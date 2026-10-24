@@ -1,0 +1,275 @@
+{
+  "always_look": false,
+  "speak_replies": true,
+  "greet_on_sight": true,
+  "camera_on_start": false,
+  "listen_on_start": false,
+  "mirror_look": false,
+  "quiet_mode": true,
+  "context_aware": false,
+  "style": "companion",
+  "self_check": false,
+  "humor": 2,
+  "hotkeys": true,
+  "desktop_notifications": true,
+  "morning_briefing": true,
+  "voice_style": "normal",
+  "barge_in": false,
+  "privacy_mode": false,
+  "gesture_mode": false,
+  "scene_transitions": true,
+  "gym_room": true,
+  "idle_activities": true,
+  "keep_screens": true,
+  "stream_speech": true,
+  "noise_filter": true,
+  "wake_sensitivity": 2,
+  "watch_objects": true,
+  "code_auto_write": true,
+  "music_source": "youtube",
+  "duck_audio": true,
+  "ui": {
+    "view": {
+      "pos": [
+        3.324,
+        1.03,
+        5.321
+      ],
+      "target": [
+        -0.1,
+        1.15,
+        -0.6
+      ]
+    },
+    "study_tab": "Language",
+    "collapsed": false,
+    "code_workspace": "C:\\Users\\jpant\\OneDrive\\Desktop\\test",
+    "outfit": {
+      "auto": false,
+      "hat": "mech",
+      "glasses": false,
+      "color": "#3e8eff"
+    },
+    "sfx": true,
+    "sfx_volume": 0.5,
+    "fx": true,
+    "den_v1": true,
+    "room_before_den": {
+      "shell": {
+        "wall": "#d98a4b",
+        "floor": "light wood",
+        "sky": "auto",
+        "brightness": 1.15
+      },
+      "items": [
+        {
+          "type": "denRug",
+          "x": 0.3,
+          "z": 0.6,
+          "rot": 1.571,
+          "y": 0
+        },
+        {
+          "type": "denTv",
+          "x": -1.2,
+          "z": -3.65,
+          "rot": 0,
+          "y": 0
+        },
+        {
+          "type": "denBookcase",
+          "x": -3.4,
+          "z": -3.7,
+          "rot": 0,
+          "y": 0
+        },
+        {
+          "type": "denBookcase",
+          "x": 4.6,
+          "z": -1.6,
+          "rot": -1.571,
+          "y": 0
+        },
+        {
+          "type": "denPlant",
+          "x": -2.55,
+          "z": -3.3,
+          "rot": 0,
+          "y": 0
+        },
+        {
+          "type": "denPlant",
+          "x": 1,
+          "z": -3.4,
+          "rot": 0.6,
+          "y": 0
+        },
+        {
+          "type": "denSkateboard",
+          "x": 1.7,
+          "z": -3.8,
+          "rot": 0,
+          "y": 0
+        },
+        {
+          "type": "denSofa",
+          "x": 3.9,
+          "z": 1,
+          "rot": -1.571,
+          "y": 0
+        },
+        {
+          "type": "denOttoman",
+          "x": 2.8,
+          "z": -1.6,
+          "rot": 0.3,
+          "y": 0
+        },
+        {
+          "type": "denCoffeeTable",
+          "x": 1.9,
+          "z": 0.9,
+          "rot": 1.571,
+          "y": 0
+        },
+        {
+          "type": "denFloorLamp",
+          "x": 4.3,
+          "z": -0.4,
+          "rot": 0,
+          "y": 0
+        },
+        {
+          "type": "denSideShelf",
+          "x": 2.3,
+          "z": 2.9,
+          "rot": 3.142,
+          "y": 0
+        },
+        {
+          "type": "denFan",
+          "x": 0.6,
+          "z": 0.2,
+          "rot": 0,
+          "y": 2.55
+        },
+        {
+          "type": "woodChair",
+          "x": -3.75,
+          "z": 2,
+          "rot": -1.571,
+          "y": 0
+        },
+        {
+          "type": "woodDesk",
+          "x": -4.55,
+          "z": 2,
+          "rot": 1.571,
+          "y": 0
+        },
+        {
+          "type": "denBed",
+          "x": -3.75,
+          "z": -1.1,
+          "rot": 1.571,
+          "y": 0
+        },
+        {
+          "type": "denPanels",
+          "wall": "back",
+          "u": -2.6,
+          "y": 2.8
+        },
+        {
+          "type": "denPanels",
+          "wall": "back",
+          "u": 0.4,
+          "y": 2.8
+        },
+        {
+          "type": "denPanels",
+          "wall": "back",
+          "u": 3.4,
+          "y": 2.8
+        },
+        {
+          "type": "denPanels",
+          "wall": "left",
+          "u": -2.5,
+          "y": 2.8
+        },
+        {
+          "type": "denPanels",
+          "wall": "left",
+          "u": 0.5,
+          "y": 2.8
+        },
+        {
+          "type": "denPanels",
+          "wall": "left",
+          "u": 3.5,
+          "y": 2.8
+        },
+        {
+          "type": "denCubeShelves",
+          "wall": "back",
+          "u": -2.2,
+          "y": 1.55
+        },
+        {
+          "type": "denClock",
+          "wall": "back",
+          "u": -1.2,
+          "y": 2.15
+        },
+        {
+          "type": "denWallLamp",
+          "wall": "back",
+          "u": -4.3,
+          "y": 1.95
+        },
+        {
+          "type": "denWindow",
+          "wall": "back",
+          "u": 3.1,
+          "y": 1.4
+        },
+        {
+          "type": "denStripes",
+          "wall": "left",
+          "u": 3.8,
+          "y": 1.2
+        },
+        {
+          "type": "denWindow",
+          "wall": "right",
+          "u": 2.6,
+          "y": 1.4
+        }
+      ]
+    },
+    "hidden_panels": [
+      "camera",
+      "voice",
+      "baking",
+      "focus",
+      "music",
+      "spotify",
+      "missions",
+      "mind",
+      "code",
+      "gym",
+      "cooking",
+      "planner"
+    ],
+    "theme": {
+      "accent": "#3e8eff",
+      "bg": "#000000",
+      "panel": "#16191e"
+    },
+    "own_music_v1": true,
+    "bgm_theme": "cello",
+    "sfx_style": "clickhigh",
+    "bgm_volume": 1
+  }
+}

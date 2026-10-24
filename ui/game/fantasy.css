@@ -1,0 +1,168 @@
+/* fantasy.css - the fantasy look on top of game.css: dark carved-wood & leather panels with gold filigree borders,
+   parchment scrolls for the Dungeon Master, engraved gold headings with dark outlines, rune glows and gentle
+   animations. Loaded after game.css; it only restyles (no layout changes), so every screen keeps working. */
+:root {
+  --stone: linear-gradient(160deg, rgba(43, 30, 22, .93), rgba(24, 17, 13, .95));
+  --stone-solid: #21170f;
+  --stone-2: rgba(52, 36, 26, .95);
+  --edge: rgba(214, 170, 92, .42);
+  --parch: #f4e7c8;
+  --parch-dim: #cbb994;
+  --portal: #ffd27a;            /* magic accents become warm gold */
+  --rune: #7fe9ff;              /* arcane cyan kept for magic glints */
+  --gold: #f0c35a;
+  --gold-deep: #9c6b1f;
+  --ink: #2a1a0c;
+  --tale: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --display: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --outline: 0 0 1px #000, 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000, 0 2px 6px rgba(0, 0, 0, .8);
+  --filigree: linear-gradient(135deg, #7a5320, #f6d47e 22%, #a8742a 45%, #ffe9a8 60%, #8a5d22 82%, #f0c35a);
+}
+
+/* ---------- panels: leather with a double gold frame ---------- */
+.pc, .rail button, .drawer, .modal, .actionbar, .toast, .gold, .plaque-goal, .prompt, .history, .sub, .res-grid div, .save, .item, .ability, .quest, button.round {
+  border: 2px solid transparent !important;
+  background: linear-gradient(160deg, rgba(48, 33, 24, .94), rgba(22, 15, 11, .96)) padding-box, var(--filigree) border-box !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55), inset 0 0 18px rgba(0, 0, 0, .45), 0 4px 16px rgba(0, 0, 0, .45);
+}
+.item, .ability, .quest, .save { background: linear-gradient(160deg, rgba(60, 42, 30, .7), rgba(30, 21, 15, .8)) padding-box, linear-gradient(135deg, rgba(240, 195, 90, .35), rgba(120, 80, 30, .25)) border-box !important; }
+.drawer, .modal { position: relative; }
+.drawer::before, .modal::before, .actionbar::before {      /* corner gems */
+  content: ""; position: absolute; inset: 5px; pointer-events: none; border-radius: inherit;
+  background:
+    radial-gradient(circle at 0 0, var(--gold) 0 3px, transparent 4px),
+    radial-gradient(circle at 100% 0, var(--gold) 0 3px, transparent 4px),
+    radial-gradient(circle at 0 100%, var(--gold) 0 3px, transparent 4px),
+    radial-gradient(circle at 100% 100%, var(--gold) 0 3px, transparent 4px);
+  opacity: .85;
+}
+.modal { background: linear-gradient(170deg, #3a281b, #1d140d) padding-box, var(--filigree) border-box !important; border-width: 3px !important; }
+
+/* ---------- headings: engraved gold with a dark outline ---------- */
+.modal h2, .drawer h2, .create-panel h2, .card-pick h2, .results h1, .ls-title, .plaque-name, .preview-name, .pc .nm, .banner span, .title-big, .title-small, .sect, .create-panel h3 {
+  font-family: var(--display); letter-spacing: .03em;
+}
+.modal h2, .drawer h2, .create-panel h2, .card-pick h2, .results h1, .ls-title, .plaque-name, .preview-name {
+  color: transparent; background: linear-gradient(180deg, #fff4cf 0%, #f0c35a 45%, #a8742a 100%); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .6px rgba(30, 15, 4, .9); filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .85));
+}
+.title-big { color: #fff3cf; -webkit-text-stroke: 1.5px #2a1606; text-shadow: 0 0 28px rgba(240, 195, 90, .55), 0 4px 0 #4a2a0d, 0 8px 24px rgba(0, 0, 0, .7); animation: torch 4s ease-in-out infinite; }
+.title-small { color: var(--gold); -webkit-text-stroke: .4px #2a1606; }
+.title-tag, .ls-text { color: var(--parch); }
+@keyframes torch { 0%, 100% { text-shadow: 0 0 28px rgba(240, 195, 90, .55), 0 4px 0 #4a2a0d, 0 8px 24px rgba(0, 0, 0, .7); } 45% { text-shadow: 0 0 40px rgba(255, 170, 70, .75), 0 4px 0 #4a2a0d, 0 8px 24px rgba(0, 0, 0, .7); } 55% { text-shadow: 0 0 22px rgba(240, 195, 90, .45), 0 4px 0 #4a2a0d, 0 8px 24px rgba(0, 0, 0, .7); } }
+.sect, .create-panel h3 { color: var(--gold); text-transform: uppercase; font-size: 12.5px; letter-spacing: .12em; display: flex; align-items: center; gap: 8px; }
+.sect::after, .create-panel h3::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(240, 195, 90, .6), transparent); }
+/* every bit of UI text over the 3D world gets a dark outline so it reads on any background */
+.lbl .n, .plaque-name, .bar span, .float, .banner small, .gold, .pc .nm, .prompt, .turn { text-shadow: var(--outline); }
+
+/* ---------- buttons: gold-trimmed, with a shine that sweeps across ---------- */
+button.big {
+  font-family: var(--display); color: #2a1606; border: 0 !important;
+  background: linear-gradient(180deg, #ffe7a3, #f0c35a 45%, #c48a2c) !important;
+  box-shadow: 0 3px 0 #7a4f17, 0 0 0 2px #3a230b, 0 0 22px rgba(240, 195, 90, .35) !important;
+  position: relative; overflow: hidden; text-shadow: 0 1px 0 rgba(255, 255, 255, .5);
+}
+button.big::after, button.send::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .55), transparent); transform: skewX(-20deg); }
+button.big:hover::after, button.send:hover::after { animation: sweep .7s ease; }
+@keyframes sweep { to { left: 130%; } }
+button.ghost, button.small, .chip, .tabs button, .choice {
+  background: linear-gradient(180deg, rgba(70, 49, 33, .85), rgba(36, 25, 17, .9)) padding-box, linear-gradient(135deg, rgba(240, 195, 90, .55), rgba(110, 72, 28, .5)) border-box !important;
+  border: 2px solid transparent !important; color: var(--parch);
+}
+button.ghost:hover, button.small:hover, .chip:hover:not(:disabled), .tabs button:hover, .choice:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(92, 64, 40, .9), rgba(46, 31, 20, .92)) padding-box, var(--filigree) border-box !important;
+  box-shadow: 0 0 14px rgba(240, 195, 90, .3);
+}
+.choice.on, .tabs button.on { background: linear-gradient(180deg, rgba(120, 80, 30, .75), rgba(60, 38, 16, .85)) padding-box, var(--filigree) border-box !important; box-shadow: 0 0 16px rgba(240, 195, 90, .4), inset 0 0 10px rgba(255, 220, 140, .2) !important; }
+button.send { position: relative; overflow: hidden; background: linear-gradient(180deg, #e2546a, #a82338) !important; box-shadow: 0 3px 0 #5e1220, 0 0 0 2px #2a0a10 !important; font-family: var(--display); }
+.rail button { color: var(--gold); }
+.rail button.on, .rail button:hover { box-shadow: 0 0 16px rgba(240, 195, 90, .5) !important; }
+.rail button em { font-family: var(--display); background: #21170f; border: 1px solid var(--gold-deep); color: var(--parch); }
+
+/* ---------- party cards ---------- */
+.pc .face { background: radial-gradient(circle at 35% 30%, #fff1c4, #f0c35a 55%, #8a5d22); color: #2a1606; box-shadow: 0 0 0 2px #3a230b, 0 0 0 4px rgba(240, 195, 90, .55); font-family: var(--display); }
+.pc.vermeil .face { background: radial-gradient(circle at 35% 30%, #ffb3be, #e0475b 55%, #7a1424); color: #fff; }
+.pc.ally .face { background: radial-gradient(circle at 35% 30%, #d8ffcc, #7fd36b 55%, #2f6b22); }
+.pc.turn { box-shadow: 0 0 0 2px rgba(240, 195, 90, .6), 0 0 26px rgba(240, 195, 90, .45) !important; }
+.bar { background: rgba(0, 0, 0, .55); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .8), 0 0 0 1px rgba(240, 195, 90, .3); }
+.bar.hp i { background: linear-gradient(180deg, #ff8a95, #c3253d 60%, #8e1528); }
+.bar.mp i { background: linear-gradient(180deg, #9cc3ff, #3a6ee0 60%, #23449a); }
+.bar.xp i { background: linear-gradient(90deg, #a8742a, #ffe28a, #a8742a); background-size: 200% 100%; animation: xpflow 3s linear infinite; }
+@keyframes xpflow { to { background-position: -200% 0; } }
+
+/* ---------- the narrator speaks from a parchment scroll ---------- */
+.sub.dm {
+  background: linear-gradient(180deg, #f6e7c1, #e9d29c) padding-box, var(--filigree) border-box !important;
+  color: #3a2410; box-shadow: inset 0 0 22px rgba(120, 80, 30, .35), 0 6px 18px rgba(0, 0, 0, .5) !important;
+  transform-origin: top center; animation: unroll .45s cubic-bezier(.2, .9, .3, 1);
+}
+.sub.dm .who { color: #8a1f2b !important; font-family: var(--display); letter-spacing: .06em; text-transform: uppercase; font-size: 12px; }
+.sub.dm .say { color: #3a2410; font-size: 18px; }
+.sub.vermeil .who { color: #ff9aa8; } .sub.npc .who { color: #b9f0a8; } .sub .who { font-family: var(--display); text-shadow: var(--outline); }
+.sub.sys { background: rgba(20, 13, 9, .78) padding-box, linear-gradient(135deg, rgba(240, 195, 90, .3), rgba(110, 72, 28, .2)) border-box !important; }
+.sub.waiting .say::after { content: " ✦"; color: var(--gold); animation: pulse 1s ease-in-out infinite; display: inline-block; }
+@keyframes unroll { from { opacity: 0; transform: scaleY(.15); filter: blur(2px); } 60% { transform: scaleY(1.04); } }
+
+/* ---------- the action bar, input, chips ---------- */
+.act input { background: rgba(10, 6, 3, .55) !important; border: 2px solid rgba(240, 195, 90, .35) !important; color: var(--parch); font-family: var(--tale); }
+.act input:focus { border-color: var(--gold) !important; box-shadow: 0 0 14px rgba(240, 195, 90, .3); }
+.turn { font-family: var(--display); letter-spacing: .05em; background: rgba(0, 0, 0, .4); border: 1px solid rgba(240, 195, 90, .4); }
+.turn.you { background: linear-gradient(180deg, #ffe7a3, #f0c35a); color: #2a1606; text-shadow: none; }
+
+/* ---------- top plaque, gold, toasts, prompt ---------- */
+.plaque-name { font-size: 26px; }
+.plaque-goal { color: var(--parch); }
+.plaque-goal:before { content: "⚜ " !important; color: var(--gold); }
+.gold { color: #ffe08a; font-family: var(--display); }
+.gold:before { content: "🪙 " !important; }
+.toast { border-left: 5px solid var(--gold) !important; color: var(--parch); animation: tin .35s cubic-bezier(.2, 1.3, .4, 1); }
+.toast.good { border-left-color: #8fe07a !important; } .toast.bad { border-left-color: #ff6b7d !important; }
+.prompt kbd { background: linear-gradient(180deg, #ffe7a3, #f0c35a); color: #2a1606; box-shadow: 0 2px 0 #7a4f17; }
+
+/* ---------- banners: forged-gold letters ---------- */
+.banner span { font-family: var(--display); color: #fff3cf; -webkit-text-stroke: 1.5px #2a1606; text-shadow: 0 0 26px var(--bcol, var(--gold)), 0 4px 0 #3a1f08, 0 10px 30px rgba(0, 0, 0, .7); }
+.banner small { font-family: var(--tale); color: var(--parch); }
+
+/* ---------- loading screen: a rune circle ---------- */
+.loadscreen { background: radial-gradient(ellipse at 50% 40%, #3a2416, #120b07 75%) !important; }
+.ls-portal i { border-top-color: var(--gold) !important; filter: drop-shadow(0 0 6px rgba(240, 195, 90, .6)); }
+.ls-portal i:nth-child(2) { border-top-color: #ff9a4a !important; }
+.ls-portal i:nth-child(3) { border-top-color: var(--rune) !important; }
+.ls-portal::after { content: "ᚠ ᚱ ᚨ ᛗ ᛖ"; position: absolute; inset: -26px; display: grid; place-items: center; font-size: 15px; letter-spacing: 1.4em; color: rgba(240, 195, 90, .55); animation: spin 18s linear infinite; }
+.ls-bar { border: 1px solid rgba(240, 195, 90, .5) !important; box-shadow: 0 0 0 2px #2a1606, 0 0 12px rgba(240, 195, 90, .25); }
+.ls-bar i { background: linear-gradient(90deg, #a8742a, #ffe28a, #f0c35a) !important; }
+.ls-tip { color: var(--parch-dim); font-family: var(--tale); font-style: italic; }
+
+/* ---------- dice tray: no outlines (plain felt, plain numbers) ---------- */
+.dicetray { animation: trayIn .35s cubic-bezier(.2, 1.3, .4, 1); }
+@keyframes trayIn { from { opacity: 0; transform: translateY(20px) scale(.9) rotate(3deg); } }
+.dice-label .big { font-family: var(--display); }
+.dice-label { text-shadow: none !important; }
+
+/* ---------- cards & results ---------- */
+.card { border: 3px solid transparent !important; background: linear-gradient(170deg, #3d2a1c, #1a120c) padding-box, linear-gradient(135deg, var(--rar, var(--gold)), #3a230b 50%, var(--rar, var(--gold))) border-box !important; }
+.card .cn { font-family: var(--display); -webkit-text-stroke: .4px #000; }
+#results { background: radial-gradient(#3a2416, #0d0805) !important; }
+.lbl.exit .n { color: #ffe08a; font-family: var(--display); }
+.lbl.npc .n { color: #e5ffd8; }
+
+/* ---------- gentle life in the UI ---------- */
+.rail button { animation: rowIn .4s ease backwards; }
+.rail button:nth-child(2) { animation-delay: .04s; } .rail button:nth-child(3) { animation-delay: .08s; } .rail button:nth-child(4) { animation-delay: .12s; }
+.rail button:nth-child(5) { animation-delay: .16s; } .rail button:nth-child(n+6) { animation-delay: .2s; }
+.party .pc { animation: rowIn .4s ease backwards; } .party .pc:nth-child(2) { animation-delay: .06s; } .party .pc:nth-child(3) { animation-delay: .12s; } .party .pc:nth-child(n+4) { animation-delay: .18s; }
+.plaque { animation: plaqueIn .6s cubic-bezier(.2, 1.2, .4, 1); }
+@keyframes plaqueIn { from { opacity: 0; transform: translate(-50%, -14px) scale(.9); } }
+.drawer-body::-webkit-scrollbar, .history::-webkit-scrollbar, .modal::-webkit-scrollbar { width: 8px; }
+.drawer-body::-webkit-scrollbar-thumb, .history::-webkit-scrollbar-thumb, .modal::-webkit-scrollbar-thumb { background: linear-gradient(#a8742a, #6b4615); border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .title-big, .bar.xp i, .ls-portal::after, .sub.dm { animation: none !important; }
+}
+
+/* live portraits (portraits.js) */
+.pc .face.pic, .ini.pic { background-color: #1a120c; background-size: cover; background-position: center 30%; color: transparent; }
+.pc .face.pic { box-shadow: 0 0 0 2px #3a230b, 0 0 0 4px rgba(240, 195, 90, .55), inset 0 0 10px rgba(0, 0, 0, .6); }
+.pc.vermeil .face.pic { box-shadow: 0 0 0 2px #3a0b12, 0 0 0 4px rgba(224, 71, 91, .7), inset 0 0 10px rgba(0, 0, 0, .6); }
+.pc.hurt .face.pic { animation: faceHurt .5s ease; }
+@keyframes faceHurt { 30% { filter: sepia(1) saturate(5) hue-rotate(-30deg) brightness(.9); } }
+.ini.pic.enemy { box-shadow: 0 0 0 2px rgba(224, 71, 91, .8); }

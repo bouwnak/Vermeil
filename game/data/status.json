@@ -1,0 +1,20 @@
+{
+  "_doc": "Status effects. stat = which stat value changes (+value, or -value when sign is -1). dot/hot = damage/heal each turn start. skip = loses turn. taken = damage-taken multiplier.",
+  "poison":   {"name": "Poisoned", "icon": "☠", "dot": true, "element": "poison", "bad": true},
+  "burn":     {"name": "Burning", "icon": "🔥", "dot": true, "element": "fire", "bad": true},
+  "regen":    {"name": "Regenerating", "icon": "✚", "hot": true},
+  "stun":     {"name": "Stunned", "icon": "💫", "skip": true, "bad": true},
+  "freeze":   {"name": "Frozen", "icon": "❄", "skip": true, "bad": true, "break_on_fire": true},
+  "slow":     {"name": "Slowed", "icon": "🐌", "stat": "spd", "sign": -1, "bad": true},
+  "might":    {"name": "Empowered", "icon": "💪", "stat": "patk", "sign": 1, "also": "matk"},
+  "weaken":   {"name": "Weakened", "icon": "🥀", "stat": "patk", "sign": -1, "also": "matk", "bad": true},
+  "fortify":  {"name": "Fortified", "icon": "🛡", "stat": "pdef", "sign": 1, "also": "mdef"},
+  "evasive":  {"name": "Evasive", "icon": "💨", "stat": "eva", "sign": 1},
+  "blessed":  {"name": "Blessed", "icon": "✨", "stat": "acc", "sign": 1},
+  "dazed":    {"name": "Dazed", "icon": "😵", "stat": "acc", "sign": -1, "bad": true},
+  "marked":   {"name": "Marked", "icon": "🎯", "taken_add": true, "bad": true},
+  "guarded":  {"name": "Guarded", "icon": "🛡", "taken_mul": true},
+  "barrier":  {"name": "Barrier", "icon": "🔵", "absorb": true},
+  "taunted":  {"name": "Taunted", "icon": "😠", "taunt": true, "bad": true},
+  "defending":{"name": "Defending", "icon": "🛡", "defend": true}
+}

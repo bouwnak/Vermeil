@@ -1,0 +1,103 @@
+{
+  "_doc": "Classes. base = level-1 stats, growth = added every level. attrs = skill-check scores (10 = average). abilities: [ability id, level it unlocks]. human_model = the model a human of this class uses.",
+  "warrior": {
+    "name": "Warrior", "role": "melee", "resource": "stamina",
+    "desc": "Front-line fighter. Big hits, lots of HP.",
+    "base": {"hp": 34, "mana": 10, "patk": 7, "matk": 1, "pdef": 5, "mdef": 2, "spd": 4, "crit": 6, "acc": 4, "eva": 1},
+    "growth": {"hp": 7, "mana": 1, "patk": 2, "matk": 0, "pdef": 1.2, "mdef": 0.5, "spd": 0.3, "crit": 0.3, "acc": 0.4, "eva": 0.2},
+    "attrs": {"str": 16, "dex": 11, "int": 8, "wis": 10, "con": 15, "cha": 10},
+    "abilities": [["power_strike", 1], ["war_cry", 2], ["whirlwind", 5], ["second_wind", 7], ["titan_blow", 10]],
+    "start_items": ["iron_sword", "leather_armor", "potion_small", "potion_small"],
+    "human_model": "rpg_characters_warrior"
+  },
+  "knight": {
+    "name": "Knight", "role": "tank", "resource": "stamina",
+    "desc": "Heavy armour, protects allies, hard to kill.",
+    "base": {"hp": 38, "mana": 10, "patk": 6, "matk": 1, "pdef": 7, "mdef": 3, "spd": 3, "crit": 4, "acc": 4, "eva": 0},
+    "growth": {"hp": 8, "mana": 1, "patk": 1.6, "matk": 0, "pdef": 1.6, "mdef": 0.8, "spd": 0.2, "crit": 0.2, "acc": 0.3, "eva": 0.1},
+    "attrs": {"str": 15, "dex": 9, "int": 9, "wis": 11, "con": 16, "cha": 11},
+    "abilities": [["shield_bash", 1], ["guard_ally", 2], ["taunt", 4], ["bulwark", 6], ["holy_charge", 10]],
+    "start_items": ["iron_sword", "wooden_shield", "chainmail", "potion_small"],
+    "human_model": "ultimate_animated_character_knight_male"
+  },
+  "rogue": {
+    "name": "Rogue", "role": "melee", "resource": "stamina",
+    "desc": "Fast and sneaky. Huge critical hits, poisons and steals.",
+    "base": {"hp": 26, "mana": 12, "patk": 6, "matk": 2, "pdef": 3, "mdef": 2, "spd": 8, "crit": 15, "acc": 6, "eva": 4},
+    "growth": {"hp": 5, "mana": 1, "patk": 1.8, "matk": 0.2, "pdef": 0.7, "mdef": 0.5, "spd": 0.6, "crit": 0.6, "acc": 0.5, "eva": 0.4},
+    "attrs": {"str": 10, "dex": 17, "int": 12, "wis": 10, "con": 11, "cha": 13},
+    "abilities": [["backstab", 1], ["poison_blade", 2], ["smoke_bomb", 4], ["steal", 3], ["shadow_dance", 10]],
+    "start_items": ["iron_dagger", "leather_armor", "potion_small", "smoke_pellet"],
+    "human_model": "rpg_characters_rogue"
+  },
+  "ranger": {
+    "name": "Ranger", "role": "ranged", "resource": "stamina",
+    "desc": "Bow expert. Hits from range and marks prey.",
+    "base": {"hp": 28, "mana": 14, "patk": 6, "matk": 2, "pdef": 3, "mdef": 3, "spd": 7, "crit": 10, "acc": 7, "eva": 3},
+    "growth": {"hp": 5.5, "mana": 1.2, "patk": 1.8, "matk": 0.3, "pdef": 0.8, "mdef": 0.6, "spd": 0.5, "crit": 0.5, "acc": 0.6, "eva": 0.3},
+    "attrs": {"str": 11, "dex": 16, "int": 10, "wis": 14, "con": 12, "cha": 10},
+    "abilities": [["aimed_shot", 1], ["hunters_mark", 2], ["volley", 5], ["nature_mend", 6], ["storm_arrow", 10]],
+    "start_items": ["hunting_bow", "leather_armor", "potion_small", "potion_small"],
+    "human_model": "rpg_characters_ranger"
+  },
+  "mage": {
+    "name": "Mage", "role": "caster", "resource": "mana",
+    "desc": "Arcane spells that hit hard but a fragile body.",
+    "base": {"hp": 22, "mana": 30, "patk": 2, "matk": 8, "pdef": 2, "mdef": 5, "spd": 5, "crit": 7, "acc": 5, "eva": 2},
+    "growth": {"hp": 4, "mana": 4, "patk": 0.3, "matk": 2.2, "pdef": 0.5, "mdef": 1.0, "spd": 0.4, "crit": 0.4, "acc": 0.5, "eva": 0.2},
+    "attrs": {"str": 8, "dex": 12, "int": 17, "wis": 13, "con": 10, "cha": 11},
+    "abilities": [["arcane_bolt", 1], ["fireball", 2], ["frost_nova", 4], ["arcane_shield", 6], ["meteor", 10]],
+    "start_items": ["oak_staff", "cloth_robe", "potion_small", "ether_small"],
+    "human_model": "rpg_characters_wizard"
+  },
+  "elementalist": {
+    "name": "Elementalist", "role": "caster", "resource": "mana",
+    "desc": "Bends fire, ice, lightning and earth - pick the element the enemy is weak to.",
+    "base": {"hp": 24, "mana": 28, "patk": 2, "matk": 7, "pdef": 3, "mdef": 4, "spd": 5, "crit": 6, "acc": 5, "eva": 2},
+    "growth": {"hp": 4.5, "mana": 3.6, "patk": 0.3, "matk": 2.0, "pdef": 0.6, "mdef": 0.9, "spd": 0.4, "crit": 0.4, "acc": 0.5, "eva": 0.2},
+    "attrs": {"str": 9, "dex": 12, "int": 16, "wis": 14, "con": 11, "cha": 10},
+    "abilities": [["flame_lash", 1], ["ice_shard", 1], ["chain_lightning", 3], ["stone_skin", 5], ["elemental_storm", 10]],
+    "start_items": ["oak_staff", "cloth_robe", "potion_small", "ether_small"],
+    "human_model": "ultimate_monsters_wizard"
+  },
+  "cleric": {
+    "name": "Cleric", "role": "healer", "resource": "mana",
+    "desc": "Heals and protects the party with holy light.",
+    "base": {"hp": 28, "mana": 26, "patk": 4, "matk": 6, "pdef": 4, "mdef": 5, "spd": 4, "crit": 4, "acc": 4, "eva": 1},
+    "growth": {"hp": 5.5, "mana": 3.2, "patk": 0.8, "matk": 1.7, "pdef": 0.9, "mdef": 1.1, "spd": 0.3, "crit": 0.2, "acc": 0.4, "eva": 0.2},
+    "attrs": {"str": 11, "dex": 10, "int": 12, "wis": 17, "con": 13, "cha": 13},
+    "abilities": [["heal", 1], ["smite", 1], ["bless", 3], ["mass_heal", 5], ["resurrect", 8], ["divine_judgement", 10]],
+    "start_items": ["iron_mace", "chainmail", "potion_small", "ether_small"],
+    "human_model": "rpg_characters_cleric"
+  },
+  "paladin": {
+    "name": "Paladin", "role": "tank", "resource": "mana",
+    "desc": "Holy knight: strong sword, healing hands, light magic.",
+    "base": {"hp": 34, "mana": 18, "patk": 6, "matk": 4, "pdef": 6, "mdef": 4, "spd": 3, "crit": 5, "acc": 4, "eva": 0},
+    "growth": {"hp": 7, "mana": 2, "patk": 1.6, "matk": 1.0, "pdef": 1.3, "mdef": 1.0, "spd": 0.2, "crit": 0.3, "acc": 0.4, "eva": 0.1},
+    "attrs": {"str": 15, "dex": 9, "int": 10, "wis": 14, "con": 14, "cha": 14},
+    "abilities": [["holy_strike", 1], ["lay_on_hands", 2], ["guard_ally", 4], ["consecrate", 6], ["holy_charge", 10]],
+    "start_items": ["iron_sword", "chainmail", "wooden_shield", "potion_small"],
+    "human_model": "ultimate_animated_character_knight_golden_male"
+  },
+  "monk": {
+    "name": "Monk", "role": "melee", "resource": "stamina",
+    "desc": "Lightning-fast fists, dodges everything.",
+    "base": {"hp": 28, "mana": 14, "patk": 6, "matk": 3, "pdef": 3, "mdef": 4, "spd": 9, "crit": 10, "acc": 6, "eva": 5},
+    "growth": {"hp": 5.5, "mana": 1.4, "patk": 1.8, "matk": 0.4, "pdef": 0.7, "mdef": 0.8, "spd": 0.6, "crit": 0.5, "acc": 0.5, "eva": 0.5},
+    "attrs": {"str": 13, "dex": 16, "int": 10, "wis": 15, "con": 12, "cha": 9},
+    "abilities": [["flurry", 1], ["inner_peace", 2], ["stunning_palm", 4], ["wind_step", 6], ["thousand_fists", 10]],
+    "start_items": ["hand_wraps", "cloth_robe", "potion_small", "potion_small"],
+    "human_model": "rpg_characters_monk"
+  },
+  "summoner": {
+    "name": "Summoner", "role": "caster", "resource": "mana",
+    "desc": "Calls spirit allies to fight beside the party.",
+    "base": {"hp": 23, "mana": 30, "patk": 2, "matk": 7, "pdef": 2, "mdef": 5, "spd": 5, "crit": 5, "acc": 5, "eva": 2},
+    "growth": {"hp": 4.2, "mana": 4, "patk": 0.3, "matk": 1.9, "pdef": 0.5, "mdef": 1.0, "spd": 0.4, "crit": 0.3, "acc": 0.5, "eva": 0.2},
+    "attrs": {"str": 8, "dex": 11, "int": 15, "wis": 15, "con": 10, "cha": 14},
+    "abilities": [["spirit_bolt", 1], ["summon_sprite", 1], ["summon_golem", 4], ["soul_link", 6], ["summon_dragonling", 10]],
+    "start_items": ["oak_staff", "cloth_robe", "potion_small", "ether_small"],
+    "human_model": "ultimate_animated_character_witch"
+  }
+}

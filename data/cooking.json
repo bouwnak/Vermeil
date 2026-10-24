@@ -1,0 +1,129 @@
+{
+  "recipes": [
+    {
+      "title": "Chicken Adobo",
+      "servings": 4,
+      "source": "",
+      "ingredients": [
+        {
+          "qty": 1.0,
+          "unit": "kg",
+          "name": "chicken thighs and drumsticks",
+          "text": "1 kg chicken thighs and drumsticks",
+          "id": "e4fba4"
+        },
+        {
+          "qty": 0.5,
+          "unit": "cup",
+          "name": "soy sauce",
+          "text": "1/2 cup soy sauce",
+          "id": "47eafd"
+        },
+        {
+          "qty": 0.333,
+          "unit": "cup",
+          "name": "cane vinegar",
+          "text": "1/3 cup cane vinegar",
+          "id": "363b81"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "water",
+          "text": "1 cup water",
+          "id": "66b011"
+        },
+        {
+          "qty": 8.0,
+          "unit": "clove",
+          "name": "garlic, crushed",
+          "text": "8 cloves garlic, crushed",
+          "id": "349d59"
+        },
+        {
+          "qty": 3.0,
+          "unit": "pc",
+          "name": "bay leaves",
+          "text": "3 pieces bay leaves",
+          "id": "a30aa7"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tsp",
+          "name": "whole black peppercorns",
+          "text": "1 teaspoon whole black peppercorns",
+          "id": "03d274"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "brown sugar",
+          "text": "1 tablespoon brown sugar",
+          "id": "37d826"
+        },
+        {
+          "qty": 2.0,
+          "unit": "tbsp",
+          "name": "cooking oil",
+          "text": "2 tablespoons cooking oil",
+          "id": "37ee55"
+        }
+      ],
+      "steps": [
+        "Marinate the chicken in soy sauce and garlic for at least 30 minutes.",
+        "Heat oil in a pan and brown the chicken on all sides, about 5 minutes.",
+        "Add the marinade, water, bay leaves and peppercorns. Bring to a boil.",
+        "Pour in the vinegar and let it boil for 2 minutes without stirring.",
+        "Cover and simmer for 30 minutes until the chicken is tender.",
+        "Add the brown sugar and simmer uncovered for 10 minutes until the sauce thickens. Serve with rice."
+      ],
+      "nutrition": {
+        "per": "serving",
+        "servings": 4,
+        "source": "estimated",
+        "rows": [
+          {
+            "label": "Calories",
+            "value": "480 kcal"
+          },
+          {
+            "label": "Total fat",
+            "value": "30 g"
+          },
+          {
+            "label": "Saturated fat",
+            "value": "8 g"
+          },
+          {
+            "label": "Cholesterol",
+            "value": "190 mg"
+          },
+          {
+            "label": "Sodium",
+            "value": "1900 mg"
+          },
+          {
+            "label": "Carbohydrates",
+            "value": "8 g"
+          },
+          {
+            "label": "Fiber",
+            "value": "0.5 g"
+          },
+          {
+            "label": "Sugar",
+            "value": "4 g"
+          },
+          {
+            "label": "Protein",
+            "value": "42 g"
+          }
+        ]
+      },
+      "id": "f887d645",
+      "updated": "2026-10-21 21:33",
+      "image": "https://panlasangpinoy.com/wp-content/uploads/2026/05/Chicken-Adobo-in-a-Bowl.jpg",
+      "image_tried": true
+    }
+  ]
+}

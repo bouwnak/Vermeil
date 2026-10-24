@@ -1,0 +1,888 @@
+{
+ "_doc": "Item bases. slot: weapon/offhand/armor/accessory (equipment), consumable, material, quest, currency. dice = weapon damage dice. bonus = stats while equipped. use = what a consumable does. model = catalog id shown in 3D/inventory. trader_only = only sold by wandering traders. use.perm = permanent stat boost, use.card = grants an upgrade-card pick.",
+ "rarities": {
+  "common": {
+   "name": "Common",
+   "color": "#c9c9c9",
+   "mult": 1.0,
+   "affixes": 0,
+   "weight": 60,
+   "value": 1
+  },
+  "uncommon": {
+   "name": "Uncommon",
+   "color": "#5fd36a",
+   "mult": 1.2,
+   "affixes": 1,
+   "weight": 26,
+   "value": 2
+  },
+  "rare": {
+   "name": "Rare",
+   "color": "#4aa3ff",
+   "mult": 1.45,
+   "affixes": 1,
+   "weight": 10,
+   "value": 4
+  },
+  "epic": {
+   "name": "Epic",
+   "color": "#b26bff",
+   "mult": 1.75,
+   "affixes": 2,
+   "weight": 3,
+   "value": 8
+  },
+  "legendary": {
+   "name": "Legendary",
+   "color": "#ffb02e",
+   "mult": 2.2,
+   "affixes": 3,
+   "weight": 1,
+   "value": 16
+  }
+ },
+ "affixes": {
+  "flaming": {
+   "prefix": "Flaming",
+   "element": "fire",
+   "bonus": {
+    "matk": 1
+   }
+  },
+  "frozen": {
+   "prefix": "Frost",
+   "element": "ice",
+   "bonus": {
+    "matk": 1
+   }
+  },
+  "shocking": {
+   "prefix": "Storm",
+   "element": "lightning",
+   "bonus": {
+    "spd": 1
+   }
+  },
+  "holy": {
+   "prefix": "Blessed",
+   "element": "light",
+   "bonus": {
+    "mdef": 1
+   }
+  },
+  "shadow": {
+   "prefix": "Shadow",
+   "element": "shadow",
+   "bonus": {
+    "crit": 3
+   }
+  },
+  "swift": {
+   "prefix": "Swift",
+   "bonus": {
+    "spd": 2
+   }
+  },
+  "sturdy": {
+   "prefix": "Sturdy",
+   "bonus": {
+    "pdef": 2,
+    "hp": 6
+   }
+  },
+  "keen": {
+   "prefix": "Keen",
+   "bonus": {
+    "crit": 5
+   }
+  },
+  "accurate": {
+   "prefix": "True",
+   "bonus": {
+    "acc": 3
+   }
+  },
+  "mighty": {
+   "suffix": "of Might",
+   "bonus": {
+    "patk": 2
+   }
+  },
+  "wise": {
+   "suffix": "of Wisdom",
+   "bonus": {
+    "matk": 2,
+    "mana": 6
+   }
+  },
+  "vital": {
+   "suffix": "of Vitality",
+   "bonus": {
+    "hp": 10
+   }
+  },
+  "warding": {
+   "suffix": "of Warding",
+   "bonus": {
+    "mdef": 2
+   }
+  },
+  "evasion": {
+   "suffix": "of the Fox",
+   "bonus": {
+    "eva": 2
+   }
+  }
+ },
+ "bases": {
+  "iron_sword": {
+   "name": "Iron Sword",
+   "slot": "weapon",
+   "kind": "sword",
+   "dice": "1d8",
+   "bonus": {
+    "patk": 1
+   },
+   "value": 20,
+   "model": "conv_medieval_weapons_pack_sword",
+   "level": 1
+  },
+  "steel_sword": {
+   "name": "Steel Sword",
+   "slot": "weapon",
+   "kind": "sword",
+   "dice": "1d10",
+   "bonus": {
+    "patk": 3
+   },
+   "value": 60,
+   "model": "conv_medieval_weapons_pack_sword_2",
+   "level": 4
+  },
+  "claymore": {
+   "name": "Claymore",
+   "slot": "weapon",
+   "kind": "sword",
+   "dice": "2d6",
+   "bonus": {
+    "patk": 5,
+    "spd": -1
+   },
+   "value": 120,
+   "model": "conv_medieval_weapons_pack_claymore",
+   "level": 7
+  },
+  "golden_sword": {
+   "name": "Golden Sword",
+   "slot": "weapon",
+   "kind": "sword",
+   "dice": "2d8",
+   "bonus": {
+    "patk": 7,
+    "crit": 3
+   },
+   "value": 260,
+   "model": "conv_medieval_weapons_pack_sword_golden",
+   "level": 11
+  },
+  "iron_dagger": {
+   "name": "Iron Dagger",
+   "slot": "weapon",
+   "kind": "dagger",
+   "dice": "1d6",
+   "bonus": {
+    "crit": 4,
+    "spd": 1
+   },
+   "value": 18,
+   "model": "conv_medieval_weapons_pack_dagger",
+   "level": 1
+  },
+  "assassin_dagger": {
+   "name": "Assassin's Dagger",
+   "slot": "weapon",
+   "kind": "dagger",
+   "dice": "1d8",
+   "bonus": {
+    "crit": 8,
+    "spd": 2,
+    "patk": 2
+   },
+   "value": 110,
+   "model": "conv_medieval_weapons_pack_dagger_2",
+   "level": 6
+  },
+  "battle_axe": {
+   "name": "Battle Axe",
+   "slot": "weapon",
+   "kind": "axe",
+   "dice": "1d12",
+   "bonus": {
+    "patk": 3
+   },
+   "value": 70,
+   "model": "conv_medieval_weapons_pack_axe_double",
+   "level": 4
+  },
+  "hand_axe": {
+   "name": "Hand Axe",
+   "slot": "weapon",
+   "kind": "axe",
+   "dice": "1d8",
+   "bonus": {
+    "patk": 2
+   },
+   "value": 25,
+   "model": "conv_medieval_weapons_pack_axe_small",
+   "level": 1
+  },
+  "war_hammer": {
+   "name": "War Hammer",
+   "slot": "weapon",
+   "kind": "hammer",
+   "dice": "2d6",
+   "bonus": {
+    "patk": 4,
+    "spd": -1
+   },
+   "value": 90,
+   "model": "conv_medieval_weapons_pack_hammer_double",
+   "level": 5
+  },
+  "iron_mace": {
+   "name": "Iron Mace",
+   "slot": "weapon",
+   "kind": "hammer",
+   "dice": "1d8",
+   "bonus": {
+    "patk": 1,
+    "mdef": 1
+   },
+   "value": 22,
+   "model": "conv_medieval_weapons_pack_hammer_small",
+   "level": 1
+  },
+  "spear": {
+   "name": "Spear",
+   "slot": "weapon",
+   "kind": "spear",
+   "dice": "1d10",
+   "bonus": {
+    "acc": 2
+   },
+   "value": 40,
+   "model": "conv_medieval_weapons_pack_spear",
+   "level": 2
+  },
+  "scythe": {
+   "name": "Reaper's Scythe",
+   "slot": "weapon",
+   "kind": "spear",
+   "dice": "2d8",
+   "bonus": {
+    "patk": 5,
+    "crit": 5
+   },
+   "element": "shadow",
+   "value": 220,
+   "model": "conv_medieval_weapons_pack_scythe",
+   "level": 10
+  },
+  "hunting_bow": {
+   "name": "Hunting Bow",
+   "slot": "weapon",
+   "kind": "bow",
+   "dice": "1d8",
+   "bonus": {
+    "acc": 2
+   },
+   "value": 25,
+   "model": "conv_medieval_weapons_pack_bow_wooden",
+   "level": 1,
+   "ranged": true
+  },
+  "long_bow": {
+   "name": "Longbow",
+   "slot": "weapon",
+   "kind": "bow",
+   "dice": "1d10",
+   "bonus": {
+    "acc": 3,
+    "patk": 2
+   },
+   "value": 80,
+   "model": "conv_medieval_weapons_pack_bow_wooden2",
+   "level": 5,
+   "ranged": true
+  },
+  "golden_bow": {
+   "name": "Golden Bow",
+   "slot": "weapon",
+   "kind": "bow",
+   "dice": "2d8",
+   "bonus": {
+    "acc": 4,
+    "patk": 5,
+    "crit": 4
+   },
+   "value": 240,
+   "model": "conv_medieval_weapons_pack_bow_golden",
+   "level": 10,
+   "ranged": true
+  },
+  "oak_staff": {
+   "name": "Oak Staff",
+   "slot": "weapon",
+   "kind": "staff",
+   "dice": "1d6",
+   "bonus": {
+    "matk": 2,
+    "mana": 4
+   },
+   "value": 20,
+   "model": "conv_rpg_asset_pack_woodenstaff",
+   "level": 1
+  },
+  "ice_staff": {
+   "name": "Frost Staff",
+   "slot": "weapon",
+   "kind": "staff",
+   "dice": "1d6",
+   "bonus": {
+    "matk": 4,
+    "mana": 8
+   },
+   "element": "ice",
+   "value": 100,
+   "model": "conv_rpg_asset_pack_icestaff",
+   "level": 5
+  },
+  "arch_staff": {
+   "name": "Archmage Staff",
+   "slot": "weapon",
+   "kind": "staff",
+   "dice": "1d8",
+   "bonus": {
+    "matk": 7,
+    "mana": 14,
+    "mdef": 2
+   },
+   "value": 250,
+   "model": "conv_rpg_asset_pack_staff",
+   "level": 10
+  },
+  "hand_wraps": {
+   "name": "Hand Wraps",
+   "slot": "weapon",
+   "kind": "fists",
+   "dice": "1d6",
+   "bonus": {
+    "spd": 1
+   },
+   "value": 10,
+   "model": null,
+   "level": 1
+  },
+  "tiger_claws": {
+   "name": "Tiger Claws",
+   "slot": "weapon",
+   "kind": "fists",
+   "dice": "1d8",
+   "bonus": {
+    "patk": 3,
+    "crit": 4,
+    "spd": 1
+   },
+   "value": 90,
+   "model": null,
+   "level": 6
+  },
+  "rapier": {
+   "name": "Crimson Rapier",
+   "slot": "weapon",
+   "kind": "sword",
+   "dice": "1d8",
+   "bonus": {
+    "patk": 2,
+    "crit": 4,
+    "spd": 1
+   },
+   "value": 50,
+   "model": "conv_medieval_weapons_pack_sword",
+   "level": 1
+  },
+  "wooden_shield": {
+   "name": "Wooden Shield",
+   "slot": "offhand",
+   "bonus": {
+    "pdef": 2
+   },
+   "value": 15,
+   "model": "conv_medieval_weapons_pack_shield_round",
+   "level": 1
+  },
+  "heater_shield": {
+   "name": "Heater Shield",
+   "slot": "offhand",
+   "bonus": {
+    "pdef": 4,
+    "mdef": 1
+   },
+   "value": 70,
+   "model": "conv_medieval_weapons_pack_shield_heater",
+   "level": 5
+  },
+  "golden_shield": {
+   "name": "Celtic Golden Shield",
+   "slot": "offhand",
+   "bonus": {
+    "pdef": 7,
+    "mdef": 3
+   },
+   "value": 220,
+   "model": "conv_medieval_weapons_pack_shield_celtic_golden",
+   "level": 10
+  },
+  "spell_book": {
+   "name": "Spell Tome",
+   "slot": "offhand",
+   "bonus": {
+    "matk": 2,
+    "mana": 6
+   },
+   "value": 60,
+   "model": "conv_ultimate_rpg_items_pack_book1_closed",
+   "level": 3
+  },
+  "cloth_robe": {
+   "name": "Cloth Robe",
+   "slot": "armor",
+   "bonus": {
+    "mdef": 2,
+    "mana": 4
+   },
+   "value": 12,
+   "model": "conv_ultimate_rpg_items_pack_armor_leather",
+   "level": 1
+  },
+  "leather_armor": {
+   "name": "Leather Armor",
+   "slot": "armor",
+   "bonus": {
+    "pdef": 2,
+    "eva": 1
+   },
+   "value": 15,
+   "model": "conv_ultimate_rpg_items_pack_armor_leather",
+   "level": 1
+  },
+  "chainmail": {
+   "name": "Chainmail",
+   "slot": "armor",
+   "bonus": {
+    "pdef": 4,
+    "spd": -1
+   },
+   "value": 40,
+   "model": "conv_ultimate_rpg_items_pack_armor_metal",
+   "level": 1
+  },
+  "plate_armor": {
+   "name": "Plate Armor",
+   "slot": "armor",
+   "bonus": {
+    "pdef": 8,
+    "mdef": 2,
+    "spd": -1
+   },
+   "value": 150,
+   "model": "conv_ultimate_rpg_items_pack_armor_metal2",
+   "level": 6
+  },
+  "mage_robe": {
+   "name": "Archmage Robe",
+   "slot": "armor",
+   "bonus": {
+    "mdef": 6,
+    "matk": 3,
+    "mana": 12
+   },
+   "value": 160,
+   "model": "conv_ultimate_rpg_items_pack_armor_leather",
+   "level": 6
+  },
+  "shadow_garb": {
+   "name": "Shadow Garb",
+   "slot": "armor",
+   "bonus": {
+    "pdef": 4,
+    "eva": 4,
+    "crit": 4
+   },
+   "value": 160,
+   "model": "conv_ultimate_rpg_items_pack_armor_black",
+   "level": 7
+  },
+  "golden_armor": {
+   "name": "Golden Armor",
+   "slot": "armor",
+   "bonus": {
+    "pdef": 10,
+    "mdef": 6,
+    "hp": 15
+   },
+   "value": 320,
+   "model": "conv_ultimate_rpg_items_pack_armor_golden",
+   "level": 11
+  },
+  "copper_ring": {
+   "name": "Copper Ring",
+   "slot": "accessory",
+   "bonus": {
+    "crit": 2
+   },
+   "value": 25,
+   "model": "conv_ultimate_rpg_items_pack_ring1",
+   "level": 1
+  },
+  "ruby_ring": {
+   "name": "Ruby Ring",
+   "slot": "accessory",
+   "bonus": {
+    "patk": 2,
+    "matk": 2
+   },
+   "value": 80,
+   "model": "conv_ultimate_rpg_items_pack_ring3",
+   "level": 4
+  },
+  "sapphire_ring": {
+   "name": "Sapphire Ring",
+   "slot": "accessory",
+   "bonus": {
+    "mana": 10,
+    "mdef": 2
+   },
+   "value": 80,
+   "model": "conv_ultimate_rpg_items_pack_ring5",
+   "level": 4
+  },
+  "amulet_life": {
+   "name": "Amulet of Life",
+   "slot": "accessory",
+   "bonus": {
+    "hp": 20
+   },
+   "value": 120,
+   "model": "conv_ultimate_rpg_items_pack_necklace1",
+   "level": 5
+  },
+  "swift_charm": {
+   "name": "Swift Charm",
+   "slot": "accessory",
+   "bonus": {
+    "spd": 3,
+    "eva": 2
+   },
+   "value": 110,
+   "model": "conv_ultimate_rpg_items_pack_necklace2",
+   "level": 5
+  },
+  "crown": {
+   "name": "Fallen Crown",
+   "slot": "accessory",
+   "bonus": {
+    "hp": 15,
+    "patk": 3,
+    "matk": 3,
+    "crit": 4
+   },
+   "value": 400,
+   "model": "conv_ultimate_rpg_items_pack_crown",
+   "level": 12
+  },
+  "potion_small": {
+   "name": "Small Potion",
+   "slot": "consumable",
+   "use": {
+    "heal": "2d8+6"
+   },
+   "value": 10,
+   "stack": 20,
+   "model": "conv_ultimate_rpg_items_pack_potion1_filled",
+   "level": 1
+  },
+  "potion_big": {
+   "name": "Big Potion",
+   "slot": "consumable",
+   "use": {
+    "heal": "4d8+12"
+   },
+   "value": 30,
+   "stack": 20,
+   "model": "conv_ultimate_rpg_items_pack_potion3_filled",
+   "level": 5
+  },
+  "ether_small": {
+   "name": "Ether",
+   "slot": "consumable",
+   "use": {
+    "mana": "2d8+4"
+   },
+   "value": 15,
+   "stack": 20,
+   "model": "conv_ultimate_rpg_items_pack_potion2_filled",
+   "level": 1
+  },
+  "elixir": {
+   "name": "Elixir",
+   "slot": "consumable",
+   "use": {
+    "heal_pct": 1.0,
+    "mana_pct": 1.0
+   },
+   "value": 120,
+   "stack": 5,
+   "model": "conv_ultimate_rpg_items_pack_potion7_filled",
+   "level": 8
+  },
+  "antidote": {
+   "name": "Antidote",
+   "slot": "consumable",
+   "use": {
+    "cleanse": true
+   },
+   "value": 8,
+   "stack": 20,
+   "model": "conv_ultimate_rpg_items_pack_potion4_filled",
+   "level": 1
+  },
+  "phoenix_feather": {
+   "name": "Phoenix Feather",
+   "slot": "consumable",
+   "use": {
+    "revive_pct": 0.5
+   },
+   "value": 80,
+   "stack": 5,
+   "model": "conv_ultimate_rpg_items_pack_heart",
+   "level": 3,
+   "target": "ally_dead"
+  },
+  "smoke_pellet": {
+   "name": "Smoke Pellet",
+   "slot": "consumable",
+   "use": {
+    "flee_bonus": 10
+   },
+   "value": 12,
+   "stack": 10,
+   "model": "conv_ultimate_rpg_items_pack_pouch",
+   "level": 1,
+   "target": "self"
+  },
+  "fire_bomb": {
+   "name": "Fire Bomb",
+   "slot": "consumable",
+   "use": {
+    "damage": "3d6",
+    "element": "fire",
+    "all_enemies": true
+   },
+   "value": 25,
+   "stack": 10,
+   "model": "conv_ultimate_rpg_items_pack_potion9_filled",
+   "level": 2,
+   "target": "all_enemies"
+  },
+  "frost_bomb": {
+   "name": "Frost Bomb",
+   "slot": "consumable",
+   "use": {
+    "damage": "3d6",
+    "element": "ice",
+    "all_enemies": true
+   },
+   "value": 25,
+   "stack": 10,
+   "model": "conv_ultimate_rpg_items_pack_potion10_filled",
+   "level": 2,
+   "target": "all_enemies"
+  },
+  "trail_ration": {
+   "name": "Trail Ration",
+   "slot": "consumable",
+   "use": {
+    "heal": "1d8+2"
+   },
+   "value": 4,
+   "stack": 30,
+   "model": "conv_ultimate_rpg_items_pack_chickenleg",
+   "level": 1
+  },
+  "gold": {
+   "name": "Gold",
+   "slot": "currency",
+   "value": 1,
+   "stack": 999999,
+   "model": "conv_ultimate_rpg_items_pack_coin"
+  },
+  "bone": {
+   "name": "Old Bone",
+   "slot": "material",
+   "value": 3,
+   "stack": 99,
+   "model": "conv_ultimate_rpg_items_pack_bone"
+  },
+  "crystal": {
+   "name": "Mana Crystal",
+   "slot": "material",
+   "value": 20,
+   "stack": 99,
+   "model": "conv_ultimate_rpg_items_pack_crystal1"
+  },
+  "gem": {
+   "name": "Bright Gem",
+   "slot": "material",
+   "value": 40,
+   "stack": 99,
+   "model": "conv_ultimate_rpg_items_pack_crystal3"
+  },
+  "gold_ingot": {
+   "name": "Gold Ingot",
+   "slot": "material",
+   "value": 60,
+   "stack": 99,
+   "model": "conv_ultimate_rpg_items_pack_gold_ingots"
+  },
+  "monster_hide": {
+   "name": "Monster Hide",
+   "slot": "material",
+   "value": 6,
+   "stack": 99,
+   "model": "conv_ultimate_rpg_items_pack_parchment"
+  },
+  "scrap_metal": {
+   "name": "Scrap Metal",
+   "slot": "material",
+   "value": 6,
+   "stack": 99,
+   "model": "cyberpunk_game_kit_quaterniu_collectible_gear"
+  },
+  "dino_tooth": {
+   "name": "Dino Tooth",
+   "slot": "material",
+   "value": 12,
+   "stack": 99,
+   "model": "conv_ultimate_rpg_items_pack_fishbone"
+  },
+  "slime_gel": {
+   "name": "Slime Gel",
+   "slot": "material",
+   "value": 4,
+   "stack": 99,
+   "model": "conv_ultimate_rpg_items_pack_potion11_filled"
+  },
+  "quest_item": {
+   "name": "Quest Item",
+   "slot": "quest",
+   "value": 0,
+   "stack": 1,
+   "model": "conv_ultimate_rpg_items_pack_scroll",
+   "quest": true
+  },
+  "giants_tonic": {
+   "name": "Giant's Tonic",
+   "slot": "consumable",
+   "use": {
+    "perm": {
+     "patk": 1,
+     "hp": 3
+    }
+   },
+   "value": 140,
+   "stack": 5,
+   "model": "conv_ultimate_rpg_items_pack_potion4_filled",
+   "level": 2,
+   "trader_only": true,
+   "desc": "Permanently +1 physical attack and +3 max HP."
+  },
+  "sages_draught": {
+   "name": "Sage's Draught",
+   "slot": "consumable",
+   "use": {
+    "perm": {
+     "matk": 1,
+     "mana": 4
+    }
+   },
+   "value": 140,
+   "stack": 5,
+   "model": "conv_ultimate_rpg_items_pack_potion5_filled",
+   "level": 2,
+   "trader_only": true,
+   "desc": "Permanently +1 magic attack and +4 max mana."
+  },
+  "heartfruit": {
+   "name": "Heartfruit",
+   "slot": "consumable",
+   "use": {
+    "perm": {
+     "hp": 10
+    }
+   },
+   "value": 160,
+   "stack": 5,
+   "model": "conv_ultimate_rpg_items_pack_heart",
+   "level": 3,
+   "trader_only": true,
+   "desc": "Permanently +10 max HP."
+  },
+  "windstep_elixir": {
+   "name": "Windstep Elixir",
+   "slot": "consumable",
+   "use": {
+    "perm": {
+     "spd": 1,
+     "eva": 1
+    }
+   },
+   "value": 170,
+   "stack": 5,
+   "model": "conv_ultimate_rpg_items_pack_potion6_filled",
+   "level": 4,
+   "trader_only": true,
+   "desc": "Permanently +1 speed and +1 evasion."
+  },
+  "ironbark_tonic": {
+   "name": "Ironbark Tonic",
+   "slot": "consumable",
+   "use": {
+    "perm": {
+     "pdef": 1,
+     "mdef": 1
+    }
+   },
+   "value": 150,
+   "stack": 5,
+   "model": "conv_ultimate_rpg_items_pack_potion3_filled",
+   "level": 3,
+   "trader_only": true,
+   "desc": "Permanently +1 physical and magic defense."
+  },
+  "tome_insight": {
+   "name": "Tome of Insight",
+   "slot": "consumable",
+   "use": {
+    "card": "card_rare"
+   },
+   "value": 260,
+   "stack": 3,
+   "model": "conv_ultimate_rpg_items_pack_book2_closed",
+   "level": 3,
+   "trader_only": true,
+   "desc": "Read it to choose a new upgrade card (rare or better)."
+  }
+ }
+}

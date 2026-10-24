@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><title>Model &amp; animation checker</title>
+<script type="importmap">{ "imports": { "three": "../vendor/three/build/three.module.js", "three/addons/": "../vendor/three/examples/jsm/" } }</script>
+<style>
+  body { margin: 0; background: #20343b; color: #eee; font: 14px system-ui; }
+  #bar { position: fixed; top: 0; left: 0; right: 0; padding: 8px; display: flex; gap: 6px; flex-wrap: wrap; background: rgba(0,0,0,.4); z-index: 2; }
+  button { background: #2f4f58; color: #fff; border: 1px solid #5fe3ff55; border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+  #rep { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px; background: rgba(0,0,0,.5); white-space: pre-wrap; font: 12px monospace; max-height: 30vh; overflow: auto; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="bar"></div><div id="rep"></div>
+<script type="module">
+// Model & animation checker: viewer.html?ids=a,b,c  shows models side by side and lets you play every common
+// animation state on all of them, with a report of which states use a real clip and which are procedural.
+import * as THREE from "three";
+import * as A from "./assets.js";
+import { Animator, describeReport, styleFor, EMOTES } from "./anim.js";
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); r.outputColorSpace = THREE.SRGBColorSpace; document.body.append(r.domElement);
+const sc = new THREE.Scene(); sc.background = new THREE.Color(0x8fc8e8);
+sc.add(new THREE.HemisphereLight(0xffffff, 0x557744, 1.5)); const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(3, 6, 4); sc.add(d);
+const g = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x6fae3f })); g.rotation.x = -Math.PI / 2; sc.add(g);
+const cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 200);
+await A.loadCatalog();
+const q = new URLSearchParams(location.search);
+const ids = (q.get("ids") || "vermeil,rpg_characters_warrior,ultimate_monsters_orc,conv_dinosaur_animated_pack_trex,cute_animated_monsters_bat,ultimate_monsters_greenblob").split(",");
+const items = [];
+const BODY = (id) => A.catalog[id]?.body || "humanoid";
+for (let i = 0; i < ids.length; i++) {
+  try {
+    const { root, clips } = await A.instance(ids[i]);
+    A.normalize(root, q.get("h") ? +q.get("h") : (BODY(ids[i]) === "humanoid" ? 1.75 : 1.3));
+    const holder = new THREE.Group(); holder.add(root);
+    const grp = new THREE.Group(); grp.add(holder); grp.rotation.y = +(q.get("yaw") || 0); grp.position.x = (i - (ids.length - 1) / 2) * 2.6; sc.add(grp);
+    const sp = (q.get("species") || "").split(",")[i] || null;
+    const an = new Animator(holder, clips, { body: BODY(ids[i]), name: ids[i], style: q.get("style") || styleFor({ model: ids[i], species: sp, body: BODY(ids[i]) }) }); an.height = 1.7;
+    if (q.get("curl")) an.curlSign = +q.get("curl");
+    an.noFidget = q.has("nofidget");
+    items.push({ id: ids[i], grp, an });
+  } catch (e) { document.getElementById("rep").textContent += `${ids[i]}: FAILED ${e}\n`; }
+}
+const span = Math.max(4, ids.length * 2.6);
+cam.position.set(0, 2.4, span * 0.9); cam.lookAt(0, 1, 0);
+if (q.get("zoom") === "head") { cam.position.set(0, 1.6, Math.max(1.6, ids.length * 1.3)); cam.lookAt(0, 1.45, 0); }
+if (q.get("zoom") === "hands") { cam.position.set(0, 1.3, Math.max(2, ids.length * 1.5)); cam.lookAt(0, 1.0, 0); }
+const states = ["idle", "walk", "run", "combat_idle", "attack", "attack_heavy", "cast", "cast_big", "shoot", "hit", "block", "dodge", "death", "victory", "wave", "talk", "jump", "roar", "item", "spin"];
+const bar = document.getElementById("bar");
+let move = 0;
+for (const s of states) {
+  const b = document.createElement("button"); b.textContent = s; b.onclick = () => {
+    for (const it of items) { if (it.an.dead) it.an.revive(); if (["idle", "walk", "run", "combat_idle"].includes(s)) { move = s === "walk" ? 1.6 : s === "run" ? 5 : 0; it.an.setMove(move, s === "combat_idle"); } else it.an.play(s); }
+  }; bar.append(b);
+}
+window.__report = items.map((it) => ({ id: it.id, rigged: it.an.rigged, bones: Object.keys(it.an.bones), counts: describeReport(it.an.report), report: it.an.report }));
+document.getElementById("rep").textContent += window.__report.map((x) => `${x.id}: rigged=${x.rigged} ${JSON.stringify(x.counts)}  attack=${x.report.attack} cast=${x.report.cast} hit=${x.report.hit} death=${x.report.death} run=${x.report.run}`).join("\n");
+window.__play = (s) => bar.querySelectorAll("button").forEach((b) => b.textContent === s && b.click());
+window.__emote = (e) => { for (const it of items) it.an.emote(e); };
+window.__items = items;
+for (const e of EMOTES) { const b = document.createElement("button"); b.textContent = "✦" + e; b.style.background = "#4a3a58"; b.onclick = () => window.__emote(e); bar.append(b); }
+const clock = new THREE.Clock();
+(function loop() { requestAnimationFrame(loop); const dt = Math.min(0.25, clock.getDelta()); for (const it of items) it.an.update(dt, it.grp.quaternion); r.render(sc, cam); })();
+</script>
+</body>
+</html>

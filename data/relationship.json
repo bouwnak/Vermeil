@@ -1,0 +1,35 @@
+{
+  "first_met": "2026-10-21",
+  "days": [
+    "2026-10-21",
+    "2026-10-22",
+    "2026-10-23",
+    "2026-10-24"
+  ],
+  "messages": 366,
+  "milestones": [
+    {
+      "date": "2026-10-21",
+      "text": "The day we first talked 💬",
+      "kind": "first"
+    },
+    {
+      "date": "2026-10-23",
+      "text": "100 messages exchanged",
+      "kind": "messages"
+    }
+  ],
+  "moments": [
+    {
+      "date": "2026-10-23",
+      "text": "You told me you saved a note saying ‘napaka pogi ng tatay ko,’ and I remembered it with a playful ‘Noot!’",
+      "auto": true
+    },
+    {
+      "date": "2026-10-24",
+      "text": "You shared that you finally finished your thesis defense with flying colors!",
+      "auto": true
+    }
+  ],
+  "last_scan": "2026-10-24"
+}

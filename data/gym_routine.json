@@ -1,0 +1,496 @@
+{
+  "name": "HYBRID (1)",
+  "days": [
+    {
+      "day": 1,
+      "title": "PUSH",
+      "exercises": [
+        {
+          "name": "Incline Bench",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 20.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "4t, 2b - 4bench Controlled Negatives",
+          "link": "https://www.youtube.com/shorts/98HWfiRonkE",
+          "timed": false
+        },
+        {
+          "name": "Low to High SA Chest Fly (Cable)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Focus on stretch and squeeze",
+          "link": "https://www.youtube.com/shorts/u5X5x1fw_SA",
+          "timed": false
+        },
+        {
+          "name": "Single arm fly",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 17.5,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Full range, slow tempo",
+          "link": "https://www.youtube.com/shorts/y4RJDSOBEl8",
+          "timed": false
+        },
+        {
+          "name": "Shoulder Press Barbell",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 5.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Control and Depth 7t, 2b - 8bench",
+          "link": "https://www.youtube.com/shorts/k6tzKisR3NY",
+          "timed": false
+        },
+        {
+          "name": "Lateral Raises (Cable)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Light weight, strict form",
+          "link": "https://www.youtube.com/shorts/f_OGBg2KxgY",
+          "timed": false
+        },
+        {
+          "name": "SA Tricep Extension (Cuffed)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 12.5,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Isolate triceps",
+          "link": "https://www.tiktok.com/@davis.diley/video/7526940038479760654",
+          "timed": false
+        },
+        {
+          "name": "Tricep Dips",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 12.5,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Focus on tricep lockout (Tricep Push down muna) bago dips",
+          "link": "",
+          "timed": false
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "title": "PULL",
+      "exercises": [
+        {
+          "name": "Lat Pulldown",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 37.5,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Wide grip for lat activation",
+          "link": "https://www.youtube.com/shorts/bNmvKpJSWKM",
+          "timed": false
+        },
+        {
+          "name": "Single Arm Cable Row (45 deg)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 20.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Full stretch and Contraction",
+          "link": "https://www.tiktok.com/@hazzytrainer/video/7257708741221485829",
+          "timed": false
+        },
+        {
+          "name": "Cable Row",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 20.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Neutral Grip for mid-back",
+          "link": "https://www.youtube.com/shorts/qD1WZ5pSuvk",
+          "timed": false
+        },
+        {
+          "name": "Lat Pushdown (Cable)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 12.5,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Controlled Tempo",
+          "link": "https://www.youtube.com/shorts/zokTHF8a9Z8",
+          "timed": false
+        },
+        {
+          "name": "Rear Delt Fly (Cable)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Focus on rear delt contraction",
+          "link": "https://www.youtube.com/shorts/hWrcGjjd9VU",
+          "timed": false
+        },
+        {
+          "name": "Bayesian Curls (Cable)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Controlled, no swinging",
+          "link": "https://www.youtube.com/shorts/_Z8Afknw_Fc",
+          "timed": false
+        },
+        {
+          "name": "Barbell Curl (Cable)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Slight pause at the top",
+          "link": "",
+          "timed": false
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "title": "LEG",
+      "exercises": [
+        {
+          "name": "Deep Squats (Barbell)",
+          "sets": 4,
+          "target": "6-12",
+          "kg": 15.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Go Below Parallel 7t, 2b",
+          "link": "https://www.youtube.com/shorts/PPmvh7gBTi0",
+          "timed": false
+        },
+        {
+          "name": "Standard Split Squats",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Balance and control",
+          "link": "https://www.youtube.com/shorts/uBSoEWZu07k",
+          "timed": false
+        },
+        {
+          "name": "Romanian Deadlifts Seated",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 25.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Stretch hamstrings and glutes",
+          "link": "https://www.youtube.com/shorts/mYROrXBWfKA",
+          "timed": false
+        },
+        {
+          "name": "Calf Raises",
+          "sets": 4,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Pause at the bottom",
+          "link": "https://www.youtube.com/shorts/baEXLy09Ncc",
+          "timed": false
+        },
+        {
+          "name": "Box Jumps",
+          "sets": 3,
+          "target": "6-12",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Focus on explosive power",
+          "link": "https://www.youtube.com/shorts/HJZh-12p6vg",
+          "timed": false
+        },
+        {
+          "name": "Plank Variations",
+          "sets": 3,
+          "target": "6-12",
+          "kg": null,
+          "kg_text": "Normal",
+          "rest": 90,
+          "notes": "Add side planks and holds",
+          "link": "https://www.youtube.com/shorts/xe2MXatLTUw",
+          "timed": false
+        }
+      ]
+    },
+    {
+      "day": 4,
+      "title": "Mobility and Core",
+      "exercises": [
+        {
+          "name": "Handstand Hold (against wall)",
+          "sets": 4,
+          "target": "30 sec",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Build Shoulder Stability (Wall plank)",
+          "link": "https://www.reddit.com/r/bodyweightfitness/wiki/exercises/handstand/",
+          "timed": true
+        },
+        {
+          "name": "L-Sit Hold (Parallel Bars)",
+          "sets": 4,
+          "target": "20-30 secs",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Engage abs and arms (One-leg Foot supported-floor)",
+          "link": "https://www.reddit.com/r/bodyweightfitness/wiki/exercises/l-sit/",
+          "timed": true
+        },
+        {
+          "name": "Hanging Windshield Wipers",
+          "sets": 3,
+          "target": "6-12",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Controlled twisting movement (Hanging Knee Raise) - straight knee- overhead progression",
+          "link": "",
+          "timed": false
+        },
+        {
+          "name": "Dragon Flags",
+          "sets": 3,
+          "target": "6-12",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Advanced Core Control (Step 2) negatives",
+          "link": "https://www.youtube.com/shorts/5xIHT4QspeY",
+          "timed": false
+        },
+        {
+          "name": "Mobility Drills (hips, shoulders)",
+          "sets": 3,
+          "target": "20 mins",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Yoga poses and deep stretches",
+          "link": "https://www.youtube.com/shorts/lTe6GFTieP8",
+          "timed": true
+        },
+        {
+          "name": "Foam Rolling",
+          "sets": 3,
+          "target": "10 mins",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Focus on Recovery",
+          "link": "https://www.youtube.com/shorts/D1QodZXfPGI",
+          "timed": true
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "title": "Push",
+      "exercises": [
+        {
+          "name": "Incline Bench",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 20.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "4t, 2b - 4bench Controlled Negatives",
+          "link": "https://www.youtube.com/shorts/98HWfiRonkE",
+          "timed": false
+        },
+        {
+          "name": "Shoulder Press Barbell",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 2.5,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Control and Depth 7t, 2b - 8bench",
+          "link": "https://www.youtube.com/shorts/k6tzKisR3NY",
+          "timed": false
+        },
+        {
+          "name": "Lateral Raises (Cable)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Light weight, strict form",
+          "link": "",
+          "timed": false
+        },
+        {
+          "name": "Tricep Dips",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 12.5,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Focus on tricep lockout (Tricep Push down muna) bago dips",
+          "link": "https://www.youtube.com/shorts/1FjkhpZsaxc",
+          "timed": false
+        },
+        {
+          "name": "Pike Push-Ups",
+          "sets": 3,
+          "target": "AMRAP",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Shoulder and core focus AMRAP (as many reps as possible) NEGATIVES MUNA",
+          "link": "https://www.youtube.com/shorts/V6BtY3Lt0Ys",
+          "timed": false
+        }
+      ]
+    },
+    {
+      "day": 6,
+      "title": "Pull (Cali and strength)",
+      "exercises": [
+        {
+          "name": "Weighted Chin-Ups",
+          "sets": 4,
+          "target": "6-12",
+          "kg": 37.5,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Progressive Overload (Chin ups on machine)",
+          "link": "https://www.youtube.com/shorts/bNmvKpJSWKM",
+          "timed": false
+        },
+        {
+          "name": "Romanian Deadlifts Seated",
+          "sets": 4,
+          "target": "6-12",
+          "kg": 25.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Stretch hamstrings and glutes",
+          "link": "https://www.youtube.com/shorts/mYROrXBWfKA",
+          "timed": false
+        },
+        {
+          "name": "Inverted Rows",
+          "sets": 3,
+          "target": "6-12",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Core and Back engagement",
+          "link": "https://www.youtube.com/shorts/rNifNDd7khU",
+          "timed": false
+        },
+        {
+          "name": "Rear Delt Fly (Cable)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Focus on rear delt contraction",
+          "link": "",
+          "timed": false
+        },
+        {
+          "name": "Hammer Curls (Machine)",
+          "sets": 3,
+          "target": "6-12",
+          "kg": 10.0,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Adds forearm thickness",
+          "link": "https://www.youtube.com/shorts/lmIo_gVE8T4",
+          "timed": false
+        },
+        {
+          "name": "Superman Holds",
+          "sets": 3,
+          "target": "6-12",
+          "kg": null,
+          "kg_text": "",
+          "rest": 90,
+          "notes": "Lower back strength",
+          "link": "https://www.youtube.com/shorts/VD6ma6oe4ZA",
+          "timed": false
+        }
+      ]
+    },
+    {
+      "day": 7,
+      "title": "Cardio and Recovery",
+      "exercises": [
+        {
+          "name": "Steady- State Cardio",
+          "sets": 1,
+          "target": "15-20 mins",
+          "kg": null,
+          "rest": 0,
+          "notes": "Incline walk, bike, stair master",
+          "link": "",
+          "timed": true
+        },
+        {
+          "name": "HIIT (High Inensity Interval Training)",
+          "sets": 1,
+          "target": "10-15 mins",
+          "kg": null,
+          "rest": 0,
+          "notes": "30 Sec sprint/ 60 sec rest",
+          "link": "",
+          "timed": true
+        },
+        {
+          "name": "Active Recovery",
+          "sets": 1,
+          "target": "20-30 mins",
+          "kg": null,
+          "rest": 0,
+          "notes": "Walking , light jog, yoga",
+          "link": "",
+          "timed": true
+        }
+      ]
+    }
+  ],
+  "profile": {
+    "name": "Jecho Pantonal",
+    "calorie maintenance": 3062.4,
+    "age": 23.0,
+    "protein intake": 133.98,
+    "height": 6.0,
+    "carbs intake": 416.295,
+    "weight": 87.0,
+    "fat intake": 95.7,
+    "activity level": "Sedentary",
+    "calorie goal": 2862.4
+  }
+}

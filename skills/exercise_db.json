@@ -1,0 +1,169 @@
+{
+  "about": "Exercise alternatives for Gym mode. Each group holds exercises that train the same thing, so any of them can replace another. stars: 5 = the most used by well-known coaches/influencers and the best swap, 0 = the weakest alternative. used_by: coaches, influencers or gym chains known to use/recommend it in their public videos, programs or apps (not a complete list).",
+  "people": {
+    "Jeff Nippard": "Science-based bodybuilding coach (YouTube, Fundamentals/Pure Bodybuilding programs)",
+    "Mike Israetel": "Renaissance Periodization (RP Strength) coach and sport scientist",
+    "Chris Bumstead": "6x Classic Physique Mr. Olympia (CBum)",
+    "Jeremy Ethier": "Built With Science (YouTube)",
+    "Jeff Cavaliere": "Athlean-X (YouTube), physical therapist",
+    "Smart Fit": "Gym chain - exercise library in the Smart Fit app",
+    "Bret Contreras": "'The Glute Guy', hip thrust researcher",
+    "Sean Nalewanyj": "Natural bodybuilding coach (YouTube)"
+  },
+  "groups": [
+    {"id": "chest_press", "name": "Chest press (horizontal push)", "muscles": ["chest", "front delts", "triceps"], "exercises": [
+      {"name": "Barbell Bench Press", "aliases": ["bench press", "flat bench", "bb bench"], "equipment": "barbell", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Chris Bumstead", "Smart Fit"], "why": "The classic heavy chest builder; easy to progress."},
+      {"name": "Incline Dumbbell Press", "aliases": ["incline db press", "incline dumbbell bench"], "equipment": "dumbbells", "stars": 5, "used_by": ["Jeff Nippard", "Chris Bumstead", "Jeremy Ethier", "Sean Nalewanyj"], "why": "Upper chest focus and a big stretch; kind to shoulders."},
+      {"name": "Machine Chest Press", "aliases": ["chest press machine", "seated chest press"], "equipment": "machine", "stars": 4, "used_by": ["Mike Israetel", "Jeff Nippard", "Smart Fit"], "why": "Stable, safe to push close to failure without a spotter."},
+      {"name": "Dumbbell Bench Press", "aliases": ["db bench", "flat dumbbell press"], "equipment": "dumbbells", "stars": 4, "used_by": ["Jeremy Ethier", "Smart Fit"], "why": "More range of motion than a barbell, each side works alone."},
+      {"name": "Smith Machine Incline Press", "aliases": ["smith incline", "smith bench"], "equipment": "smith machine", "stars": 4, "used_by": ["Chris Bumstead", "Jeff Nippard"], "why": "Steady path so the chest does the work."},
+      {"name": "Weighted Dips (chest lean)", "aliases": ["chest dips"], "equipment": "dip bars", "stars": 3, "used_by": ["Jeff Cavaliere"], "why": "Great lower-chest stretch; can bother some shoulders."},
+      {"name": "Push-ups", "aliases": ["push up", "pushups", "press up"], "equipment": "bodyweight", "stars": 3, "used_by": ["Jeff Cavaliere", "Smart Fit"], "why": "No equipment; add a backpack or deficit to make it harder."},
+      {"name": "Floor Press", "aliases": [], "equipment": "barbell or dumbbells", "stars": 1, "used_by": [], "why": "Short range of motion - less chest growth than the others."},
+      {"name": "Band Chest Press", "aliases": ["resistance band press"], "equipment": "band", "stars": 0, "used_by": [], "why": "Hard to load heavy enough; only for travel."}
+    ]},
+    {"id": "chest_fly", "name": "Chest fly", "muscles": ["chest"], "exercises": [
+      {"name": "Cable Fly", "aliases": ["cable crossover", "cable chest fly", "crossover"], "equipment": "cables", "stars": 5, "used_by": ["Jeff Nippard", "Chris Bumstead", "Smart Fit"], "why": "Tension through the whole movement."},
+      {"name": "Pec Deck", "aliases": ["pec fly machine", "machine fly", "butterfly"], "equipment": "machine", "stars": 5, "used_by": ["Mike Israetel", "Jeff Nippard", "Smart Fit"], "why": "Easy to learn and to push hard safely."},
+      {"name": "Dumbbell Fly", "aliases": ["db fly", "flat fly"], "equipment": "dumbbells", "stars": 3, "used_by": ["Smart Fit"], "why": "Big stretch, but little tension at the top."},
+      {"name": "Low-to-High Cable Fly", "aliases": ["low cable fly"], "equipment": "cables", "stars": 4, "used_by": ["Jeremy Ethier"], "why": "Targets the upper chest."},
+      {"name": "Band Fly", "aliases": [], "equipment": "band", "stars": 1, "used_by": [], "why": "Fine at home, hard to progress."},
+      {"name": "Svend Press", "aliases": [], "equipment": "plate", "stars": 0, "used_by": [], "why": "Very light load - weakest swap."}
+    ]},
+    {"id": "vertical_pull", "name": "Vertical pull (lats)", "muscles": ["lats", "upper back", "biceps"], "exercises": [
+      {"name": "Lat Pulldown", "aliases": ["pulldown", "wide grip pulldown"], "equipment": "cable machine", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Chris Bumstead", "Smart Fit"], "why": "Easy to load and to feel the lats."},
+      {"name": "Pull-ups", "aliases": ["pull up", "pullup", "chin ups", "chin-up"], "equipment": "bar", "stars": 5, "used_by": ["Jeff Cavaliere", "Jeff Nippard", "Sean Nalewanyj"], "why": "The bodyweight king for back width."},
+      {"name": "Neutral-Grip Pulldown", "aliases": ["close grip pulldown", "v-bar pulldown"], "equipment": "cable machine", "stars": 4, "used_by": ["Jeff Nippard", "Jeremy Ethier"], "why": "Strong position, long stretch on the lats."},
+      {"name": "Single-Arm Cable Pulldown", "aliases": ["one arm pulldown"], "equipment": "cables", "stars": 4, "used_by": ["Jeff Nippard", "Chris Bumstead"], "why": "Great lat stretch and mind-muscle connection."},
+      {"name": "Assisted Pull-up Machine", "aliases": ["assisted pullup"], "equipment": "machine", "stars": 3, "used_by": ["Smart Fit"], "why": "Builds up to real pull-ups."},
+      {"name": "Straight-Arm Pulldown", "aliases": ["straight arm pushdown", "lat pushdown"], "equipment": "cables", "stars": 3, "used_by": ["Jeff Cavaliere"], "why": "Isolates the lats, but lighter."},
+      {"name": "Band Pulldown", "aliases": [], "equipment": "band", "stars": 0, "used_by": [], "why": "Too light for most people."}
+    ]},
+    {"id": "row", "name": "Row (horizontal pull)", "muscles": ["upper back", "lats", "rear delts"], "exercises": [
+      {"name": "Chest-Supported Row", "aliases": ["chest supported row", "incline db row", "seal row"], "equipment": "bench + dumbbells / machine", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Jeremy Ethier"], "why": "No lower-back fatigue, all upper back."},
+      {"name": "Seated Cable Row", "aliases": ["cable row", "low row"], "equipment": "cables", "stars": 5, "used_by": ["Chris Bumstead", "Smart Fit", "Mike Israetel"], "why": "Steady tension; easy to change handles."},
+      {"name": "Barbell Row", "aliases": ["bent over row", "bb row", "pendlay row"], "equipment": "barbell", "stars": 4, "used_by": ["Jeff Nippard", "Jeff Cavaliere", "Sean Nalewanyj"], "why": "Heavy and effective, tiring for the lower back."},
+      {"name": "One-Arm Dumbbell Row", "aliases": ["db row", "single arm row", "kroc row"], "equipment": "dumbbell + bench", "stars": 4, "used_by": ["Jeremy Ethier", "Smart Fit"], "why": "Big range of motion, each side alone."},
+      {"name": "T-Bar Row", "aliases": ["tbar row", "landmine row"], "equipment": "t-bar / landmine", "stars": 4, "used_by": ["Chris Bumstead"], "why": "Heavy mid-back builder."},
+      {"name": "Machine Row", "aliases": ["hammer strength row", "seated row machine"], "equipment": "machine", "stars": 4, "used_by": ["Mike Israetel", "Smart Fit"], "why": "Stable and safe close to failure."},
+      {"name": "Inverted Row", "aliases": ["bodyweight row", "australian pull up"], "equipment": "bar / rings", "stars": 2, "used_by": ["Jeff Cavaliere"], "why": "Good at home, limited load."},
+      {"name": "Band Row", "aliases": [], "equipment": "band", "stars": 0, "used_by": [], "why": "Weakest swap - too light."}
+    ]},
+    {"id": "squat", "name": "Squat pattern (quads)", "muscles": ["quads", "glutes"], "exercises": [
+      {"name": "Barbell Back Squat", "aliases": ["squat", "back squat", "high bar squat"], "equipment": "barbell + rack", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Chris Bumstead", "Smart Fit"], "why": "The classic leg builder."},
+      {"name": "Hack Squat", "aliases": ["hack squat machine"], "equipment": "machine", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Chris Bumstead"], "why": "Deep quad stretch with back support."},
+      {"name": "Pendulum Squat", "aliases": ["pendulum"], "equipment": "machine", "stars": 5, "used_by": ["Mike Israetel", "Jeff Nippard"], "why": "Huge quad range, very joint friendly."},
+      {"name": "Leg Press", "aliases": ["45 degree leg press", "leg press machine"], "equipment": "machine", "stars": 4, "used_by": ["Chris Bumstead", "Smart Fit", "Mike Israetel"], "why": "Heavy legs without loading the spine."},
+      {"name": "Belt Squat", "aliases": [], "equipment": "machine", "stars": 4, "used_by": ["Jeff Nippard"], "why": "Squat without the bar on your back."},
+      {"name": "Smith Machine Squat", "aliases": ["smith squat"], "equipment": "smith machine", "stars": 3, "used_by": ["Smart Fit"], "why": "Feet forward = more quads, steady path."},
+      {"name": "Goblet Squat", "aliases": ["kettlebell squat", "db squat"], "equipment": "dumbbell / kettlebell", "stars": 3, "used_by": ["Jeremy Ethier", "Smart Fit"], "why": "Great for learning, gets too light later."},
+      {"name": "Bodyweight Squat", "aliases": ["air squat"], "equipment": "bodyweight", "stars": 1, "used_by": [], "why": "Only for beginners or high reps."},
+      {"name": "Wall Sit", "aliases": [], "equipment": "bodyweight", "stars": 0, "used_by": [], "why": "No movement - the weakest swap for growth."}
+    ]},
+    {"id": "single_leg", "name": "Lunges and single-leg", "muscles": ["quads", "glutes"], "exercises": [
+      {"name": "Bulgarian Split Squat", "aliases": ["bss", "rear foot elevated split squat"], "equipment": "dumbbells + bench", "stars": 5, "used_by": ["Jeff Nippard", "Jeremy Ethier", "Jeff Cavaliere", "Mike Israetel"], "why": "Brutal but one of the best leg exercises."},
+      {"name": "Walking Lunges", "aliases": ["lunge", "lunges", "db lunges"], "equipment": "dumbbells", "stars": 4, "used_by": ["Chris Bumstead", "Smart Fit"], "why": "Quads and glutes plus balance."},
+      {"name": "Reverse Lunge", "aliases": ["step back lunge"], "equipment": "dumbbells", "stars": 4, "used_by": ["Jeremy Ethier"], "why": "Easier on the knees than forward lunges."},
+      {"name": "Smith Machine Split Squat", "aliases": ["smith lunge"], "equipment": "smith machine", "stars": 3, "used_by": [], "why": "Stable, easy to load."},
+      {"name": "Step-ups", "aliases": ["box step up"], "equipment": "box + dumbbells", "stars": 3, "used_by": ["Smart Fit"], "why": "Good glute work; easy to cheat with the back leg."},
+      {"name": "Split Squat", "aliases": ["static lunge"], "equipment": "dumbbells", "stars": 3, "used_by": [], "why": "Simpler version of the Bulgarian."},
+      {"name": "Curtsy Lunge", "aliases": [], "equipment": "bodyweight / dumbbells", "stars": 1, "used_by": [], "why": "Awkward to load heavy."}
+    ]},
+    {"id": "hinge", "name": "Hip hinge (hamstrings, glutes, lower back)", "muscles": ["hamstrings", "glutes", "lower back"], "exercises": [
+      {"name": "Romanian Deadlift", "aliases": ["rdl", "romanian dl", "barbell rdl"], "equipment": "barbell", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Chris Bumstead", "Jeremy Ethier"], "why": "Best hamstring stretch under load."},
+      {"name": "Conventional Deadlift", "aliases": ["deadlift", "dl"], "equipment": "barbell", "stars": 4, "used_by": ["Jeff Nippard", "Sean Nalewanyj"], "why": "Huge strength builder, very tiring."},
+      {"name": "Dumbbell RDL", "aliases": ["db rdl", "dumbbell romanian deadlift"], "equipment": "dumbbells", "stars": 4, "used_by": ["Jeremy Ethier", "Smart Fit"], "why": "Same as the RDL, easier to set up."},
+      {"name": "45° Back Extension", "aliases": ["hyperextension", "back extension", "roman chair"], "equipment": "bench", "stars": 4, "used_by": ["Jeff Nippard", "Smart Fit"], "why": "Glutes/hamstrings with little fatigue."},
+      {"name": "Good Morning", "aliases": [], "equipment": "barbell", "stars": 3, "used_by": ["Jeff Cavaliere"], "why": "Strong hamstring stretch; learn it light."},
+      {"name": "Kettlebell Swing", "aliases": ["kb swing"], "equipment": "kettlebell", "stars": 2, "used_by": [], "why": "More conditioning than muscle growth."},
+      {"name": "Cable Pull-Through", "aliases": [], "equipment": "cables", "stars": 2, "used_by": [], "why": "Easy to learn, hard to load heavy."}
+    ]},
+    {"id": "leg_curl", "name": "Hamstring curl", "muscles": ["hamstrings"], "exercises": [
+      {"name": "Seated Leg Curl", "aliases": ["seated hamstring curl"], "equipment": "machine", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Jeremy Ethier"], "why": "Hamstrings stretched = more growth (research-backed)."},
+      {"name": "Lying Leg Curl", "aliases": ["prone leg curl", "leg curl"], "equipment": "machine", "stars": 5, "used_by": ["Chris Bumstead", "Smart Fit"], "why": "Classic and effective."},
+      {"name": "Nordic Curl", "aliases": ["nordic hamstring curl"], "equipment": "bodyweight + anchor", "stars": 4, "used_by": ["Jeff Cavaliere"], "why": "Very strong and protects from injuries."},
+      {"name": "Glute-Ham Raise", "aliases": ["ghr"], "equipment": "GHD machine", "stars": 4, "used_by": [], "why": "Hamstrings at both joints."},
+      {"name": "Standing Single-Leg Curl", "aliases": [], "equipment": "machine / cable", "stars": 3, "used_by": [], "why": "Good when the other machines are busy."},
+      {"name": "Stability Ball Leg Curl", "aliases": ["swiss ball curl"], "equipment": "ball", "stars": 2, "used_by": [], "why": "Fine at home, hard to progress."},
+      {"name": "Dumbbell Leg Curl", "aliases": [], "equipment": "dumbbell", "stars": 0, "used_by": [], "why": "Awkward and unsafe to load - weakest swap."}
+    ]},
+    {"id": "quad_iso", "name": "Quad isolation", "muscles": ["quads"], "exercises": [
+      {"name": "Leg Extension", "aliases": ["leg extensions", "quad extension"], "equipment": "machine", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Chris Bumstead", "Smart Fit"], "why": "Only exercise that fully trains the rectus femoris."},
+      {"name": "Reverse Nordic", "aliases": [], "equipment": "bodyweight", "stars": 3, "used_by": ["Jeff Nippard"], "why": "Quad stretch with no machine."},
+      {"name": "Sissy Squat", "aliases": [], "equipment": "bodyweight / sissy bench", "stars": 3, "used_by": [], "why": "Quad isolation at home."},
+      {"name": "Spanish Squat", "aliases": [], "equipment": "band", "stars": 2, "used_by": [], "why": "Knee-friendly, mostly rehab."},
+      {"name": "Band Leg Extension", "aliases": [], "equipment": "band", "stars": 1, "used_by": [], "why": "Very light."}
+    ]},
+    {"id": "glutes", "name": "Glutes", "muscles": ["glutes"], "exercises": [
+      {"name": "Barbell Hip Thrust", "aliases": ["hip thrust", "hip thrusts"], "equipment": "barbell + bench", "stars": 5, "used_by": ["Bret Contreras", "Jeff Nippard", "Smart Fit"], "why": "Heavy glute work at the top of the movement."},
+      {"name": "Machine Hip Thrust", "aliases": ["glute drive"], "equipment": "machine", "stars": 5, "used_by": ["Bret Contreras"], "why": "Same thing, faster setup."},
+      {"name": "Hip Abduction Machine", "aliases": ["abductor", "abduction"], "equipment": "machine", "stars": 4, "used_by": ["Smart Fit", "Jeff Nippard"], "why": "Upper/side glutes."},
+      {"name": "Cable Kickback", "aliases": ["glute kickback"], "equipment": "cables", "stars": 3, "used_by": ["Smart Fit"], "why": "Isolation for one side at a time."},
+      {"name": "Glute Bridge", "aliases": ["bridge"], "equipment": "bodyweight / barbell", "stars": 3, "used_by": ["Bret Contreras"], "why": "Shorter range than the hip thrust."},
+      {"name": "Donkey Kicks", "aliases": [], "equipment": "bodyweight", "stars": 1, "used_by": [], "why": "Too light for growth after the first weeks."}
+    ]},
+    {"id": "calves", "name": "Calves", "muscles": ["calves"], "exercises": [
+      {"name": "Standing Calf Raise", "aliases": ["calf raise", "calf raises"], "equipment": "machine / smith", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Smart Fit"], "why": "Pause at the bottom stretch - that's where growth is."},
+      {"name": "Leg Press Calf Raise", "aliases": ["calf press"], "equipment": "leg press", "stars": 4, "used_by": ["Chris Bumstead", "Jeff Nippard"], "why": "Heavy and stable."},
+      {"name": "Seated Calf Raise", "aliases": [], "equipment": "machine", "stars": 4, "used_by": ["Smart Fit"], "why": "Hits the soleus (lower calf)."},
+      {"name": "Donkey Calf Raise", "aliases": [], "equipment": "machine / partner", "stars": 3, "used_by": [], "why": "Great stretch."},
+      {"name": "Single-Leg Dumbbell Calf Raise", "aliases": [], "equipment": "dumbbell + step", "stars": 3, "used_by": ["Jeremy Ethier"], "why": "Good at home."},
+      {"name": "Jump Rope", "aliases": ["skipping"], "equipment": "rope", "stars": 0, "used_by": [], "why": "Cardio, not a real calf builder."}
+    ]},
+    {"id": "ohp", "name": "Shoulder press (vertical push)", "muscles": ["front delts", "side delts", "triceps"], "exercises": [
+      {"name": "Seated Dumbbell Shoulder Press", "aliases": ["db shoulder press", "dumbbell press", "shoulder press"], "equipment": "dumbbells", "stars": 5, "used_by": ["Jeff Nippard", "Chris Bumstead", "Jeremy Ethier", "Smart Fit"], "why": "Simple and effective."},
+      {"name": "Machine Shoulder Press", "aliases": ["shoulder press machine"], "equipment": "machine", "stars": 5, "used_by": ["Mike Israetel", "Smart Fit"], "why": "Push to failure safely."},
+      {"name": "Standing Barbell Overhead Press", "aliases": ["ohp", "military press", "overhead press"], "equipment": "barbell", "stars": 4, "used_by": ["Jeff Nippard", "Jeff Cavaliere", "Sean Nalewanyj"], "why": "Whole-body strength."},
+      {"name": "Smith Machine Shoulder Press", "aliases": [], "equipment": "smith machine", "stars": 4, "used_by": ["Chris Bumstead"], "why": "Stable path."},
+      {"name": "Arnold Press", "aliases": [], "equipment": "dumbbells", "stars": 3, "used_by": [], "why": "Fun variation, lighter loads."},
+      {"name": "Landmine Press", "aliases": [], "equipment": "landmine", "stars": 3, "used_by": ["Jeff Cavaliere"], "why": "Shoulder-friendly angle."},
+      {"name": "Pike Push-up", "aliases": [], "equipment": "bodyweight", "stars": 2, "used_by": [], "why": "Home option."},
+      {"name": "Behind-the-Neck Press (heavy)", "aliases": ["behind the neck press"], "equipment": "barbell", "stars": 0, "used_by": [], "why": "Risky for most shoulders - weakest swap."}
+    ]},
+    {"id": "lateral", "name": "Side delts (lateral raise)", "muscles": ["side delts"], "exercises": [
+      {"name": "Cable Lateral Raise", "aliases": ["cable lateral", "single arm cable lateral"], "equipment": "cables", "stars": 5, "used_by": ["Jeff Nippard", "Chris Bumstead", "Jeremy Ethier"], "why": "Tension at the bottom where dumbbells have none."},
+      {"name": "Dumbbell Lateral Raise", "aliases": ["lateral raise", "side raise", "lateral raises"], "equipment": "dumbbells", "stars": 5, "used_by": ["Mike Israetel", "Smart Fit", "Sean Nalewanyj"], "why": "The standard - many sets, light weight."},
+      {"name": "Machine Lateral Raise", "aliases": [], "equipment": "machine", "stars": 4, "used_by": ["Mike Israetel"], "why": "Steady and easy to push hard."},
+      {"name": "Lean-Away Dumbbell Lateral Raise", "aliases": ["lean away lateral"], "equipment": "dumbbell", "stars": 4, "used_by": ["Jeff Nippard"], "why": "More tension at the bottom."},
+      {"name": "Wide-Grip Upright Row", "aliases": ["upright row"], "equipment": "barbell / cable", "stars": 3, "used_by": [], "why": "Heavier, keep the grip wide."},
+      {"name": "Band Lateral Raise", "aliases": [], "equipment": "band", "stars": 1, "used_by": [], "why": "Travel option."}
+    ]},
+    {"id": "rear_delt", "name": "Rear delts", "muscles": ["rear delts", "upper back"], "exercises": [
+      {"name": "Reverse Pec Deck", "aliases": ["rear delt machine", "reverse fly machine"], "equipment": "machine", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Smart Fit"], "why": "Easiest way to really hit rear delts."},
+      {"name": "Cable Rear Delt Fly", "aliases": ["reverse cable fly", "cable reverse fly"], "equipment": "cables", "stars": 5, "used_by": ["Jeff Nippard", "Chris Bumstead"], "why": "Constant tension."},
+      {"name": "Face Pull", "aliases": ["face pulls"], "equipment": "cable + rope", "stars": 4, "used_by": ["Jeff Cavaliere", "Jeremy Ethier"], "why": "Rear delts plus shoulder health."},
+      {"name": "Bent-Over Dumbbell Reverse Fly", "aliases": ["rear delt fly", "reverse fly"], "equipment": "dumbbells", "stars": 3, "used_by": ["Smart Fit"], "why": "Works anywhere, easy to swing."},
+      {"name": "Band Pull-Apart", "aliases": [], "equipment": "band", "stars": 2, "used_by": ["Jeff Cavaliere"], "why": "Good warm-up, light."}
+    ]},
+    {"id": "biceps", "name": "Biceps", "muscles": ["biceps", "forearms"], "exercises": [
+      {"name": "Incline Dumbbell Curl", "aliases": ["incline curl"], "equipment": "dumbbells + bench", "stars": 5, "used_by": ["Jeff Nippard", "Jeremy Ethier"], "why": "Long-head stretch."},
+      {"name": "Bayesian Cable Curl", "aliases": ["bayesian curl", "behind the body cable curl"], "equipment": "cable", "stars": 5, "used_by": ["Jeff Nippard"], "why": "Stretch + tension all the way."},
+      {"name": "Preacher Curl", "aliases": ["ez preacher", "machine preacher curl"], "equipment": "EZ bar / machine", "stars": 5, "used_by": ["Mike Israetel", "Chris Bumstead", "Smart Fit"], "why": "No cheating; hardest at the stretch."},
+      {"name": "EZ-Bar Curl", "aliases": ["barbell curl", "ez curl", "bicep curl", "biceps curl"], "equipment": "EZ bar / barbell", "stars": 4, "used_by": ["Chris Bumstead", "Smart Fit", "Sean Nalewanyj"], "why": "Heavier loads."},
+      {"name": "Hammer Curl", "aliases": ["hammer curls", "rope hammer curl"], "equipment": "dumbbells / rope", "stars": 4, "used_by": ["Jeff Cavaliere", "Smart Fit"], "why": "Brachialis + forearms for thicker arms."},
+      {"name": "Dumbbell Curl", "aliases": ["db curl", "alternating curl"], "equipment": "dumbbells", "stars": 4, "used_by": ["Smart Fit"], "why": "Simple standard."},
+      {"name": "Concentration Curl", "aliases": [], "equipment": "dumbbell", "stars": 3, "used_by": [], "why": "Good squeeze, light."},
+      {"name": "Band Curl", "aliases": [], "equipment": "band", "stars": 1, "used_by": [], "why": "Travel option."}
+    ]},
+    {"id": "triceps", "name": "Triceps", "muscles": ["triceps"], "exercises": [
+      {"name": "Overhead Cable Triceps Extension", "aliases": ["overhead extension", "overhead tricep extension", "cable overhead extension"], "equipment": "cable + rope", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel", "Jeremy Ethier"], "why": "Long-head stretch = more growth (research-backed)."},
+      {"name": "Rope Pushdown", "aliases": ["tricep pushdown", "triceps pushdown", "cable pushdown"], "equipment": "cable", "stars": 5, "used_by": ["Chris Bumstead", "Smart Fit", "Sean Nalewanyj"], "why": "Easy, joint-friendly, many sets."},
+      {"name": "Skull Crusher", "aliases": ["skullcrusher", "lying tricep extension", "ez skull crusher"], "equipment": "EZ bar / dumbbells", "stars": 4, "used_by": ["Mike Israetel", "Jeff Nippard"], "why": "Heavy long-head work."},
+      {"name": "Close-Grip Bench Press", "aliases": ["cgbp"], "equipment": "barbell", "stars": 4, "used_by": ["Jeff Nippard"], "why": "Heaviest triceps lift."},
+      {"name": "Dips", "aliases": ["tricep dips", "parallel bar dips"], "equipment": "dip bars", "stars": 4, "used_by": ["Jeff Cavaliere"], "why": "Bodyweight strength builder."},
+      {"name": "Dumbbell Overhead Extension", "aliases": ["french press"], "equipment": "dumbbell", "stars": 3, "used_by": ["Smart Fit"], "why": "Stretch, but awkward heavy."},
+      {"name": "Dumbbell Kickback", "aliases": ["tricep kickback"], "equipment": "dumbbell", "stars": 2, "used_by": [], "why": "No tension at the stretch."},
+      {"name": "Bench Dips", "aliases": [], "equipment": "bench", "stars": 1, "used_by": [], "why": "Hard on the shoulders - weak swap."}
+    ]},
+    {"id": "abs", "name": "Abs and core", "muscles": ["abs", "core"], "exercises": [
+      {"name": "Cable Crunch", "aliases": ["kneeling cable crunch", "rope crunch"], "equipment": "cable", "stars": 5, "used_by": ["Jeff Nippard", "Mike Israetel"], "why": "Abs can be loaded heavy like any muscle."},
+      {"name": "Hanging Leg Raise", "aliases": ["leg raise", "hanging knee raise"], "equipment": "bar", "stars": 5, "used_by": ["Jeff Cavaliere", "Jeff Nippard", "Chris Bumstead"], "why": "Lower abs and grip."},
+      {"name": "Ab Wheel Rollout", "aliases": ["ab roller", "rollout"], "equipment": "ab wheel", "stars": 4, "used_by": ["Jeff Cavaliere"], "why": "Brutal anti-extension work."},
+      {"name": "Machine Crunch", "aliases": ["ab crunch machine"], "equipment": "machine", "stars": 4, "used_by": ["Smart Fit"], "why": "Easy to load."},
+      {"name": "Decline Crunch", "aliases": [], "equipment": "decline bench", "stars": 3, "used_by": [], "why": "Hold a plate to progress."},
+      {"name": "Plank", "aliases": ["planks"], "equipment": "bodyweight", "stars": 2, "used_by": ["Smart Fit"], "why": "Core stability; little growth once easy."},
+      {"name": "Sit-ups", "aliases": ["situps"], "equipment": "bodyweight", "stars": 1, "used_by": [], "why": "Mostly hip flexors."},
+      {"name": "Side Bends (heavy)", "aliases": [], "equipment": "dumbbell", "stars": 0, "used_by": [], "why": "Weakest swap for abs."}
+    ]}
+  ]
+}

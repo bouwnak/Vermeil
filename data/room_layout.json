@@ -1,0 +1,194 @@
+{
+  "shell": {
+    "wall": "#d98a4b",
+    "floor": "light wood",
+    "sky": "auto",
+    "brightness": 1.15
+  },
+  "items": [
+    {
+      "type": "denRug",
+      "x": 0.3,
+      "z": 0.6,
+      "rot": 1.571,
+      "y": 0
+    },
+    {
+      "type": "denTv",
+      "x": -1.2,
+      "z": -3.65,
+      "rot": 0,
+      "y": 0
+    },
+    {
+      "type": "denBookcase",
+      "x": -3.4,
+      "z": -3.7,
+      "rot": 0,
+      "y": 0
+    },
+    {
+      "type": "denBookcase",
+      "x": 4.6,
+      "z": -1.6,
+      "rot": -1.571,
+      "y": 0
+    },
+    {
+      "type": "denPlant",
+      "x": -2.55,
+      "z": -3.3,
+      "rot": 0,
+      "y": 0
+    },
+    {
+      "type": "denPlant",
+      "x": 1,
+      "z": -3.4,
+      "rot": 0.6,
+      "y": 0
+    },
+    {
+      "type": "denSkateboard",
+      "x": 1.7,
+      "z": -3.8,
+      "rot": 0,
+      "y": 0
+    },
+    {
+      "type": "denSofa",
+      "x": 3.9,
+      "z": 1,
+      "rot": -1.571,
+      "y": 0
+    },
+    {
+      "type": "denOttoman",
+      "x": 2.8,
+      "z": -1.6,
+      "rot": 0.3,
+      "y": 0
+    },
+    {
+      "type": "denCoffeeTable",
+      "x": 1.9,
+      "z": 0.9,
+      "rot": 1.571,
+      "y": 0
+    },
+    {
+      "type": "denFloorLamp",
+      "x": 4.3,
+      "z": -0.4,
+      "rot": 0,
+      "y": 0
+    },
+    {
+      "type": "denSideShelf",
+      "x": 2.3,
+      "z": 2.9,
+      "rot": 3.142,
+      "y": 0
+    },
+    {
+      "type": "denFan",
+      "x": 0.6,
+      "z": 0.2,
+      "rot": 0,
+      "y": 2.55
+    },
+    {
+      "type": "woodChair",
+      "x": -3.75,
+      "z": 2,
+      "rot": -1.571,
+      "y": 0
+    },
+    {
+      "type": "woodDesk",
+      "x": -4.55,
+      "z": 2,
+      "rot": 1.571,
+      "y": 0
+    },
+    {
+      "type": "denBed",
+      "x": -3.75,
+      "z": -1.1,
+      "rot": 1.571,
+      "y": 0
+    },
+    {
+      "type": "denPanels",
+      "wall": "back",
+      "u": -2.6,
+      "y": 2.8
+    },
+    {
+      "type": "denPanels",
+      "wall": "back",
+      "u": 0.4,
+      "y": 2.8
+    },
+    {
+      "type": "denPanels",
+      "wall": "back",
+      "u": 3.4,
+      "y": 2.8
+    },
+    {
+      "type": "denPanels",
+      "wall": "left",
+      "u": -2.5,
+      "y": 2.8
+    },
+    {
+      "type": "denPanels",
+      "wall": "left",
+      "u": 0.5,
+      "y": 2.8
+    },
+    {
+      "type": "denPanels",
+      "wall": "left",
+      "u": 3.5,
+      "y": 2.8
+    },
+    {
+      "type": "denCubeShelves",
+      "wall": "back",
+      "u": -2.2,
+      "y": 1.55
+    },
+    {
+      "type": "denClock",
+      "wall": "back",
+      "u": -1.2,
+      "y": 2.15
+    },
+    {
+      "type": "denWallLamp",
+      "wall": "back",
+      "u": -4.3,
+      "y": 1.95
+    },
+    {
+      "type": "denWindow",
+      "wall": "back",
+      "u": 3.1,
+      "y": 1.4
+    },
+    {
+      "type": "denStripes",
+      "wall": "left",
+      "u": 3.8,
+      "y": 1.2
+    },
+    {
+      "type": "denWindow",
+      "wall": "right",
+      "u": 2.6,
+      "y": 1.4
+    }
+  ]
+}

@@ -1,0 +1,230 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vermeil — Dungeon Adventure</title>
+  <link rel="stylesheet" href="../vendor/fonts/nunito.css">
+  <link rel="stylesheet" href="game.css">
+  <link rel="stylesheet" href="fantasy.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "../vendor/three/build/three.module.js",
+      "three/addons/": "../vendor/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="world" aria-label="The game world"></canvas>
+  <div id="labels"></div>
+  <div id="fade"></div>
+  <div id="banner" class="banner" hidden><span id="bannerText"></span><small id="bannerSub"></small></div>
+
+  <!-- ===================== title + menus ===================== -->
+  <section id="title" class="screen">
+    <div class="title-card">
+      <p class="title-small">Vermeil</p>
+      <h1 class="title-big">Dungeon<br>Adventure</h1>
+      <p class="title-tag">Step through the portal. The Dungeon Master is waiting.</p>
+      <div class="title-buttons">
+        <button class="big" id="btnNew">Start new campaign</button>
+        <button class="big ghost" id="btnContinue" hidden>Continue campaign</button>
+        <button class="ghost" id="btnLoad">Save &amp; load</button>
+        <button class="ghost" id="btnSettings">Settings</button>
+        <button class="ghost" id="btnBack">Back to Games</button>
+      </div>
+      <p class="title-status" id="titleStatus"></p>
+    </div>
+  </section>
+
+  <section id="create" class="screen" hidden>
+    <div class="create-panel">
+      <h2>Who steps through the portal?</h2>
+      <div class="row name-row">
+        <label class="field grow">Your name <input id="cName" maxlength="24" value="Hero" autocomplete="off"></label>
+        <button type="button" class="dice-btn" id="cRandom" title="Randomize your hero: name, species, class and world">🎲 Randomize</button>
+      </div>
+      <h3>Species</h3>
+      <div class="choice-grid" id="cSpecies"></div>
+      <h3>Class</h3>
+      <div class="choice-grid" id="cClass"></div>
+      <h3>The world</h3>
+      <div class="row">
+        <label class="field grow">Kind of world
+          <select id="cGenre"><option value="">Surprise me</option></select>
+        </label>
+      </div>
+      <label class="field">Your own idea for the story (optional)
+        <input id="cPremise" maxlength="300" placeholder="e.g. Dinosaurs have invaded a city of knights…" autocomplete="off">
+      </label>
+      <details class="vsettings">
+        <summary>Your companion (<span class="cn">Vermeil</span>)</summary>
+        <label class="field">Her class
+          <select id="cVClass"></select>
+        </label>
+        <label class="check"><input type="checkbox" id="cVRandClass"> Give her a random class</label>
+        <label class="check"><input type="checkbox" id="cVRandLook"> Randomise her species and look (off = her own model)</label>
+        <label class="field">In battle she…
+          <select id="cVControl">
+            <option value="auto">fights on her own</option>
+            <option value="tactical">fights on her own and gives tactics</option>
+            <option value="advice">only gives advice (simple attacks)</option>
+            <option value="direct">is controlled by you</option>
+          </select>
+        </label>
+      </details>
+      <div class="create-foot">
+        <button class="ghost" id="cBack">Back</button>
+        <button class="big" id="cStart">Open the portal</button>
+      </div>
+    </div>
+    <div class="create-preview" id="cPreview">
+      <div class="preview-name" id="cPreviewName"></div>
+      <div class="preview-desc" id="cPreviewDesc"></div>
+    </div>
+  </section>
+
+  <section id="saves" class="screen" hidden>
+    <div class="modal">
+      <h2>Save &amp; load</h2>
+      <div id="saveList" class="save-list"></div>
+      <div class="modal-foot"><button class="ghost" id="savesClose">Close</button></div>
+    </div>
+  </section>
+
+  <section id="settingsScreen" class="screen" hidden>
+    <div class="modal">
+      <h2>Settings</h2>
+      <div class="settings-grid">
+        <label>Music <output data-out="music_volume"></output> <input type="range" min="0" max="1" step="0.05" data-vol="music_volume"></label>
+        <label>Sound effects <output data-out="sfx_volume"></output> <input type="range" min="0" max="1" step="0.05" data-vol="sfx_volume"></label>
+        <label>Ambience <output data-out="ambient_volume"></output> <input type="range" min="0" max="1" step="0.05" data-vol="ambient_volume"></label>
+        <label>All voices <output data-out="voice_volume"></output> <input type="range" min="0" max="1.5" step="0.05" data-vol="voice_volume"></label>
+        <label class="sub-vol">· Narrator (Dungeon Master) <output data-out="voice_dm_volume"></output> <input type="range" min="0" max="1.5" step="0.05" data-vol="voice_dm_volume"></label>
+        <label class="sub-vol">· <span class="cn">Vermeil</span> <output data-out="voice_vermeil_volume"></output> <input type="range" min="0" max="1.5" step="0.05" data-vol="voice_vermeil_volume"></label>
+        <label class="sub-vol">· Everyone else <output data-out="voice_npc_volume"></output> <input type="range" min="0" max="1.5" step="0.05" data-vol="voice_npc_volume"></label>
+        <button type="button" class="small" id="testVoice">▶ Test the voices</button>
+        <label class="check"><input type="checkbox" id="setVoice"> Speak narration and dialogue out loud</label>
+        <label class="check"><input type="checkbox" id="setSkipPortal"> Skip the portal scene</label>
+        <label><span class="cn">Vermeil</span> in battle
+          <select id="setVControl">
+            <option value="auto">fights on her own</option>
+            <option value="tactical">fights on her own and gives tactics</option>
+            <option value="advice">only gives advice</option>
+            <option value="direct">controlled by you</option>
+          </select>
+        </label>
+        <label>Recruited allies in battle
+          <select id="setAControl"><option value="auto">fight on their own</option><option value="direct">controlled by you</option></select>
+        </label>
+        <label>Graphics quality
+          <select id="setQuality"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+        </label>
+        <label>Performance
+          <select id="setPerf"><option value="fast">Fast (keeps 60 fps)</option><option value="balanced">Balanced</option><option value="graphics">Best graphics</option></select>
+        </label>
+        <label class="check"><input type="checkbox" id="setTest"> 🧪 Experimental: test mode (cheats for trying things out)</label>
+        <div id="testPanel" class="test-panel" hidden></div>
+      </div>
+      <div class="modal-foot"><button class="ghost" id="settingsClose">Close</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== in-game HUD ===================== -->
+  <div id="hud" hidden>
+    <div class="party" id="party"></div>
+
+    <nav class="rail" id="rail" aria-label="Game menus">
+      <button data-p="bag" title="Backpack (B)"><span>🎒</span><em>Backpack</em></button>
+      <button data-p="equip" title="Equipment (E)"><span>🗡</span><em>Equipment</em></button>
+      <button data-p="stats" title="Character (C)"><span>📜</span><em>Character</em></button>
+      <button data-p="skills" title="Skills (K)"><span>✨</span><em>Skills</em></button>
+      <button data-p="cards" title="Upgrade cards"><span>🃏</span><em>Cards</em></button>
+      <button data-p="quests" title="Quests (Q)"><span>❗</span><em>Quests</em></button>
+      <button data-p="partyp" title="Party (P)"><span>👥</span><em>Party</em></button>
+      <button data-p="map" title="Map (M)"><span>🗺</span><em>Map</em></button>
+      <button data-p="journal" title="Journal (J)"><span>📖</span><em>Journal</em></button>
+      <button data-p="log" title="Campaign log (L)"><span>📃</span><em>Log</em></button>
+    </nav>
+    <aside class="drawer" id="drawer" hidden>
+      <header><h2 id="drawerTitle"></h2><button class="x" id="drawerClose" aria-label="Close">✕</button></header>
+      <div id="drawerBody" class="drawer-body"></div>
+    </aside>
+
+    <div class="plaque" id="plaque">
+      <div class="plaque-name" id="locName"></div>
+      <div class="plaque-goal" id="goal"></div>
+    </div>
+    <div class="topright">
+      <span class="gold" id="gold" title="Gold"></span>
+      <button class="round" id="btnMute" title="Voices on/off">🔊</button>
+      <button class="round" id="btnPause" title="Menu (Esc)">☰</button>
+    </div>
+
+    <div class="initiative" id="initiative" hidden></div>
+    <div class="prompt" id="prompt" hidden></div>
+    <div class="toasts" id="toasts"></div>
+
+    <div class="talkbox">
+      <div class="subs" id="subs" aria-live="polite"></div>
+      <div class="actionbar">
+        <span class="turn" id="turnChip">Explore</span>
+        <div class="quick" id="quick"></div>
+        <form id="actForm" class="act">
+          <button type="button" class="round hist" id="btnHist" title="Show what has been said">💬</button>
+          <input id="actInput" maxlength="300" placeholder="What do you do?  e.g. “I ask the merchant about the strange knight”" autocomplete="off">
+          <button class="send" id="actSend" type="submit">Do it</button>
+        </form>
+      </div>
+      <div class="history" id="history" hidden></div>
+    </div>
+    <div class="dicetray" id="dicetray" hidden>
+      <canvas id="diceCanvas"></canvas>
+      <div class="dice-label" id="diceLabel"></div>
+    </div>
+  </div>
+
+  <section id="pause" class="screen dim" hidden>
+    <div class="modal small">
+      <h2>Paused</h2>
+      <div class="col">
+        <button class="big" id="pResume">Resume</button>
+        <button class="ghost" id="pSave">Save &amp; load</button>
+        <button class="ghost" id="pSettings">Settings</button>
+        <button class="ghost" id="pTitle">Back to the title screen</button>
+        <button class="ghost" id="pAssistant">Back to Games</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="cardPick" class="screen dim" hidden>
+    <div class="card-pick">
+      <h2 id="cardReason">Choose an upgrade</h2>
+      <p id="cardFor" class="muted"></p>
+      <div class="cards" id="cardChoices"></div>
+    </div>
+  </section>
+
+  <section id="dialog" class="screen dim" hidden>
+    <div class="modal" id="dialogBox"></div>
+  </section>
+
+  <section id="results" class="screen" hidden>
+    <div class="results" id="resultsBody"></div>
+  </section>
+
+  <div class="loadscreen" id="loading">
+    <div class="ls-sky"></div>
+    <div class="ls-portal" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+    <h2 class="ls-title" id="loadingTitle">Vermeil · Dungeon Adventure</h2>
+    <p class="ls-text" id="loadingText">Opening the portal…</p>
+    <div class="ls-bar"><i id="loadingBar"></i></div>
+    <p class="ls-count" id="loadingCount"></p>
+    <p class="ls-tip" id="loadingTip"></p>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

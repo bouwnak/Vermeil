@@ -1,0 +1,405 @@
+{
+  "recipes": [
+    {
+      "title": "Chocolate Chip Cookies",
+      "servings": 24,
+      "source": "",
+      "ingredients": [
+        {
+          "qty": 2.5,
+          "unit": "cup",
+          "name": "all-purpose flour",
+          "text": "2 1/2 cups all-purpose flour",
+          "id": "e7621b"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "softened butter",
+          "text": "1 cup softened butter",
+          "id": "932d5c"
+        },
+        {
+          "qty": 0.5,
+          "unit": "cup",
+          "name": "white sugar",
+          "text": "1/2 cup white sugar",
+          "id": "f7c5d5"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "brown sugar",
+          "text": "1 cup brown sugar",
+          "id": "9dd1f2"
+        },
+        {
+          "qty": 2.0,
+          "unit": "pc",
+          "name": "raw eggs",
+          "text": "2 pieces raw eggs",
+          "id": "20d278"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tsp",
+          "name": "vanilla extract",
+          "text": "1 teaspoon vanilla extract",
+          "id": "34b585"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tsp",
+          "name": "baking soda",
+          "text": "1 teaspoon baking soda",
+          "id": "821bd9"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tsp",
+          "name": "salt",
+          "text": "1 teaspoon salt",
+          "id": "6984a0"
+        },
+        {
+          "qty": 2.0,
+          "unit": "cup",
+          "name": "semisweet chocolate chips",
+          "text": "2 cups semisweet chocolate chips",
+          "id": "3b58f3"
+        },
+        {
+          "qty": 0.75,
+          "unit": "cup",
+          "name": "chopped walnuts",
+          "text": "3/4 cup chopped walnuts",
+          "id": "a52f8d"
+        }
+      ],
+      "steps": [
+        "Preheat oven to 350 degrees Fahrenheit.",
+        "In a mixing bowl, combine all-purpose flour, salt, and baking soda. Mix well and set aside.",
+        "On a separate mixing bowl, put in butter and beat. Gradually add both sugars while beating.",
+        "Add-in the vanilla extract and eggs (one piece at a time) while beating.",
+        "Gradually add the flour, salt, and baking soda mixture and beat until all the ingredients are well mixed.",
+        "Put-in the chocolate chips and chopped nuts. Fold until the chips and nuts are evenly distributed.",
+        "Scoop about a tablespoon of dough onto a baking sheet lined with parchment paper.",
+        "Bake for 10 to 12 minutes, until the edges are golden."
+      ],
+      "nutrition": {
+        "per": "serving",
+        "servings": 24,
+        "source": "estimated",
+        "rows": [
+          {
+            "label": "Calories",
+            "value": "260 kcal"
+          },
+          {
+            "label": "Total fat",
+            "value": "14 g"
+          },
+          {
+            "label": "Saturated fat",
+            "value": "7 g"
+          },
+          {
+            "label": "Cholesterol",
+            "value": "36 mg"
+          },
+          {
+            "label": "Sodium",
+            "value": "190 mg"
+          },
+          {
+            "label": "Carbohydrates",
+            "value": "33 g"
+          },
+          {
+            "label": "Fiber",
+            "value": "1.5 g"
+          },
+          {
+            "label": "Sugar",
+            "value": "21 g"
+          },
+          {
+            "label": "Protein",
+            "value": "3 g"
+          }
+        ]
+      },
+      "id": "6d977441",
+      "updated": "2026-10-21 21:33",
+      "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Three_Bars_%281%29.jpg/1280px-Three_Bars_%281%29.jpg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=thumbnail",
+      "image_tried": true
+    },
+    {
+      "title": "Make Your Day Smoothie Bowl",
+      "source": "https://www.tiktok.com/@gisellecooks_/video/7530806350683589902?q=banana%20bread&t=1792589701272",
+      "servings": 2,
+      "ingredients": [
+        {
+          "qty": 2.0,
+          "unit": "",
+          "name": "ripe bananas",
+          "text": "2 ripe bananas",
+          "id": "954a5f"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "frozen mixed berries",
+          "text": "1 cup frozen mixed berries",
+          "id": "e8673f"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "spinach",
+          "text": "1 cup spinach",
+          "id": "3da711"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "unsweetened almond milk",
+          "text": "1 cup unsweetened almond milk",
+          "id": "28f5d9"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "honey",
+          "text": "1 tablespoon honey",
+          "id": "04f998"
+        },
+        {
+          "qty": 0.5,
+          "unit": "tsp",
+          "name": "vanilla extract",
+          "text": "1/2 teaspoon vanilla extract",
+          "id": "c1653c"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "chia seeds",
+          "text": "1 tablespoon chia seeds",
+          "id": "d69665"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "shredded coconut",
+          "text": "1 tablespoon shredded coconut",
+          "id": "37b1a2"
+        },
+        {
+          "qty": null,
+          "unit": "",
+          "name": "Fresh berries and sliced banana for topping",
+          "text": "Fresh berries and sliced banana for topping",
+          "id": "bdfbbb"
+        }
+      ],
+      "steps": [
+        "Blend bananas, frozen berries, spinach, almond milk, honey, and vanilla until smooth.",
+        "Pour smoothie into two bowls.",
+        "Sprinkle chia seeds and shredded coconut on top.",
+        "Add fresh berries and sliced banana for garnish.",
+        "Serve immediately and enjoy a bright, energizing start to your day."
+      ],
+      "nutrition": {
+        "per": "serving",
+        "servings": 2,
+        "rows": [
+          {
+            "label": "Calories",
+            "value": "280 kcal"
+          },
+          {
+            "label": "Total fat",
+            "value": "12.7 g"
+          },
+          {
+            "label": "Saturated fat",
+            "value": "3.0 g"
+          },
+          {
+            "label": "Cholesterol",
+            "value": "0 mg"
+          },
+          {
+            "label": "Sodium",
+            "value": "200 mg"
+          },
+          {
+            "label": "Carbohydrates",
+            "value": "58 g"
+          },
+          {
+            "label": "Fiber",
+            "value": "10 g"
+          },
+          {
+            "label": "Sugar",
+            "value": "28 g"
+          },
+          {
+            "label": "Protein",
+            "value": "8 g"
+          }
+        ],
+        "source": "estimated by AI"
+      },
+      "notes": "From a video - the written recipe was worked out by the AI, so check it against the video.",
+      "image": "https://cdn.prod.website-files.com/6a294495bc84130c6dd0c4fd/6a706624f7fdfc3470419256_og-img.png",
+      "id": "8ef990fe",
+      "updated": "2026-10-22 03:05",
+      "image_tried": true,
+      "image_v": 2
+    },
+    {
+      "title": "TikTok Make Your Day Smoothie Bowl",
+      "source": "https://www.tiktok.com/@bakewithzoha/video/7668374443105799438?q=red%20velvet%20cae&t=1792589910456",
+      "servings": 2,
+      "ingredients": [
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "frozen mixed berries",
+          "text": "1 cup frozen mixed berries",
+          "id": "526568"
+        },
+        {
+          "qty": 1.0,
+          "unit": "",
+          "name": "banana, sliced",
+          "text": "1 banana, sliced",
+          "id": "aab85d"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "unsweetened almond milk",
+          "text": "1 cup unsweetened almond milk",
+          "id": "7f4885"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "honey or agave syrup",
+          "text": "1 tbsp honey or agave syrup",
+          "id": "8fe814"
+        },
+        {
+          "qty": 0.5,
+          "unit": "tsp",
+          "name": "vanilla extract",
+          "text": "1/2 tsp vanilla extract",
+          "id": "bfb821"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "chia seeds",
+          "text": "1 tbsp chia seeds",
+          "id": "b38338"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "shredded coconut (optional)",
+          "text": "1 tbsp shredded coconut (optional)",
+          "id": "729eea"
+        },
+        {
+          "qty": null,
+          "unit": "",
+          "name": "Fresh fruit slices (mango, kiwi, berries) for topping",
+          "text": "Fresh fruit slices (mango, kiwi, berries) for topping",
+          "id": "e4f142"
+        },
+        {
+          "qty": null,
+          "unit": "",
+          "name": "Granola or granola mix for crunch",
+          "text": "Granola or granola mix for crunch",
+          "id": "5fd390"
+        },
+        {
+          "qty": null,
+          "unit": "",
+          "name": "Optional: 1 scoop protein powder",
+          "text": "Optional: 1 scoop protein powder",
+          "id": "ade1d2"
+        },
+        {
+          "qty": null,
+          "unit": "",
+          "name": "Optional: 1 tbsp nut butter for extra creaminess",
+          "text": "Optional: 1 tbsp nut butter for extra creaminess",
+          "id": "05b744"
+        }
+      ],
+      "steps": [
+        "1. In a blender, combine frozen berries, banana, almond milk, honey, and vanilla extract. Blend on high until smooth and creamy. If using protein powder, add it now and blend again.",
+        "2. Pour the smoothie into two bowls. The consistency should be thick enough to hold toppings but still pourable.",
+        "3. Sprinkle chia seeds and shredded coconut evenly over the surface of each bowl. This adds texture and nutritional boost.",
+        "4. Arrange fresh fruit slices (mango, kiwi, berries) on top in a colorful pattern for an Instagram‑ready look.",
+        "5. Add a generous spoonful of granola on top of the fruit for a satisfying crunch. If desired, drizzle a little nut butter over the granola for extra flavor and creaminess.",
+        "6. Serve immediately and enjoy a vibrant, energy‑boosting breakfast or snack that’s ready to make your day!"
+      ],
+      "nutrition": {
+        "per": "serving",
+        "servings": 2,
+        "rows": [
+          {
+            "label": "Calories",
+            "value": "520 kcal"
+          },
+          {
+            "label": "Total fat",
+            "value": "15 g"
+          },
+          {
+            "label": "Saturated fat",
+            "value": "2 g"
+          },
+          {
+            "label": "Cholesterol",
+            "value": "0 mg"
+          },
+          {
+            "label": "Sodium",
+            "value": "200 mg"
+          },
+          {
+            "label": "Carbohydrates",
+            "value": "70 g"
+          },
+          {
+            "label": "Fiber",
+            "value": "12 g"
+          },
+          {
+            "label": "Sugar",
+            "value": "30 g"
+          },
+          {
+            "label": "Protein",
+            "value": "20 g"
+          }
+        ],
+        "source": "estimated by AI"
+      },
+      "notes": "From a video - the written recipe was worked out by the AI, so check it against the video.",
+      "image": "https://play-lh.googleusercontent.com/2o7iuqPe-0msP3DvNhzoOgNo4eZ6GkL_RtGVeKyBn5UBQAW5cw-GW5V3wDOHB1yTQuqWzrFLFOv2u4_5ea1uhg=s0-br30",
+      "id": "47acbc99",
+      "updated": "2026-10-22 03:05",
+      "image_tried": true,
+      "image_v": 2
+    }
+  ]
+}

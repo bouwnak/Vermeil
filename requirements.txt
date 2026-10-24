@@ -1,0 +1,41 @@
+# Core (needed to start Vermeil)
+requests
+SpeechRecognition
+PyAudio
+sounddevice
+soundfile
+rapidfuzz
+vaderSentiment
+keyboard
+
+# Main AI: Groq (online). No extra package needed - it uses requests + GROQ_API_KEY in .env
+
+# Backup AI (runs on your PC - also install the Ollama app: https://ollama.com, then run setup_local.py)
+faster-whisper   # speech recognition (Whisper), offline
+piper-tts        # voices, offline
+
+# The window app (python app.py)
+pywebview
+numpy
+opencv-python    # camera: seeing and recognising you (needs version 4.8 or newer)
+
+# Study mode (reading your lecture files)
+pypdf
+python-docx
+python-pptx
+openpyxl                 # gym mode: import your workout Excel file
+
+# Computer control (apps, screen, system status, notifications)
+psutil
+pillow
+winotify
+
+# Features (only loaded when you use them)
+playwright       # her own browser window for filling forms (uses your Edge/Chrome - no extra download)
+edge-tts         # online voices for languages Piper doesn't have (Japanese, Korean, Filipino...)
+google-api-python-client   # optional: ADD events to Google Calendar (see Settings for the 5-minute setup)
+google-auth-oauthlib
+sympy            # solve math
+yt-dlp           # play music
+pycaw            # set volume
+comtypes         # set volume

@@ -1,0 +1,134 @@
+# ==========================================
+# Vermeil - Git Ignore Rules
+# ==========================================
+
+# --- Secrets and Credentials ---
+# Never commit private API keys or tokens
+env
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.pfx
+data/spotify_token.json
+
+# --- Python Environment & Caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Virtual Environments
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# --- IDE & Editor Configurations ---
+.vscode/
+.claude/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# --- Operating System Files ---
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Log and Output Files ---
+*.log
+*.out
+p.out
+
+# --- Large Binaries & External Packages ---
+# FFmpeg binaries (ffmpeg.exe, ffplay.exe, ffprobe.exe are > 180MB each)
+Packages/
+
+# --- Large AI Model Weights & Checkpoints ---
+# Automatically downloaded via setup scripts (setup_kokoro.bat, setup_rvc.bat, setup_local.py)
+tools/kokoro/*.onnx
+tools/kokoro/*.bin
+tools/rvc/*.onnx
+tools/rvc/*.pt
+tools/rvc/*.pth
+tools/ollama/
+data/models/
+data/piper_voices/
+data/rvc_voices/
+rvc_samples/
+
+# --- Raw 3D Asset Library (Quaternius Reference Packs) ---
+# Raw 7GB reference library; game uses converted assets in ui/game/assets/
+dnd/
+
+# --- Retro Game ROMs & BIOS ---
+# Keep repo free of copyrighted ROM/BIOS dumps
+ui/games/roms/**/*.zip
+ui/games/roms/**/*.7z
+ui/games/roms/**/*.gba
+ui/games/roms/**/*.bin
+ui/games/roms/bios/
+
+# --- User Data & Dynamic Runtime Saves ---
+data/vermeil_memory*.json
+data/journal.json
+data/notes.txt
+data/gym_log.json
+data/gym_log_backup.json
+data/gym_stats.json
+data/music_history.json
+data/music_queue.json
+data/local_models.json
+data/voice_baseline.json
+data/wake_templates.json
+data/library/
+data/meetings/
+data/retro_saves/
+data/game/saves/
+data/game/test_saves/
+data/game/convert_jobs.json
+data/game/convert_log.txt
+data/game/convert_progress.json
+data/game/made_preview.png
+
+# --- Blender Backup Files ---
+*.blend1
+*.blend2
+
+# --- Archives and Old Backups ---
+_archive/

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Vermeil — Games</title>
+<link rel="stylesheet" href="../vendor/fonts/nunito.css">
+<link rel="stylesheet" href="games.css">
+</head>
+<body>
+
+<!-- ============ the Games hub ============ -->
+<section id="hub" class="view">
+  <header class="hub-head">
+    <div>
+      <p class="eyebrow">Vermeil</p>
+      <h1>Games</h1>
+      <p class="muted">Pick something to play. Your chat is saved while you're away.</p>
+    </div>
+    <div class="hub-tools">
+      <button class="btn ghost icon" id="musicBtn" type="button" title="Music on / off" aria-label="Music on / off" aria-pressed="true">🎵</button>
+      <button class="btn ghost" id="backApp" type="button">← Back to Vermeil</button>
+    </div>
+  </header>
+
+  <div class="hub-body">
+    <div class="hub-list">
+      <button class="hub-card" id="cardAdventure" type="button" data-preview="adventure" data-sfx="open">
+        <span class="hub-art art-adventure" aria-hidden="true">⚔</span>
+        <span class="hub-text"><b>Adventure</b><small>Dungeon RPG with Vermeil — explore, fight and build your party</small></span>
+        <span class="hub-go" aria-hidden="true">›</span>
+      </button>
+      <button class="hub-card" id="cardRetro" type="button" data-preview="retro" data-sfx="open">
+        <span class="hub-art art-retro" aria-hidden="true">🕹</span>
+        <span class="hub-text"><b>Retro Games</b><small>Classic NES, SNES, Sega, Game Boy, PlayStation and arcade games</small></span>
+        <span class="hub-go" aria-hidden="true">›</span>
+      </button>
+      <div class="hub-card soon" aria-disabled="true" data-preview="soon">
+        <span class="hub-art" aria-hidden="true">?</span>
+        <span class="hub-text"><b>Game 3</b><small>Coming soon</small></span>
+      </div>
+      <div class="hub-card soon" aria-disabled="true" data-preview="soon">
+        <span class="hub-art" aria-hidden="true">?</span>
+        <span class="hub-text"><b>Game 4</b><small>Coming soon</small></span>
+      </div>
+    </div>
+
+    <!-- the picture of the game you're pointing at -->
+    <aside class="hub-preview" id="preview" aria-hidden="true">
+      <div class="pv pv-adventure" data-pv="adventure">
+        <img src="img/adventure.jpg" alt="" onerror="this.remove()">
+        <div class="pv-caption"><b>Adventure</b><span>Explore the dungeon with Vermeil</span></div>
+      </div>
+      <div class="pv pv-retro" data-pv="retro">
+        <div class="pv-collage" id="collage"></div>
+        <div class="pv-retro-title">RETRO</div>
+      </div>
+      <div class="pv pv-soon" data-pv="soon"><span>?</span><b>Coming soon</b></div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ Retro Games (laid out like retrogames.cc) ============ -->
+<section id="retro" class="view" hidden>
+  <header class="rg-bar">
+    <button class="rg-logo" id="rgHome" type="button" title="Most popular games">Retro<span>Games</span></button>
+    <nav class="rg-nav" id="rgNav"></nav>
+    <button class="btn ghost small" id="rgBackHub" type="button">← Games hub</button>
+  </header>
+
+  <div class="rg-body">
+    <main class="rg-main" id="rgList">
+      <div class="rg-title"><h2 id="rgHeading">Most Popular Games</h2><span class="muted" id="rgCount"></span>
+        <button class="btn ghost small danger" id="rgDeleteAll" type="button" hidden>Delete all</button></div>
+      <div class="rg-grid" id="rgGrid"></div>
+      <p class="rg-msg" id="rgMsg" hidden></p>
+      <div class="rg-more"><button class="btn" id="rgMore" type="button" hidden>Load more games</button></div>
+    </main>
+
+    <aside class="rg-side">
+      <form class="rg-search" id="rgSearch">
+        <input id="rgQuery" type="search" placeholder="Search games…" autocomplete="off">
+        <button class="btn" type="submit">Search</button>
+      </form>
+      <h3>Consoles</h3>
+      <div class="rg-side-list" id="rgSide"></div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ a retro game, filling the whole screen ============ -->
+<div class="stage" id="stage" hidden>
+  <div class="stage-bar" id="stageBar">
+    <button class="btn small" id="stBack" type="button">← Back to games</button>
+    <b class="stage-title" id="stTitle"></b>
+    <button class="btn ghost small fav-btn" id="stFav" type="button" aria-pressed="false">♡ Favorite</button>
+    <button class="btn ghost small" id="stHub" type="button">Games hub</button>
+  </div>
+  <div class="stage-game" id="stGame"></div>
+  <p class="stage-msg" id="stMsg" hidden></p>
+</div>
+
+<!-- Adventure: start or cancel -->
+<div class="modal" id="confirm" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <span class="hub-art art-adventure big" aria-hidden="true">⚔</span>
+    <h2 id="confirmTitle">Start the Dungeon Adventure?</h2>
+    <p class="muted">You'll leave the Games hub and the game will load. You can come back any time.</p>
+    <div class="dialog-btns">
+      <button class="btn ghost" id="confirmNo" type="button">Cancel</button>
+      <button class="btn primary" id="confirmYes" type="button" data-sfx="start">Start game</button>
+    </div>
+  </div>
+</div>
+
+<!-- loading screen -->
+<div class="loading" id="loading" hidden>
+  <div class="spinner"></div>
+  <p class="loading-title" id="loadingTitle">Loading…</p>
+  <p class="muted" id="loadingSub">Getting the game ready</p>
+  <div class="loading-track"><i id="loadingFill"></i></div>
+</div>
+
+<script type="module" src="games.js"></script>
+</body>
+</html>

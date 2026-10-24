@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retro player</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #game { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="game"></div>
+<script>
+// player.html - one retro game, inside the Games hub (games.js puts this page in a frame and is "host").
+// EmulatorJS (the same free emulator retrogames.cc uses) - without the ad and "PLAY NOW" screens. The game file was
+// downloaded by Python into ui/games/roms/. Saves go to Python too (data/retro_saves/), so they're kept on this PC.
+const q = new URLSearchParams(location.search);
+const host = parent.retroHost;
+const gid = q.get("id");
+
+const toB64 = (bytes) => {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+const fromB64 = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const say = (t) => { try { EJS_emulator.displayMessage(t); } catch { /* not ready */ } };
+
+// the game's own save (its battery save / memory card): written into the emulator before it's used
+function putSram(bytes) {
+  const gm = EJS_emulator.gameManager, path = gm.getSaveFilePath();
+  let dir = "";
+  for (const p of path.split("/").slice(0, -1)) {
+    if (!p) continue;
+    dir += "/" + p;
+    if (!gm.FS.analyzePath(dir).exists) gm.FS.mkdir(dir);
+  }
+  if (gm.FS.analyzePath(path).exists) gm.FS.unlink(path);
+  gm.FS.writeFile(path, bytes);
+  gm.loadSaveFiles();
+}
+
+let lastSram = "";
+// keep the game's own save in Python (every so often, and when you leave the game)
+window.backupSram = async () => {
+  try {
+    const bytes = EJS_emulator?.gameManager?.getSaveFile();
+    if (!bytes || !bytes.length) return;
+    const b64 = toB64(bytes);
+    if (b64 === lastSram) return;
+    const r = await host.call("retro_save", gid, "sram", b64);
+    if (!r?.error) lastSram = b64;
+  } catch (e) { console.warn("[retro] save backup", e); }
+};
+
+window.EJS_player = "#game";
+window.EJS_core = q.get("core");
+window.EJS_gameUrl = q.get("rom");
+if (q.get("bios")) window.EJS_biosUrl = q.get("bios");
+if (q.get("parent")) window.EJS_gameParentUrl = q.get("parent");   // arcade "clone" games need their main file too
+window.EJS_gameName = q.get("name") || "game";
+// the emulator engines are on this PC (ui/games/emulatorjs/data/) - the internet copy is only the backup
+const CDN = "https://cdn.emulatorjs.org/4.2.3/data/";
+window.EJS_pathtodata = "emulatorjs/data/";
+window.EJS_language = "en-US";             // the emulator's menus in English
+window.EJS_startOnLoaded = true;           // no "PLAY NOW" button
+window.EJS_Buttons = { exitEmulation: false };   // no "Exit Emulation" button (it only left a frozen game) - use "Back to games"
+window.EJS_color = host.accent();
+window.EJS_backgroundColor = "#000000";
+window.EJS_defaultOptions = { "save-state-location": "download" };
+
+// the Save / Load buttons on the game's bar -> Python
+window.EJS_onSaveState = async (e) => {
+  const r = await host.call("retro_save", gid, "state", toB64(e.state));
+  say(r?.error ? r.error : "Saved");
+  host.saved();
+};
+window.EJS_onLoadState = async () => {
+  const r = await host.call("retro_load", gid, "state");
+  if (r?.data) { EJS_emulator.gameManager.loadState(fromB64(r.data)); say("Loaded your save"); }
+  else say("No save yet - press Save first");
+};
+window.EJS_onSaveSave = async (e) => {
+  if (!e.save) return say("This game has no save of its own here - use Save");
+  const r = await host.call("retro_save", gid, "sram", toB64(e.save));
+  say(r?.error ? r.error : "Saved");
+};
+window.EJS_onLoadSave = async () => {
+  const r = await host.call("retro_load", gid, "sram");
+  if (r?.data) { putSram(fromB64(r.data)); say("Loaded"); } else say("No save yet");
+};
+
+window.EJS_onGameStart = async () => {
+  // put your saves back: the game's own save first, then the last Save (exactly where you left off)
+  let msg = "";
+  try {
+    const sram = await host.call("retro_load", gid, "sram");
+    if (sram?.data) { putSram(fromB64(sram.data)); lastSram = sram.data; }
+    const st = await host.call("retro_load", gid, "state");
+    if (st?.data) { EJS_emulator.gameManager.loadState(fromB64(st.data)); msg = "Welcome back - your save is loaded"; }
+  } catch (e) { console.warn("[retro] restoring saves", e); }
+  host.started(msg);
+  setInterval(window.backupSram, 30000);
+};
+
+// Esc, or the mouse near the top -> the hub shows its bar (the game keeps the keyboard otherwise)
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") host.poke(); });
+document.addEventListener("mousemove", (e) => host.poke(e.clientY), { passive: true });
+
+function loadEngine(path, fallback) {
+  window.EJS_pathtodata = path;
+  const s = document.createElement("script");
+  s.src = path + "loader.js";
+  s.onerror = () => { s.remove(); fallback ? loadEngine(fallback) : host.failed("Couldn't load the emulator. Check your internet and try again."); };
+  document.body.append(s);
+}
+loadEngine(EJS_pathtodata, CDN);
+</script>
+</body>
+</html>

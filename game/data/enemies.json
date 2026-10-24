@@ -1,0 +1,3996 @@
+{
+ "_doc": "Enemy templates. stats are at level 1, growth per level (multiplied by 'tier'). ai: brute/caster/skirmisher/support/coward/boss. biomes/genres decide where they appear. loot: [item, chance, min, max]. boss phases change abilities when HP drops below 'below'. sound = which creature sounds it makes in the game (see ui/game/audio.js CREATURES: mech, robot, slime, insect, beast, dino, undead...). size = height in metres (each monster varies a little; 1 in 12 is a big 'alpha'). Bosses are house-sized.",
+ "enemies": {
+  "slime": {
+   "name": "Slime",
+   "models": [
+    "conv_animated_monster_pack_slime",
+    "ultimate_monsters_greenblob",
+    "ultimate_monsters_pinkblob"
+   ],
+   "body": "blob",
+   "tier": 0.7,
+   "ai": "brute",
+   "abilities": [
+    "e_slam"
+   ],
+   "resist": [
+    "poison"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "slime_gel",
+     0.8,
+     1,
+     3
+    ],
+    [
+     "potion_small",
+     0.15,
+     1,
+     1
+    ]
+   ],
+   "xp": 14,
+   "gold": [
+    2,
+    8
+   ],
+   "biomes": [
+    "forest",
+    "meadow",
+    "swamp",
+    "cave",
+    "farmland",
+    "sky_isles",
+    "blockland",
+    "mines"
+   ],
+   "genres": [
+    "fantasy",
+    "dark",
+    "wild"
+   ],
+   "sound": "slime",
+   "size": 0.9
+  },
+  "spiky_blob": {
+   "name": "Spiky Blob",
+   "models": [
+    "ultimate_monsters_greenspikyblob"
+   ],
+   "body": "blob",
+   "tier": 0.9,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_venom"
+   ],
+   "resist": [
+    "poison"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "slime_gel",
+     0.8,
+     1,
+     3
+    ]
+   ],
+   "xp": 20,
+   "gold": [
+    4,
+    10
+   ],
+   "biomes": [
+    "swamp",
+    "forest",
+    "cave",
+    "sky_isles"
+   ],
+   "genres": [
+    "fantasy",
+    "dark",
+    "wild"
+   ],
+   "sound": "slime",
+   "size": 1.0
+  },
+  "mushnub": {
+   "name": "Mushnub",
+   "models": [
+    "ultimate_monsters_mushnub",
+    "cute_animated_monsters_mushroom"
+   ],
+   "body": "blob",
+   "tier": 0.8,
+   "ai": "support",
+   "abilities": [
+    "e_slam",
+    "e_venom"
+   ],
+   "resist": [
+    "earth"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "potion_small",
+     0.25,
+     1,
+     1
+    ],
+    [
+     "antidote",
+     0.3,
+     1,
+     1
+    ]
+   ],
+   "xp": 16,
+   "gold": [
+    3,
+    9
+   ],
+   "biomes": [
+    "forest",
+    "swamp",
+    "sakura"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "plant",
+   "size": 1.1
+  },
+  "bat": {
+   "name": "Cave Bat",
+   "models": [
+    "conv_animated_monster_pack_bat",
+    "cute_animated_monsters_bat"
+   ],
+   "body": "flyer",
+   "tier": 0.7,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_bite"
+   ],
+   "weak": [
+    "light",
+    "wind"
+   ],
+   "loot": [
+    [
+     "bone",
+     0.4,
+     1,
+     1
+    ]
+   ],
+   "xp": 12,
+   "gold": [
+    1,
+    5
+   ],
+   "biomes": [
+    "cave",
+    "dungeon",
+    "ruins",
+    "graveyard",
+    "sky_isles",
+    "manor",
+    "crypt",
+    "mines",
+    "pirate_cove"
+   ],
+   "genres": [
+    "fantasy",
+    "dark"
+   ],
+   "sound": "bat",
+   "size": 0.8
+  },
+  "spider": {
+   "name": "Giant Spider",
+   "models": [
+    "conv_easy_animated_enemy_pack_spider"
+   ],
+   "body": "quadruped",
+   "tier": 1.0,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_bite",
+    "e_venom"
+   ],
+   "resist": [
+    "poison"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "monster_hide",
+     0.6,
+     1,
+     2
+    ],
+    [
+     "antidote",
+     0.2,
+     1,
+     1
+    ]
+   ],
+   "xp": 22,
+   "gold": [
+    4,
+    12
+   ],
+   "biomes": [
+    "forest",
+    "cave",
+    "dungeon",
+    "swamp",
+    "blockland",
+    "manor",
+    "crypt",
+    "mines"
+   ],
+   "genres": [
+    "fantasy",
+    "dark",
+    "wild"
+   ],
+   "sound": "insect",
+   "size": 1.1
+  },
+  "rat": {
+   "name": "Plague Rat",
+   "models": [
+    "conv_easy_animated_enemy_pack_rat"
+   ],
+   "body": "quadruped",
+   "tier": 0.6,
+   "ai": "coward",
+   "abilities": [
+    "e_bite",
+    "e_venom"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "bone",
+     0.3,
+     1,
+     1
+    ]
+   ],
+   "xp": 10,
+   "gold": [
+    1,
+    4
+   ],
+   "biomes": [
+    "dungeon",
+    "village",
+    "city",
+    "swamp",
+    "farmland",
+    "manor",
+    "crypt",
+    "mines"
+   ],
+   "genres": [
+    "fantasy",
+    "dark",
+    "modern"
+   ],
+   "sound": "rodent",
+   "size": 0.6
+  },
+  "snake": {
+   "name": "Viper",
+   "models": [
+    "conv_easy_animated_enemy_pack_snake",
+    "conv_easy_animated_enemy_pack_snake_angry"
+   ],
+   "body": "serpent",
+   "tier": 0.8,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_venom",
+    "e_bite"
+   ],
+   "resist": [
+    "poison"
+   ],
+   "weak": [
+    "ice"
+   ],
+   "loot": [
+    [
+     "monster_hide",
+     0.5,
+     1,
+     1
+    ]
+   ],
+   "xp": 16,
+   "gold": [
+    2,
+    7
+   ],
+   "biomes": [
+    "desert",
+    "swamp",
+    "forest",
+    "jungle",
+    "sakura"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "reptile",
+   "size": 0.7
+  },
+  "frog": {
+   "name": "Bog Frog",
+   "models": [
+    "conv_easy_animated_enemy_pack_frog",
+    "ultimate_monsters_frog"
+   ],
+   "body": "quadruped",
+   "tier": 0.7,
+   "ai": "brute",
+   "abilities": [
+    "e_bite"
+   ],
+   "resist": [
+    "water"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [
+    [
+     "slime_gel",
+     0.5,
+     1,
+     2
+    ]
+   ],
+   "xp": 12,
+   "gold": [
+    2,
+    6
+   ],
+   "biomes": [
+    "swamp",
+    "meadow",
+    "river",
+    "sakura"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "frog",
+   "size": 0.8
+  },
+  "wasp": {
+   "name": "Giant Wasp",
+   "models": [
+    "conv_easy_animated_enemy_pack_wasp",
+    "cute_animated_monsters_bee"
+   ],
+   "body": "flyer",
+   "tier": 0.8,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_venom"
+   ],
+   "weak": [
+    "fire",
+    "wind"
+   ],
+   "loot": [
+    [
+     "monster_hide",
+     0.3,
+     1,
+     1
+    ]
+   ],
+   "xp": 15,
+   "gold": [
+    2,
+    6
+   ],
+   "biomes": [
+    "meadow",
+    "forest",
+    "jungle",
+    "farmland",
+    "sakura",
+    "sky_isles"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "insect",
+   "size": 0.9
+  },
+  "skeleton": {
+   "name": "Skeleton Warrior",
+   "models": [
+    "conv_animated_monster_pack_skeleton",
+    "pirate_kit_characters_skeleton",
+    "pirate_kit_characters_skeleton_headless"
+   ],
+   "body": "humanoid",
+   "tier": 1.0,
+   "ai": "brute",
+   "abilities": [
+    "e_claw",
+    "e_slam"
+   ],
+   "resist": [
+    "poison",
+    "shadow",
+    "ice"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "weak": [
+    "light",
+    "earth"
+   ],
+   "loot": [
+    [
+     "bone",
+     0.9,
+     1,
+     3
+    ],
+    [
+     "iron_sword",
+     0.08,
+     1,
+     1
+    ]
+   ],
+   "xp": 24,
+   "gold": [
+    5,
+    14
+   ],
+   "biomes": [
+    "graveyard",
+    "dungeon",
+    "ruins",
+    "cave",
+    "beach",
+    "farmland",
+    "harbor",
+    "manor",
+    "crypt",
+    "pirate_cove"
+   ],
+   "genres": [
+    "fantasy",
+    "dark",
+    "pirate"
+   ],
+   "sound": "skeleton",
+   "size": 1.8
+  },
+  "zombie": {
+   "name": "Zombie",
+   "models": [
+    "zombie_apocalypse_kit_zombie_basic",
+    "zombie_apocalypse_kit_zombie_chubby",
+    "zombie_apocalypse_kit_zombie_ribcage",
+    "zombie_apocalypse_kit_zombie_arm",
+    "ultimate_animated_character_zombie_male",
+    "ultimate_animated_character_zombie_female",
+    "conv_zombie_zombie",
+    "conv_zombie_zombiesmooth"
+   ],
+   "body": "humanoid",
+   "tier": 0.9,
+   "ai": "brute",
+   "abilities": [
+    "e_claw",
+    "e_bite"
+   ],
+   "resist": [
+    "poison",
+    "shadow"
+   ],
+   "weak": [
+    "fire",
+    "light"
+   ],
+   "loot": [
+    [
+     "bone",
+     0.5,
+     1,
+     2
+    ],
+    [
+     "trail_ration",
+     0.2,
+     1,
+     1
+    ]
+   ],
+   "xp": 18,
+   "gold": [
+    3,
+    10
+   ],
+   "biomes": [
+    "city",
+    "graveyard",
+    "swamp",
+    "village",
+    "farmland",
+    "manor",
+    "outpost",
+    "crypt"
+   ],
+   "genres": [
+    "modern",
+    "dark"
+   ],
+   "sound": "zombie",
+   "size": 1.8
+  },
+  "ghost": {
+   "name": "Wailing Ghost",
+   "models": [
+    "ultimate_monsters_ghost",
+    "ultimate_monsters_ghost_skull",
+    "cute_animated_monsters_ghost"
+   ],
+   "body": "flyer",
+   "tier": 1.0,
+   "ai": "caster",
+   "abilities": [
+    "e_darkbolt"
+   ],
+   "resist": [
+    "shadow",
+    "ice",
+    "poison"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "weak": [
+    "light",
+    "arcane"
+   ],
+   "loot": [
+    [
+     "crystal",
+     0.3,
+     1,
+     1
+    ],
+    [
+     "ether_small",
+     0.3,
+     1,
+     1
+    ]
+   ],
+   "xp": 26,
+   "gold": [
+    5,
+    15
+   ],
+   "biomes": [
+    "graveyard",
+    "ruins",
+    "dungeon",
+    "castle",
+    "sakura",
+    "manor",
+    "crypt"
+   ],
+   "genres": [
+    "fantasy",
+    "dark"
+   ],
+   "sound": "ghost",
+   "size": 1.7
+  },
+  "goblin": {
+   "name": "Goblin Raider",
+   "models": [
+    "ultimate_animated_character_goblin_male",
+    "ultimate_animated_character_goblin_female"
+   ],
+   "body": "humanoid",
+   "tier": 0.9,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_claw"
+   ],
+   "weak": [
+    "light"
+   ],
+   "loot": [
+    [
+     "gold",
+     0.6,
+     5,
+     20
+    ],
+    [
+     "iron_dagger",
+     0.12,
+     1,
+     1
+    ],
+    [
+     "potion_small",
+     0.25,
+     1,
+     1
+    ],
+    [
+     "smoke_pellet",
+     0.15,
+     1,
+     1
+    ]
+   ],
+   "xp": 20,
+   "gold": [
+    6,
+    18
+   ],
+   "biomes": [
+    "forest",
+    "cave",
+    "ruins",
+    "mountain",
+    "meadow",
+    "farmland",
+    "mines"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "humanoid_weapon": "iron_dagger",
+   "sound": "goblin",
+   "size": 1.25
+  },
+  "orc": {
+   "name": "Orc Brute",
+   "models": [
+    "ultimate_monsters_orc",
+    "ultimate_monsters_orc_skull",
+    "ultimate_monsters_tribal"
+   ],
+   "body": "humanoid",
+   "tier": 1.3,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_roar"
+   ],
+   "weak": [
+    "arcane"
+   ],
+   "loot": [
+    [
+     "battle_axe",
+     0.08,
+     1,
+     1
+    ],
+    [
+     "monster_hide",
+     0.5,
+     1,
+     2
+    ],
+    [
+     "potion_small",
+     0.3,
+     1,
+     1
+    ]
+   ],
+   "xp": 34,
+   "gold": [
+    10,
+    26
+   ],
+   "biomes": [
+    "mountain",
+    "forest",
+    "ruins",
+    "desert",
+    "castle"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "brute",
+   "size": 2.3
+  },
+  "bandit": {
+   "name": "Bandit",
+   "models": [
+    "ultimate_modular_men_punk",
+    "ultimate_modular_women_punk",
+    "ultimate_animated_character_ninja_male",
+    "ultimate_animated_character_ninja_female",
+    "ultimate_modular_men_adventurer"
+   ],
+   "body": "humanoid",
+   "tier": 1.0,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_claw"
+   ],
+   "loot": [
+    [
+     "gold",
+     0.8,
+     10,
+     30
+    ],
+    [
+     "potion_small",
+     0.3,
+     1,
+     1
+    ],
+    [
+     "iron_dagger",
+     0.08,
+     1,
+     1
+    ],
+    [
+     "copper_ring",
+     0.05,
+     1,
+     1
+    ]
+   ],
+   "xp": 24,
+   "gold": [
+    10,
+    25
+   ],
+   "biomes": [
+    "forest",
+    "meadow",
+    "village",
+    "mountain",
+    "desert",
+    "city",
+    "farmland",
+    "harbor",
+    "outpost"
+   ],
+   "genres": [
+    "fantasy",
+    "modern",
+    "wild"
+   ],
+   "modular": true,
+   "sound": "humanoid",
+   "size": 1.78
+  },
+  "pirate": {
+   "name": "Pirate Cutthroat",
+   "models": [
+    "pirate_kit_characters_henry",
+    "pirate_kit_characters_mako",
+    "pirate_kit_characters_anne",
+    "ultimate_animated_character_pirate_male",
+    "ultimate_animated_character_pirate_female"
+   ],
+   "body": "humanoid",
+   "tier": 1.0,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_claw",
+    "e_shoot"
+   ],
+   "loot": [
+    [
+     "gold",
+     0.9,
+     12,
+     30
+    ],
+    [
+     "trail_ration",
+     0.3,
+     1,
+     2
+    ]
+   ],
+   "xp": 26,
+   "gold": [
+    12,
+    28
+   ],
+   "biomes": [
+    "beach",
+    "village",
+    "river",
+    "harbor",
+    "pirate_cove"
+   ],
+   "genres": [
+    "pirate",
+    "fantasy"
+   ],
+   "sound": "humanoid",
+   "size": 1.78
+  },
+  "shark_man": {
+   "name": "Sharkfolk",
+   "models": [
+    "pirate_kit_characters_sharky",
+    "pirate_kit_characters_shark"
+   ],
+   "body": "humanoid",
+   "tier": 1.2,
+   "ai": "brute",
+   "abilities": [
+    "e_bite",
+    "e_slam"
+   ],
+   "resist": [
+    "water"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [
+    [
+     "dino_tooth",
+     0.5,
+     1,
+     2
+    ]
+   ],
+   "xp": 30,
+   "gold": [
+    8,
+    20
+   ],
+   "biomes": [
+    "beach",
+    "river",
+    "harbor",
+    "pirate_cove"
+   ],
+   "genres": [
+    "pirate"
+   ],
+   "sound": "brute",
+   "size": 1.9
+  },
+  "cultist": {
+   "name": "Cultist",
+   "models": [
+    "ultimate_monsters_wizard",
+    "ultimate_animated_character_witch",
+    "ultimate_modular_women_witch"
+   ],
+   "body": "humanoid",
+   "tier": 1.0,
+   "ai": "caster",
+   "abilities": [
+    "e_darkbolt",
+    "e_heal_self"
+   ],
+   "resist": [
+    "shadow"
+   ],
+   "weak": [
+    "light"
+   ],
+   "loot": [
+    [
+     "ether_small",
+     0.4,
+     1,
+     1
+    ],
+    [
+     "crystal",
+     0.3,
+     1,
+     1
+    ],
+    [
+     "spell_book",
+     0.04,
+     1,
+     1
+    ]
+   ],
+   "xp": 28,
+   "gold": [
+    8,
+    20
+   ],
+   "biomes": [
+    "ruins",
+    "dungeon",
+    "graveyard",
+    "castle",
+    "swamp",
+    "manor",
+    "crypt"
+   ],
+   "genres": [
+    "fantasy",
+    "dark"
+   ],
+   "sound": "cultist",
+   "size": 1.8
+  },
+  "demon": {
+   "name": "Lesser Demon",
+   "models": [
+    "ultimate_monsters_demon",
+    "ultimate_monsters_bluedemon",
+    "cute_animated_monsters_demon",
+    "cute_animated_monsters_greendemon",
+    "bestiary_dungeon_monsters_ki_imp"
+   ],
+   "body": "humanoid",
+   "tier": 1.2,
+   "ai": "caster",
+   "abilities": [
+    "e_claw",
+    "e_firebreath"
+   ],
+   "resist": [
+    "fire",
+    "shadow"
+   ],
+   "weak": [
+    "light",
+    "ice"
+   ],
+   "loot": [
+    [
+     "crystal",
+     0.5,
+     1,
+     2
+    ],
+    [
+     "ruby_ring",
+     0.04,
+     1,
+     1
+    ]
+   ],
+   "xp": 34,
+   "gold": [
+    10,
+    24
+   ],
+   "biomes": [
+    "volcano",
+    "dungeon",
+    "castle",
+    "ruins",
+    "manor"
+   ],
+   "genres": [
+    "fantasy",
+    "dark"
+   ],
+   "sound": "demon",
+   "size": 2.0
+  },
+  "puglin": {
+   "name": "Puglin",
+   "models": [
+    "bestiary_dungeon_monsters_ki_puglin"
+   ],
+   "body": "humanoid",
+   "tier": 0.8,
+   "ai": "coward",
+   "abilities": [
+    "e_bite"
+   ],
+   "loot": [
+    [
+     "gold",
+     0.6,
+     4,
+     12
+    ]
+   ],
+   "xp": 14,
+   "gold": [
+    4,
+    10
+   ],
+   "biomes": [
+    "dungeon",
+    "cave"
+   ],
+   "genres": [
+    "fantasy"
+   ],
+   "sound": "goblin",
+   "size": 1.2
+  },
+  "yeti": {
+   "name": "Yeti",
+   "models": [
+    "ultimate_monsters_yeti",
+    "cute_animated_monsters_yeti"
+   ],
+   "body": "humanoid",
+   "tier": 1.4,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_frostbreath"
+   ],
+   "resist": [
+    "ice"
+   ],
+   "immune": [
+    "ice"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "monster_hide",
+     0.8,
+     1,
+     3
+    ],
+    [
+     "potion_big",
+     0.15,
+     1,
+     1
+    ]
+   ],
+   "xp": 40,
+   "gold": [
+    10,
+    22
+   ],
+   "biomes": [
+    "snow",
+    "mountain"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "brute",
+   "size": 2.8
+  },
+  "golem": {
+   "name": "Goleling",
+   "models": [
+    "ultimate_monsters_goleling",
+    "ultimate_monsters_goleling_evolved"
+   ],
+   "body": "blob",
+   "tier": 1.3,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_stomp"
+   ],
+   "resist": [
+    "earth",
+    "fire"
+   ],
+   "weak": [
+    "water",
+    "lightning"
+   ],
+   "loot": [
+    [
+     "gem",
+     0.3,
+     1,
+     1
+    ],
+    [
+     "crystal",
+     0.4,
+     1,
+     2
+    ]
+   ],
+   "xp": 38,
+   "gold": [
+    8,
+    20
+   ],
+   "biomes": [
+    "mountain",
+    "cave",
+    "ruins",
+    "desert",
+    "mines"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "stone",
+   "size": 1.3,
+   "desc": "A living lump of rock with leafy ears - small, stubborn and very hard to crack."
+  },
+  "cactoro": {
+   "name": "Cactoro",
+   "models": [
+    "ultimate_monsters_cactoro",
+    "cute_animated_monsters_cactus"
+   ],
+   "body": "humanoid",
+   "tier": 1.0,
+   "ai": "brute",
+   "abilities": [
+    "e_claw"
+   ],
+   "resist": [
+    "earth"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "trail_ration",
+     0.3,
+     1,
+     1
+    ]
+   ],
+   "xp": 22,
+   "gold": [
+    4,
+    12
+   ],
+   "biomes": [
+    "desert",
+    "sky_isles"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "plant",
+   "size": 1.3
+  },
+  "living_tree": {
+   "name": "Angry Treant",
+   "models": [
+    "cute_animated_monsters_tree"
+   ],
+   "body": "blob",
+   "tier": 1.3,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_heal_self"
+   ],
+   "resist": [
+    "water",
+    "earth"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "crystal",
+     0.2,
+     1,
+     1
+    ]
+   ],
+   "xp": 32,
+   "gold": [
+    3,
+    10
+   ],
+   "biomes": [
+    "forest",
+    "swamp",
+    "farmland",
+    "sakura"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "plant",
+   "size": 3.2
+  },
+  "cyclops": {
+   "name": "Cyclops",
+   "models": [
+    "cute_animated_monsters_cyclops"
+   ],
+   "body": "blob",
+   "tier": 1.4,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_stomp"
+   ],
+   "weak": [
+    "arcane"
+   ],
+   "loot": [
+    [
+     "gold",
+     0.8,
+     15,
+     35
+    ],
+    [
+     "potion_big",
+     0.2,
+     1,
+     1
+    ]
+   ],
+   "xp": 42,
+   "gold": [
+    12,
+    30
+   ],
+   "biomes": [
+    "mountain",
+    "ruins",
+    "cave",
+    "meadow"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "brute",
+   "size": 2.9
+  },
+  "skull_beast": {
+   "name": "Flying Skull",
+   "models": [
+    "cute_animated_monsters_skull",
+    "platformer_game_kit_skull"
+   ],
+   "body": "blob",
+   "tier": 0.9,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_bite",
+    "e_darkbolt"
+   ],
+   "resist": [
+    "shadow"
+   ],
+   "weak": [
+    "light"
+   ],
+   "loot": [
+    [
+     "bone",
+     0.7,
+     1,
+     2
+    ]
+   ],
+   "xp": 20,
+   "gold": [
+    4,
+    10
+   ],
+   "biomes": [
+    "dungeon",
+    "graveyard",
+    "ruins",
+    "sky_isles",
+    "manor",
+    "crypt"
+   ],
+   "genres": [
+    "fantasy",
+    "dark"
+   ],
+   "sound": "skeleton",
+   "size": 0.9
+  },
+  "crab": {
+   "name": "Giant Crab",
+   "models": [
+    "cute_animated_monsters_crab",
+    "platformer_game_kit_crab"
+   ],
+   "body": "quadruped",
+   "tier": 1.0,
+   "ai": "brute",
+   "abilities": [
+    "e_claw"
+   ],
+   "resist": [
+    "water"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [
+    [
+     "trail_ration",
+     0.5,
+     1,
+     2
+    ]
+   ],
+   "xp": 20,
+   "gold": [
+    3,
+    9
+   ],
+   "biomes": [
+    "beach",
+    "river",
+    "harbor",
+    "pirate_cove"
+   ],
+   "genres": [
+    "pirate",
+    "fantasy",
+    "wild"
+   ],
+   "sound": "crab",
+   "size": 1.0
+  },
+  "squidle": {
+   "name": "Squidle",
+   "models": [
+    "ultimate_monsters_squidle",
+    "pirate_kit_characters_tentacle"
+   ],
+   "body": "serpent",
+   "tier": 1.1,
+   "ai": "caster",
+   "abilities": [
+    "e_darkbolt",
+    "e_slam"
+   ],
+   "resist": [
+    "water"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [
+    [
+     "slime_gel",
+     0.5,
+     1,
+     2
+    ],
+    [
+     "gem",
+     0.1,
+     1,
+     1
+    ]
+   ],
+   "xp": 28,
+   "gold": [
+    6,
+    16
+   ],
+   "biomes": [
+    "beach",
+    "river",
+    "swamp",
+    "harbor",
+    "pirate_cove"
+   ],
+   "genres": [
+    "pirate",
+    "fantasy"
+   ],
+   "sound": "water",
+   "size": 1.2
+  },
+  "raptor": {
+   "name": "Velociraptor",
+   "models": [
+    "conv_dinosaur_animated_pack_velociraptor"
+   ],
+   "body": "quadruped",
+   "tier": 1.1,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_bite",
+    "e_claw"
+   ],
+   "weak": [
+    "ice"
+   ],
+   "loot": [
+    [
+     "dino_tooth",
+     0.7,
+     1,
+     2
+    ]
+   ],
+   "xp": 28,
+   "gold": [
+    2,
+    8
+   ],
+   "biomes": [
+    "jungle",
+    "city",
+    "meadow",
+    "desert"
+   ],
+   "genres": [
+    "modern",
+    "wild",
+    "scifi"
+   ],
+   "sound": "dino",
+   "size": 1.7
+  },
+  "trex": {
+   "name": "Tyrannosaurus",
+   "models": [
+    "conv_dinosaur_animated_pack_trex"
+   ],
+   "body": "quadruped",
+   "tier": 2.0,
+   "ai": "brute",
+   "abilities": [
+    "e_bite",
+    "e_roar",
+    "e_stomp"
+   ],
+   "weak": [
+    "ice"
+   ],
+   "loot": [
+    [
+     "dino_tooth",
+     1.0,
+     2,
+     4
+    ],
+    [
+     "gem",
+     0.3,
+     1,
+     1
+    ]
+   ],
+   "xp": 70,
+   "gold": [
+    10,
+    30
+   ],
+   "biomes": [
+    "jungle",
+    "city",
+    "meadow"
+   ],
+   "genres": [
+    "modern",
+    "wild"
+   ],
+   "size": 5.0,
+   "sound": "dino_big"
+  },
+  "triceratops": {
+   "name": "Triceratops",
+   "models": [
+    "conv_dinosaur_animated_pack_triceratops",
+    "conv_dinosaur_animated_pack_stegosaurus"
+   ],
+   "body": "quadruped",
+   "tier": 1.6,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_stomp"
+   ],
+   "weak": [
+    "ice"
+   ],
+   "loot": [
+    [
+     "dino_tooth",
+     0.8,
+     1,
+     3
+    ]
+   ],
+   "xp": 50,
+   "gold": [
+    5,
+    18
+   ],
+   "biomes": [
+    "jungle",
+    "meadow",
+    "city"
+   ],
+   "genres": [
+    "modern",
+    "wild"
+   ],
+   "size": 3.0,
+   "sound": "dino_big"
+  },
+  "robot": {
+   "name": "Security Drone",
+   "models": [
+    "cyberpunk_game_kit_quaterniu_enemy_2legs",
+    "cyberpunk_game_kit_quaterniu_enemy_2legs_gun",
+    "cyberpunk_game_kit_quaterniu_enemy_flying",
+    "cyberpunk_game_kit_quaterniu_enemy_flying_gun",
+    "ultimate_space_kit_enemy_small",
+    "ultimate_space_kit_enemy_flying",
+    "ultimate_space_kit_enemy_extrasmall"
+   ],
+   "body": "blob",
+   "tier": 1.0,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_shoot",
+    "e_laser"
+   ],
+   "resist": [
+    "poison"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "weak": [
+    "lightning",
+    "water"
+   ],
+   "loot": [
+    [
+     "scrap_metal",
+     0.9,
+     1,
+     3
+    ],
+    [
+     "crystal",
+     0.15,
+     1,
+     1
+    ]
+   ],
+   "xp": 26,
+   "gold": [
+    8,
+    18
+   ],
+   "biomes": [
+    "scifi",
+    "city",
+    "space",
+    "outpost",
+    "space_station"
+   ],
+   "genres": [
+    "scifi",
+    "modern"
+   ],
+   "sound": "robot",
+   "size": 1.6
+  },
+  "mech": {
+   "name": "War Mech",
+   "models": [
+    "animated_mech_pack_mike",
+    "animated_mech_pack_stan",
+    "animated_mech_pack_george",
+    "cyberpunk_game_kit_quaterniu_enemy_large",
+    "cyberpunk_game_kit_quaterniu_enemy_large_gun",
+    "ultimate_space_kit_enemy_large"
+   ],
+   "body": "humanoid",
+   "tier": 1.6,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_laser",
+    "e_shoot"
+   ],
+   "resist": [
+    "poison",
+    "fire"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [
+    [
+     "scrap_metal",
+     1.0,
+     2,
+     4
+    ],
+    [
+     "gem",
+     0.2,
+     1,
+     1
+    ]
+   ],
+   "xp": 48,
+   "gold": [
+    15,
+    35
+   ],
+   "biomes": [
+    "scifi",
+    "city",
+    "space",
+    "outpost"
+   ],
+   "genres": [
+    "scifi"
+   ],
+   "sound": "mech",
+   "size": 3.6
+  },
+  "alien": {
+   "name": "Alien Raider",
+   "models": [
+    "ultimate_monsters_alien",
+    "cute_animated_monsters_alien",
+    "cute_animated_monsters_alien_tall"
+   ],
+   "body": "humanoid",
+   "tier": 1.1,
+   "ai": "caster",
+   "abilities": [
+    "e_laser",
+    "e_claw"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "crystal",
+     0.5,
+     1,
+     2
+    ],
+    [
+     "scrap_metal",
+     0.3,
+     1,
+     1
+    ]
+   ],
+   "xp": 30,
+   "gold": [
+    8,
+    20
+   ],
+   "biomes": [
+    "space",
+    "scifi",
+    "desert",
+    "outpost",
+    "space_station"
+   ],
+   "genres": [
+    "scifi"
+   ],
+   "sound": "alien",
+   "size": 1.7
+  },
+  "ninja": {
+   "name": "Shadow Ninja",
+   "models": [
+    "ultimate_monsters_ninja",
+    "ultimate_animated_character_ninja_male",
+    "ultimate_animated_character_ninja_female"
+   ],
+   "body": "humanoid",
+   "tier": 1.2,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_claw",
+    "e_darkbolt"
+   ],
+   "resist": [
+    "shadow"
+   ],
+   "weak": [
+    "light"
+   ],
+   "loot": [
+    [
+     "smoke_pellet",
+     0.4,
+     1,
+     2
+    ],
+    [
+     "assassin_dagger",
+     0.04,
+     1,
+     1
+    ]
+   ],
+   "xp": 32,
+   "gold": [
+    10,
+    22
+   ],
+   "biomes": [
+    "city",
+    "castle",
+    "forest",
+    "village",
+    "sakura"
+   ],
+   "genres": [
+    "fantasy",
+    "modern"
+   ],
+   "sound": "humanoid",
+   "size": 1.75
+  },
+  "dragon_whelp": {
+   "name": "Dragon Whelp",
+   "models": [
+    "cute_animated_monsters_yellowdragon",
+    "conv_animated_monster_pack_dragon",
+    "ultimate_monsters_dragon"
+   ],
+   "body": "flyer",
+   "tier": 1.4,
+   "ai": "caster",
+   "abilities": [
+    "e_bite",
+    "e_firebreath"
+   ],
+   "resist": [
+    "fire"
+   ],
+   "weak": [
+    "ice"
+   ],
+   "loot": [
+    [
+     "gem",
+     0.4,
+     1,
+     1
+    ],
+    [
+     "gold",
+     0.8,
+     15,
+     30
+    ]
+   ],
+   "xp": 44,
+   "gold": [
+    15,
+    30
+   ],
+   "biomes": [
+    "volcano",
+    "mountain",
+    "ruins",
+    "cave",
+    "sky_isles"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "dragon",
+   "size": 1.8
+  },
+  "armabee": {
+   "name": "Armabee",
+   "models": [
+    "ultimate_monsters_armabee",
+    "ultimate_monsters_armabee_evolved"
+   ],
+   "body": "flyer",
+   "tier": 1.0,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_venom",
+    "e_bite"
+   ],
+   "weak": [
+    "fire",
+    "wind"
+   ],
+   "loot": [
+    [
+     "monster_hide",
+     0.4,
+     1,
+     1
+    ]
+   ],
+   "xp": 22,
+   "gold": [
+    3,
+    9
+   ],
+   "biomes": [
+    "meadow",
+    "forest",
+    "jungle",
+    "sky_isles"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "insect",
+   "size": 1.3
+  },
+  "hywirl": {
+   "name": "Hywirl",
+   "models": [
+    "ultimate_monsters_hywirl",
+    "ultimate_monsters_glub",
+    "ultimate_monsters_glub_evolved"
+   ],
+   "body": "blob",
+   "tier": 1.0,
+   "ai": "caster",
+   "abilities": [
+    "e_frostbreath",
+    "e_slam"
+   ],
+   "resist": [
+    "water",
+    "ice"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [
+    [
+     "crystal",
+     0.3,
+     1,
+     1
+    ]
+   ],
+   "xp": 24,
+   "gold": [
+    4,
+    12
+   ],
+   "biomes": [
+    "river",
+    "swamp",
+    "snow",
+    "beach",
+    "sakura",
+    "sky_isles"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "water",
+   "size": 1.3
+  },
+  "wild_wolf": {
+   "name": "Feral Hound",
+   "models": [
+    "ultimate_monsters_dog",
+    "zombie_apocalypse_kit_characters_germanshepherd"
+   ],
+   "body": "quadruped",
+   "tier": 0.9,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_bite"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "monster_hide",
+     0.6,
+     1,
+     2
+    ]
+   ],
+   "xp": 18,
+   "gold": [
+    1,
+    5
+   ],
+   "biomes": [
+    "forest",
+    "meadow",
+    "snow",
+    "mountain",
+    "farmland"
+   ],
+   "genres": [
+    "fantasy",
+    "wild",
+    "modern"
+   ],
+   "sound": "beast",
+   "size": 1.1
+  },
+  "eye_drone": {
+   "name": "Eye Drone",
+   "models": [
+    "sci_fi_essentials_kit_enemy_eyedrone"
+   ],
+   "body": "flyer",
+   "size": 1.0,
+   "tier": 0.9,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_laser"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [],
+   "xp": 22,
+   "gold": [
+    6,
+    14
+   ],
+   "biomes": [
+    "scifi",
+    "space",
+    "outpost",
+    "city",
+    "space_station"
+   ],
+   "genres": [
+    "scifi",
+    "modern"
+   ],
+   "sound": "robot",
+   "resist": []
+  },
+  "quadshell": {
+   "name": "Quadshell",
+   "models": [
+    "sci_fi_essentials_kit_enemy_quadshell"
+   ],
+   "body": "quadruped",
+   "size": 1.3,
+   "tier": 1.2,
+   "ai": "brute",
+   "abilities": [
+    "e_bite",
+    "e_slam"
+   ],
+   "resist": [
+    "earth"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [],
+   "xp": 30,
+   "gold": [
+    8,
+    16
+   ],
+   "biomes": [
+    "space",
+    "scifi",
+    "cave",
+    "outpost",
+    "space_station"
+   ],
+   "genres": [
+    "scifi"
+   ],
+   "sound": "insect"
+  },
+  "trilobite": {
+   "name": "Void Trilobite",
+   "models": [
+    "sci_fi_essentials_kit_enemy_trilobite"
+   ],
+   "body": "quadruped",
+   "size": 0.9,
+   "tier": 0.8,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_bite",
+    "e_venom"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [],
+   "xp": 18,
+   "gold": [
+    4,
+    10
+   ],
+   "biomes": [
+    "space",
+    "cave",
+    "scifi",
+    "mines",
+    "space_station"
+   ],
+   "genres": [
+    "scifi"
+   ],
+   "sound": "insect",
+   "resist": []
+  },
+  "alien_horror": {
+   "name": "Xeno Horror",
+   "models": [
+    "modular_scifi_megakit_alien_cyclop",
+    "modular_scifi_megakit_alien_oculichrysalis",
+    "modular_scifi_megakit_alien_scolitex"
+   ],
+   "body": "blob",
+   "size": 2.2,
+   "tier": 1.4,
+   "ai": "caster",
+   "abilities": [
+    "e_darkbolt",
+    "e_venom"
+   ],
+   "weak": [
+    "fire",
+    "light"
+   ],
+   "loot": [],
+   "xp": 40,
+   "gold": [
+    10,
+    22
+   ],
+   "biomes": [
+    "space",
+    "scifi",
+    "cave",
+    "space_station"
+   ],
+   "genres": [
+    "scifi"
+   ],
+   "sound": "alien",
+   "resist": []
+  },
+  "space_mech": {
+   "name": "Rogue Mech Pilot",
+   "models": [
+    "ultimate_space_kit_mech_barbarathebee",
+    "ultimate_space_kit_mech_fernandotheflamingo",
+    "ultimate_space_kit_mech_finnthefrog",
+    "ultimate_space_kit_mech_raetheredpanda"
+   ],
+   "body": "humanoid",
+   "size": 3.2,
+   "tier": 1.6,
+   "ai": "brute",
+   "abilities": [
+    "e_shoot",
+    "e_stomp"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [],
+   "xp": 48,
+   "gold": [
+    14,
+    30
+   ],
+   "biomes": [
+    "scifi",
+    "space",
+    "outpost",
+    "space_station"
+   ],
+   "genres": [
+    "scifi"
+   ],
+   "sound": "mech",
+   "resist": []
+  },
+  "trooper": {
+   "name": "Rogue Trooper",
+   "models": [
+    "toon_shooter_game_kit_character_enemy",
+    "toon_shooter_game_kit_character_hazmat"
+   ],
+   "body": "humanoid",
+   "size": 1.8,
+   "tier": 1.0,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_shoot"
+   ],
+   "loot": [],
+   "xp": 26,
+   "gold": [
+    10,
+    20
+   ],
+   "biomes": [
+    "city",
+    "outpost"
+   ],
+   "genres": [
+    "modern",
+    "scifi"
+   ],
+   "sound": "humanoid",
+   "resist": [],
+   "weak": []
+  },
+  "war_tank": {
+   "name": "Abandoned War Tank",
+   "models": [
+    "conv_tank_pack_tank",
+    "conv_tank_pack_tank2",
+    "conv_tank_pack_tank3",
+    "conv_tank_pack_tank4"
+   ],
+   "body": "blob",
+   "size": 2.6,
+   "tier": 1.8,
+   "ai": "brute",
+   "abilities": [
+    "e_shoot",
+    "e_stomp"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "resist": [
+    "earth"
+   ],
+   "weak": [
+    "lightning",
+    "water"
+   ],
+   "loot": [],
+   "xp": 55,
+   "gold": [
+    16,
+    34
+   ],
+   "biomes": [
+    "city",
+    "outpost"
+   ],
+   "genres": [
+    "modern",
+    "scifi"
+   ],
+   "sound": "mech"
+  },
+  "chomper": {
+   "name": "Chomper",
+   "models": [
+    "platformer_game_kit_enemy"
+   ],
+   "body": "blob",
+   "size": 1.3,
+   "tier": 0.9,
+   "ai": "brute",
+   "abilities": [
+    "e_bite"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "gold",
+     0.5,
+     4,
+     12
+    ]
+   ],
+   "xp": 18,
+   "gold": [
+    6,
+    14
+   ],
+   "biomes": [
+    "sky_isles",
+    "jungle",
+    "meadow"
+   ],
+   "genres": [
+    "wild",
+    "fantasy"
+   ],
+   "sound": "plant",
+   "resist": []
+  },
+  "sky_bee": {
+   "name": "Buzzbomber",
+   "models": [
+    "platformer_game_kit_bee"
+   ],
+   "body": "flyer",
+   "size": 0.9,
+   "tier": 0.8,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_venom"
+   ],
+   "weak": [
+    "fire",
+    "wind"
+   ],
+   "loot": [],
+   "xp": 15,
+   "gold": [
+    3,
+    9
+   ],
+   "biomes": [
+    "sky_isles",
+    "meadow",
+    "farmland"
+   ],
+   "genres": [
+    "wild",
+    "fantasy"
+   ],
+   "sound": "insect",
+   "resist": []
+  },
+  "mimic": {
+   "name": "Mimic",
+   "models": [
+    "conv_rpg_asset_pack_animatedchest",
+    "fantasy_props_megakit_chest_wood"
+   ],
+   "body": "blob",
+   "size": 1.1,
+   "tier": 1.3,
+   "ai": "brute",
+   "abilities": [
+    "e_bite",
+    "e_slam"
+   ],
+   "resist": [
+    "earth"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     20,
+     60
+    ]
+   ],
+   "xp": 36,
+   "gold": [
+    20,
+    50
+   ],
+   "biomes": [
+    "dungeon",
+    "cave",
+    "ruins",
+    "manor",
+    "crypt",
+    "mines"
+   ],
+   "genres": [
+    "fantasy",
+    "dark",
+    "pirate"
+   ],
+   "sound": "stone"
+  },
+  "block_zombie": {
+   "name": "Blocky Zombie",
+   "models": [
+    "cube_world_zombie"
+   ],
+   "body": "humanoid",
+   "size": 1.8,
+   "tier": 0.9,
+   "ai": "brute",
+   "abilities": [
+    "e_claw"
+   ],
+   "weak": [
+    "fire",
+    "light"
+   ],
+   "loot": [],
+   "xp": 16,
+   "gold": [
+    3,
+    8
+   ],
+   "biomes": [
+    "blockland"
+   ],
+   "genres": [
+    "wild"
+   ],
+   "sound": "zombie",
+   "resist": []
+  },
+  "block_skeleton": {
+   "name": "Blocky Skeleton",
+   "models": [
+    "cube_world_skeleton",
+    "cube_world_skeleton_armor"
+   ],
+   "body": "humanoid",
+   "size": 1.8,
+   "tier": 1.0,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_shoot",
+    "e_claw"
+   ],
+   "weak": [
+    "light",
+    "earth"
+   ],
+   "loot": [],
+   "xp": 20,
+   "gold": [
+    4,
+    10
+   ],
+   "biomes": [
+    "blockland"
+   ],
+   "genres": [
+    "wild"
+   ],
+   "sound": "skeleton",
+   "resist": []
+  },
+  "block_goblin": {
+   "name": "Blocky Goblin",
+   "models": [
+    "cube_world_goblin",
+    "cube_world_demon"
+   ],
+   "body": "humanoid",
+   "size": 1.3,
+   "tier": 0.9,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_claw"
+   ],
+   "loot": [
+    [
+     "gold",
+     0.6,
+     3,
+     10
+    ]
+   ],
+   "xp": 16,
+   "gold": [
+    4,
+    12
+   ],
+   "biomes": [
+    "blockland"
+   ],
+   "genres": [
+    "wild"
+   ],
+   "sound": "goblin",
+   "resist": [],
+   "weak": []
+  },
+  "block_wolf": {
+   "name": "Blocky Wolf",
+   "models": [
+    "cube_world_wolf"
+   ],
+   "body": "quadruped",
+   "size": 1.0,
+   "tier": 0.8,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_bite"
+   ],
+   "loot": [],
+   "xp": 14,
+   "gold": [
+    2,
+    6
+   ],
+   "biomes": [
+    "blockland",
+    "snow"
+   ],
+   "genres": [
+    "wild"
+   ],
+   "sound": "beast",
+   "resist": [],
+   "weak": []
+  },
+  "block_yeti": {
+   "name": "Blocky Yeti",
+   "models": [
+    "cube_world_yeti"
+   ],
+   "body": "humanoid",
+   "size": 2.6,
+   "tier": 1.4,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_frostbreath"
+   ],
+   "resist": [
+    "ice"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [],
+   "xp": 36,
+   "gold": [
+    8,
+    18
+   ],
+   "biomes": [
+    "blockland",
+    "snow"
+   ],
+   "genres": [
+    "wild"
+   ],
+   "sound": "brute"
+  },
+  "block_wizard": {
+   "name": "Blocky Sorcerer",
+   "models": [
+    "cube_world_wizard"
+   ],
+   "body": "humanoid",
+   "size": 1.8,
+   "tier": 1.1,
+   "ai": "caster",
+   "abilities": [
+    "e_darkbolt",
+    "e_heal_self"
+   ],
+   "weak": [
+    "earth"
+   ],
+   "loot": [],
+   "xp": 26,
+   "gold": [
+    6,
+    14
+   ],
+   "biomes": [
+    "blockland"
+   ],
+   "genres": [
+    "wild"
+   ],
+   "sound": "cultist",
+   "resist": []
+  },
+  "panda": {
+   "name": "Rowdy Panda",
+   "models": [
+    "cute_animated_monsters_panda"
+   ],
+   "body": "humanoid",
+   "size": 1.6,
+   "tier": 1.1,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_claw"
+   ],
+   "loot": [],
+   "xp": 24,
+   "gold": [
+    4,
+    10
+   ],
+   "biomes": [
+    "sakura",
+    "jungle",
+    "forest"
+   ],
+   "genres": [
+    "wild",
+    "fantasy"
+   ],
+   "sound": "beast",
+   "resist": [],
+   "weak": []
+  },
+  "penguin": {
+   "name": "Penguin Brawler",
+   "models": [
+    "cute_animated_monsters_penguin"
+   ],
+   "body": "humanoid",
+   "size": 1.0,
+   "tier": 0.8,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_slam"
+   ],
+   "resist": [
+    "ice"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [],
+   "xp": 14,
+   "gold": [
+    2,
+    8
+   ],
+   "biomes": [
+    "snow",
+    "beach",
+    "harbor"
+   ],
+   "genres": [
+    "wild",
+    "fantasy",
+    "pirate"
+   ],
+   "sound": "beast"
+  },
+  "alpaking": {
+   "name": "Alpaking",
+   "models": [
+    "ultimate_monsters_alpaking"
+   ],
+   "body": "flyer",
+   "size": 1.6,
+   "tier": 1.1,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_slam",
+    "e_bite"
+   ],
+   "loot": [],
+   "xp": 24,
+   "gold": [
+    5,
+    12
+   ],
+   "biomes": [
+    "mountain",
+    "meadow",
+    "farmland",
+    "sky_isles"
+   ],
+   "genres": [
+    "wild",
+    "fantasy"
+   ],
+   "sound": "beast",
+   "resist": [],
+   "weak": []
+  },
+  "birb": {
+   "name": "Angry Birb",
+   "models": [
+    "ultimate_monsters_birb",
+    "ultimate_monsters_pigeon",
+    "ultimate_monsters_chicken"
+   ],
+   "body": "flyer",
+   "size": 0.8,
+   "tier": 0.6,
+   "ai": "coward",
+   "abilities": [
+    "e_bite"
+   ],
+   "loot": [],
+   "xp": 10,
+   "gold": [
+    1,
+    5
+   ],
+   "biomes": [
+    "farmland",
+    "meadow",
+    "village",
+    "sky_isles",
+    "harbor"
+   ],
+   "genres": [
+    "wild",
+    "fantasy",
+    "pirate"
+   ],
+   "sound": "bat",
+   "resist": [],
+   "weak": []
+  },
+  "brontosaur": {
+   "name": "Brontosaur",
+   "models": [
+    "conv_dinosaur_animated_pack_apatosaurus"
+   ],
+   "body": "quadruped",
+   "size": 7.0,
+   "tier": 2.0,
+   "ai": "brute",
+   "abilities": [
+    "e_stomp",
+    "e_slam"
+   ],
+   "resist": [
+    "earth"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [],
+   "xp": 80,
+   "gold": [
+    10,
+    30
+   ],
+   "biomes": [
+    "jungle",
+    "meadow",
+    "city"
+   ],
+   "genres": [
+    "modern",
+    "wild"
+   ],
+   "sound": "dino_big"
+  },
+  "crest_dino": {
+   "name": "Parasaurolophus",
+   "models": [
+    "conv_dinosaur_animated_pack_parasaurolophus"
+   ],
+   "body": "quadruped",
+   "size": 2.6,
+   "tier": 1.2,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_roar"
+   ],
+   "loot": [],
+   "xp": 32,
+   "gold": [
+    5,
+    12
+   ],
+   "biomes": [
+    "jungle",
+    "meadow",
+    "city"
+   ],
+   "genres": [
+    "modern",
+    "wild"
+   ],
+   "sound": "dino",
+   "resist": [],
+   "weak": []
+  },
+  "wild_boar": {
+   "name": "Feral Boar",
+   "models": [
+    "cute_animated_monsters_pig"
+   ],
+   "body": "quadruped",
+   "size": 1.0,
+   "tier": 0.8,
+   "ai": "brute",
+   "abilities": [
+    "e_bite",
+    "e_slam"
+   ],
+   "loot": [],
+   "xp": 14,
+   "gold": [
+    2,
+    6
+   ],
+   "biomes": [
+    "farmland",
+    "forest",
+    "meadow"
+   ],
+   "genres": [
+    "wild",
+    "fantasy",
+    "dark"
+   ],
+   "sound": "beast",
+   "resist": [],
+   "weak": []
+  },
+  "troll": {
+   "name": "Swamp Troll",
+   "models": [
+    "ultimate_monsters_orc"
+   ],
+   "tint": "#6f9a4a",
+   "body": "humanoid",
+   "tier": 1.7,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_roar"
+   ],
+   "resist": [
+    "poison"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "loot": [
+    [
+     "monster_hide",
+     0.8,
+     1,
+     3
+    ],
+    [
+     "potion_big",
+     0.2,
+     1,
+     1
+    ]
+   ],
+   "xp": 48,
+   "gold": [
+    14,
+    34
+   ],
+   "biomes": [
+    "swamp",
+    "forest",
+    "mountain",
+    "cave"
+   ],
+   "genres": [
+    "fantasy",
+    "dark",
+    "wild"
+   ],
+   "sound": "brute",
+   "size": 3.2
+  },
+  "ogre": {
+   "name": "Hill Ogre",
+   "models": [
+    "ultimate_monsters_orc_skull"
+   ],
+   "tint": "#c49a6c",
+   "body": "humanoid",
+   "tier": 1.8,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_stomp"
+   ],
+   "weak": [
+    "arcane"
+   ],
+   "loot": [
+    [
+     "gold",
+     0.8,
+     15,
+     40
+    ],
+    [
+     "monster_hide",
+     0.6,
+     1,
+     2
+    ]
+   ],
+   "xp": 52,
+   "gold": [
+    16,
+    40
+   ],
+   "biomes": [
+    "mountain",
+    "forest",
+    "farmland",
+    "ruins"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "brute",
+   "size": 3.6
+  },
+  "vampire": {
+   "name": "Vampire Noble",
+   "models": [
+    "ultimate_modular_men_king"
+   ],
+   "tint": "#b9a3d6",
+   "body": "humanoid",
+   "tier": 1.5,
+   "ai": "caster",
+   "abilities": [
+    "e_darkbolt",
+    "e_claw"
+   ],
+   "resist": [
+    "shadow",
+    "poison"
+   ],
+   "weak": [
+    "light",
+    "fire"
+   ],
+   "loot": [
+    [
+     "ruby_ring",
+     0.05,
+     1,
+     1
+    ],
+    [
+     "crystal",
+     0.5,
+     1,
+     2
+    ]
+   ],
+   "xp": 46,
+   "gold": [
+    18,
+    44
+   ],
+   "biomes": [
+    "graveyard",
+    "manor",
+    "crypt",
+    "castle"
+   ],
+   "genres": [
+    "dark",
+    "fantasy"
+   ],
+   "sound": "humanoid",
+   "size": 1.95
+  },
+  "werewolf": {
+   "name": "Werewolf",
+   "models": [
+    "cube_world_wolf"
+   ],
+   "tint": "#5a4636",
+   "body": "quadruped",
+   "tier": 1.4,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_bite",
+    "e_claw"
+   ],
+   "weak": [
+    "light"
+   ],
+   "loot": [
+    [
+     "monster_hide",
+     0.9,
+     1,
+     3
+    ]
+   ],
+   "xp": 40,
+   "gold": [
+    6,
+    18
+   ],
+   "biomes": [
+    "forest",
+    "graveyard",
+    "mountain",
+    "swamp"
+   ],
+   "genres": [
+    "dark",
+    "fantasy",
+    "wild"
+   ],
+   "sound": "beast",
+   "size": 2.0
+  },
+  "kobold": {
+   "name": "Kobold Scrapper",
+   "models": [
+    "ultimate_monsters_dino"
+   ],
+   "tint": "#c0703a",
+   "body": "humanoid",
+   "tier": 0.75,
+   "ai": "skirmisher",
+   "abilities": [
+    "e_claw",
+    "e_bite"
+   ],
+   "weak": [
+    "ice"
+   ],
+   "loot": [
+    [
+     "potion_small",
+     0.3,
+     1,
+     1
+    ],
+    [
+     "gold",
+     0.6,
+     3,
+     12
+    ]
+   ],
+   "xp": 16,
+   "gold": [
+    3,
+    12
+   ],
+   "biomes": [
+    "cave",
+    "mines",
+    "ruins",
+    "desert"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "sound": "beast",
+   "size": 1.15
+  },
+  "gargoyle": {
+   "name": "Gargoyle",
+   "models": [
+    "ultimate_monsters_bluedemon"
+   ],
+   "tint": "#8d8f93",
+   "body": "humanoid",
+   "tier": 1.5,
+   "ai": "brute",
+   "abilities": [
+    "e_claw",
+    "e_slam"
+   ],
+   "resist": [
+    "earth",
+    "poison",
+    "ice"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "loot": [
+    [
+     "crystal",
+     0.4,
+     1,
+     1
+    ]
+   ],
+   "xp": 42,
+   "gold": [
+    8,
+    22
+   ],
+   "biomes": [
+    "castle",
+    "ruins",
+    "crypt",
+    "graveyard",
+    "manor"
+   ],
+   "genres": [
+    "fantasy",
+    "dark"
+   ],
+   "sound": "stone",
+   "size": 2.2
+  },
+  "death_knight": {
+   "name": "Death Knight",
+   "models": [
+    "conv_knight_knightcharacter"
+   ],
+   "tint": "#3a3a52",
+   "body": "humanoid",
+   "tier": 1.7,
+   "ai": "brute",
+   "abilities": [
+    "e_slam",
+    "e_darkbolt"
+   ],
+   "resist": [
+    "shadow",
+    "ice",
+    "poison"
+   ],
+   "weak": [
+    "light"
+   ],
+   "loot": [
+    [
+     "iron_sword",
+     0.15,
+     1,
+     1
+    ],
+    [
+     "potion_big",
+     0.2,
+     1,
+     1
+    ]
+   ],
+   "xp": 55,
+   "gold": [
+    20,
+    45
+   ],
+   "biomes": [
+    "castle",
+    "crypt",
+    "dungeon",
+    "graveyard"
+   ],
+   "genres": [
+    "fantasy",
+    "dark"
+   ],
+   "sound": "humanoid",
+   "size": 2.1
+  }
+ },
+ "bosses": {
+  "dragon_lord": {
+   "name": "Ignatius the Dragon Lord",
+   "models": [
+    "ultimate_monsters_dragon_evolved"
+   ],
+   "body": "flyer",
+   "tier": 2.6,
+   "ai": "boss",
+   "size": 8.5,
+   "abilities": [
+    "e_bite",
+    "e_firebreath"
+   ],
+   "resist": [
+    "fire"
+   ],
+   "immune": [
+    "fire"
+   ],
+   "weak": [
+    "ice"
+   ],
+   "biomes": [
+    "volcano",
+    "mountain",
+    "castle",
+    "ruins"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_roar",
+      "e_enrage"
+     ],
+     "line": "The dragon's scales glow white-hot!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_stomp"
+     ],
+     "line": "It crashes down, shaking the earth!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     200,
+     400
+    ],
+    [
+     "crown",
+     1.0,
+     1,
+     1
+    ],
+    [
+     "golden_sword",
+     0.5,
+     1,
+     1
+    ]
+   ],
+   "xp": 400,
+   "sound": "dragon"
+  },
+  "lich": {
+   "name": "Morvath the Lich",
+   "models": [
+    "ultimate_monsters_wizard",
+    "ultimate_monsters_ghost_skull"
+   ],
+   "body": "humanoid",
+   "tier": 2.4,
+   "ai": "boss",
+   "size": 4.2,
+   "abilities": [
+    "e_darkbolt",
+    "e_frostbreath"
+   ],
+   "resist": [
+    "shadow",
+    "ice",
+    "poison"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "weak": [
+    "light",
+    "fire"
+   ],
+   "biomes": [
+    "graveyard",
+    "dungeon",
+    "castle",
+    "ruins",
+    "manor",
+    "crypt"
+   ],
+   "genres": [
+    "fantasy",
+    "dark"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "skeleton",
+     "line": "Bones rise from the ground to serve the Lich!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_heal_self",
+      "e_enrage"
+     ],
+     "line": "The Lich drinks the souls around it!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     180,
+     350
+    ],
+    [
+     "arch_staff",
+     1.0,
+     1,
+     1
+    ],
+    [
+     "elixir",
+     1.0,
+     1,
+     2
+    ]
+   ],
+   "xp": 380,
+   "sound": "ghost"
+  },
+  "mushroom_king": {
+   "name": "The Mushroom King",
+   "models": [
+    "ultimate_monsters_mushroomking",
+    "ultimate_monsters_mushnub_evolved"
+   ],
+   "body": "humanoid",
+   "tier": 2.2,
+   "ai": "boss",
+   "size": 6.0,
+   "abilities": [
+    "e_slam",
+    "e_venom"
+   ],
+   "resist": [
+    "poison",
+    "earth"
+   ],
+   "weak": [
+    "fire"
+   ],
+   "biomes": [
+    "forest",
+    "swamp",
+    "cave",
+    "sakura",
+    "sky_isles"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "mushnub",
+     "line": "Spores burst - little Mushnubs sprout everywhere!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_heal_self",
+      "e_stomp"
+     ],
+     "line": "The King roots himself and drinks the soil!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     150,
+     300
+    ],
+    [
+     "amulet_life",
+     1.0,
+     1,
+     1
+    ],
+    [
+     "elixir",
+     0.8,
+     1,
+     1
+    ]
+   ],
+   "xp": 340,
+   "sound": "plant"
+  },
+  "orc_warlord": {
+   "name": "Grukk the Ogre Warlord",
+   "models": [
+    "ultimate_monsters_orc_skull"
+   ],
+   "body": "humanoid",
+   "tier": 2.3,
+   "ai": "boss",
+   "size": 6.5,
+   "abilities": [
+    "e_slam",
+    "e_roar"
+   ],
+   "weak": [
+    "arcane"
+   ],
+   "biomes": [
+    "mountain",
+    "castle",
+    "ruins",
+    "desert",
+    "forest",
+    "mines"
+   ],
+   "genres": [
+    "fantasy",
+    "wild"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "goblin",
+     "line": "Grukk bellows - goblins pour in!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_enrage",
+      "e_stomp"
+     ],
+     "line": "Grukk flies into a berserker rage!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     160,
+     320
+    ],
+    [
+     "war_hammer",
+     1.0,
+     1,
+     1
+    ],
+    [
+     "plate_armor",
+     0.6,
+     1,
+     1
+    ]
+   ],
+   "xp": 360,
+   "sound": "brute"
+  },
+  "kraken": {
+   "name": "The Deep Kraken",
+   "models": [
+    "pirate_kit_characters_tentacle",
+    "ultimate_monsters_squidle"
+   ],
+   "body": "serpent",
+   "tier": 2.4,
+   "ai": "boss",
+   "size": 7.5,
+   "abilities": [
+    "e_slam",
+    "e_darkbolt"
+   ],
+   "resist": [
+    "water",
+    "ice"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "biomes": [
+    "beach",
+    "river",
+    "harbor",
+    "pirate_cove"
+   ],
+   "genres": [
+    "pirate"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_frostbreath"
+     ],
+     "line": "The sea boils as the Kraken surfaces fully!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_enrage",
+      "e_heal_self"
+     ],
+     "line": "Ink clouds the water - it's furious!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     250,
+     450
+    ],
+    [
+     "golden_bow",
+     0.6,
+     1,
+     1
+    ],
+    [
+     "gem",
+     1.0,
+     2,
+     4
+    ]
+   ],
+   "xp": 380,
+   "sound": "water"
+  },
+  "rex_king": {
+   "name": "Tyrant Rex",
+   "models": [
+    "conv_dinosaur_animated_pack_trex"
+   ],
+   "body": "quadruped",
+   "tier": 2.6,
+   "ai": "boss",
+   "size": 9.0,
+   "abilities": [
+    "e_bite",
+    "e_roar",
+    "e_stomp"
+   ],
+   "weak": [
+    "ice"
+   ],
+   "biomes": [
+    "city",
+    "jungle",
+    "meadow"
+   ],
+   "genres": [
+    "modern",
+    "wild"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "raptor",
+     "line": "A screech - raptors answer their king!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_enrage"
+     ],
+     "line": "The Rex charges blindly, smashing everything!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     200,
+     380
+    ],
+    [
+     "dino_tooth",
+     1.0,
+     5,
+     8
+    ],
+    [
+     "claymore",
+     0.8,
+     1,
+     1
+    ]
+   ],
+   "xp": 400,
+   "sound": "dino_big"
+  },
+  "mech_titan": {
+   "name": "OMEGA War Titan",
+   "models": [
+    "animated_mech_pack_george",
+    "animated_mech_pack_stan"
+   ],
+   "body": "humanoid",
+   "tier": 2.6,
+   "ai": "boss",
+   "size": 9.5,
+   "abilities": [
+    "e_laser",
+    "e_shoot",
+    "e_slam"
+   ],
+   "resist": [
+    "fire",
+    "poison"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "weak": [
+    "lightning",
+    "water"
+   ],
+   "biomes": [
+    "scifi",
+    "city",
+    "space",
+    "outpost"
+   ],
+   "genres": [
+    "scifi",
+    "modern"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "robot",
+     "line": "Drones launch from the Titan's back!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_enrage",
+      "e_stomp"
+     ],
+     "line": "OVERDRIVE. The Titan glows red!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     220,
+     400
+    ],
+    [
+     "golden_armor",
+     0.6,
+     1,
+     1
+    ],
+    [
+     "scrap_metal",
+     1.0,
+     5,
+     10
+    ]
+   ],
+   "xp": 400,
+   "sound": "mech"
+  },
+  "demon_lord": {
+   "name": "Azgul the Demon Lord",
+   "models": [
+    "ultimate_monsters_bluedemon",
+    "ultimate_monsters_demon"
+   ],
+   "body": "humanoid",
+   "tier": 2.7,
+   "ai": "boss",
+   "size": 7.0,
+   "abilities": [
+    "e_claw",
+    "e_firebreath",
+    "e_darkbolt"
+   ],
+   "resist": [
+    "fire",
+    "shadow"
+   ],
+   "weak": [
+    "light",
+    "ice"
+   ],
+   "biomes": [
+    "volcano",
+    "castle",
+    "dungeon",
+    "ruins"
+   ],
+   "genres": [
+    "fantasy",
+    "dark"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "demon",
+     "line": "Hellgates crack open around Azgul!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_enrage",
+      "e_heal_self"
+     ],
+     "line": "Azgul's true form erupts in flame!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     260,
+     450
+    ],
+    [
+     "scythe",
+     1.0,
+     1,
+     1
+    ],
+    [
+     "shadow_garb",
+     0.6,
+     1,
+     1
+    ]
+   ],
+   "xp": 420,
+   "sound": "demon"
+  },
+  "elder_horror": {
+   "name": "Ul'thoth the Elder Horror",
+   "models": [
+    "cute_animated_monsters_cthulhu"
+   ],
+   "body": "flyer",
+   "tier": 2.4,
+   "ai": "boss",
+   "size": 8.0,
+   "abilities": [
+    "e_darkbolt",
+    "e_slam"
+   ],
+   "weak": [
+    "light",
+    "fire"
+   ],
+   "biomes": [
+    "swamp",
+    "beach",
+    "harbor",
+    "manor",
+    "pirate_cove"
+   ],
+   "genres": [
+    "dark",
+    "pirate"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "squidle",
+     "line": "Tentacles burst from the ground!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_enrage",
+      "e_venom"
+     ],
+     "line": "The Elder Horror opens every one of its eyes..."
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     160,
+     320
+    ]
+   ],
+   "xp": 380,
+   "sound": "alien",
+   "resist": []
+  },
+  "block_colossus": {
+   "name": "The Block Colossus",
+   "models": [
+    "cube_world_giant"
+   ],
+   "body": "humanoid",
+   "tier": 2.3,
+   "ai": "boss",
+   "size": 7.5,
+   "abilities": [
+    "e_slam",
+    "e_stomp"
+   ],
+   "resist": [
+    "earth"
+   ],
+   "weak": [
+    "lightning"
+   ],
+   "biomes": [
+    "blockland",
+    "mountain"
+   ],
+   "genres": [
+    "wild"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "block_zombie",
+     "line": "The Colossus stamps - blocky zombies tumble out of the ground!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_enrage",
+      "e_roar"
+     ],
+     "line": "Cracks of light run across the Colossus!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     160,
+     320
+    ]
+   ],
+   "xp": 360,
+   "sound": "stone"
+  },
+  "alpaking_sovereign": {
+   "name": "The Alpaking Sovereign",
+   "models": [
+    "ultimate_monsters_alpaking_evolved"
+   ],
+   "body": "flyer",
+   "tier": 2.2,
+   "ai": "boss",
+   "size": 6.0,
+   "abilities": [
+    "e_slam",
+    "e_roar",
+    "e_bite"
+   ],
+   "biomes": [
+    "mountain",
+    "sky_isles",
+    "meadow",
+    "farmland"
+   ],
+   "genres": [
+    "wild",
+    "fantasy"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "alpaking",
+     "line": "The Sovereign calls its herd!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_enrage"
+     ],
+     "line": "The Alpaking Sovereign rears up, furious!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     160,
+     320
+    ]
+   ],
+   "xp": 340,
+   "sound": "beast",
+   "resist": [],
+   "weak": []
+  },
+  "mech_overlord": {
+   "name": "Overlord Mk-IV",
+   "models": [
+    "ultimate_space_kit_enemy_large",
+    "animated_mech_pack_mike"
+   ],
+   "body": "humanoid",
+   "tier": 2.4,
+   "ai": "boss",
+   "size": 8.0,
+   "abilities": [
+    "e_laser",
+    "e_shoot",
+    "e_stomp"
+   ],
+   "immune": [
+    "poison"
+   ],
+   "weak": [
+    "lightning",
+    "water"
+   ],
+   "biomes": [
+    "outpost",
+    "scifi",
+    "city",
+    "space_station"
+   ],
+   "genres": [
+    "scifi",
+    "modern"
+   ],
+   "phases": [
+    {
+     "below": 0.6,
+     "add": [
+      "e_summon_minions"
+     ],
+     "summon": "eye_drone",
+     "line": "Drones launch from the Overlord's back!"
+    },
+    {
+     "below": 0.3,
+     "add": [
+      "e_enrage"
+     ],
+     "line": "WARNING: OVERLOAD. The Overlord glows white-hot!"
+    }
+   ],
+   "loot": [
+    [
+     "gold",
+     1.0,
+     160,
+     320
+    ]
+   ],
+   "xp": 380,
+   "sound": "mech",
+   "resist": []
+  }
+ },
+ "summons": {
+  "spirit_sprite": {
+   "name": "Spirit Sprite",
+   "models": [
+    "cute_animated_monsters_ghost"
+   ],
+   "body": "flyer",
+   "tier": 0.6,
+   "ai": "caster",
+   "abilities": [
+    "spirit_bolt"
+   ],
+   "lasts": 4,
+   "sound": "ghost"
+  },
+  "stone_golem": {
+   "name": "Stone Golem",
+   "models": [
+    "ultimate_monsters_goleling"
+   ],
+   "body": "blob",
+   "tier": 1.0,
+   "ai": "brute",
+   "abilities": [
+    "e_slam"
+   ],
+   "lasts": 5,
+   "taunts": true,
+   "sound": "stone"
+  },
+  "dragonling": {
+   "name": "Dragonling",
+   "models": [
+    "cute_animated_monsters_yellowdragon"
+   ],
+   "body": "flyer",
+   "tier": 1.2,
+   "ai": "caster",
+   "abilities": [
+    "e_bite",
+    "e_firebreath"
+   ],
+   "lasts": 5,
+   "sound": "dragon"
+  }
+ }
+}

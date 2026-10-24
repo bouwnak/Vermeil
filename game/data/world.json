@@ -1,0 +1,930 @@
+{
+ "_doc": "Genres (what kind of world a campaign is), NPC roles and the name/personality pieces the generator mixes.",
+ "genres": {
+  "fantasy": {
+   "name": "High Fantasy",
+   "biomes": [
+    "forest",
+    "meadow",
+    "village",
+    "ruins",
+    "mountain",
+    "castle",
+    "cave",
+    "dungeon",
+    "swamp",
+    "snow",
+    "farmland",
+    "sakura",
+    "harbor",
+    "manor",
+    "crypt",
+    "mines"
+   ],
+   "start": [
+    "forest",
+    "meadow",
+    "farmland"
+   ],
+   "hub": "village",
+   "weight": 5,
+   "premises": [
+    "An ancient seal is breaking and monsters pour from the old ruins.",
+    "The kingdom's crown was stolen by something that isn't human.",
+    "A dragon has woken after a thousand years and demands tribute.",
+    "The forest spirits are dying and nobody knows why."
+   ]
+  },
+  "dark": {
+   "name": "Dark Fantasy",
+   "biomes": [
+    "graveyard",
+    "swamp",
+    "ruins",
+    "dungeon",
+    "castle",
+    "forest",
+    "cave",
+    "village",
+    "manor",
+    "farmland",
+    "crypt",
+    "mines"
+   ],
+   "start": [
+    "forest",
+    "graveyard"
+   ],
+   "hub": "village",
+   "weight": 3,
+   "premises": [
+    "A plague of undead spreads from a cursed abbey.",
+    "Night has not ended for nine days, and the villagers whisper of a Lich.",
+    "A cult is gathering souls to open a gate below the castle."
+   ]
+  },
+  "wild": {
+   "name": "Magical Wilderness",
+   "biomes": [
+    "forest",
+    "meadow",
+    "jungle",
+    "mountain",
+    "swamp",
+    "ruins",
+    "cave",
+    "snow",
+    "desert",
+    "sky_isles",
+    "blockland",
+    "sakura",
+    "farmland",
+    "mines"
+   ],
+   "start": [
+    "meadow",
+    "forest",
+    "sky_isles",
+    "sakura"
+   ],
+   "hub": "village",
+   "weight": 3,
+   "premises": [
+    "Elemental spirits have gone mad and the land itself is fighting back.",
+    "A floating island crashed into the valley, bringing strange beasts.",
+    "The great migration of beasts has turned violent - something drives them."
+   ]
+  },
+  "pirate": {
+   "name": "Pirate Seas",
+   "biomes": [
+    "beach",
+    "village",
+    "jungle",
+    "cave",
+    "ruins",
+    "harbor",
+    "pirate_cove",
+    "crypt"
+   ],
+   "start": [
+    "beach"
+   ],
+   "hub": "beach",
+   "weight": 2,
+   "premises": [
+    "A cursed treasure map leads to an island that moves.",
+    "The Deep Kraken is sinking every ship that leaves the cove.",
+    "Captain Barbarossa's ghost crew is raiding the coast."
+   ]
+  },
+  "modern": {
+   "name": "Dino City",
+   "biomes": [
+    "city",
+    "jungle",
+    "meadow",
+    "cave",
+    "outpost",
+    "farmland",
+    "mines"
+   ],
+   "start": [
+    "city"
+   ],
+   "hub": "city",
+   "weight": 2,
+   "premises": [
+    "A rift opened over the city and dinosaurs came through it.",
+    "The zoo's secret lab broke open - prehistoric beasts and zombies roam the streets.",
+    "Time is fracturing: the city is half modern, half Jurassic jungle."
+   ]
+  },
+  "scifi": {
+   "name": "Star Frontier",
+   "biomes": [
+    "scifi",
+    "space",
+    "desert",
+    "cave",
+    "city",
+    "outpost",
+    "space_station"
+   ],
+   "start": [
+    "space"
+   ],
+   "hub": "scifi",
+   "weight": 2,
+   "premises": [
+    "A rogue war machine has taken over the frontier outpost.",
+    "Knights from a medieval world crashed their ship on an alien planet.",
+    "An alien hive is waking beneath the colony."
+   ]
+  }
+ },
+ "genre_mix_chance": 0.3,
+ "npc_roles": {
+  "villager": {
+   "models": "^(ultimate_animated_character_(casual_(male|female)|worker_(male|female)|oldclassy_(male|female)|kimono_(male|female))|ultimate_modular_(men|women)_(casual\\w*|farmer|worker|medieval)|ultimate_animated_character_casual[23]_(male|female)|ultimate_animated_character_casual_bald|ultimate_animated_character_cowboy_hair|ultimate_animated_character_ninja_male_hair|conv_animated_women_characters_(female|smooth_female)_\\w+)$",
+   "routine": [
+    "wander",
+    "chat",
+    "visit",
+    "rest"
+   ],
+   "hostile": false
+  },
+  "wandering_trader": {
+   "models": "^(ultimate_animated_character_oldclassy_(male|female)|ultimate_modular_(men|women)_adventurer)$",
+   "routine": [
+    "stall"
+   ],
+   "hostile": false,
+   "shop": true
+  },
+  "merchant": {
+   "models": "^(ultimate_animated_character_(chef_(male|female)|oldclassy_(male|female))|ultimate_modular_(men|women)_(suit|formal|king)|ultimate_animated_character_suit_(male|female))$",
+   "routine": [
+    "stall",
+    "chat"
+   ],
+   "hostile": false,
+   "shop": true
+  },
+  "guard": {
+   "models": "^(ultimate_animated_character_(bluesoldier_(male|female)|knight_male)|ultimate_modular_women_soldier|conv_knight_knightcharacter|ultimate_animated_character_soldier_(male|female)|toon_shooter_game_kit_character_soldier)$",
+   "routine": [
+    "patrol",
+    "guard"
+   ],
+   "hostile": false
+  },
+  "knight": {
+   "models": "^(ultimate_animated_character_knight_(golden_)?(male|female)|conv_knight_knightcharacter)$",
+   "routine": [
+    "patrol",
+    "guard"
+   ],
+   "hostile": false
+  },
+  "blacksmith": {
+   "models": "^(ultimate_animated_character_viking_(male|female)|ultimate_modular_men_worker|ultimate_animated_character_vikinghelmet)$",
+   "routine": [
+    "work",
+    "chat"
+   ],
+   "hostile": false,
+   "shop": true
+  },
+  "innkeeper": {
+   "models": "^(ultimate_animated_character_chef_(male|female|hat))$",
+   "routine": [
+    "work",
+    "chat"
+   ],
+   "hostile": false,
+   "shop": true
+  },
+  "farmer": {
+   "models": "^(ultimate_modular_men_farmer|ultimate_animated_character_worker_(male|female)|conv_animated_women_characters_female_casual|ultimate_animated_character_cowboy_(male|female))$",
+   "routine": [
+    "work",
+    "wander"
+   ],
+   "hostile": false
+  },
+  "child": {
+   "models": "^(ultimate_animated_character_(casual_(male|female)))$",
+   "routine": [
+    "run_around",
+    "chat"
+   ],
+   "hostile": false,
+   "scale": 0.65
+  },
+  "priest": {
+   "models": "^(rpg_characters_cleric|ultimate_animated_character_wizard)$",
+   "routine": [
+    "visit",
+    "rest"
+   ],
+   "hostile": false
+  },
+  "traveler": {
+   "models": "^(ultimate_modular_(men|women)_adventurer|conv_animated_women_characters_\\w+|ultimate_animated_character_elf|ultimate_animated_character_cowboy_(male|female))$",
+   "routine": [
+    "wander",
+    "rest"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "hunter": {
+   "models": "^(rpg_characters_ranger|ultimate_modular_men_adventurer|ultimate_animated_character_elf)$",
+   "routine": [
+    "patrol",
+    "wander"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "druid": {
+   "models": "^(ultimate_monsters_wizard|rpg_characters_monk)$",
+   "routine": [
+    "wander",
+    "rest"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "hermit": {
+   "models": "^(ultimate_animated_character_wizard|ultimate_animated_character_oldclassy_male)$",
+   "routine": [
+    "rest",
+    "wander"
+   ],
+   "hostile": false
+  },
+  "witch": {
+   "models": "^(ultimate_animated_character_witch|ultimate_modular_women_witch)$",
+   "routine": [
+    "work",
+    "wander"
+   ],
+   "hostile": false,
+   "shop": true,
+   "recruitable": true
+  },
+  "scholar": {
+   "models": "^(ultimate_animated_character_wizard|ultimate_modular_women_formal|ultimate_modular_men_suit)$",
+   "routine": [
+    "visit",
+    "wander"
+   ],
+   "hostile": false
+  },
+  "treasure_hunter": {
+   "models": "^(ultimate_modular_(men|women)_adventurer|ultimate_animated_character_pirate_(male|female))$",
+   "routine": [
+    "wander",
+    "visit"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "gravedigger": {
+   "models": "^(ultimate_modular_men_worker|ultimate_animated_character_oldclassy_male)$",
+   "routine": [
+    "work"
+   ],
+   "hostile": false
+  },
+  "miner": {
+   "models": "^(ultimate_animated_character_viking_male|ultimate_modular_men_worker)$",
+   "routine": [
+    "work",
+    "wander"
+   ],
+   "hostile": false
+  },
+  "shepherd": {
+   "models": "^(ultimate_modular_men_farmer|ultimate_animated_character_worker_female)$",
+   "routine": [
+    "wander"
+   ],
+   "hostile": false
+  },
+  "nomad": {
+   "models": "^(ultimate_animated_character_ninja_sand\\w*|ultimate_modular_men_adventurer|ultimate_animated_character_kimono_(male|female))$",
+   "routine": [
+    "wander",
+    "rest"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "sailor": {
+   "models": "^(pirate_kit_characters_(henry|anne|mako)|ultimate_animated_character_pirate_(male|female))$",
+   "routine": [
+    "work",
+    "wander",
+    "chat"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "pirate": {
+   "models": "^(pirate_kit_characters_(captain_barbarossa|henry|anne)|ultimate_animated_character_pirate_(male|female))$",
+   "routine": [
+    "wander",
+    "chat"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "fisher": {
+   "models": "^(ultimate_modular_men_beach|ultimate_animated_character_worker_(male|female))$",
+   "routine": [
+    "work"
+   ],
+   "hostile": false
+  },
+  "survivor": {
+   "models": "^(zombie_apocalypse_kit_characters_(lis|matt|sam|shaun)|ultimate_modular_(men|women)_(casual\\w*|punk)|zombie_apocalypse_kit_characters_(lis|matt|sam|shaun)_singleweapon)$",
+   "routine": [
+    "wander",
+    "guard"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "soldier": {
+   "models": "^(ultimate_modular_men_swat|ultimate_modular_women_soldier|ultimate_animated_character_bluesoldier_(male|female)|ultimate_animated_character_soldier_(male|female)|toon_shooter_game_kit_character_soldier)$",
+   "routine": [
+    "patrol",
+    "guard"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "scientist": {
+   "models": "^(ultimate_animated_character_doctor_\\w+|ultimate_modular_women_scifi|ultimate_modular_men_suit|toon_shooter_game_kit_character_hazmat)$",
+   "routine": [
+    "work",
+    "visit"
+   ],
+   "hostile": false
+  },
+  "engineer": {
+   "models": "^(ultimate_modular_men_worker|ultimate_modular_women_scifi|cyberpunk_game_kit_quaterniu_character)$",
+   "routine": [
+    "work",
+    "wander"
+   ],
+   "hostile": false,
+   "shop": true
+  },
+  "pilot": {
+   "models": "^(ultimate_modular_men_spacesuit|ultimate_space_kit_astronaut_\\w+)$",
+   "routine": [
+    "wander",
+    "visit"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "astronaut": {
+   "models": "^(ultimate_space_kit_astronaut_\\w+|ultimate_modular_men_spacesuit)$",
+   "routine": [
+    "wander"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "explorer": {
+   "models": "^(ultimate_modular_(men|women)_adventurer|rpg_characters_ranger)$",
+   "routine": [
+    "wander",
+    "visit"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "noble": {
+   "models": "^(ultimate_modular_men_king|ultimate_modular_women_formal|ultimate_animated_character_oldclassy_(male|female)|ultimate_animated_character_suit_(male|female))$",
+   "routine": [
+    "visit",
+    "chat"
+   ],
+   "hostile": false
+  },
+  "prisoner": {
+   "models": "^(ultimate_modular_men_(casual_2|farmer)|conv_animated_women_characters_female_casual)$",
+   "routine": [
+    "rest"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "monk": {
+   "models": "^(rpg_characters_monk|ultimate_animated_character_kimono_(male|female)|sushi_restaurant_kit_rabbit_(bald|grey))$",
+   "routine": [
+    "visit",
+    "rest"
+   ],
+   "hostile": false
+  },
+  "butler": {
+   "models": "^(ultimate_animated_character_suit_male|ultimate_modular_men_suit)$",
+   "routine": [
+    "patrol",
+    "visit"
+   ],
+   "hostile": false
+  },
+  "ghost_hunter": {
+   "models": "^(ultimate_animated_character_cowboy_(male|female)|ultimate_modular_women_witch)$",
+   "routine": [
+    "wander",
+    "visit"
+   ],
+   "hostile": false,
+   "recruitable": true
+  },
+  "rabbit_folk": {
+   "models": "^sushi_restaurant_kit_rabbit_(blond|cyan|green|pink|purple)$",
+   "routine": [
+    "wander",
+    "chat",
+    "visit"
+   ],
+   "hostile": false
+  },
+  "blockfolk": {
+   "models": "^(cube_world_character_(male|female)_\\d|cube_world_wizard)$",
+   "routine": [
+    "wander",
+    "work",
+    "chat"
+   ],
+   "hostile": false
+  }
+ },
+ "names": {
+  "fantasy": {
+   "first": [
+    "Aldric",
+    "Brina",
+    "Cedric",
+    "Dalia",
+    "Elowen",
+    "Fenwick",
+    "Garran",
+    "Hilde",
+    "Isolde",
+    "Jorah",
+    "Kael",
+    "Lyra",
+    "Marek",
+    "Nessa",
+    "Orin",
+    "Perrin",
+    "Quilla",
+    "Rowan",
+    "Sable",
+    "Tamsin",
+    "Ulric",
+    "Vesna",
+    "Wren",
+    "Yara",
+    "Zev",
+    "Bram",
+    "Cora",
+    "Dunstan",
+    "Elin",
+    "Fiora",
+    "Gideon",
+    "Holt",
+    "Ivy",
+    "Jessamy",
+    "Kip",
+    "Liora",
+    "Mabel",
+    "Nils",
+    "Odessa",
+    "Pip"
+   ],
+   "last": [
+    "Ashdown",
+    "Briarwood",
+    "Coldwater",
+    "Dunmere",
+    "Emberfell",
+    "Foxglove",
+    "Greymantle",
+    "Hollowell",
+    "Ironside",
+    "Juniper",
+    "Kettleby",
+    "Larkspur",
+    "Mossbrook",
+    "Nightingale",
+    "Oakhart",
+    "Pennywhistle",
+    "Quickfoot",
+    "Ravenmoor",
+    "Stonebrook",
+    "Thistledown",
+    "Underhill",
+    "Vale",
+    "Willowmere",
+    "Yarrow"
+   ]
+  },
+  "pirate": {
+   "first": [
+    "Anne",
+    "Barnaby",
+    "Calico",
+    "Dirk",
+    "Esme",
+    "Finn",
+    "Grog",
+    "Hattie",
+    "Ishmael",
+    "Jolene",
+    "Kidd",
+    "Lottie",
+    "Mako",
+    "Ned",
+    "Ophelia",
+    "Rummy",
+    "Salty",
+    "Tess"
+   ],
+   "last": [
+    "Blackwater",
+    "Bones",
+    "Crow",
+    "Driftwood",
+    "Flint",
+    "Gull",
+    "Hook",
+    "Keel",
+    "Marlow",
+    "Reef",
+    "Saltbeard",
+    "Tidewell"
+   ]
+  },
+  "modern": {
+   "first": [
+    "Alex",
+    "Bea",
+    "Chris",
+    "Dana",
+    "Eli",
+    "Frankie",
+    "Gabe",
+    "Hana",
+    "Ivan",
+    "Jules",
+    "Kai",
+    "Lena",
+    "Max",
+    "Nina",
+    "Owen",
+    "Priya",
+    "Rico",
+    "Sam",
+    "Tara",
+    "Vic",
+    "Wes",
+    "Zoe"
+   ],
+   "last": [
+    "Alvarez",
+    "Brooks",
+    "Chen",
+    "Diaz",
+    "Evans",
+    "Fischer",
+    "Garcia",
+    "Hayes",
+    "Ito",
+    "Jensen",
+    "Kim",
+    "Lopez",
+    "Morales",
+    "Nakamura",
+    "Okafor",
+    "Park",
+    "Reyes",
+    "Santos",
+    "Tan",
+    "Walsh"
+   ]
+  },
+  "scifi": {
+   "first": [
+    "Ax",
+    "Breck",
+    "Cyra",
+    "Dex",
+    "Echo",
+    "Fenn",
+    "Halix",
+    "Io",
+    "Juno",
+    "Kestrel",
+    "Lux",
+    "Nova",
+    "Orion",
+    "Pax",
+    "Quinn",
+    "Rhea",
+    "Sol",
+    "Tycho",
+    "Vega",
+    "Zane"
+   ],
+   "last": [
+    "Arden",
+    "Corvax",
+    "Drey",
+    "Halloran",
+    "Kade",
+    "Mercer",
+    "Nyx",
+    "Orlov",
+    "Stroud",
+    "Talon",
+    "Voss",
+    "Wrenfield"
+   ]
+  }
+ },
+ "personalities": [
+  "cheerful",
+  "grumpy",
+  "shy",
+  "boastful",
+  "wise",
+  "nervous",
+  "flirty",
+  "suspicious",
+  "kind",
+  "greedy",
+  "brave",
+  "lazy",
+  "curious",
+  "melancholy",
+  "sarcastic",
+  "honest",
+  "dramatic",
+  "pious",
+  "mysterious",
+  "chatty"
+ ],
+ "voice_kinds": {
+  "male": [
+   "deep",
+   "warm",
+   "gruff",
+   "young"
+  ],
+  "female": [
+   "bright",
+   "soft",
+   "husky",
+   "young"
+  ]
+ },
+ "quest_kinds": [
+  "slay",
+  "fetch",
+  "rescue",
+  "escort",
+  "explore",
+  "deliver",
+  "investigate"
+ ],
+ "location_names": {
+  "forest": [
+   "Whisperwood",
+   "Elderglen",
+   "Mossheart Wood",
+   "Thornhollow",
+   "Sunfleck Grove"
+  ],
+  "meadow": [
+   "Goldenfield",
+   "Brightmeadow",
+   "Windsong Fields",
+   "Clover Downs"
+  ],
+  "village": [
+   "Millbrook",
+   "Oakvale",
+   "Thistlewick",
+   "Larkhaven",
+   "Fernbury"
+  ],
+  "swamp": [
+   "Mirefen",
+   "Blackbog",
+   "Rotwillow Marsh",
+   "Gloomwater"
+  ],
+  "cave": [
+   "Glimmerdeep",
+   "Echoing Hollow",
+   "Crystal Grotto",
+   "Wyrmhole"
+  ],
+  "dungeon": [
+   "The Sunken Vaults",
+   "Dread Keep Cellars",
+   "Catacombs of Ash",
+   "The Iron Crypt"
+  ],
+  "ruins": [
+   "Fallen Aeloria",
+   "Moonstone Ruins",
+   "The Broken Arches",
+   "Temple of Seven Winds"
+  ],
+  "graveyard": [
+   "Weeping Hill",
+   "Old Cairn Yard",
+   "Ravenrest",
+   "Hollow Graves"
+  ],
+  "mountain": [
+   "Frostfang Pass",
+   "Eagle's Stair",
+   "Greyspire Ridge",
+   "Stormbreak Heights"
+  ],
+  "snow": [
+   "Icemarch",
+   "Whitewaste",
+   "Shiverpine Tundra",
+   "The Pale Steppe"
+  ],
+  "desert": [
+   "Sunscar Dunes",
+   "The Amber Waste",
+   "Mirage Flats",
+   "Bonesand"
+  ],
+  "beach": [
+   "Smuggler's Cove",
+   "Gullrock Bay",
+   "Coral Strand",
+   "Skull Beach"
+  ],
+  "volcano": [
+   "Cinderpeak",
+   "Ashfall Wastes",
+   "The Molten Throat",
+   "Embercrag"
+  ],
+  "jungle": [
+   "Raptor Ridge",
+   "The Green Maw",
+   "Fernwild",
+   "Lost Valley"
+  ],
+  "city": [
+   "Old Town Square",
+   "Harbor District",
+   "Rift Plaza",
+   "Central Avenue"
+  ],
+  "scifi": [
+   "Outpost Kepler",
+   "Station Halcyon",
+   "Dock 9",
+   "Frontier Hub"
+  ],
+  "space": [
+   "Violet Reach",
+   "Planet Xyra",
+   "The Glass Plains",
+   "Nebula Fields"
+  ],
+  "castle": [
+   "Highguard Keep",
+   "Dawnwatch",
+   "Castle Greystone",
+   "The Crimson Bastion"
+  ],
+  "river": [
+   "Silverrun",
+   "Otter Ford",
+   "Willow Crossing"
+  ],
+  "farmland": [
+   "Goldenreach Fields",
+   "Haywind Farms",
+   "Barleybrook",
+   "Sunmeadow Acres",
+   "Millstone Farm",
+   "Applecross",
+   "Wheatwhistle"
+  ],
+  "harbor": [
+   "Saltwind Harbor",
+   "Gullscry Port",
+   "Anchorhold",
+   "Brinewater Docks",
+   "Port Coralis",
+   "Tidecall Quay"
+  ],
+  "sakura": [
+   "Petalfall Valley",
+   "Hanami Gardens",
+   "Shrine of a Thousand Gates",
+   "Blossom Hollow",
+   "Moonpetal Pass"
+  ],
+  "sky_isles": [
+   "Cloudhop Isles",
+   "Skyspring Steps",
+   "Coinfall Heights",
+   "Bouncing Meadows",
+   "Windward Isles"
+  ],
+  "blockland": [
+   "The Blocklands",
+   "Cubewood",
+   "Squarestone Hills",
+   "Pixel Glade",
+   "Craftdeep Quarry"
+  ],
+  "manor": [
+   "Ravenholt Manor",
+   "The Whispering Halls",
+   "Greymoor House",
+   "Duskwater Estate",
+   "Candlewick Manor"
+  ],
+  "outpost": [
+   "Outpost Kestrel",
+   "Dustline Station",
+   "Camp Horizon",
+   "Relay Station 9",
+   "Fort Ashfall"
+  ],
+  "crypt": [
+   "The Bone Vaults",
+   "Crypt of the Nine Kings",
+   "Ashen Catacombs",
+   "The Silent Ossuary",
+   "Tomb of Whispers"
+  ],
+  "mines": [
+   "The Deep Mines",
+   "Glitterdeep Shafts",
+   "Old Ironvein Mine",
+   "Lanternfall Tunnels",
+   "Dwarrow Delve"
+  ],
+  "space_station": [
+   "Derelict Station Theta",
+   "Orbital Lab 7",
+   "The Silent Halls",
+   "Station Perihelion",
+   "Drydock Omega"
+  ],
+  "pirate_cove": [
+   "Smugglers' Cove",
+   "Skull Grotto",
+   "Rumrunner's Hollow",
+   "The Drowned Cave",
+   "Blackwater Cove"
+  ]
+ }
+}

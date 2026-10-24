@@ -1,0 +1,383 @@
+{
+ "playlists": [
+  {
+   "id": "f55230e5df",
+   "name": "Limitless Vibes",
+   "description": "An upbeat, confident mix of pop‑rock, hip‑hop and electronic anthems inspired by 'Be LIMITLESS'. · Made by Vermeil from Be LIMITLESS",
+   "color": "#e8115b",
+   "created": "2026-10-23",
+   "songs": [
+    {
+     "title": "Can't Hold Us (feat. Ray Dalton)",
+     "artist": "Macklemore & Ryan Lewis",
+     "yt": "2zNSgSzhBfM",
+     "duration": 424,
+     "thumb": "https://i.ytimg.com/vi/2zNSgSzhBfM/hqdefault.jpg"
+    },
+    {
+     "title": "Glorious (feat. Skylar Grey)",
+     "artist": "Macklemore & Ryan Lewis",
+     "yt": "7OrLroFa0AI",
+     "duration": 255,
+     "thumb": "https://i.ytimg.com/vi/7OrLroFa0AI/hqdefault.jpg"
+    },
+    {
+     "title": "You Can't Stop The Girl",
+     "artist": "Alex Warren",
+     "yt": "QTRfIJw2dVU",
+     "duration": 162,
+     "thumb": "https://i.ytimg.com/vi/QTRfIJw2dVU/hqdefault.jpg"
+    },
+    {
+     "title": "Loud & Proud",
+     "artist": "Alex Warren",
+     "yt": "1SWp4sUaVBY",
+     "duration": 154,
+     "thumb": "https://i.ytimg.com/vi/1SWp4sUaVBY/hqdefault.jpg"
+    },
+    {
+     "title": "Love Drunk",
+     "artist": "Fall Out Boy",
+     "yt": "eCV2h1uHx3o",
+     "duration": 203,
+     "thumb": "https://i.ytimg.com/vi/eCV2h1uHx3o/hqdefault.jpg"
+    },
+    {
+     "title": "Centuries",
+     "artist": "Fall Out Boy",
+     "yt": "LBr7kECsjcQ",
+     "duration": 272,
+     "thumb": "https://i.ytimg.com/vi/LBr7kECsjcQ/hqdefault.jpg"
+    },
+    {
+     "title": "In My Head (Macklemore Remix)",
+     "artist": "Madcon",
+     "yt": "kaRljQahEZg",
+     "duration": 291,
+     "thumb": "https://i.ytimg.com/vi/kaRljQahEZg/hqdefault.jpg"
+    },
+    {
+     "title": "Glow",
+     "artist": "Madcon",
+     "yt": "P9QBK1W9Ag4",
+     "duration": 287,
+     "thumb": "https://i.ytimg.com/vi/P9QBK1W9Ag4/hqdefault.jpg"
+    },
+    {
+     "title": "Shine (feat. James Bay)",
+     "artist": "BANNERS",
+     "yt": "uaLblVmnNL4",
+     "duration": 227,
+     "thumb": "https://i.ytimg.com/vi/uaLblVmnNL4/hqdefault.jpg"
+    },
+    {
+     "title": "Start A Riot",
+     "artist": "BANNERS",
+     "yt": "ZXorliBQMxg",
+     "duration": 217,
+     "thumb": "https://i.ytimg.com/vi/ZXorliBQMxg/hqdefault.jpg"
+    },
+    {
+     "title": "Give Me Everything (feat. Ne-Yo, Afrojack & Nayer)",
+     "artist": "Pitbull",
+     "yt": "EPo5wWmKEaI",
+     "duration": 267,
+     "thumb": "https://i.ytimg.com/vi/EPo5wWmKEaI/hqdefault.jpg"
+    },
+    {
+     "title": "Timber (feat. Ke$ha)",
+     "artist": "Pitbull",
+     "yt": "hHUbLv4ThOo",
+     "duration": 215,
+     "thumb": "https://i.ytimg.com/vi/hHUbLv4ThOo/hqdefault.jpg"
+    },
+    {
+     "title": "Youngblood",
+     "artist": "5 Seconds of Summer",
+     "yt": "-RJSbO8UZVY",
+     "duration": 230,
+     "thumb": "https://i.ytimg.com/vi/-RJSbO8UZVY/hqdefault.jpg"
+    },
+    {
+     "title": "Easier",
+     "artist": "5 Seconds of Summer",
+     "yt": "b1dFSWLJ9wY",
+     "duration": 178,
+     "thumb": "https://i.ytimg.com/vi/b1dFSWLJ9wY/hqdefault.jpg"
+    },
+    {
+     "title": "Story of My Life",
+     "artist": "One Direction",
+     "yt": "W-TE_Ys4iwM",
+     "duration": 248,
+     "thumb": "https://i.ytimg.com/vi/W-TE_Ys4iwM/hqdefault.jpg"
+    },
+    {
+     "title": "Night Changes",
+     "artist": "One Direction",
+     "yt": "syFZfO_wfMQ",
+     "duration": 241,
+     "thumb": "https://i.ytimg.com/vi/syFZfO_wfMQ/hqdefault.jpg"
+    },
+    {
+     "title": "Feel It Still (Live)",
+     "artist": "Portugal. The Man",
+     "yt": "F09POwrBn-M",
+     "duration": 172,
+     "thumb": "https://i.ytimg.com/vi/F09POwrBn-M/hqdefault.jpg"
+    },
+    {
+     "title": "Modern Jesus",
+     "artist": "Portugal. The Man",
+     "yt": "q8e1sSNsf44",
+     "duration": 221,
+     "thumb": "https://i.ytimg.com/vi/q8e1sSNsf44/hqdefault.jpg"
+    },
+    {
+     "title": "Believer",
+     "artist": "Imagine Dragons",
+     "yt": "7wtfhZwyrcc",
+     "duration": 217,
+     "thumb": "https://i.ytimg.com/vi/7wtfhZwyrcc/hqdefault.jpg"
+    },
+    {
+     "title": "Thunder",
+     "artist": "Imagine Dragons",
+     "yt": "fKopy74weus",
+     "duration": 205,
+     "thumb": "https://i.ytimg.com/vi/fKopy74weus/hqdefault.jpg"
+    },
+    {
+     "title": "Closer (feat. Halsey)",
+     "artist": "The Chainsmokers",
+     "yt": "PT2_F-1esPk",
+     "duration": 262,
+     "thumb": "https://i.ytimg.com/vi/PT2_F-1esPk/hqdefault.jpg"
+    },
+    {
+     "title": "Something Just Like This (with Coldplay)",
+     "artist": "The Chainsmokers",
+     "yt": "FM7MFYoylVs",
+     "duration": 248,
+     "thumb": "https://i.ytimg.com/vi/FM7MFYoylVs/hqdefault.jpg"
+    },
+    {
+     "title": "Stay (with Alessia Cara)",
+     "artist": "Zedd",
+     "yt": "yWEK4v9AVKQ",
+     "duration": 214,
+     "thumb": "https://i.ytimg.com/vi/yWEK4v9AVKQ/hqdefault.jpg"
+    },
+    {
+     "title": "The Middle (feat. Maren Morris)",
+     "artist": "Zedd",
+     "yt": "M3mJkSqZbX4",
+     "duration": 191,
+     "thumb": "https://i.ytimg.com/vi/M3mJkSqZbX4/hqdefault.jpg"
+    },
+    {
+     "title": "Levitating (feat. DaBaby)",
+     "artist": "Dua Lipa",
+     "yt": "TUVcZfQe-Kw",
+     "duration": 231,
+     "thumb": "https://i.ytimg.com/vi/TUVcZfQe-Kw/hqdefault.jpg"
+    }
+   ]
+  },
+  {
+   "id": "d49c50b77b",
+   "name": "Be LIMITLESS",
+   "description": "Imported from Spotify · 11 songs",
+   "color": "#e13300",
+   "created": "2026-10-23",
+   "songs": [
+    {
+     "title": "Can't Hold Us (feat. Ray Dalton)",
+     "artist": "Macklemore",
+     "yt": "2zNSgSzhBfM",
+     "duration": 424,
+     "thumb": "https://i.ytimg.com/vi/2zNSgSzhBfM/hqdefault.jpg"
+    },
+    {
+     "title": "You Can't Stop This",
+     "artist": "Alex Warren",
+     "yt": "QTRfIJw2dVU",
+     "duration": 162,
+     "thumb": "https://i.ytimg.com/vi/QTRfIJw2dVU/hqdefault.jpg"
+    },
+    {
+     "title": "PASSENGER",
+     "artist": "Alex Warren",
+     "yt": "RGq8HhCxYrM",
+     "duration": 167,
+     "thumb": "https://i.ytimg.com/vi/RGq8HhCxYrM/hqdefault.jpg"
+    },
+    {
+     "title": "Don't Worry (with Ray Dalton) - Radio Edit",
+     "artist": "Madcon",
+     "yt": "YRlcRn7lh-k",
+     "duration": 211,
+     "thumb": "https://i.ytimg.com/vi/YRlcRn7lh-k/hqdefault.jpg"
+    },
+    {
+     "title": "Someone To You",
+     "artist": "BANNERS",
+     "yt": "XeLaiL9tk68",
+     "duration": 222,
+     "thumb": "https://i.ytimg.com/vi/XeLaiL9tk68/hqdefault.jpg"
+    },
+    {
+     "title": "Fireball (feat. John Ryan)",
+     "artist": "Pitbull",
+     "yt": "HMqgVXSvwGo",
+     "duration": 242,
+     "thumb": "https://i.ytimg.com/vi/HMqgVXSvwGo/hqdefault.jpg"
+    },
+    {
+     "title": "Teeth",
+     "artist": "5 Seconds of Summer",
+     "yt": "JWeJHN5P-E8",
+     "duration": 219,
+     "thumb": "https://i.ytimg.com/vi/JWeJHN5P-E8/hqdefault.jpg"
+    },
+    {
+     "title": "Drag Me Down",
+     "artist": "One Direction",
+     "yt": "Jwgf3wmiA04",
+     "duration": 192,
+     "thumb": "https://i.ytimg.com/vi/Jwgf3wmiA04/hqdefault.jpg"
+    },
+    {
+     "title": "Feel It Still",
+     "artist": "Portugal. The Man",
+     "yt": "pBkHHoOIIn8",
+     "duration": 171,
+     "thumb": "https://i.ytimg.com/vi/pBkHHoOIIn8/hqdefault.jpg"
+    },
+    {
+     "title": "Immortals - From \"Big Hero 6”",
+     "artist": "Fall Out Boy",
+     "yt": "Y4o_8zbelwY",
+     "duration": 190,
+     "thumb": "https://i.ytimg.com/vi/Y4o_8zbelwY/hqdefault.jpg"
+    },
+    {
+     "title": "My Songs Know What You Did In The Dark (Light Em Up)",
+     "artist": "Fall Out Boy",
+     "yt": "LkIWmsP3c_s",
+     "duration": 188,
+     "thumb": "https://i.ytimg.com/vi/LkIWmsP3c_s/hqdefault.jpg"
+    }
+   ]
+  }
+ ],
+ "liked": [],
+ "analyses": {
+  "d49c50b77b": {
+   "id": "d49c50b77b",
+   "name": "Be LIMITLESS",
+   "stats": {
+    "songs": 11,
+    "artists": 9,
+    "top_artists": [
+     {
+      "name": "Alex Warren",
+      "songs": 2
+     },
+     {
+      "name": "Fall Out Boy",
+      "songs": 2
+     },
+     {
+      "name": "Macklemore",
+      "songs": 1
+     },
+     {
+      "name": "Madcon",
+      "songs": 1
+     },
+     {
+      "name": "BANNERS",
+      "songs": 1
+     },
+     {
+      "name": "Pitbull",
+      "songs": 1
+     },
+     {
+      "name": "5 Seconds of Summer",
+      "songs": 1
+     },
+     {
+      "name": "One Direction",
+      "songs": 1
+     },
+     {
+      "name": "Portugal. The Man",
+      "songs": 1
+     }
+    ],
+    "total_minutes": 40,
+    "avg_length": 217,
+    "variety": 82
+   },
+   "ai": {
+    "genres": [
+     {
+      "name": "Pop",
+      "pct": 45
+     },
+     {
+      "name": "Hip‑Hop/Rap",
+      "pct": 25
+     },
+     {
+      "name": "Alternative/Indie",
+      "pct": 15
+     },
+     {
+      "name": "Dance/Electronic",
+      "pct": 15
+     }
+    ],
+    "eras": [
+     {
+      "decade": "2010s",
+      "pct": 100
+     }
+    ],
+    "moods": [
+     "upbeat",
+     "confident",
+     "feel‑good",
+     "anthemic"
+    ],
+    "energy": 8,
+    "tempo": "mixed",
+    "vibe": "A high‑energy, feel‑good collection that blends chart‑topping pop hooks with punchy rap verses and indie swagger.",
+    "best_for": [
+     "road trips",
+     "gym workouts",
+     "party playlists",
+     "morning motivation"
+    ],
+    "similar_artists": [
+     "Imagine Dragons",
+     "The Chainsmokers",
+     "Zedd",
+     "Dua Lipa",
+     "Khalid",
+     "Lizzo",
+     "Maroon 5",
+     "Coldplay"
+    ],
+    "name_ideas": [
+     "Limitless Beats",
+     "Skyline Pulse",
+     "Rise & Run"
+    ]
+   },
+   "analysed": "2026-10-23 17:13"
+  }
+ }
+}

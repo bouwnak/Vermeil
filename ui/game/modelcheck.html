@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><title>Model load check</title>
+<script type="importmap">{ "imports": { "three": "../vendor/three/build/three.module.js", "three/addons/": "../vendor/three/examples/jsm/" } }</script>
+<style>body{margin:0;background:#20343b;color:#eee;font:12px monospace}#out{white-space:pre-wrap;padding:8px}</style>
+</head>
+<body>
+<div id="out">checking…</div>
+<script type="module">
+// Developer tool: loads EVERY model in the catalog, renders a small picture of each and reports models that
+// fail to load, have missing textures, or come out invisible. Use: modelcheck.html?filter=regex&from=0&to=2000
+import * as THREE from "three";
+import * as A from "./assets.js";
+const q = new URLSearchParams(location.search);
+const rx = new RegExp(q.get("filter") || ".", "i");
+const S = 96;
+const r = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true }); r.setSize(S, S); r.outputColorSpace = THREE.SRGBColorSpace;
+document.body.append(r.domElement);
+const sc = new THREE.Scene(); sc.background = new THREE.Color(0xff00ff);
+sc.add(new THREE.HemisphereLight(0xffffff, 0x666666, 2)); const dl = new THREE.DirectionalLight(0xffffff, 2); dl.position.set(3, 5, 4); sc.add(dl);
+const cam = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
+const texErr = [];
+const ow = console.warn, oe = console.error;
+console.warn = (...a) => { texErr.push(a.join(" ")); ow(...a); };
+console.error = (...a) => { texErr.push(a.join(" ")); oe(...a); };
+await A.loadCatalog();
+const ids = Object.keys(A.catalog).filter((i) => rx.test(i)).slice(+(q.get("from") || 0), +(q.get("to") || 1e9));
+const res = [];
+const px = new Uint8Array(S * S * 4);
+for (const id of ids) {
+  const e = { id, ok: true };
+  texErr.length = 0;
+  try {
+    const { root } = await A.instance(id);
+    root.updateMatrixWorld(true);
+    let meshes = 0, hidden = 0, transparent = 0, noMap = 0;
+    root.traverse((o) => {
+      if (!o.isMesh) return; meshes++;
+      for (const m of [].concat(o.material)) { if (m.transparent) transparent++; if (m.opacity < 0.05 || m.visible === false) hidden++; if (!m.map) noMap++; }
+    });
+    const box = new THREE.Box3().setFromObject(root, true);
+    const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+    const rad = Math.max(size.length() / 2, 0.001);
+    cam.position.set(c.x + rad * 1.6, c.y + rad * 0.8, c.z + rad * 2.2); cam.near = rad / 100; cam.far = rad * 20; cam.updateProjectionMatrix(); cam.lookAt(c);
+    sc.add(root); r.render(sc, cam); sc.remove(root);
+    const gl = r.getContext(); gl.readPixels(0, 0, S, S, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    let cov = 0, dark = 0;
+    for (let i = 0; i < px.length; i += 4) { if (!(px[i] > 240 && px[i + 1] < 20 && px[i + 2] > 240)) { cov++; if (px[i] + px[i + 1] + px[i + 2] < 40) dark++; } }
+    Object.assign(e, { meshes, hidden, transparent, noMap, coverage: +(cov / (S * S)).toFixed(3), dark: cov ? +(dark / cov).toFixed(2) : 0, size: size.toArray().map((v) => +v.toFixed(2)), warn: texErr.slice(0, 3) });
+    if (meshes === 0 || cov / (S * S) < 0.01 || texErr.length || hidden || (cov && dark / cov > 0.6)) e.ok = false;
+    root.traverse((o) => { if (o.isMesh) { for (const m of [].concat(o.material)) m.dispose(); } });
+  } catch (err) { e.ok = false; e.error = String(err); }
+  res.push(e);
+}
+window.__res = res;
+document.getElementById("out").textContent = res.filter((x) => !x.ok).map((x) => JSON.stringify(x)).join("\n") || "all ok";
+window.__done = true;
+</script>
+</body>
+</html>

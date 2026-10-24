@@ -1,0 +1,4241 @@
+{
+ "_doc": "Biome templates for the world builder. Pools are regular expressions matched against catalog ids (ui/game/assets/catalog.json). height = target height in metres for that pool (models are rescaled to it, +-jitter). density = objects per 100 m2. ground/sky/fog/light are colours. enclosed = walls of rock around the area (caves, dungeons).",
+ "forest": {
+  "name": "Enchanted Forest",
+  "ground": [
+   "#6fae3f",
+   "#8cc04a",
+   "#5f9a37"
+  ],
+  "path": "#a88a5c",
+  "sky": [
+   "#8fd3ff",
+   "#eaf6ff"
+  ],
+  "fog": [
+   "#cfe9d0",
+   30,
+   95
+  ],
+  "sun": "#fff2cc",
+  "ambient": "#b9d7ff",
+  "time": "day",
+  "pools": {
+   "tree": {
+    "match": "^(stylized_nature_megakit_commontree_\\d|ultimate_stylized_nature_(mapletree|birchtree)_\\d+|conv_ultimate_nature_pack_(commontree|birchtree)_\\d|conv_textured_stylized_trees_(tree|birch)_\\d+|conv_textured_fantasy_nature_(bigtree2?|tree|smalltree)|conv_simple_nature_pack_tree\\d|stylized_nature_megakit_pine_\\d|conv_ultimate_nature_pack_pinetree_\\d|conv_textured_stylized_trees_pine_\\d+|ultimate_fantasy_rts_resource_pinetree|stylized_nature_megakit_twistedtree_\\d)$",
+    "height": [
+     5,
+     10
+    ],
+    "density": 2.2,
+    "edge": 3.0,
+    "solid": 0.6,
+    "clusters": 6,
+    "spread": 6,
+    "giant": [
+     0.06,
+     1.6
+    ],
+    "variety": 8
+   },
+   "bush": {
+    "match": "^(stylized_nature_megakit_bush_common(_flowers)?|ultimate_stylized_nature_bush(_small|_large)?(_flowers)?|conv_ultimate_nature_pack_bush_\\d|conv_textured_fantasy_nature_(big|bigger)?bush|conv_simple_nature_pack_bush\\d|conv_ultimate_nature_pack_bushberries_\\d|conv_nature_crops_pack_bushberries_\\d)$",
+    "height": [
+     0.8,
+     1.6
+    ],
+    "density": 1.8,
+    "clusters": 8,
+    "spread": 3
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_(common|wispy)_(short|tall)|ultimate_stylized_nature_grass_(small|large)|conv_ultimate_nature_pack_grass(_2|_short)?|conv_nature_crops_pack_grass_\\d|conv_simple_nature_pack_grass\\d)$",
+    "height": [
+     0.3,
+     0.8
+    ],
+    "density": 13,
+    "decor": true,
+    "variety": 5
+   },
+   "flower": {
+    "match": "^(stylized_nature_megakit_flower_\\d_(group|single)|ultimate_stylized_nature_flower_\\d(_clump)?|conv_ultimate_nature_pack_flowers|conv_nature_crops_pack_flower_\\d|conv_textured_fantasy_nature_flower\\d?|stylized_nature_megakit_mushroom_(common|laetiporus)|conv_textured_fantasy_nature_mushroom|conv_nature_crops_pack_mushroom_\\d)$",
+    "height": [
+     0.3,
+     0.8
+    ],
+    "density": 4.5,
+    "decor": true,
+    "clusters": 10,
+    "spread": 2.5,
+    "variety": 5
+   },
+   "rock": {
+    "match": "^(stylized_nature_megakit_rock_medium_\\d|conv_ultimate_nature_pack_rock_\\d|conv_simple_nature_pack_rock\\d|conv_medieval_village_pack_rock_\\d|ultimate_fantasy_rts_resource_rock_\\d|conv_ultimate_nature_pack_rock_moss_\\d)$",
+    "height": [
+     0.4,
+     2.0
+    ],
+    "density": 0.9,
+    "solid": 0.8,
+    "giant": [
+     0.05,
+     2.2
+    ]
+   },
+   "landmark": {
+    "match": "^(made_ruin_arch|made_ruin_column|made_signpost)$",
+    "height": [
+     2.5,
+     4.5
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "solid": 0.6
+   },
+   "light": {
+    "match": "^made_lamppost$",
+    "height": [
+     3.1,
+     3.1
+    ],
+    "count": [
+     0,
+     1
+    ],
+    "solid": 0.3
+   },
+   "fern": {
+    "match": "^(stylized_nature_megakit_(fern_\\d|clover_\\d|plant_\\d(_big)?|petal_\\d)|conv_ultimate_nature_pack_plant_\\d)$",
+    "height": [
+     0.4,
+     1.0
+    ],
+    "density": 3.5,
+    "decor": true,
+    "clusters": 8,
+    "spread": 3
+   },
+   "pebble": {
+    "match": "^(stylized_nature_megakit_pebble_(round|square)_\\d)$",
+    "height": [
+     0.15,
+     0.35
+    ],
+    "density": 1.5,
+    "decor": true
+   },
+   "log": {
+    "match": "^(conv_ultimate_nature_pack_(treestump|woodlog)(_moss)?|conv_survival_pack_woodlog|ultimate_fantasy_rts_logs)$",
+    "height": [
+     0.5,
+     1.0
+    ],
+    "density": 0.25,
+    "solid": 0.7
+   }
+  },
+  "path_stones": "^stylized_nature_megakit_rockpath_",
+  "music": "forest",
+  "ambient_fx": [
+   "leaves",
+   "fireflies",
+   "god_rays"
+  ],
+  "npc_roles": [
+   "traveler",
+   "hunter",
+   "druid"
+  ],
+  "npc_count": [
+   1,
+   3
+  ],
+  "setpieces": [
+   [
+    "campsite",
+    3
+   ],
+   [
+    "hunter_camp",
+    2
+   ],
+   [
+    "mushroom_ring",
+    3
+   ],
+   [
+    "fallen_giant",
+    3
+   ],
+   [
+    "woodcutter",
+    2
+   ],
+   [
+    "ruined_shrine",
+    1
+   ],
+   [
+    "flower_meadow",
+    2
+   ],
+   [
+    "boulder_field",
+    1
+   ],
+   [
+    "witch_hut_yard",
+    1
+   ],
+   [
+    "pond_life",
+    1
+   ],
+   [
+    "picnic",
+    1
+   ],
+   [
+    "wagon_stop",
+    1
+   ],
+   [
+    "shrine_altar",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   6
+  ]
+ },
+ "meadow": {
+  "name": "Sunny Meadow",
+  "ground": [
+   "#8ccf4f",
+   "#a3d95d",
+   "#79bf46"
+  ],
+  "path": "#b89a68",
+  "sky": [
+   "#7fcbff",
+   "#f2fbff"
+  ],
+  "fog": [
+   "#dff1ff",
+   45,
+   130
+  ],
+  "sun": "#fff6d8",
+  "ambient": "#c8e2ff",
+  "time": "day",
+  "pools": {
+   "tree": {
+    "match": "^(stylized_nature_megakit_commontree_\\d|ultimate_stylized_nature_(mapletree|birchtree)_\\d+|conv_ultimate_nature_pack_(commontree|birchtree)_\\d|conv_textured_stylized_trees_(tree|birch)_\\d+|conv_textured_fantasy_nature_(bigtree2?|tree|smalltree)|conv_simple_nature_pack_tree\\d|conv_ultimate_nature_pack_(commontree|birchtree|pinetree|willow)_autumn_\\d)$",
+    "height": [
+     5,
+     8
+    ],
+    "density": 0.55,
+    "edge": 2.0,
+    "solid": 0.6,
+    "clusters": 4,
+    "spread": 5,
+    "giant": [
+     0.08,
+     1.5
+    ]
+   },
+   "bush": {
+    "match": "^(stylized_nature_megakit_bush_common(_flowers)?|ultimate_stylized_nature_bush(_small|_large)?(_flowers)?|conv_ultimate_nature_pack_bush_\\d|conv_textured_fantasy_nature_(big|bigger)?bush|conv_simple_nature_pack_bush\\d|conv_ultimate_nature_pack_bushberries_\\d|conv_nature_crops_pack_bushberries_\\d)$",
+    "height": [
+     0.8,
+     1.4
+    ],
+    "density": 1.0,
+    "clusters": 6
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_(common|wispy)_(short|tall)|ultimate_stylized_nature_grass_(small|large)|conv_ultimate_nature_pack_grass(_2|_short)?|conv_nature_crops_pack_grass_\\d|conv_simple_nature_pack_grass\\d)$",
+    "height": [
+     0.3,
+     0.8
+    ],
+    "density": 14,
+    "decor": true,
+    "variety": 5
+   },
+   "flower": {
+    "match": "^(stylized_nature_megakit_flower_\\d_(group|single)|ultimate_stylized_nature_flower_\\d(_clump)?|conv_ultimate_nature_pack_flowers|conv_nature_crops_pack_flower_\\d|conv_textured_fantasy_nature_flower\\d?)$",
+    "height": [
+     0.3,
+     0.7
+    ],
+    "density": 8,
+    "decor": true,
+    "clusters": 12,
+    "spread": 3,
+    "variety": 6
+   },
+   "rock": {
+    "match": "^(stylized_nature_megakit_rock_medium_\\d|conv_ultimate_nature_pack_rock_\\d|conv_simple_nature_pack_rock\\d|conv_medieval_village_pack_rock_\\d|ultimate_fantasy_rts_resource_rock_\\d|stylized_nature_megakit_pebble_(round|square)_\\d)$",
+    "height": [
+     0.3,
+     1.2
+    ],
+    "density": 0.4,
+    "solid": 0.8
+   },
+   "landmark": {
+    "match": "^(made_signpost|conv_medieval_village_pack_hay|conv_farm_buildings_windmill|ultimate_fantasy_rts_windmill_firstage|conv_survival_pack_tent)$",
+    "height": [
+     1.5,
+     6
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "solid": 0.7
+   },
+   "crop": {
+    "match": "^conv_nature_crops_pack_(wheat|corn|flowers|rice)_\\d$",
+    "height": [
+     0.6,
+     1.1
+    ],
+    "density": 0.8,
+    "decor": true,
+    "clusters": 3,
+    "spread": 2.5
+   }
+  },
+  "music": "meadow",
+  "ambient_fx": [
+   "butterflies",
+   "pollen"
+  ],
+  "npc_roles": [
+   "farmer",
+   "traveler",
+   "shepherd"
+  ],
+  "npc_count": [
+   1,
+   3
+  ],
+  "animals": "^(conv_farm_animals_(cow|sheep|horse|pig|llama)|cute_animated_monsters_(deer|chicken))$",
+  "setpieces": [
+   [
+    "picnic",
+    2
+   ],
+   [
+    "crop_field",
+    3
+   ],
+   [
+    "orchard",
+    2
+   ],
+   [
+    "flower_meadow",
+    4
+   ],
+   [
+    "wagon_stop",
+    2
+   ],
+   [
+    "campsite",
+    1
+   ],
+   [
+    "farmstead",
+    2
+   ],
+   [
+    "pond_life",
+    1
+   ],
+   [
+    "fallen_giant",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ },
+ "village": {
+  "name": "Village",
+  "ground": [
+   "#86c04c",
+   "#97c95a"
+  ],
+  "path": "#c0a173",
+  "sky": [
+   "#86cfff",
+   "#f5fbff"
+  ],
+  "fog": [
+   "#e4f0ff",
+   50,
+   140
+  ],
+  "sun": "#fff3d1",
+  "ambient": "#c6dcff",
+  "time": "day",
+  "settlement": true,
+  "pools": {
+   "building": {
+    "match": "^(conv_medieval_village_pack_(house_\\d|inn|blacksmith|mill|stable|sawmill|bell_tower)|ultimate_fantasy_rts_(houses_(firstage|secondage)_\\d_level[23]|market_(firstage|secondage)_level[23]|storage_(firstage|secondage)_level[23]|towerhouse_(firstage|secondage)|windmill_(firstage|secondage))|conv_farm_buildings_(barn|smallbarn|silo_house|windmill))$",
+    "height": [
+     5,
+     9
+    ],
+    "count": [
+     5,
+     8
+    ],
+    "solid": 1.0,
+    "door": true,
+    "variety": 7
+   },
+   "prop": {
+    "match": "^(conv_medieval_village_pack_(barrel|cart|crate|hay|bags?|bag_open|package_\\d|cauldron)|fantasy_props_megakit_(barrel(_apples|_holder)?|crate_(wooden|metal)|farmcrate_\\w+|bucket_wooden_\\d|bag|pouch_large|cage_small|vase_\\d|pot_\\d|chest_wood|weaponstand))$",
+    "height": [
+     0.6,
+     2.2
+    ],
+    "density": 0.8,
+    "solid": 0.7,
+    "variety": 8
+   },
+   "tree": {
+    "match": "^(stylized_nature_megakit_commontree_\\d|ultimate_stylized_nature_(mapletree|birchtree)_\\d+|conv_ultimate_nature_pack_(commontree|birchtree)_\\d|conv_textured_stylized_trees_(tree|birch)_\\d+|conv_textured_fantasy_nature_(bigtree2?|tree|smalltree)|conv_simple_nature_pack_tree\\d)$",
+    "height": [
+     5,
+     8
+    ],
+    "density": 0.25,
+    "edge": 2.5,
+    "solid": 0.6
+   },
+   "bush": {
+    "match": "^(stylized_nature_megakit_bush_common(_flowers)?|ultimate_stylized_nature_bush(_small|_large)?(_flowers)?|conv_ultimate_nature_pack_bush_\\d|conv_textured_fantasy_nature_(big|bigger)?bush|conv_simple_nature_pack_bush\\d|conv_ultimate_nature_pack_bushberries_\\d|conv_nature_crops_pack_bushberries_\\d)$",
+    "height": [
+     0.7,
+     1.3
+    ],
+    "density": 0.6
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_(common|wispy)_(short|tall)|ultimate_stylized_nature_grass_(small|large)|conv_ultimate_nature_pack_grass(_2|_short)?|conv_nature_crops_pack_grass_\\d|conv_simple_nature_pack_grass\\d)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 6,
+    "decor": true
+   },
+   "flower": {
+    "match": "^(stylized_nature_megakit_flower_\\d_(group|single)|ultimate_stylized_nature_flower_\\d(_clump)?|conv_ultimate_nature_pack_flowers|conv_nature_crops_pack_flower_\\d|conv_textured_fantasy_nature_flower\\d?)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 3,
+    "decor": true,
+    "clusters": 8
+   },
+   "light": {
+    "match": "^(made_lamppost(_double)?|fantasy_props_megakit_lantern_wall)$",
+    "height": [
+     3.1,
+     3.1
+    ],
+    "count": [
+     4,
+     8
+    ],
+    "solid": 0.3,
+    "along_path": true
+   },
+   "fence": {
+    "match": "^(conv_medieval_village_pack_fence|medieval_village_megakit_prop_woodenfence_single|conv_farm_buildings_fence2?)$",
+    "height": [
+     1,
+     1.2
+    ],
+    "count": [
+     5,
+     10
+    ],
+    "solid": 0.5
+   },
+   "landmark": {
+    "match": "^(made_fountain|conv_medieval_village_pack_well|conv_medieval_village_pack_gazebo|made_signpost)$",
+    "height": [
+     2.2,
+     3.4
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "center": true,
+    "solid": 1.0
+   },
+   "animal_pen": {
+    "match": "^(conv_medieval_village_pack_hay|fantasy_props_megakit_bucket_wooden_\\d)$",
+    "height": [
+     0.5,
+     1.1
+    ],
+    "density": 0.12,
+    "solid": 0.5
+   }
+  },
+  "music": "village",
+  "ambient_fx": [
+   "smoke",
+   "birds"
+  ],
+  "npc_roles": [
+   "merchant",
+   "guard",
+   "villager",
+   "villager",
+   "blacksmith",
+   "innkeeper",
+   "child",
+   "farmer",
+   "priest"
+  ],
+  "npc_count": [
+   5,
+   9
+  ],
+  "animals": "^(conv_farm_animals_(cow|sheep|pig|horse)|cute_animated_monsters_chicken)$",
+  "setpieces": [
+   [
+    "market_row",
+    4
+   ],
+   [
+    "blacksmith_yard",
+    2
+   ],
+   [
+    "tavern_tables",
+    3
+   ],
+   [
+    "town_well",
+    2
+   ],
+   [
+    "crowd",
+    3
+   ],
+   [
+    "laundry_line",
+    2
+   ],
+   [
+    "training_ground",
+    1
+   ],
+   [
+    "bell_square",
+    1
+   ],
+   [
+    "crop_field",
+    1
+   ],
+   [
+    "wagon_stop",
+    1
+   ],
+   [
+    "tavern_front",
+    2
+   ],
+   [
+    "market_square",
+    2
+   ],
+   [
+    "armory_corner",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   4,
+   7
+  ]
+ },
+ "swamp": {
+  "name": "Murky Swamp",
+  "ground": [
+   "#5b7a3a",
+   "#4e6b33",
+   "#68843f"
+  ],
+  "path": "#6b5b3e",
+  "sky": [
+   "#7d9b87",
+   "#c9d8c2"
+  ],
+  "fog": [
+   "#9fb59a",
+   12,
+   60
+  ],
+  "sun": "#e8f0c8",
+  "ambient": "#90a890",
+  "time": "dusk",
+  "water": {
+   "color": "#4f7d5f",
+   "coverage": 0.3
+  },
+  "pools": {
+   "tree": {
+    "match": "^(conv_ultimate_nature_pack_willow_\\d|stylized_nature_megakit_twistedtree_\\d|stylized_nature_megakit_deadtree_\\d|ultimate_stylized_nature_deadtree_\\d+|conv_ultimate_nature_pack_(commontree|birchtree|willow)_dead_\\d|conv_textured_stylized_trees_dead(tree|birch)_\\d+|conv_ultimate_nature_pack_willow_dead_\\d)$",
+    "height": [
+     4,
+     9
+    ],
+    "density": 1.2,
+    "edge": 2.5,
+    "solid": 0.6,
+    "clusters": 5,
+    "giant": [
+     0.06,
+     1.5
+    ]
+   },
+   "bush": {
+    "match": "^(stylized_nature_megakit_bush_common(_flowers)?|ultimate_stylized_nature_bush(_small|_large)?(_flowers)?|conv_ultimate_nature_pack_bush_\\d|conv_textured_fantasy_nature_(big|bigger)?bush|conv_simple_nature_pack_bush\\d|conv_ultimate_nature_pack_bushberries_\\d|conv_nature_crops_pack_bushberries_\\d)$",
+    "height": [
+     0.7,
+     1.3
+    ],
+    "density": 1.1,
+    "tint": "#6a7a4a"
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_wispy_(short|tall)|stylized_nature_megakit_fern_\\d|conv_ultimate_nature_pack_grass(_2)?)$",
+    "height": [
+     0.4,
+     1.0
+    ],
+    "density": 9,
+    "decor": true
+   },
+   "flower": {
+    "match": "^(stylized_nature_megakit_mushroom_(common|laetiporus)|conv_textured_fantasy_nature_mushroom|conv_nature_crops_pack_mushroom_\\d|conv_ultimate_nature_pack_lilypad)$",
+    "height": [
+     0.2,
+     0.7
+    ],
+    "density": 2.5,
+    "decor": true,
+    "glow": true,
+    "clusters": 8
+   },
+   "rock": {
+    "match": "^(conv_ultimate_nature_pack_rock_moss_\\d|conv_ultimate_nature_pack_(woodlog|treestump)_moss)$",
+    "height": [
+     0.4,
+     1.4
+    ],
+    "density": 0.8,
+    "solid": 0.8
+   }
+  },
+  "music": "swamp",
+  "ambient_fx": [
+   "fireflies",
+   "mist"
+  ],
+  "npc_roles": [
+   "hermit",
+   "witch"
+  ],
+  "npc_count": [
+   0,
+   2
+  ],
+  "setpieces": [
+   [
+    "witch_hut_yard",
+    3
+   ],
+   [
+    "bone_pile",
+    2
+   ],
+   [
+    "pond_life",
+    3
+   ],
+   [
+    "mushroom_ring",
+    2
+   ],
+   [
+    "fallen_giant",
+    2
+   ],
+   [
+    "graveside",
+    1
+   ],
+   [
+    "shrine_altar",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   5
+  ]
+ },
+ "cave": {
+  "name": "Crystal Cave",
+  "ground": [
+   "#6b6258",
+   "#5d554c"
+  ],
+  "path": "#7a6f62",
+  "sky": [
+   "#1b1a24",
+   "#2a2836"
+  ],
+  "fog": [
+   "#2a2735",
+   8,
+   45
+  ],
+  "sun": "#9fb7ff",
+  "ambient": "#5a5875",
+  "time": "dark",
+  "enclosed": "rock",
+  "pools": {
+   "wall": {
+    "match": "^(conv_ultimate_nature_pack_rock_[4-7]|stylized_nature_megakit_rock_medium_\\d)$",
+    "height": [
+     3,
+     6
+    ],
+    "ring": true,
+    "solid": 1.0
+   },
+   "rock": {
+    "match": "^(conv_modular_dungeon_pack_rock\\d|stylized_nature_megakit_rock_medium_\\d|conv_ultimate_nature_pack_rock_\\d|conv_simple_nature_pack_rock\\d|conv_medieval_village_pack_rock_\\d|ultimate_fantasy_rts_resource_rock_\\d|cube_world_rock\\d)$",
+    "height": [
+     0.6,
+     2.4
+    ],
+    "density": 1.4,
+    "solid": 0.8,
+    "tint": "#5b5560",
+    "giant": [
+     0.05,
+     1.8
+    ]
+   },
+   "crystal": {
+    "match": "^(conv_ultimate_rpg_items_pack_crystal\\d|cube_world_crystal_(big|small)|conv_ultimate_rpg_items_pack_crystal\\d_damaged)$",
+    "height": [
+     0.8,
+     2.4
+    ],
+    "density": 0.5,
+    "glow": true,
+    "solid": 0.6
+   },
+   "flower": {
+    "match": "^(stylized_nature_megakit_mushroom_(common|laetiporus)|conv_textured_fantasy_nature_mushroom|conv_nature_crops_pack_mushroom_\\d)$",
+    "height": [
+     0.3,
+     0.9
+    ],
+    "density": 1.2,
+    "decor": true,
+    "glow": true,
+    "clusters": 6
+   },
+   "prop": {
+    "match": "^(conv_modular_dungeon_pack_(bones(_\\d)?|chest|barrel|torch)|conv_survival_pack_woodentorch_fire|ultimate_fantasy_rts_resource_gold_\\d|conv_ultimate_rpg_items_pack_(mineral|gold_ingots))$",
+    "height": [
+     0.5,
+     1.8
+    ],
+    "density": 0.25,
+    "solid": 0.6,
+    "glow": true
+   },
+   "pebble": {
+    "match": "^(stylized_nature_megakit_pebble_(round|square)_\\d)$",
+    "height": [
+     0.15,
+     0.4
+    ],
+    "density": 2,
+    "decor": true,
+    "tint": "#5b5560"
+   },
+   "rubble": {
+    "match": "^stylized_nature_megakit_pebble_(round|square)_\\d$",
+    "height": [
+     0.2,
+     0.6
+    ],
+    "density": 3,
+    "decor": true,
+    "tint": "#4b4550"
+   }
+  },
+  "music": "cave",
+  "ambient_fx": [
+   "drips",
+   "crystal_glow",
+   "dust"
+  ],
+  "npc_roles": [
+   "miner",
+   "hermit"
+  ],
+  "npc_count": [
+   0,
+   1
+  ],
+  "setpieces": [
+   [
+    "mine_entrance",
+    3
+   ],
+   [
+    "crystal_cluster",
+    4
+   ],
+   [
+    "bone_pile",
+    2
+   ],
+   [
+    "pirate_cache",
+    1
+   ],
+   [
+    "voxel_mine",
+    1
+   ],
+   [
+    "dragon_hoard",
+    2
+   ],
+   [
+    "shrine_altar",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   5
+  ]
+ },
+ "dungeon": {
+  "name": "Forgotten Dungeon",
+  "ground": [
+   "#5a5a62",
+   "#4f4f57"
+  ],
+  "path": "#6e6e78",
+  "sky": [
+   "#121218",
+   "#1e1e28"
+  ],
+  "fog": [
+   "#1d1b26",
+   8,
+   40
+  ],
+  "sun": "#ffcf8a",
+  "ambient": "#4a4660",
+  "time": "dark",
+  "enclosed": "wall",
+  "pools": {
+   "wall": {
+    "match": "^conv_modular_dungeon_pack_(modularstonewall|wallrocks)$",
+    "height": [
+     4,
+     4
+    ],
+    "ring": true,
+    "solid": 1.0
+   },
+   "column": {
+    "match": "^conv_modular_dungeon_pack_(column|column_broken2?)$",
+    "height": [
+     3,
+     4
+    ],
+    "count": [
+     6,
+     10
+    ],
+    "solid": 1.0
+   },
+   "prop": {
+    "match": "^(conv_modular_dungeon_pack_(barrel|bars|bones(_\\d)?|book_open|candelabrum(_tall)?|carpet|chest|chest_gold|potion\\d?)|fantasy_props_megakit_(cage_small|chain_coil|chest_wood|crate_metal|bookcase_\\d|book_stack_\\d)|conv_ultimate_rpg_items_pack_(skull(_\\d)?|chest_(closed|open|ingots)))$",
+    "height": [
+     0.5,
+     2.2
+    ],
+    "density": 0.55,
+    "solid": 0.6,
+    "variety": 9
+   },
+   "light": {
+    "match": "^conv_modular_dungeon_pack_(torch|candelabrum_tall)$",
+    "height": [
+     1.8,
+     2.4
+    ],
+    "count": [
+     4,
+     8
+    ],
+    "glow": true,
+    "solid": 0.4
+   },
+   "decor": {
+    "match": "^(conv_modular_dungeon_pack_bones(_\\d)?|conv_ultimate_rpg_items_pack_(bone|skull)|fantasy_props_megakit_(candle_\\d|vase_rubble_medium))$",
+    "height": [
+     0.2,
+     0.6
+    ],
+    "density": 1.6,
+    "decor": true
+   },
+   "pebble": {
+    "match": "^stylized_nature_megakit_pebble_(round|square)_\\d$",
+    "height": [
+     0.15,
+     0.35
+    ],
+    "density": 2,
+    "decor": true,
+    "tint": "#555"
+   }
+  },
+  "floor_tiles": "^conv_modular_dungeon_pack_modularfloor$",
+  "music": "dungeon",
+  "ambient_fx": [
+   "dust",
+   "torch_flicker"
+  ],
+  "npc_roles": [
+   "prisoner"
+  ],
+  "npc_count": [
+   0,
+   1
+  ],
+  "setpieces": [
+   [
+    "bone_pile",
+    3
+   ],
+   [
+    "torture_chamber",
+    3
+   ],
+   [
+    "sarcophagus_hall",
+    2
+   ],
+   [
+    "library_corner",
+    2
+   ],
+   [
+    "ruined_shrine",
+    1
+   ],
+   [
+    "witch_hut_yard",
+    1
+   ],
+   [
+    "dining_hall",
+    1
+   ],
+   [
+    "pirate_cache",
+    1
+   ],
+   [
+    "throne_dais",
+    1
+   ],
+   [
+    "dragon_hoard",
+    1
+   ],
+   [
+    "crypt_rest",
+    1
+   ],
+   [
+    "armory_corner",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   6
+  ]
+ },
+ "ruins": {
+  "name": "Ancient Ruins",
+  "ground": [
+   "#7fb04a",
+   "#90b85a",
+   "#6e9e42"
+  ],
+  "path": "#c9bfa6",
+  "sky": [
+   "#8fd3ff",
+   "#fff3e6"
+  ],
+  "fog": [
+   "#e6f0e6",
+   30,
+   100
+  ],
+  "sun": "#ffefc4",
+  "ambient": "#c0d4ff",
+  "time": "day",
+  "pools": {
+   "ruin": {
+    "match": "^(made_ruin_arch|made_ruin_column|conv_modular_dungeon_pack_(column|column_broken(_\\d)?)|medieval_village_megakit_wall_arch|conv_modular_medieval_buildings_(wall|tallwall|wallentrance)|fantasy_props_megakit_vase_rubble_medium)$",
+    "height": [
+     2.5,
+     4.5
+    ],
+    "count": [
+     6,
+     11
+    ],
+    "solid": 0.8,
+    "variety": 7
+   },
+   "tree": {
+    "match": "^(stylized_nature_megakit_commontree_\\d|ultimate_stylized_nature_(mapletree|birchtree)_\\d+|conv_ultimate_nature_pack_(commontree|birchtree)_\\d|conv_textured_stylized_trees_(tree|birch)_\\d+|conv_textured_fantasy_nature_(bigtree2?|tree|smalltree)|conv_simple_nature_pack_tree\\d|stylized_nature_megakit_twistedtree_\\d|stylized_nature_megakit_deadtree_\\d|ultimate_stylized_nature_deadtree_\\d+|conv_ultimate_nature_pack_(commontree|birchtree|willow)_dead_\\d|conv_textured_stylized_trees_dead(tree|birch)_\\d+)$",
+    "height": [
+     5,
+     9
+    ],
+    "density": 0.9,
+    "edge": 2.5,
+    "solid": 0.6,
+    "clusters": 4,
+    "giant": [
+     0.07,
+     1.5
+    ]
+   },
+   "bush": {
+    "match": "^(stylized_nature_megakit_bush_common(_flowers)?|ultimate_stylized_nature_bush(_small|_large)?(_flowers)?|conv_ultimate_nature_pack_bush_\\d|conv_textured_fantasy_nature_(big|bigger)?bush|conv_simple_nature_pack_bush\\d|conv_ultimate_nature_pack_bushberries_\\d|conv_nature_crops_pack_bushberries_\\d)$",
+    "height": [
+     0.8,
+     1.4
+    ],
+    "density": 1.2
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_(common|wispy)_(short|tall)|ultimate_stylized_nature_grass_(small|large)|conv_ultimate_nature_pack_grass(_2|_short)?|conv_nature_crops_pack_grass_\\d|conv_simple_nature_pack_grass\\d|stylized_nature_megakit_(fern_\\d|clover_\\d|plant_\\d(_big)?|petal_\\d)|conv_ultimate_nature_pack_plant_\\d)$",
+    "height": [
+     0.3,
+     0.8
+    ],
+    "density": 9,
+    "decor": true
+   },
+   "flower": {
+    "match": "^(stylized_nature_megakit_flower_\\d_(group|single)|ultimate_stylized_nature_flower_\\d(_clump)?|conv_ultimate_nature_pack_flowers|conv_nature_crops_pack_flower_\\d|conv_textured_fantasy_nature_flower\\d?)$",
+    "height": [
+     0.3,
+     0.7
+    ],
+    "density": 3,
+    "decor": true,
+    "clusters": 8
+   },
+   "rock": {
+    "match": "^(stylized_nature_megakit_rock_medium_\\d|conv_ultimate_nature_pack_rock_\\d|conv_simple_nature_pack_rock\\d|conv_medieval_village_pack_rock_\\d|ultimate_fantasy_rts_resource_rock_\\d|conv_ultimate_nature_pack_rock_moss_\\d)$",
+    "height": [
+     0.6,
+     2.0
+    ],
+    "density": 0.8,
+    "solid": 0.8
+   }
+  },
+  "music": "ruins",
+  "ambient_fx": [
+   "god_rays",
+   "leaves"
+  ],
+  "npc_roles": [
+   "scholar",
+   "treasure_hunter"
+  ],
+  "npc_count": [
+   0,
+   2
+  ],
+  "setpieces": [
+   [
+    "ruined_shrine",
+    4
+   ],
+   [
+    "bone_pile",
+    2
+   ],
+   [
+    "boulder_field",
+    2
+   ],
+   [
+    "campsite",
+    1
+   ],
+   [
+    "fallen_giant",
+    1
+   ],
+   [
+    "pirate_cache",
+    1
+   ],
+   [
+    "library_corner",
+    1
+   ],
+   [
+    "shrine_altar",
+    2
+   ],
+   [
+    "crypt_rest",
+    1
+   ],
+   [
+    "dragon_hoard",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   6
+  ]
+ },
+ "graveyard": {
+  "name": "Haunted Graveyard",
+  "ground": [
+   "#4f6040",
+   "#46553a"
+  ],
+  "path": "#6a6050",
+  "sky": [
+   "#2c2e48",
+   "#555a7a"
+  ],
+  "fog": [
+   "#5a6070",
+   10,
+   55
+  ],
+  "sun": "#a8b8ff",
+  "ambient": "#5c6288",
+  "time": "night",
+  "pools": {
+   "grave": {
+    "match": "^made_gravestone_(1|cross)$",
+    "height": [
+     0.9,
+     1.2
+    ],
+    "count": [
+     10,
+     22
+    ],
+    "rows": true,
+    "solid": 0.8
+   },
+   "tree": {
+    "match": "^(stylized_nature_megakit_deadtree_\\d|ultimate_stylized_nature_deadtree_\\d+|conv_ultimate_nature_pack_(commontree|birchtree|willow)_dead_\\d|conv_textured_stylized_trees_dead(tree|birch)_\\d+|stylized_nature_megakit_twistedtree_\\d)$",
+    "height": [
+     4,
+     8
+    ],
+    "density": 0.7,
+    "edge": 2.0,
+    "solid": 0.6,
+    "clusters": 4,
+    "giant": [
+     0.08,
+     1.5
+    ]
+   },
+   "fence": {
+    "match": "^medieval_village_megakit_prop_metalfence_(ornament|simple)$",
+    "height": [
+     1.2,
+     1.4
+    ],
+    "count": [
+     6,
+     14
+    ],
+    "solid": 0.5
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_wispy_(short|tall)|conv_ultimate_nature_pack_grass_short)$",
+    "height": [
+     0.4,
+     0.8
+    ],
+    "density": 6,
+    "decor": true
+   },
+   "light": {
+    "match": "^(made_lamppost|conv_survival_pack_woodentorch_fire)$",
+    "height": [
+     2,
+     3.1
+    ],
+    "count": [
+     2,
+     4
+    ],
+    "glow": true,
+    "solid": 0.3
+   },
+   "landmark": {
+    "match": "^(made_ruin_column|conv_modular_dungeon_pack_bones2?)$",
+    "height": [
+     1,
+     3
+    ],
+    "count": [
+     1,
+     3
+    ],
+    "solid": 0.6
+   },
+   "decor": {
+    "match": "^(conv_modular_dungeon_pack_bones(_\\d)?|conv_ultimate_rpg_items_pack_skull(_\\d)?|stylized_nature_megakit_pebble_(round|square)_\\d|stylized_nature_megakit_mushroom_(common|laetiporus)|conv_textured_fantasy_nature_mushroom|conv_nature_crops_pack_mushroom_\\d)$",
+    "height": [
+     0.2,
+     0.6
+    ],
+    "density": 1.4,
+    "decor": true
+   },
+   "rock": {
+    "match": "^(conv_ultimate_nature_pack_rock_moss_\\d|conv_ultimate_nature_pack_treestump(_moss)?)$",
+    "height": [
+     0.4,
+     1.2
+    ],
+    "density": 0.4,
+    "solid": 0.7
+   }
+  },
+  "music": "graveyard",
+  "ambient_fx": [
+   "mist",
+   "wisps"
+  ],
+  "npc_roles": [
+   "gravedigger",
+   "priest"
+  ],
+  "npc_count": [
+   0,
+   1
+  ],
+  "setpieces": [
+   [
+    "graveside",
+    4
+   ],
+   [
+    "ruined_shrine",
+    2
+   ],
+   [
+    "bone_pile",
+    2
+   ],
+   [
+    "witch_hut_yard",
+    1
+   ],
+   [
+    "crypt_rest",
+    1
+   ],
+   [
+    "shrine_altar",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   5
+  ]
+ },
+ "mountain": {
+  "name": "Mountain Pass",
+  "ground": [
+   "#8e9a6a",
+   "#9aa278",
+   "#7d8a5c"
+  ],
+  "path": "#a59377",
+  "sky": [
+   "#79b9f2",
+   "#e8f2ff"
+  ],
+  "fog": [
+   "#dfe8f2",
+   30,
+   120
+  ],
+  "sun": "#ffffff",
+  "ambient": "#b8cbe8",
+  "time": "day",
+  "pools": {
+   "cliff": {
+    "match": "^(pirate_kit_environment_cliff\\d|ultimate_fantasy_rts_mountain(large)?_(single|group_\\d))$",
+    "height": [
+     6,
+     14
+    ],
+    "ring": true,
+    "solid": 1.0
+   },
+   "tree": {
+    "match": "^(stylized_nature_megakit_pine_\\d|conv_ultimate_nature_pack_pinetree_\\d|conv_textured_stylized_trees_pine_\\d+|ultimate_fantasy_rts_resource_pinetree)$",
+    "height": [
+     5,
+     11
+    ],
+    "density": 0.9,
+    "edge": 2.5,
+    "solid": 0.6,
+    "clusters": 5,
+    "giant": [
+     0.06,
+     1.5
+    ]
+   },
+   "rock": {
+    "match": "^(stylized_nature_megakit_rock_medium_\\d|conv_ultimate_nature_pack_rock_\\d|conv_simple_nature_pack_rock\\d|conv_medieval_village_pack_rock_\\d|ultimate_fantasy_rts_resource_rock_\\d|ultimate_fantasy_rts_rock(_group)?|pirate_kit_environment_rock_\\d)$",
+    "height": [
+     0.8,
+     3.2
+    ],
+    "density": 1.2,
+    "solid": 0.9,
+    "giant": [
+     0.08,
+     2.0
+    ]
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_wispy_(short|tall)|conv_ultimate_nature_pack_grass_short|stylized_nature_megakit_clover_\\d)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 6,
+    "decor": true
+   },
+   "landmark": {
+    "match": "^(made_signpost|conv_survival_pack_tent|made_campfire_stones)$",
+    "height": [
+     1,
+     2.5
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "solid": 0.7
+   },
+   "pebble": {
+    "match": "^(stylized_nature_megakit_pebble_(round|square)_\\d)$",
+    "height": [
+     0.15,
+     0.4
+    ],
+    "density": 2.5,
+    "decor": true
+   },
+   "log": {
+    "match": "^(conv_ultimate_nature_pack_(treestump|woodlog)(_moss)?|conv_survival_pack_woodlog|ultimate_fantasy_rts_logs)$",
+    "height": [
+     0.5,
+     1.0
+    ],
+    "density": 0.2,
+    "solid": 0.7
+   }
+  },
+  "music": "mountain",
+  "ambient_fx": [
+   "wind",
+   "clouds"
+  ],
+  "npc_roles": [
+   "hunter",
+   "hermit",
+   "miner"
+  ],
+  "npc_count": [
+   0,
+   2
+  ],
+  "setpieces": [
+   [
+    "mine_entrance",
+    3
+   ],
+   [
+    "hunter_camp",
+    2
+   ],
+   [
+    "boulder_field",
+    3
+   ],
+   [
+    "campsite",
+    2
+   ],
+   [
+    "knight_camp",
+    1
+   ],
+   [
+    "crystal_cluster",
+    1
+   ],
+   [
+    "shrine_altar",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   5
+  ]
+ },
+ "snow": {
+  "name": "Frozen Tundra",
+  "ground": [
+   "#eef4fb",
+   "#dfe9f5",
+   "#f6f9fd"
+  ],
+  "path": "#c8d4e2",
+  "sky": [
+   "#9cc6ec",
+   "#f0f6ff"
+  ],
+  "fog": [
+   "#e8f0f8",
+   20,
+   90
+  ],
+  "sun": "#ffffff",
+  "ambient": "#c4d8f0",
+  "time": "day",
+  "pools": {
+   "tree": {
+    "match": "^(conv_ultimate_nature_pack_(pinetree|commontree|birchtree|willow)_snow_\\d|conv_ultimate_nature_pack_(commontree|birchtree|willow)_dead_snow_\\d)$",
+    "height": [
+     5,
+     10
+    ],
+    "density": 1.6,
+    "edge": 2.5,
+    "solid": 0.6,
+    "clusters": 5,
+    "giant": [
+     0.06,
+     1.5
+    ]
+   },
+   "bush": {
+    "match": "^(conv_ultimate_nature_pack_bush_snow_\\d)$",
+    "height": [
+     0.8,
+     1.3
+    ],
+    "density": 0.9
+   },
+   "rock": {
+    "match": "^(conv_ultimate_nature_pack_(rock_snow_\\d|treestump_snow|woodlog_snow)|cube_world_block_(snow|ice))$",
+    "height": [
+     0.5,
+     2.2
+    ],
+    "density": 0.9,
+    "solid": 0.9,
+    "giant": [
+     0.06,
+     1.8
+    ]
+   },
+   "landmark": {
+    "match": "^(made_signpost|conv_survival_pack_tent|made_campfire_stones)$",
+    "height": [
+     1,
+     2.5
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "solid": 0.7
+   },
+   "decor": {
+    "match": "^(cube_world_snow|conv_ultimate_rpg_items_pack_snowflake(_\\d)?)$",
+    "height": [
+     0.2,
+     0.5
+    ],
+    "density": 0.6,
+    "decor": true
+   },
+   "pebble": {
+    "match": "^conv_ultimate_nature_pack_rock_snow_\\d$",
+    "height": [
+     0.2,
+     0.5
+    ],
+    "density": 2.5,
+    "decor": true
+   },
+   "grass": {
+    "match": "^(conv_ultimate_nature_pack_grass_short|stylized_nature_megakit_grass_wispy_short)$",
+    "height": [
+     0.2,
+     0.4
+    ],
+    "density": 3,
+    "decor": true,
+    "tint": "#e8f0ff"
+   }
+  },
+  "music": "snow",
+  "ambient_fx": [
+   "snowfall"
+  ],
+  "npc_roles": [
+   "hunter",
+   "traveler"
+  ],
+  "npc_count": [
+   0,
+   2
+  ],
+  "setpieces": [
+   [
+    "hunter_camp",
+    3
+   ],
+   [
+    "campsite",
+    2
+   ],
+   [
+    "knight_camp",
+    1
+   ],
+   [
+    "crystal_cluster",
+    1
+   ],
+   [
+    "boulder_field",
+    1
+   ],
+   [
+    "shrine_altar",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   4
+  ]
+ },
+ "desert": {
+  "name": "Sunscorched Desert",
+  "ground": [
+   "#e6c88a",
+   "#dcbc7c",
+   "#efd59b"
+  ],
+  "path": "#c9a96e",
+  "sky": [
+   "#7ec3f2",
+   "#fff1d6"
+  ],
+  "fog": [
+   "#f5e6c8",
+   35,
+   130
+  ],
+  "sun": "#fff0c8",
+  "ambient": "#f0dcb8",
+  "time": "day",
+  "pools": {
+   "tree": {
+    "match": "^(conv_ultimate_nature_pack_cactus(flowers?)?_\\d|conv_nature_crops_pack_cactus_\\d|cute_x|conv_ultimate_nature_pack_palmtree_\\d|pirate_kit_environment_palmtree_\\d|conv_nature_crops_pack_palmtree_\\d)$",
+    "height": [
+     1.5,
+     6
+    ],
+    "density": 1.1,
+    "solid": 0.6,
+    "clusters": 4,
+    "giant": [
+     0.07,
+     1.6
+    ]
+   },
+   "rock": {
+    "match": "^(conv_ultimate_nature_pack_rock_\\d|ultimate_fantasy_rts_rock(_group)?|pirate_kit_environment_rock_\\d)$",
+    "height": [
+     0.6,
+     3.2
+    ],
+    "density": 0.8,
+    "solid": 0.9,
+    "tint": "#c9a26a",
+    "giant": [
+     0.07,
+     2.2
+    ]
+   },
+   "landmark": {
+    "match": "^(made_ruin_column|made_ruin_arch|conv_survival_pack_tent|pirate_kit_environment_largebones)$",
+    "height": [
+     2,
+     4
+    ],
+    "count": [
+     1,
+     3
+    ],
+    "solid": 0.7
+   },
+   "grass": {
+    "match": "^(conv_ultimate_nature_pack_grass_short|conv_ultimate_nature_pack_cactusflower_\\d)$",
+    "height": [
+     0.2,
+     0.5
+    ],
+    "density": 1.5,
+    "decor": true
+   },
+   "decor": {
+    "match": "^(conv_ultimate_rpg_items_pack_(skull(_\\d)?|bone)|pirate_kit_environment_skulls)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 0.2,
+    "decor": true
+   },
+   "pebble": {
+    "match": "^stylized_nature_megakit_pebble_(round|square)_\\d$",
+    "height": [
+     0.15,
+     0.4
+    ],
+    "density": 3,
+    "decor": true,
+    "tint": "#d8b27a"
+   },
+   "scrub": {
+    "match": "^(stylized_nature_megakit_grass_wispy_(short|tall)|conv_ultimate_nature_pack_grass_short)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 3,
+    "decor": true,
+    "tint": "#c9b07a"
+   }
+  },
+  "music": "desert",
+  "ambient_fx": [
+   "heat",
+   "dust"
+  ],
+  "npc_roles": [
+   "merchant",
+   "nomad"
+  ],
+  "npc_count": [
+   0,
+   2
+  ],
+  "setpieces": [
+   [
+    "bone_pile",
+    3
+   ],
+   [
+    "ruined_shrine",
+    2
+   ],
+   [
+    "crash_site",
+    1
+   ],
+   [
+    "campsite",
+    2
+   ],
+   [
+    "wagon_stop",
+    2
+   ],
+   [
+    "pirate_cache",
+    1
+   ],
+   [
+    "shrine_altar",
+    1
+   ],
+   [
+    "dragon_hoard",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   5
+  ]
+ },
+ "beach": {
+  "name": "Pirate Cove",
+  "ground": [
+   "#efdca6",
+   "#e6d095"
+  ],
+  "path": "#d6bd82",
+  "sky": [
+   "#6cc4ff",
+   "#effaff"
+  ],
+  "fog": [
+   "#dff3ff",
+   40,
+   140
+  ],
+  "sun": "#fff7dc",
+  "ambient": "#c4e4ff",
+  "time": "day",
+  "water": {
+   "color": "#3fb3d8",
+   "coverage": 0.35,
+   "side": true
+  },
+  "pools": {
+   "tree": {
+    "match": "^(conv_ultimate_nature_pack_palmtree_\\d|pirate_kit_environment_palmtree_\\d|conv_nature_crops_pack_palmtree_\\d)$",
+    "height": [
+     5,
+     9
+    ],
+    "density": 1.1,
+    "edge": 1.5,
+    "solid": 0.5,
+    "clusters": 4
+   },
+   "rock": {
+    "match": "^(pirate_kit_environment_rock_\\d|conv_ultimate_nature_pack_rock_moss_\\d)$",
+    "height": [
+     0.6,
+     2.6
+    ],
+    "density": 0.5,
+    "solid": 0.9
+   },
+   "prop": {
+    "match": "^(pirate_kit_(prop_(barrel|bucket|bucket_fishes|cannon|chest_closed|anchor|bomb)|environment_(skulls|dock_pole))|conv_cute_fish_pack_boat|conv_survival_pack_raft)$",
+    "height": [
+     0.6,
+     1.8
+    ],
+    "density": 0.25,
+    "solid": 0.7
+   },
+   "building": {
+    "match": "^pirate_kit_environment_(house\\d|sawmill)$",
+    "height": [
+     5,
+     7
+    ],
+    "count": [
+     1,
+     3
+    ],
+    "solid": 1.0,
+    "door": true
+   },
+   "landmark": {
+    "match": "^(pirate_kit_(environment_dock|ship_small|environment_largebones))$",
+    "height": [
+     3,
+     8
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "at_water": true,
+    "solid": 0.8
+   },
+   "grass": {
+    "match": "^(conv_ultimate_nature_pack_grass_short|conv_nature_crops_pack_grass_\\d)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 5,
+    "decor": true
+   },
+   "decor": {
+    "match": "^(conv_nature_crops_pack_coconut_half|conv_ultimate_food_pack_coconut(_half)?|pirate_kit_prop_bottle_\\d)$",
+    "height": [
+     0.2,
+     0.4
+    ],
+    "density": 0.3,
+    "decor": true
+   },
+   "pebble": {
+    "match": "^stylized_nature_megakit_pebble_(round|square)_\\d$",
+    "height": [
+     0.15,
+     0.35
+    ],
+    "density": 2.5,
+    "decor": true,
+    "tint": "#e8dcc0"
+   },
+   "bush": {
+    "match": "^(stylized_nature_megakit_plant_\\d(_big)?|conv_ultimate_nature_pack_plant_\\d|stylized_nature_megakit_fern_\\d)$",
+    "height": [
+     0.6,
+     1.4
+    ],
+    "density": 1.2,
+    "clusters": 6
+   }
+  },
+  "music": "beach",
+  "ambient_fx": [
+   "seagulls",
+   "waves"
+  ],
+  "npc_roles": [
+   "sailor",
+   "pirate",
+   "fisher",
+   "merchant"
+  ],
+  "npc_count": [
+   2,
+   4
+  ],
+  "setpieces": [
+   [
+    "fishing_dock",
+    3
+   ],
+   [
+    "shipwreck",
+    3
+   ],
+   [
+    "pirate_cache",
+    2
+   ],
+   [
+    "campsite",
+    1
+   ],
+   [
+    "tavern_tables",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   4
+  ]
+ },
+ "volcano": {
+  "name": "Volcanic Wastes",
+  "ground": [
+   "#4a3a36",
+   "#3d302c",
+   "#55423b"
+  ],
+  "path": "#6a4a3c",
+  "sky": [
+   "#5a2c22",
+   "#d07a4a"
+  ],
+  "fog": [
+   "#6a3a2c",
+   15,
+   70
+  ],
+  "sun": "#ffb070",
+  "ambient": "#8a5a50",
+  "time": "dusk",
+  "water": {
+   "color": "#ff6a1a",
+   "coverage": 0.2,
+   "lava": true
+  },
+  "pools": {
+   "rock": {
+    "match": "^(conv_ultimate_nature_pack_rock_\\d|stylized_nature_megakit_rock_medium_\\d|ultimate_fantasy_rts_rock(_group)?)$",
+    "height": [
+     0.8,
+     3.5
+    ],
+    "density": 1.4,
+    "solid": 0.9,
+    "tint": "#4a3a36",
+    "giant": [
+     0.08,
+     2.0
+    ]
+   },
+   "tree": {
+    "match": "^(ultimate_space_kit_tree_lava_\\d|stylized_nature_megakit_deadtree_\\d)$",
+    "height": [
+     3,
+     6
+    ],
+    "density": 0.7,
+    "solid": 0.6
+   },
+   "crystal": {
+    "match": "^conv_ultimate_rpg_items_pack_crystal\\d$",
+    "height": [
+     1,
+     2.2
+    ],
+    "density": 0.2,
+    "glow": true,
+    "tint": "#ff6a2a",
+    "solid": 0.6
+   },
+   "landmark": {
+    "match": "^(made_ruin_column|made_ruin_arch)$",
+    "height": [
+     2.5,
+     4.5
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "solid": 0.7
+   },
+   "decor": {
+    "match": "^(stylized_nature_megakit_pebble_(round|square)_\\d|conv_ultimate_rpg_items_pack_(skull(_\\d)?|bone))$",
+    "height": [
+     0.2,
+     0.5
+    ],
+    "density": 1.0,
+    "decor": true,
+    "tint": "#3a2a26"
+   },
+   "pebble": {
+    "match": "^stylized_nature_megakit_pebble_(round|square)_\\d$",
+    "height": [
+     0.15,
+     0.4
+    ],
+    "density": 3,
+    "decor": true,
+    "tint": "#3a2a26"
+   }
+  },
+  "music": "volcano",
+  "ambient_fx": [
+   "embers",
+   "heat"
+  ],
+  "npc_roles": [],
+  "npc_count": [
+   0,
+   0
+  ],
+  "setpieces": [
+   [
+    "crystal_cluster",
+    2
+   ],
+   [
+    "bone_pile",
+    3
+   ],
+   [
+    "ruined_shrine",
+    1
+   ],
+   [
+    "crash_site",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   3
+  ]
+ },
+ "jungle": {
+  "name": "Prehistoric Jungle",
+  "ground": [
+   "#4f9a3a",
+   "#5ea845",
+   "#448a33"
+  ],
+  "path": "#8a7350",
+  "sky": [
+   "#86c9e6",
+   "#e8f6e0"
+  ],
+  "fog": [
+   "#bfe0c0",
+   18,
+   75
+  ],
+  "sun": "#fff6d0",
+  "ambient": "#a8d0b0",
+  "time": "day",
+  "pools": {
+   "tree": {
+    "match": "^(conv_ultimate_nature_pack_palmtree_\\d|pirate_kit_environment_palmtree_\\d|conv_nature_crops_pack_palmtree_\\d|stylized_nature_megakit_commontree_\\d|ultimate_stylized_nature_(mapletree|birchtree)_\\d+|conv_ultimate_nature_pack_(commontree|birchtree)_\\d|conv_textured_stylized_trees_(tree|birch)_\\d+|conv_textured_fantasy_nature_(bigtree2?|tree|smalltree)|conv_simple_nature_pack_tree\\d|stylized_nature_megakit_twistedtree_\\d|ultimate_space_kit_tree_(blob|swirl)_\\d)$",
+    "height": [
+     6,
+     12
+    ],
+    "density": 1.8,
+    "edge": 3,
+    "solid": 0.6,
+    "clusters": 6,
+    "giant": [
+     0.08,
+     1.5
+    ]
+   },
+   "bush": {
+    "match": "^(stylized_nature_megakit_bush_common(_flowers)?|ultimate_stylized_nature_bush(_small|_large)?(_flowers)?|conv_ultimate_nature_pack_bush_\\d|conv_textured_fantasy_nature_(big|bigger)?bush|conv_simple_nature_pack_bush\\d|conv_ultimate_nature_pack_bushberries_\\d|conv_nature_crops_pack_bushberries_\\d|stylized_nature_megakit_plant_\\d_big|platformer_game_kit_plant_large)$",
+    "height": [
+     1,
+     2.4
+    ],
+    "density": 2.0,
+    "clusters": 8
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_(fern_\\d|clover_\\d|plant_\\d(_big)?|petal_\\d)|conv_ultimate_nature_pack_plant_\\d|stylized_nature_megakit_grass_(common|wispy)_(short|tall)|ultimate_stylized_nature_grass_(small|large)|conv_ultimate_nature_pack_grass(_2|_short)?|conv_nature_crops_pack_grass_\\d|conv_simple_nature_pack_grass\\d)$",
+    "height": [
+     0.5,
+     1.2
+    ],
+    "density": 11,
+    "decor": true
+   },
+   "rock": {
+    "match": "^(conv_ultimate_nature_pack_rock_moss_\\d)$",
+    "height": [
+     0.6,
+     2
+    ],
+    "density": 0.6,
+    "solid": 0.9
+   },
+   "flower": {
+    "match": "^(stylized_nature_megakit_flower_\\d_(group|single)|ultimate_stylized_nature_flower_\\d(_clump)?|conv_ultimate_nature_pack_flowers|conv_nature_crops_pack_flower_\\d|conv_textured_fantasy_nature_flower\\d?|stylized_nature_megakit_mushroom_(common|laetiporus)|conv_textured_fantasy_nature_mushroom|conv_nature_crops_pack_mushroom_\\d)$",
+    "height": [
+     0.3,
+     0.8
+    ],
+    "density": 3,
+    "decor": true,
+    "clusters": 8
+   },
+   "log": {
+    "match": "^(conv_ultimate_nature_pack_(treestump|woodlog)(_moss)?|conv_survival_pack_woodlog|ultimate_fantasy_rts_logs)$",
+    "height": [
+     0.5,
+     1.0
+    ],
+    "density": 0.25,
+    "solid": 0.7
+   }
+  },
+  "music": "jungle",
+  "ambient_fx": [
+   "fireflies",
+   "mist"
+  ],
+  "npc_roles": [
+   "explorer",
+   "hunter"
+  ],
+  "npc_count": [
+   0,
+   2
+  ],
+  "setpieces": [
+   [
+    "bamboo_grove",
+    3
+   ],
+   [
+    "ruined_shrine",
+    2
+   ],
+   [
+    "fallen_giant",
+    2
+   ],
+   [
+    "campsite",
+    1
+   ],
+   [
+    "pond_life",
+    2
+   ],
+   [
+    "mushroom_ring",
+    1
+   ],
+   [
+    "crash_site",
+    1
+   ],
+   [
+    "pirate_cache",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ },
+ "city": {
+  "name": "Ruined City",
+  "ground": [
+   "#7a7a7a",
+   "#858585"
+  ],
+  "path": "#5a5a5e",
+  "sky": [
+   "#8ab4d8",
+   "#e8eef4"
+  ],
+  "fog": [
+   "#c8d0d8",
+   30,
+   110
+  ],
+  "sun": "#fff4e0",
+  "ambient": "#b8c4d4",
+  "time": "day",
+  "settlement": true,
+  "pools": {
+   "street": {
+    "match": "^zombie_apocalypse_kit_street_(straight|straight_crack\\d|4way|t)$",
+    "height": [
+     0.2,
+     0.2
+    ],
+    "tiles": true
+   },
+   "building": {
+    "match": "^(conv_buildings_pack_(building\\d(_large|_small|_big)?|house\\d)|conv_buildings_pack_2017_(bank|flat\\d?|hospital|house\\d?|shop)|conv_ultimate_textured_building_p_(\\dstory(_\\w+)?)|downtown_city_megakit_building_(large|medium_2|small)_\\d)$",
+    "height": [
+     6,
+     14
+    ],
+    "count": [
+     4,
+     7
+    ],
+    "solid": 1.0,
+    "variety": 7
+   },
+   "prop": {
+    "match": "^(zombie_apocalypse_kit_(vehicle_(pickup|sports|truck)(_armored)?|container_(green|red)|barrel|firehydrant|trafficbarrier_\\d|townsign|trashbag_\\d|wheels_stack)|conv_realistic_car_pack_\\w+|conv_public_transport_pack_(bus|taxi|ambulance|schoolbus|trafficlight)|toon_shooter_game_kit_(debris_brokencar|debris_tires|trashcontainer(_open)?|pallet(_broken)?|explodingbarrel))$",
+    "height": [
+     0.8,
+     3
+    ],
+    "density": 0.8,
+    "solid": 0.9,
+    "variety": 9
+   },
+   "light": {
+    "match": "^(zombie_apocalypse_kit_streetlights|cyberpunk_game_kit_quaterniu_light_street_\\d|conv_street_pack_streetlight_(single|double|triple)|toon_shooter_game_kit_streetlight)$",
+    "height": [
+     4,
+     5.5
+    ],
+    "count": [
+     4,
+     8
+    ],
+    "solid": 0.3,
+    "along_path": true
+   },
+   "tree": {
+    "match": "^(stylized_nature_megakit_commontree_\\d|ultimate_stylized_nature_(mapletree|birchtree)_\\d+|conv_ultimate_nature_pack_(commontree|birchtree)_\\d|conv_textured_stylized_trees_(tree|birch)_\\d+|conv_textured_fantasy_nature_(bigtree2?|tree|smalltree)|conv_simple_nature_pack_tree\\d|stylized_nature_megakit_deadtree_\\d|ultimate_stylized_nature_deadtree_\\d+|conv_ultimate_nature_pack_(commontree|birchtree|willow)_dead_\\d|conv_textured_stylized_trees_dead(tree|birch)_\\d+)$",
+    "height": [
+     4,
+     7
+    ],
+    "density": 0.2,
+    "solid": 0.6
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_wispy_(short|tall)|conv_ultimate_nature_pack_grass_short)$",
+    "height": [
+     0.4,
+     0.8
+    ],
+    "density": 2.5,
+    "decor": true
+   },
+   "decor": {
+    "match": "^(toon_shooter_game_kit_debris_papers_\\d|zombie_apocalypse_kit_(trafficcone_\\d|cinderblock|blood_\\d)|downtown_city_megakit_prop_\\w+)$",
+    "height": [
+     0.2,
+     0.8
+    ],
+    "density": 0.9,
+    "decor": true,
+    "variety": 6
+   },
+   "weeds": {
+    "match": "^(stylized_nature_megakit_grass_(wispy|common)_(short|tall)|conv_ultimate_nature_pack_grass(_2)?)$",
+    "height": [
+     0.3,
+     0.7
+    ],
+    "density": 3,
+    "decor": true,
+    "clusters": 10
+   }
+  },
+  "music": "city",
+  "ambient_fx": [
+   "dust",
+   "smoke"
+  ],
+  "npc_roles": [
+   "survivor",
+   "soldier",
+   "scientist"
+  ],
+  "npc_count": [
+   1,
+   3
+  ],
+  "setpieces": [
+   [
+    "checkpoint",
+    3
+   ],
+   [
+    "bus_stop",
+    3
+   ],
+   [
+    "supply_depot",
+    2
+   ],
+   [
+    "crash_site",
+    1
+   ],
+   [
+    "railway",
+    1
+   ],
+   [
+    "crowd",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ },
+ "scifi": {
+  "name": "Outpost Station",
+  "ground": [
+   "#8a9aa8",
+   "#7c8c9a"
+  ],
+  "path": "#5c6c7c",
+  "sky": [
+   "#3a4a7a",
+   "#9ab0e0"
+  ],
+  "fog": [
+   "#6a7aa0",
+   25,
+   100
+  ],
+  "sun": "#e0f0ff",
+  "ambient": "#8090c0",
+  "time": "dusk",
+  "settlement": true,
+  "pools": {
+   "building": {
+    "match": "^(ultimate_space_kit_(base_large|building_l|house_(cylinder|long|open|single)|geodesicdome)|cyberpunk_game_kit_quaterniu_platform_4x4)$",
+    "height": [
+     4,
+     8
+    ],
+    "count": [
+     3,
+     6
+    ],
+    "solid": 1.0,
+    "door": true
+   },
+   "prop": {
+    "match": "^(ultimate_space_kit_(solarpanel_ground|rover_\\w+|pickup_crate|metalsupport)|cyberpunk_game_kit_quaterniu_(computer(_large)?|lootbox|turret_\\w+|tank|ac(_side|_stacked)?|antenna_\\d)|sci_fi_essentials_kit_prop_(crate(_large|_tarp(_large)?)?|barrel_\\d|barrel2_(open|closed)|locker|satellitedish)|conv_ultimate_modular_sci_fi_props_(capsule|containerfull|crate(long)?|pod|vessel(_tall|_short)?))$",
+    "height": [
+     0.8,
+     3
+    ],
+    "density": 0.8,
+    "solid": 0.9,
+    "variety": 9
+   },
+   "tree": {
+    "match": "^ultimate_space_kit_tree_(light|spiral|floating|spikes)_\\d$",
+    "height": [
+     3,
+     6
+    ],
+    "density": 0.3,
+    "glow": true,
+    "solid": 0.6
+   },
+   "rock": {
+    "match": "^ultimate_space_kit_rock_(large_)?\\d$",
+    "height": [
+     0.6,
+     2.6
+    ],
+    "density": 0.6,
+    "solid": 0.9
+   },
+   "light": {
+    "match": "^cyberpunk_game_kit_quaterniu_light_(street_2|square)$",
+    "height": [
+     3,
+     4
+    ],
+    "count": [
+     3,
+     5
+    ],
+    "glow": true,
+    "solid": 0.3
+   },
+   "decor": {
+    "match": "^(cyberpunk_game_kit_quaterniu_(cable_(long|small|thick)|pipe_\\d))$",
+    "height": [
+     0.1,
+     0.5
+    ],
+    "density": 0.8,
+    "decor": true
+   },
+   "plant": {
+    "match": "^ultimate_space_kit_(bush|plant|grass)_\\d$",
+    "height": [
+     0.4,
+     1.2
+    ],
+    "density": 3,
+    "decor": true
+   }
+  },
+  "music": "scifi",
+  "ambient_fx": [
+   "sparks",
+   "stars"
+  ],
+  "npc_roles": [
+   "engineer",
+   "pilot",
+   "scientist",
+   "merchant"
+  ],
+  "npc_count": [
+   2,
+   5
+  ],
+  "setpieces": [
+   [
+    "lab_outpost",
+    3
+   ],
+   [
+    "solar_array",
+    2
+   ],
+   [
+    "supply_depot",
+    2
+   ],
+   [
+    "crash_site",
+    2
+   ],
+   [
+    "checkpoint",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   4
+  ]
+ },
+ "space": {
+  "name": "Alien Planet",
+  "ground": [
+   "#7a5aa8",
+   "#6a4c98",
+   "#8a68b8"
+  ],
+  "path": "#5a4080",
+  "sky": [
+   "#140c2c",
+   "#4a2c7a"
+  ],
+  "fog": [
+   "#3a2a5a",
+   25,
+   100
+  ],
+  "sun": "#d8c8ff",
+  "ambient": "#6a5aa0",
+  "time": "night",
+  "pools": {
+   "tree": {
+    "match": "^(ultimate_space_kit_tree_\\w+_\\d)$",
+    "height": [
+     3,
+     8
+    ],
+    "density": 1.1,
+    "glow": true,
+    "solid": 0.6,
+    "clusters": 5,
+    "giant": [
+     0.07,
+     1.6
+    ]
+   },
+   "bush": {
+    "match": "^ultimate_space_kit_(bush|plant)_\\d$",
+    "height": [
+     0.6,
+     1.4
+    ],
+    "density": 1.0
+   },
+   "grass": {
+    "match": "^ultimate_space_kit_grass_\\d$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 4,
+    "decor": true
+   },
+   "rock": {
+    "match": "^(ultimate_space_kit_rock_(large_)?\\d|ultimate_space_kit_planet_\\d)$",
+    "height": [
+     0.6,
+     4
+    ],
+    "density": 0.8,
+    "solid": 0.9,
+    "giant": [
+     0.06,
+     2.0
+    ]
+   },
+   "landmark": {
+    "match": "^ultimate_space_kit_(spaceship_\\w+|rover_\\w+|geodesicdome)$",
+    "height": [
+     2,
+     5
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "solid": 0.9
+   }
+  },
+  "music": "space",
+  "ambient_fx": [
+   "stars",
+   "wisps"
+  ],
+  "npc_roles": [
+   "astronaut",
+   "explorer"
+  ],
+  "npc_count": [
+   0,
+   2
+  ],
+  "setpieces": [
+   [
+    "crash_site",
+    3
+   ],
+   [
+    "solar_array",
+    2
+   ],
+   [
+    "lab_outpost",
+    1
+   ],
+   [
+    "crystal_cluster",
+    3
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   4
+  ]
+ },
+ "castle": {
+  "name": "Fortress Gates",
+  "ground": [
+   "#7fae4a",
+   "#8cb85a"
+  ],
+  "path": "#b5ab98",
+  "sky": [
+   "#7fbfee",
+   "#f2f6ff"
+  ],
+  "fog": [
+   "#dde6f0",
+   35,
+   120
+  ],
+  "sun": "#fff4dc",
+  "ambient": "#c0d0ec",
+  "time": "day",
+  "pools": {
+   "wall": {
+    "match": "^ultimate_fantasy_rts_(wall_firstage|walltowers_firstage|walltowers_door_firstage|watchtower_firstage_level[23])$",
+    "height": [
+     5,
+     9
+    ],
+    "ring": true,
+    "solid": 1.0
+   },
+   "building": {
+    "match": "^ultimate_fantasy_rts_(barracks_firstage_level[23]|towerhouse_firstage|temple_firstage_level[23]|towncenter_firstage_level[23])$",
+    "height": [
+     7,
+     11
+    ],
+    "count": [
+     2,
+     4
+    ],
+    "solid": 1.0,
+    "door": true
+   },
+   "prop": {
+    "match": "^(fantasy_props_megakit_(banner_\\d|barrel|crate_wooden|weaponstand|dummy|anvil|banner_\\d_cloth)|conv_medieval_village_pack_(barrel|crate|cart)|conv_modular_medieval_buildings_(banner|target(witharrows)?|dummy))$",
+    "height": [
+     0.8,
+     2.6
+    ],
+    "density": 0.5,
+    "solid": 0.7,
+    "variety": 8
+   },
+   "light": {
+    "match": "^made_lamppost(_double)?$",
+    "height": [
+     3.1,
+     3.1
+    ],
+    "count": [
+     3,
+     5
+    ],
+    "solid": 0.3,
+    "along_path": true
+   },
+   "grass": {
+    "match": "^stylized_nature_megakit_grass_common",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 6,
+    "decor": true
+   },
+   "tower": {
+    "match": "^(conv_modular_medieval_buildings_(largesimpletower|largesquaretower(bricks)?|largetower|pointytower|simpletower(bricks)?|smallsquaretower(bricks)?|smalltower|tower|watchtower(wroof)?))$",
+    "height": [
+     7,
+     12
+    ],
+    "count": [
+     1,
+     3
+    ],
+    "solid": 1.0
+   },
+   "flower": {
+    "match": "^(ultimate_stylized_nature_flower_\\d_clump|stylized_nature_megakit_flower_\\d_group)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 2,
+    "decor": true,
+    "clusters": 8
+   },
+   "bush": {
+    "match": "^(ultimate_stylized_nature_bush(_small|_large)?|stylized_nature_megakit_bush_common)$",
+    "height": [
+     0.8,
+     1.3
+    ],
+    "density": 0.6
+   }
+  },
+  "music": "castle",
+  "ambient_fx": [
+   "banners",
+   "birds"
+  ],
+  "npc_roles": [
+   "guard",
+   "guard",
+   "knight",
+   "noble",
+   "merchant"
+  ],
+  "npc_count": [
+   3,
+   6
+  ],
+  "setpieces": [
+   [
+    "training_ground",
+    3
+   ],
+   [
+    "knight_camp",
+    2
+   ],
+   [
+    "blacksmith_yard",
+    2
+   ],
+   [
+    "market_row",
+    1
+   ],
+   [
+    "town_well",
+    1
+   ],
+   [
+    "dining_hall",
+    1
+   ],
+   [
+    "throne_dais",
+    2
+   ],
+   [
+    "armory_corner",
+    2
+   ],
+   [
+    "library_nook",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ },
+ "farmland": {
+  "name": "Golden Farmlands",
+  "ground": [
+   "#8fbf4a",
+   "#a5c95a",
+   "#7aaa3e"
+  ],
+  "path": "#b08f5f",
+  "sky": [
+   "#9bd6ff",
+   "#f2f8ff"
+  ],
+  "fog": [
+   "#e3efd4",
+   35,
+   110
+  ],
+  "sun": "#fff0c8",
+  "ambient": "#c8dcff",
+  "time": "day",
+  "music": "meadow",
+  "ambient_fx": [
+   "butterflies",
+   "pollen",
+   "birds"
+  ],
+  "npc_roles": [
+   "farmer",
+   "farmer",
+   "shepherd",
+   "merchant",
+   "child"
+  ],
+  "npc_count": [
+   2,
+   4
+  ],
+  "animals": "^(conv_farm_animals_(cow|sheep|horse|pig|llama)|cute_animated_monsters_(chicken|pig)|ultimate_monsters_chicken)$",
+  "pools": {
+   "tree": {
+    "match": "^(stylized_nature_megakit_commontree_\\d|ultimate_stylized_nature_(mapletree|birchtree)_\\d+|conv_ultimate_nature_pack_(commontree|birchtree)_\\d|conv_textured_stylized_trees_(tree|birch)_\\d+|conv_textured_fantasy_nature_(bigtree2?|tree|smalltree)|conv_simple_nature_pack_tree\\d|conv_nature_crops_pack_(apple|orange)_\\d)$",
+    "height": [
+     4.5,
+     7.5
+    ],
+    "density": 0.35,
+    "edge": 2.5,
+    "solid": 0.6,
+    "clusters": 3
+   },
+   "crop": {
+    "match": "^conv_nature_crops_pack_(wheat|corn|carrot|lettuce|pumpkin|tomato|beet|watermelon)_\\d$",
+    "height": [
+     0.5,
+     1.1
+    ],
+    "density": 2.2,
+    "decor": true,
+    "clusters": 6,
+    "spread": 2.2,
+    "variety": 6
+   },
+   "bush": {
+    "match": "^(stylized_nature_megakit_bush_common(_flowers)?|ultimate_stylized_nature_bush(_small|_large)?(_flowers)?|conv_ultimate_nature_pack_bush_\\d|conv_textured_fantasy_nature_(big|bigger)?bush|conv_simple_nature_pack_bush\\d|conv_ultimate_nature_pack_bushberries_\\d|conv_nature_crops_pack_bushberries_\\d)$",
+    "height": [
+     0.8,
+     1.3
+    ],
+    "density": 0.5
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_(common|wispy)_(short|tall)|ultimate_stylized_nature_grass_(small|large)|conv_ultimate_nature_pack_grass(_2|_short)?|conv_nature_crops_pack_grass_\\d|conv_simple_nature_pack_grass\\d)$",
+    "height": [
+     0.3,
+     0.7
+    ],
+    "density": 11,
+    "decor": true
+   },
+   "flower": {
+    "match": "^(stylized_nature_megakit_flower_\\d_(group|single)|ultimate_stylized_nature_flower_\\d(_clump)?|conv_ultimate_nature_pack_flowers|conv_nature_crops_pack_flower_\\d|conv_textured_fantasy_nature_flower\\d?)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 3,
+    "decor": true,
+    "clusters": 8
+   },
+   "prop": {
+    "match": "^(conv_medieval_village_pack_(hay|cart|barrel)|fantasy_props_megakit_(farmcrate_\\w+|barrel_apples|bucket_wooden_\\d)|fantasy_props_megakit_dummy)$",
+    "height": [
+     0.6,
+     1.8
+    ],
+    "density": 0.3,
+    "solid": 0.7
+   },
+   "landmark": {
+    "match": "^(conv_farm_buildings_(windmill|towerwindmill|silo|watertower)|ultimate_fantasy_rts_windmill_(firstage|secondage))$",
+    "height": [
+     6,
+     10
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "solid": 0.9
+   },
+   "fence": {
+    "match": "^(conv_farm_buildings_fence2?|conv_medieval_village_pack_fence)$",
+    "height": [
+     1,
+     1.2
+    ],
+    "count": [
+     4,
+     9
+    ],
+    "solid": 0.5
+   }
+  },
+  "setpieces": [
+   [
+    "farmstead",
+    3
+   ],
+   [
+    "crop_field",
+    4
+   ],
+   [
+    "orchard",
+    3
+   ],
+   [
+    "wagon_stop",
+    2
+   ],
+   [
+    "picnic",
+    1
+   ],
+   [
+    "town_well",
+    1
+   ],
+   [
+    "flower_meadow",
+    1
+   ],
+   [
+    "market_square",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   6
+  ]
+ },
+ "harbor": {
+  "name": "Harbor Town",
+  "ground": [
+   "#c9b98a",
+   "#b9a878",
+   "#a89868"
+  ],
+  "path": "#8a7a5a",
+  "sky": [
+   "#8fd0ff",
+   "#eef8ff"
+  ],
+  "fog": [
+   "#d6ecf2",
+   30,
+   110
+  ],
+  "sun": "#fff4dc",
+  "ambient": "#bcd6ff",
+  "time": "day",
+  "settlement": true,
+  "water": {
+   "color": "#2f9fc8",
+   "coverage": 0.3,
+   "side": true
+  },
+  "music": "beach",
+  "ambient_fx": [
+   "seagulls",
+   "waves"
+  ],
+  "npc_roles": [
+   "sailor",
+   "fisher",
+   "merchant",
+   "merchant",
+   "guard",
+   "innkeeper",
+   "pirate"
+  ],
+  "npc_count": [
+   4,
+   7
+  ],
+  "pools": {
+   "building": {
+    "match": "^(pirate_kit_environment_house\\d|conv_medieval_village_pack_(house_\\d|inn)|ultimate_fantasy_rts_port_(firstage|secondage)_level[23]|ultimate_fantasy_rts_storage_firstage_level[23])$",
+    "height": [
+     5,
+     8
+    ],
+    "count": [
+     4,
+     6
+    ],
+    "solid": 1.0,
+    "door": true
+   },
+   "prop": {
+    "match": "^(pirate_kit_prop_(barrel|bucket(_fishes)?|anchor|cannon|chest_closed)|fantasy_props_megakit_(barrel|crate_wooden|rope_\\d)|conv_medieval_village_pack_(crate|barrel|package_\\d))$",
+    "height": [
+     0.6,
+     1.6
+    ],
+    "density": 0.6,
+    "solid": 0.7
+   },
+   "tree": {
+    "match": "^(conv_ultimate_nature_pack_palmtree_\\d|pirate_kit_environment_palmtree_\\d|conv_nature_crops_pack_palmtree_\\d|stylized_nature_megakit_commontree_\\d|ultimate_stylized_nature_(mapletree|birchtree)_\\d+|conv_ultimate_nature_pack_(commontree|birchtree)_\\d|conv_textured_stylized_trees_(tree|birch)_\\d+|conv_textured_fantasy_nature_(bigtree2?|tree|smalltree)|conv_simple_nature_pack_tree\\d)$",
+    "height": [
+     5,
+     8
+    ],
+    "density": 0.2,
+    "solid": 0.5,
+    "edge": 2
+   },
+   "grass": {
+    "match": "^(conv_ultimate_nature_pack_grass_short|stylized_nature_megakit_grass_wispy_short)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 3,
+    "decor": true
+   },
+   "light": {
+    "match": "^(made_lamppost(_double)?)$",
+    "height": [
+     3.1,
+     3.1
+    ],
+    "count": [
+     3,
+     6
+    ],
+    "solid": 0.3,
+    "along_path": true
+   },
+   "landmark": {
+    "match": "^(pirate_kit_ship_large|pirate_kit_ship_small|conv_ships_(sail_ship|boatwsail|viking_boat))$",
+    "height": [
+     6,
+     10
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "at_water": true,
+    "solid": 0.8
+   },
+   "flower": {
+    "match": "^(ultimate_stylized_nature_flower_\\d_clump|stylized_nature_megakit_flower_\\d_group)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 1.5,
+    "decor": true,
+    "clusters": 6
+   },
+   "pebble": {
+    "match": "^stylized_nature_megakit_pebble_(round|square)_\\d$",
+    "height": [
+     0.15,
+     0.35
+    ],
+    "density": 2,
+    "decor": true
+   }
+  },
+  "setpieces": [
+   [
+    "fishing_dock",
+    4
+   ],
+   [
+    "market_row",
+    3
+   ],
+   [
+    "tavern_tables",
+    2
+   ],
+   [
+    "crowd",
+    2
+   ],
+   [
+    "shipwreck",
+    1
+   ],
+   [
+    "laundry_line",
+    1
+   ],
+   [
+    "tavern_front",
+    2
+   ],
+   [
+    "market_square",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   6
+  ]
+ },
+ "sakura": {
+  "name": "Sakura Valley",
+  "ground": [
+   "#9cc85e",
+   "#b2d470",
+   "#8fb852"
+  ],
+  "path": "#c4a982",
+  "sky": [
+   "#ffd6e8",
+   "#fff4f8"
+  ],
+  "fog": [
+   "#ffe4ef",
+   35,
+   115
+  ],
+  "sun": "#fff0e6",
+  "ambient": "#ffd8ea",
+  "time": "day",
+  "music": "sakura",
+  "ambient_fx": [
+   "petals",
+   "butterflies"
+  ],
+  "npc_roles": [
+   "monk",
+   "rabbit_folk",
+   "rabbit_folk",
+   "merchant",
+   "traveler"
+  ],
+  "npc_count": [
+   2,
+   4
+  ],
+  "pools": {
+   "tree": {
+    "match": "^(sushi_restaurant_kit_decoration_sakuratree|ultimate_stylized_nature_mapletree_\\d+|conv_ultimate_nature_pack_(commontree|birchtree)_autumn_\\d)$",
+    "height": [
+     4.5,
+     8
+    ],
+    "density": 1.2,
+    "edge": 2.5,
+    "solid": 0.55,
+    "clusters": 5,
+    "tint": "#ffb7d5"
+   },
+   "bamboo": {
+    "match": "^(conv_nature_crops_pack_bamboo_\\d|sushi_restaurant_kit_decoration_bamboo|cube_world_bamboo(_mid|_small)?)$",
+    "height": [
+     3,
+     5
+    ],
+    "density": 0.9,
+    "solid": 0.25,
+    "clusters": 5,
+    "spread": 2.2
+   },
+   "bush": {
+    "match": "^(ultimate_stylized_nature_bush(_small|_large)?_flowers|stylized_nature_megakit_bush_common_flowers)$",
+    "height": [
+     0.8,
+     1.4
+    ],
+    "density": 1.0
+   },
+   "grass": {
+    "match": "^(stylized_nature_megakit_grass_(common|wispy)_(short|tall)|ultimate_stylized_nature_grass_(small|large)|conv_ultimate_nature_pack_grass(_2|_short)?|conv_nature_crops_pack_grass_\\d|conv_simple_nature_pack_grass\\d)$",
+    "height": [
+     0.3,
+     0.7
+    ],
+    "density": 10,
+    "decor": true
+   },
+   "flower": {
+    "match": "^(stylized_nature_megakit_flower_\\d_(group|single)|ultimate_stylized_nature_flower_\\d(_clump)?|conv_ultimate_nature_pack_flowers|conv_nature_crops_pack_flower_\\d|conv_textured_fantasy_nature_flower\\d?|sushi_restaurant_kit_decoration_sakuraflower)$",
+    "height": [
+     0.3,
+     0.7
+    ],
+    "density": 5,
+    "decor": true,
+    "clusters": 10
+   },
+   "rock": {
+    "match": "^(conv_ultimate_nature_pack_rock_moss_\\d|stylized_nature_megakit_pebble_(round|square)_\\d)$",
+    "height": [
+     0.3,
+     1.4
+    ],
+    "density": 0.6,
+    "solid": 0.8
+   },
+   "light": {
+    "match": "^(sushi_restaurant_kit_decoration_light|sushi_restaurant_kit_decoration_wallight)$",
+    "height": [
+     1.2,
+     1.6
+    ],
+    "count": [
+     3,
+     6
+    ],
+    "glow": true,
+    "solid": 0.3,
+    "along_path": true
+   }
+  },
+  "path_stones": "^stylized_nature_megakit_rockpath_",
+  "setpieces": [
+   [
+    "torii_path",
+    4
+   ],
+   [
+    "tea_stall",
+    2
+   ],
+   [
+    "bamboo_grove",
+    3
+   ],
+   [
+    "pond_life",
+    2
+   ],
+   [
+    "flower_meadow",
+    2
+   ],
+   [
+    "ruined_shrine",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ },
+ "sky_isles": {
+  "name": "Sky Islands",
+  "ground": [
+   "#7fd36a",
+   "#95e07a",
+   "#6cc45a"
+  ],
+  "path": "#e8c88a",
+  "sky": [
+   "#7cc8ff",
+   "#e0f4ff"
+  ],
+  "fog": [
+   "#d8f0ff",
+   40,
+   130
+  ],
+  "sun": "#fffbe0",
+  "ambient": "#d0e8ff",
+  "time": "day",
+  "music": "sky",
+  "ambient_fx": [
+   "clouds",
+   "sparkles"
+  ],
+  "npc_roles": [
+   "traveler",
+   "explorer"
+  ],
+  "npc_count": [
+   0,
+   2
+  ],
+  "pools": {
+   "tree": {
+    "match": "^(platformer_game_kit_tree(_fruit)?|conv_platformer_pack_tree\\d|conv_simple_nature_pack_tree\\d)$",
+    "height": [
+     3.5,
+     6
+    ],
+    "density": 0.8,
+    "edge": 2.5,
+    "solid": 0.6,
+    "clusters": 5
+   },
+   "bush": {
+    "match": "^(platformer_game_kit_bush(_fruit)?|platformer_game_kit_plant_(large|small)|conv_platformer_pack_mushroom)$",
+    "height": [
+     0.8,
+     1.6
+    ],
+    "density": 1.0,
+    "solid": 0.3
+   },
+   "grass": {
+    "match": "^(platformer_game_kit_grass_\\d|conv_platformer_pack_grass\\d?)$",
+    "height": [
+     0.3,
+     0.6
+    ],
+    "density": 9,
+    "decor": true
+   },
+   "rock": {
+    "match": "^(platformer_game_kit_rock_\\d|platformer_game_kit_rockplatforms_(\\d|medium|large)|platformer_game_kit_rockplatform_tall|conv_platformer_pack_rock\\d)$",
+    "height": [
+     0.8,
+     3.5
+    ],
+    "density": 0.6,
+    "solid": 0.9
+   },
+   "prop": {
+    "match": "^(platformer_game_kit_cube_(grass|dirt)_(single|center|1x1center)|platformer_game_kit_(cube_question|cube_bricks|cube_crate|cube_exclamation|bouncer|cannon|pipe_\\d|stairs_small)|conv_platformer_pack_(crate|yellowbox|pipe|ladder_short))$",
+    "height": [
+     1,
+     2
+    ],
+    "density": 0.35,
+    "solid": 0.8,
+    "variety": 7
+   },
+   "decor": {
+    "match": "^(platformer_game_kit_(coin|star|gem_(blue|green|pink)|heart|fruit)|conv_platformer_pack_(coin|star|heart_full))$",
+    "height": [
+     0.4,
+     0.6
+    ],
+    "density": 0.6,
+    "decor": true,
+    "glow": true
+   },
+   "backdrop": {
+    "match": "^(platformer_game_kit_cloud_\\d|conv_platformer_pack_cloud\\d)$",
+    "height": [
+     3,
+     6
+    ],
+    "density": 1.0
+   },
+   "fence": {
+    "match": "^(platformer_game_kit_fence_(\\d|middle)|conv_platformer_pack_fence)$",
+    "height": [
+     0.9,
+     1.1
+    ],
+    "count": [
+     3,
+     6
+    ],
+    "solid": 0.5
+   },
+   "landmark": {
+    "match": "^(platformer_game_kit_goal_flag|platformer_game_kit_tower|conv_platformer_pack_(flag|sign_(left|right|leftright)))$",
+    "height": [
+     2,
+     5
+    ],
+    "count": [
+     1,
+     2
+    ],
+    "solid": 0.6
+   }
+  },
+  "setpieces": [
+   [
+    "coin_trail",
+    4
+   ],
+   [
+    "block_tower",
+    3
+   ],
+   [
+    "spike_trap",
+    2
+   ],
+   [
+    "pipe_garden",
+    3
+   ],
+   [
+    "mushroom_ring",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ },
+ "blockland": {
+  "name": "Blocklands",
+  "ground": [
+   "#6fbf3f",
+   "#7fcb4a",
+   "#5fae35"
+  ],
+  "path": "#9a7b4f",
+  "sky": [
+   "#88c8ff",
+   "#e6f4ff"
+  ],
+  "fog": [
+   "#d4ecf4",
+   35,
+   120
+  ],
+  "sun": "#fff6d8",
+  "ambient": "#c4dcff",
+  "time": "day",
+  "music": "forest",
+  "ambient_fx": [
+   "birds",
+   "pollen"
+  ],
+  "npc_roles": [
+   "blockfolk",
+   "blockfolk",
+   "miner"
+  ],
+  "npc_count": [
+   1,
+   3
+  ],
+  "animals": "^cube_world_(sheep|pig|chicken|chick|horse|cat|dog|raccoon|hedgehog)$",
+  "pools": {
+   "tree": {
+    "match": "^(cube_world_tree_?\\d?|cube_world_deadtree_?\\d?)$",
+    "height": [
+     3.5,
+     6.5
+    ],
+    "density": 1.2,
+    "edge": 2.5,
+    "solid": 0.6,
+    "clusters": 5
+   },
+   "bush": {
+    "match": "^(cube_world_bush|cube_world_leaves|cube_world_plant_\\d)$",
+    "height": [
+     0.8,
+     1.4
+    ],
+    "density": 0.9
+   },
+   "grass": {
+    "match": "^(cube_world_grass(_big|_small)?|cube_world_flowers_\\d)$",
+    "height": [
+     0.3,
+     0.7
+    ],
+    "density": 7,
+    "decor": true
+   },
+   "rock": {
+    "match": "^(cube_world_rock\\d|cube_world_block_(stone|coal|dirt|grass)|cube_world_stone)$",
+    "height": [
+     0.9,
+     2.2
+    ],
+    "density": 0.8,
+    "solid": 0.9
+   },
+   "crystal": {
+    "match": "^(cube_world_crystal_(big|small)|cube_world_block_(diamond|crystal))$",
+    "height": [
+     0.8,
+     1.6
+    ],
+    "density": 0.15,
+    "glow": true,
+    "solid": 0.6
+   },
+   "decor": {
+    "match": "^(cube_world_mushroom|cube_world_exclamation|cube_world_questionmark)$",
+    "height": [
+     0.4,
+     0.8
+    ],
+    "density": 0.3,
+    "decor": true
+   }
+  },
+  "setpieces": [
+   [
+    "voxel_mine",
+    3
+   ],
+   [
+    "voxel_farm",
+    3
+   ],
+   [
+    "crystal_cluster",
+    1
+   ],
+   [
+    "campsite",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   2,
+   4
+  ]
+ },
+ "manor": {
+  "name": "Haunted Manor",
+  "ground": [
+   "#6a4e3a",
+   "#5e4432",
+   "#73563f"
+  ],
+  "path": "#4a3528",
+  "sky": [
+   "#2a2238",
+   "#4a3c5c"
+  ],
+  "fog": [
+   "#2c2436",
+   14,
+   46
+  ],
+  "sun": "#c8b0ff",
+  "ambient": "#6a5a88",
+  "time": "dark",
+  "enclosed": "wall",
+  "music": "manor",
+  "ambient_fx": [
+   "dust",
+   "torch_flicker",
+   "wisps"
+  ],
+  "floor_tiles": "^medieval_village_megakit_floor_wooddark$",
+  "npc_roles": [
+   "butler",
+   "ghost_hunter"
+  ],
+  "npc_count": [
+   0,
+   1
+  ],
+  "pools": {
+   "wall": {
+    "match": "^(medieval_village_megakit_wall_(plaster|unevenbrick)_(straight|window_\\w+))$",
+    "height": [
+     4,
+     4
+    ],
+    "ring": true,
+    "solid": 1.0
+   },
+   "column": {
+    "match": "^(conv_ultimate_house_interior_pack_column_(round_\\d|squarebig|squaresmall))$",
+    "height": [
+     3.2,
+     3.6
+    ],
+    "count": [
+     4,
+     8
+    ],
+    "solid": 1.0
+   },
+   "prop": {
+    "match": "^(conv_ultimate_house_interior_pack_(bookshelf|drawer_\\d|shelf_large|fireplace|couch_\\w+|bed_king|nightstand_\\d|kitchen_cabinet_\\d|light_stand_\\d|light_floor_\\d|houseplant_\\d)|conv_furniture_pack_(bookcase(_books)?|closet|desk|sofa(_\\d)?|beddouble)|conv_furniture_pack_2017_(bookcaselarge(books)?|closet(_\\d)?|vase(_\\d)?|lamp(_\\d)?)|fantasy_props_megakit_(chandelier|candlestick_stand|bookcase_\\d|cabinet))$",
+    "height": [
+     0.8,
+     2.4
+    ],
+    "density": 0.75,
+    "solid": 0.7,
+    "variety": 10
+   },
+   "decor": {
+    "match": "^(conv_ultimate_house_interior_pack_carpet(_\\d|_round)|fantasy_props_megakit_(book_\\d|candle_\\d|bottle_\\d|vase_rubble_medium)|conv_modular_dungeon_pack_bones(_\\d)?)$",
+    "height": [
+     0.05,
+     0.4
+    ],
+    "density": 0.9,
+    "decor": true
+   },
+   "light": {
+    "match": "^(fantasy_props_megakit_candlestick(_stand|_triple)|conv_modular_dungeon_pack_candelabrum(_tall)?)$",
+    "height": [
+     1.0,
+     1.8
+    ],
+    "count": [
+     5,
+     9
+    ],
+    "glow": true,
+    "solid": 0.3
+   }
+  },
+  "setpieces": [
+   [
+    "parlour",
+    3
+   ],
+   [
+    "library_corner",
+    3
+   ],
+   [
+    "dining_hall",
+    2
+   ],
+   [
+    "witch_hut_yard",
+    1
+   ],
+   [
+    "bone_pile",
+    1
+   ],
+   [
+    "library_nook",
+    2
+   ],
+   [
+    "throne_dais",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ },
+ "outpost": {
+  "name": "Frontier Outpost",
+  "ground": [
+   "#b49a74",
+   "#a38a66",
+   "#c2a880"
+  ],
+  "path": "#7d6a52",
+  "sky": [
+   "#ffcf9e",
+   "#ffeedd"
+  ],
+  "fog": [
+   "#e8d2b8",
+   30,
+   110
+  ],
+  "sun": "#ffe0b0",
+  "ambient": "#d0c0b0",
+  "time": "dusk",
+  "settlement": true,
+  "music": "scifi",
+  "ambient_fx": [
+   "dust",
+   "sparks"
+  ],
+  "npc_roles": [
+   "soldier",
+   "engineer",
+   "merchant",
+   "pilot"
+  ],
+  "npc_count": [
+   3,
+   5
+  ],
+  "pools": {
+   "building": {
+    "match": "^(ultimate_space_kit_(base_large|building_l|house_(long|single|open))|toon_shooter_game_kit_structure_\\d|conv_ultimate_modular_sci_fi_props_base|cyberpunk_game_kit_quaterniu_platform_4x4)$",
+    "height": [
+     4,
+     7
+    ],
+    "count": [
+     3,
+     5
+    ],
+    "solid": 1.0,
+    "door": true
+   },
+   "prop": {
+    "match": "^(toon_shooter_game_kit_(container_(long|small)|crate|pallet|sacktrench(_small)?|barrier_(fixed|large|single)|watertank_(floor|platform)|gastank|explodingbarrel)|sci_fi_essentials_kit_prop_(crate(_large|_tarp(_large)?)?|barrel_\\d|ammo(_closed)?|satellitedish|locker)|conv_tank_pack_tank\\d?)$",
+    "height": [
+     0.8,
+     3
+    ],
+    "density": 0.6,
+    "solid": 0.9,
+    "variety": 9
+   },
+   "rock": {
+    "match": "^(ultimate_space_kit_rock_\\d|conv_ultimate_nature_pack_rock_\\d)$",
+    "height": [
+     0.6,
+     2.4
+    ],
+    "density": 0.5,
+    "solid": 0.9,
+    "tint": "#b8956a"
+   },
+   "grass": {
+    "match": "^(conv_ultimate_nature_pack_grass_short|stylized_nature_megakit_grass_wispy_short)$",
+    "height": [
+     0.2,
+     0.5
+    ],
+    "density": 2,
+    "decor": true
+   },
+   "light": {
+    "match": "^(toon_shooter_game_kit_streetlight|cyberpunk_game_kit_quaterniu_light_(street_\\d|square))$",
+    "height": [
+     3.5,
+     4.5
+    ],
+    "count": [
+     3,
+     5
+    ],
+    "glow": true,
+    "solid": 0.3,
+    "along_path": true
+   },
+   "pebble": {
+    "match": "^stylized_nature_megakit_pebble_(round|square)_\\d$",
+    "height": [
+     0.15,
+     0.4
+    ],
+    "density": 2.5,
+    "decor": true,
+    "tint": "#a38a66"
+   },
+   "debris": {
+    "match": "^(toon_shooter_game_kit_debris_(papers_\\d|pile|tires)|zombie_apocalypse_kit_(cinderblock|wheel))$",
+    "height": [
+     0.2,
+     0.8
+    ],
+    "density": 0.5,
+    "decor": true
+   }
+  },
+  "setpieces": [
+   [
+    "supply_depot",
+    3
+   ],
+   [
+    "checkpoint",
+    2
+   ],
+   [
+    "lab_outpost",
+    2
+   ],
+   [
+    "solar_array",
+    2
+   ],
+   [
+    "crash_site",
+    1
+   ],
+   [
+    "railway",
+    1
+   ],
+   [
+    "armory_corner",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   6
+  ]
+ },
+ "crypt": {
+  "name": "Forgotten Crypt",
+  "ground": [
+   "#4a4a52",
+   "#3e3e46",
+   "#55555e"
+  ],
+  "path": "#3a3a40",
+  "sky": [
+   "#16121e",
+   "#2a2236"
+  ],
+  "fog": [
+   "#1c1824",
+   12,
+   42
+  ],
+  "sun": "#a0b0ff",
+  "ambient": "#4a4a6a",
+  "time": "dark",
+  "enclosed": "wall",
+  "floor_tiles": "^medieval_village_megakit_floor_unevenbrick$",
+  "music": "graveyard",
+  "ambient_fx": [
+   "dust",
+   "wisps",
+   "mist"
+  ],
+  "npc_roles": [
+   "prisoner",
+   "gravedigger"
+  ],
+  "npc_count": [
+   0,
+   1
+  ],
+  "pools": {
+   "wall": {
+    "match": "^conv_modular_dungeon_pack_(modularstonewall|wallrocks)$",
+    "height": [
+     4,
+     4
+    ],
+    "ring": true,
+    "solid": 1.0
+   },
+   "column": {
+    "match": "^(conv_modular_dungeon_pack_(column|column_broken2?)|made_ruin_column)$",
+    "height": [
+     3,
+     4
+    ],
+    "count": [
+     6,
+     10
+    ],
+    "solid": 1.0
+   },
+   "grave": {
+    "match": "^made_gravestone_(1|2|3|cross)$",
+    "height": [
+     0.9,
+     1.3
+    ],
+    "count": [
+     8,
+     14
+    ],
+    "rows": true,
+    "solid": 0.8
+   },
+   "prop": {
+    "match": "^(conv_modular_dungeon_pack_(bones2?|chest|candelabrum(_tall)?)|conv_ultimate_rpg_items_pack_(skull(_\\d)?|chest_closed)|fantasy_props_megakit_(vase_rubble_medium|chain_coil))$",
+    "height": [
+     0.4,
+     1.8
+    ],
+    "density": 0.6,
+    "solid": 0.5
+   },
+   "decor": {
+    "match": "^(conv_modular_dungeon_pack_bones2?|conv_ultimate_rpg_items_pack_(bone|skull(_\\d)?)|fantasy_props_megakit_candle_\\d)$",
+    "height": [
+     0.2,
+     0.5
+    ],
+    "density": 1.8,
+    "decor": true,
+    "glow": true
+   },
+   "light": {
+    "match": "^(conv_modular_dungeon_pack_(torch|candelabrum_tall))$",
+    "height": [
+     1.8,
+     2.4
+    ],
+    "count": [
+     5,
+     9
+    ],
+    "glow": true,
+    "solid": 0.4
+   }
+  },
+  "setpieces": [
+   [
+    "sarcophagus_hall",
+    4
+   ],
+   [
+    "bone_pile",
+    3
+   ],
+   [
+    "graveside",
+    2
+   ],
+   [
+    "ruined_shrine",
+    2
+   ],
+   [
+    "torture_chamber",
+    1
+   ],
+   [
+    "crypt_rest",
+    3
+   ],
+   [
+    "shrine_altar",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ },
+ "mines": {
+  "name": "Deep Mines",
+  "ground": [
+   "#5e4a3a",
+   "#6a5442",
+   "#54422f"
+  ],
+  "path": "#4a3a2a",
+  "sky": [
+   "#1a1410",
+   "#2a2018"
+  ],
+  "fog": [
+   "#241c16",
+   12,
+   44
+  ],
+  "sun": "#ffcf90",
+  "ambient": "#5a4838",
+  "time": "dark",
+  "enclosed": "rock",
+  "music": "cave",
+  "ambient_fx": [
+   "dust",
+   "drips",
+   "crystal_glow"
+  ],
+  "npc_roles": [
+   "miner",
+   "miner"
+  ],
+  "npc_count": [
+   1,
+   2
+  ],
+  "pools": {
+   "wall": {
+    "match": "^(conv_ultimate_nature_pack_rock_[4-7]|stylized_nature_megakit_rock_medium_\\d)$",
+    "height": [
+     3.5,
+     6
+    ],
+    "ring": true,
+    "solid": 1.0
+   },
+   "rock": {
+    "match": "^(conv_modular_dungeon_pack_rock\\d|cube_world_rock\\d|conv_ultimate_nature_pack_rock_[1-3])$",
+    "height": [
+     0.6,
+     2.2
+    ],
+    "density": 1.0,
+    "solid": 0.8,
+    "tint": "#6a5848"
+   },
+   "crystal": {
+    "match": "^(conv_ultimate_rpg_items_pack_crystal\\d|cube_world_crystal_(big|small)|ultimate_fantasy_rts_resource_gold_\\d)$",
+    "height": [
+     0.8,
+     2.0
+    ],
+    "density": 0.45,
+    "glow": true,
+    "solid": 0.6
+   },
+   "prop": {
+    "match": "^(fantasy_props_megakit_(crate_wooden|barrel|bucket_metal|pickaxe_bronze|lantern_wall)|conv_survival_pack_(woodentorch_fire|gascan|backpack)|ultimate_fantasy_rts_logs)$",
+    "height": [
+     0.6,
+     1.6
+    ],
+    "density": 0.4,
+    "solid": 0.6,
+    "glow": true
+   },
+   "rubble": {
+    "match": "^stylized_nature_megakit_pebble_(round|square)_\\d$",
+    "height": [
+     0.2,
+     0.6
+    ],
+    "density": 3,
+    "decor": true,
+    "tint": "#5a4838"
+   }
+  },
+  "setpieces": [
+   [
+    "mine_cart_line",
+    4
+   ],
+   [
+    "mine_entrance",
+    2
+   ],
+   [
+    "crystal_cluster",
+    3
+   ],
+   [
+    "voxel_mine",
+    1
+   ],
+   [
+    "campsite",
+    1
+   ],
+   [
+    "dragon_hoard",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ },
+ "space_station": {
+  "name": "Derelict Space Station",
+  "ground": [
+   "#4a5260",
+   "#545c6a",
+   "#3e4652"
+  ],
+  "path": "#2e343e",
+  "sky": [
+   "#05060c",
+   "#141a2a"
+  ],
+  "fog": [
+   "#10141e",
+   14,
+   48
+  ],
+  "sun": "#bfe0ff",
+  "ambient": "#4a5a78",
+  "time": "dark",
+  "enclosed": "wall",
+  "floor_tiles": "^conv_ultimate_modular_sci_fi_floortile_basic$",
+  "music": "space",
+  "ambient_fx": [
+   "sparks",
+   "dust"
+  ],
+  "npc_roles": [
+   "engineer",
+   "astronaut"
+  ],
+  "npc_count": [
+   0,
+   2
+  ],
+  "pools": {
+   "wall": {
+    "match": "^(conv_ultimate_modular_sci_fi_wall_[1-5]|conv_ultimate_modular_sci_fi_window_wall_side[ab])$",
+    "height": [
+     4,
+     4
+    ],
+    "ring": true,
+    "solid": 1.0
+   },
+   "column": {
+    "match": "^(conv_ultimate_modular_sci_fi_column_[1-3]|modular_scifi_megakit_column_(astra|pipes|round|simple|hollow))$",
+    "height": [
+     3.5,
+     4
+    ],
+    "count": [
+     4,
+     8
+    ],
+    "solid": 1.0
+   },
+   "prop": {
+    "match": "^(conv_ultimate_modular_sci_fi_props_(capsule|computer(small)?|containerfull|crate(long)?|pod|shelf(_tall)?|vessel(_tall|_short)?|teleporter_\\d|laser|chest)|sci_fi_essentials_kit_prop_(locker|desk_(small|medium|l)|shelves_\\w+|crate(_large)?)|cyberpunk_game_kit_quaterniu_(computer(_large)?|tv_\\d))$",
+    "height": [
+     0.8,
+     2.6
+    ],
+    "density": 0.7,
+    "solid": 0.7,
+    "variety": 10
+   },
+   "decor": {
+    "match": "^(cyberpunk_game_kit_quaterniu_cable_(long|small|thick)|sci_fi_essentials_kit_prop_(mug|syringe|keycard|healthpack))$",
+    "height": [
+     0.1,
+     0.4
+    ],
+    "density": 1.2,
+    "decor": true
+   },
+   "light": {
+    "match": "^cyberpunk_game_kit_quaterniu_light_square$",
+    "height": [
+     1.5,
+     2
+    ],
+    "count": [
+     4,
+     8
+    ],
+    "glow": true,
+    "solid": 0.3
+   }
+  },
+  "setpieces": [
+   [
+    "lab_outpost",
+    4
+   ],
+   [
+    "supply_depot",
+    2
+   ],
+   [
+    "crash_site",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   4
+  ]
+ },
+ "pirate_cove": {
+  "name": "Smugglers' Cove",
+  "ground": [
+   "#8a7a62",
+   "#7a6a52",
+   "#9a8a70"
+  ],
+  "path": "#6a5a44",
+  "sky": [
+   "#1e2a36",
+   "#3a4a5a"
+  ],
+  "fog": [
+   "#22303c",
+   16,
+   55
+  ],
+  "sun": "#ffd8a0",
+  "ambient": "#506070",
+  "time": "dark",
+  "enclosed": "rock",
+  "water": {
+   "color": "#1f6f8f",
+   "coverage": 0.25
+  },
+  "music": "beach",
+  "ambient_fx": [
+   "drips",
+   "mist"
+  ],
+  "npc_roles": [
+   "pirate",
+   "sailor"
+  ],
+  "npc_count": [
+   1,
+   2
+  ],
+  "pools": {
+   "wall": {
+    "match": "^(pirate_kit_environment_cliff\\d|pirate_kit_environment_rock_\\d|conv_ultimate_nature_pack_rock_[4-7])$",
+    "height": [
+     4,
+     7
+    ],
+    "ring": true,
+    "solid": 1.0
+   },
+   "rock": {
+    "match": "^(pirate_kit_environment_rock_\\d|conv_ultimate_nature_pack_rock_moss_\\d)$",
+    "height": [
+     0.6,
+     2
+    ],
+    "density": 0.7,
+    "solid": 0.8
+   },
+   "prop": {
+    "match": "^pirate_kit_(prop_(barrel|bucket|cannon|cannonball|chest_closed|chest_gold|anchor|bomb|goldbag|coins)|environment_(skulls|dock_pole))$",
+    "height": [
+     0.5,
+     1.6
+    ],
+    "density": 0.5,
+    "solid": 0.6
+   },
+   "light": {
+    "match": "^(conv_survival_pack_woodentorch_fire|fantasy_props_megakit_lantern_wall)$",
+    "height": [
+     1.4,
+     1.8
+    ],
+    "count": [
+     4,
+     7
+    ],
+    "glow": true,
+    "solid": 0.3
+   },
+   "rubble": {
+    "match": "^stylized_nature_megakit_pebble_(round|square)_\\d$",
+    "height": [
+     0.15,
+     0.4
+    ],
+    "density": 2.5,
+    "decor": true
+   }
+  },
+  "setpieces": [
+   [
+    "shipwreck",
+    3
+   ],
+   [
+    "pirate_cache",
+    4
+   ],
+   [
+    "fishing_dock",
+    1
+   ],
+   [
+    "bone_pile",
+    2
+   ],
+   [
+    "dragon_hoard",
+    2
+   ],
+   [
+    "tavern_front",
+    1
+   ]
+  ],
+  "setpiece_count": [
+   3,
+   5
+  ]
+ }
+}

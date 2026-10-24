@@ -1,0 +1,2909 @@
+{
+ "_doc": "Set-pieces: little scenes placed in the world (see layout.py piece()). parts: m=model regex, h=height range, at=[dx,dz] or ring=[r,n] or row=[n,gap] or scatter=[r,n]; face=centre/out; solid; glow; p=chance.",
+ "campsite": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^conv_survival_pack_tent$",
+    "h": [
+     1.6,
+     2.0
+    ],
+    "at": [
+     0,
+     2
+    ],
+    "yaw": 3.14,
+    "solid": 0.8
+   },
+   {
+    "m": "^(conv_survival_pack_bonfire_fire|conv_medieval_village_pack_bonfire_lit|made_campfire_stones)$",
+    "h": [
+     0.6,
+     0.9
+    ],
+    "at": [
+     0,
+     -0.5
+    ],
+    "glow": true,
+    "solid": 0.6
+   },
+   {
+    "m": "^(conv_survival_pack_woodlog|conv_ultimate_nature_pack_woodlog)$",
+    "h": [
+     0.35,
+     0.45
+    ],
+    "ring": [
+     1.7,
+     3
+    ],
+    "face": "centre",
+    "solid": 0.5,
+    "same": false
+   },
+   {
+    "m": "^conv_survival_pack_(backpack|pot|pan|radio|gascan|waterbottle_\\d|axe)$",
+    "h": [
+     0.3,
+     0.6
+    ],
+    "scatter": [
+     2.2,
+     3
+    ],
+    "same": false,
+    "p": 0.9
+   },
+   {
+    "m": "^conv_survival_pack_raft$",
+    "h": [
+     0.4,
+     0.5
+    ],
+    "at": [
+     3,
+     1
+    ],
+    "p": 0.25
+   }
+  ],
+  "label": "a campsite",
+  "poi": "camp",
+  "activity": "campfire",
+  "edge": 0.4
+ },
+ "hunter_camp": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^conv_survival_pack_tent$",
+    "h": [
+     1.6,
+     1.9
+    ],
+    "at": [
+     0,
+     1.8
+    ],
+    "yaw": 3.14,
+    "solid": 0.8
+   },
+   {
+    "m": "^made_campfire_stones$",
+    "h": [
+     0.5,
+     0.7
+    ],
+    "at": [
+     0,
+     -0.6
+    ],
+    "glow": true,
+    "solid": 0.5
+   },
+   {
+    "m": "^(fantasy_props_megakit_peg_rack|fantasy_props_megakit_weaponstand)$",
+    "h": [
+     1.3,
+     1.7
+    ],
+    "at": [
+     2.3,
+     0.8
+    ],
+    "solid": 0.6
+   },
+   {
+    "m": "^conv_survival_pack_beartrap_(open|closed)$",
+    "h": [
+     0.2,
+     0.25
+    ],
+    "scatter": [
+     3.5,
+     2
+    ],
+    "same": false
+   },
+   {
+    "m": "^(conv_medieval_weapons_pack_bow_wooden(_\\d)?|conv_ultimate_rpg_items_pack_bow_wooden)$",
+    "h": [
+     0.9,
+     1.1
+    ],
+    "at": [
+     -1.6,
+     0.6
+    ],
+    "decor": true
+   }
+  ],
+  "label": "a hunter's camp",
+  "poi": "camp"
+ },
+ "wagon_stop": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^(conv_medieval_village_pack_cart|fantasy_props_megakit_stall_cart_empty)$",
+    "h": [
+     1.6,
+     2.0
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.8
+   },
+   {
+    "m": "^conv_farm_animals_horse$",
+    "h": [
+     1.6,
+     1.8
+    ],
+    "at": [
+     2.6,
+     0.2
+    ],
+    "yaw": 1.57,
+    "solid": 0.7,
+    "p": 0.7
+   },
+   {
+    "m": "^(conv_medieval_village_pack_(barrel|crate|bags?|package_\\d)|fantasy_props_megakit_(barrel(_apples)?|crate_wooden|farmcrate_\\w+))$",
+    "h": [
+     0.6,
+     1.0
+    ],
+    "scatter": [
+     2.4,
+     4
+    ],
+    "same": false,
+    "solid": 0.6
+   }
+  ],
+  "label": "an abandoned wagon",
+  "poi": "scene",
+  "edge": 0.3
+ },
+ "picnic": {
+  "r": 3.0,
+  "parts": [
+   {
+    "m": "^(conv_ultimate_house_interior_pack_carpet_\\d|sushi_restaurant_kit_decoration_carpet)$",
+    "h": [
+     0.05,
+     0.08
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "decor": true
+   },
+   {
+    "m": "^conv_(ultimate_food_pack|junk_food_pack)_(apple|banana|bread|cake|cheese_singles|croissant|cupcake|donut(_\\d)?|pizza|waffle|watermelon|orange|sandwich|burger|hotdog)$",
+    "h": [
+     0.15,
+     0.3
+    ],
+    "scatter": [
+     0.7,
+     5
+    ],
+    "same": false,
+    "decor": true
+   },
+   {
+    "m": "^conv_ultimate_rpg_items_pack_(bag|backpack|pouch)$",
+    "h": [
+     0.4,
+     0.5
+    ],
+    "at": [
+     1.1,
+     0.4
+    ],
+    "decor": true
+   },
+   {
+    "m": "^(ultimate_stylized_nature_mapletree_\\d|stylized_nature_megakit_commontree_\\d)$",
+    "h": [
+     6,
+     8
+    ],
+    "at": [
+     -2.5,
+     1.5
+    ],
+    "solid": 0.5
+   }
+  ],
+  "label": "a picnic spot",
+  "edge": 0.2
+ },
+ "crop_field": {
+  "r": 6.0,
+  "parts": [
+   {
+    "m": "^conv_nature_crops_pack_(wheat|corn|carrot|lettuce|pumpkin|tomato|beet|watermelon|rice|flowers)_crop$",
+    "h": [
+     0.7,
+     1.3
+    ],
+    "row": [
+     6,
+     1.1
+    ],
+    "rows": 4,
+    "row_gap": 1.4,
+    "decor": true
+   },
+   {
+    "m": "^(conv_farm_buildings_fence(_\\d)?|conv_medieval_village_pack_fence|medieval_village_megakit_prop_woodenfence_single)$",
+    "h": [
+     1.0,
+     1.1
+    ],
+    "row": [
+     6,
+     1.9
+    ],
+    "at": [
+     0,
+     -3.6
+    ],
+    "yaw": 0,
+    "solid": 0.5
+   },
+   {
+    "m": "^fantasy_props_megakit_dummy$",
+    "h": [
+     1.8,
+     2.0
+    ],
+    "at": [
+     0.4,
+     0.2
+    ],
+    "p": 0.6,
+    "solid": 0.5
+   }
+  ],
+  "label": "a crop field",
+  "poi": "field",
+  "activity": "farm",
+  "edge": 0.2
+ },
+ "orchard": {
+  "r": 6.0,
+  "parts": [
+   {
+    "m": "^conv_nature_crops_pack_(apple|orange)_crop$",
+    "h": [
+     3,
+     4
+    ],
+    "row": [
+     3,
+     3.2
+    ],
+    "rows": 2,
+    "row_gap": 3.6,
+    "solid": 0.4
+   },
+   {
+    "m": "^fantasy_props_megakit_(farmcrate_apple|farmcrate_empty|barrel_apples)$",
+    "h": [
+     0.6,
+     0.9
+    ],
+    "scatter": [
+     3,
+     3
+    ],
+    "same": false,
+    "solid": 0.5
+   },
+   {
+    "m": "^conv_nature_crops_pack_(apple|orange)_harvested$",
+    "h": [
+     0.3,
+     0.5
+    ],
+    "scatter": [
+     3.5,
+     3
+    ],
+    "decor": true
+   }
+  ],
+  "label": "an orchard",
+  "activity": "farm"
+ },
+ "farmstead": {
+  "r": 7.0,
+  "parts": [
+   {
+    "m": "^conv_farm_buildings_(barn|bigbarn|smallbarn|openbarn)$",
+    "h": [
+     5,
+     7
+    ],
+    "at": [
+     0,
+     3
+    ],
+    "yaw": 3.14,
+    "solid": 0.9
+   },
+   {
+    "m": "^conv_farm_buildings_(silo|silo_house|watertower|windmill|towerwindmill)$",
+    "h": [
+     6,
+     9
+    ],
+    "at": [
+     5,
+     4
+    ],
+    "solid": 0.9
+   },
+   {
+    "m": "^conv_farm_buildings_(chickencoop|well)$",
+    "h": [
+     1.6,
+     2.4
+    ],
+    "at": [
+     -4.5,
+     1
+    ],
+    "solid": 0.8
+   },
+   {
+    "m": "^conv_medieval_village_pack_hay$",
+    "h": [
+     0.9,
+     1.2
+    ],
+    "scatter": [
+     3,
+     3
+    ],
+    "same": true,
+    "solid": 0.6
+   },
+   {
+    "m": "^conv_farm_animals_(cow|pig|sheep|llama)$",
+    "h": [
+     1.1,
+     1.5
+    ],
+    "scatter": [
+     4,
+     3
+    ],
+    "same": false,
+    "solid": 0.5,
+    "p": 0.8
+   }
+  ],
+  "label": "a farmstead",
+  "poi": "door",
+  "in_town": false,
+  "edge": 0.5
+ },
+ "woodcutter": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^conv_ultimate_nature_pack_treestump(_moss)?$",
+    "h": [
+     0.5,
+     0.7
+    ],
+    "scatter": [
+     2.5,
+     3
+    ],
+    "same": false,
+    "solid": 0.5
+   },
+   {
+    "m": "^(ultimate_fantasy_rts_logs|conv_ultimate_nature_pack_woodlog|conv_survival_pack_woodlog)$",
+    "h": [
+     0.6,
+     1.0
+    ],
+    "scatter": [
+     2,
+     3
+    ],
+    "same": false,
+    "solid": 0.6
+   },
+   {
+    "m": "^(conv_survival_pack_axe|fantasy_props_megakit_axe_bronze|cube_world_axe_wood)$",
+    "h": [
+     0.6,
+     0.8
+    ],
+    "at": [
+     0.5,
+     0
+    ],
+    "decor": true
+   },
+   {
+    "m": "^(conv_medieval_village_pack_sawmill|pirate_kit_environment_sawmill)$",
+    "h": [
+     3.5,
+     4.5
+    ],
+    "at": [
+     0,
+     3.5
+    ],
+    "yaw": 3.14,
+    "solid": 0.9,
+    "p": 0.5
+   }
+  ],
+  "label": "a woodcutter's clearing",
+  "activity": "chop",
+  "edge": 0.5
+ },
+ "mine_entrance": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^ultimate_fantasy_rts_mine$",
+    "h": [
+     3.5,
+     4.5
+    ],
+    "at": [
+     0,
+     2.5
+    ],
+    "yaw": 3.14,
+    "solid": 0.9
+   },
+   {
+    "m": "^(cube_world_cart|conv_train_pack_railwaytrack_straight)$",
+    "h": [
+     0.9,
+     1.1
+    ],
+    "at": [
+     1.6,
+     -0.6
+    ],
+    "solid": 0.6
+   },
+   {
+    "m": "^(ultimate_fantasy_rts_resource_(gold|rock)_\\d|cube_world_(coal|stone|diamond)|conv_ultimate_rpg_items_pack_(gold_ingots|mineral))$",
+    "h": [
+     0.4,
+     0.9
+    ],
+    "scatter": [
+     2.5,
+     4
+    ],
+    "same": false,
+    "solid": 0.4
+   },
+   {
+    "m": "^(cube_world_pickaxe_(stone|gold)|fantasy_props_megakit_pickaxe_bronze)$",
+    "h": [
+     0.6,
+     0.8
+    ],
+    "at": [
+     -1,
+     -0.5
+    ],
+    "decor": true
+   },
+   {
+    "m": "^(fantasy_props_megakit_lantern_wall|conv_survival_pack_woodentorch_fire)$",
+    "h": [
+     1.2,
+     1.5
+    ],
+    "at": [
+     -1.6,
+     1.2
+    ],
+    "glow": true
+   }
+  ],
+  "label": "an old mine",
+  "poi": "landmark",
+  "activity": "mine"
+ },
+ "market_row": {
+  "r": 6.0,
+  "parts": [
+   {
+    "m": "^(conv_medieval_village_pack_marketstand_\\d|fantasy_props_megakit_stall_empty|fantasy_props_megakit_stall_cart_empty)$",
+    "h": [
+     2.4,
+     2.8
+    ],
+    "row": [
+     3,
+     3.1
+    ],
+    "yaw": 0,
+    "solid": 0.8,
+    "same": false
+   },
+   {
+    "m": "^(fantasy_props_megakit_(barrel_apples|farmcrate_\\w+|bag|pouch_large)|conv_ultimate_food_pack_(apple|bread|cheese_singles|pumpkin|carrot|banana|fish))$",
+    "h": [
+     0.4,
+     0.8
+    ],
+    "scatter": [
+     3.5,
+     6
+    ],
+    "same": false,
+    "solid": 0.3
+   },
+   {
+    "m": "^fantasy_props_megakit_banner_\\d$",
+    "h": [
+     2.4,
+     3
+    ],
+    "at": [
+     -4.6,
+     0.5
+    ],
+    "solid": 0.3
+   }
+  ],
+  "label": "a little market",
+  "poi": "market",
+  "activity": "shop",
+  "in_town": true
+ },
+ "blacksmith_yard": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^fantasy_props_megakit_(anvil|anvil_log)$",
+    "h": [
+     0.8,
+     1.0
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.6
+   },
+   {
+    "m": "^fantasy_props_megakit_(workbench|workbench_drawers|whetstone)$",
+    "h": [
+     0.9,
+     1.2
+    ],
+    "at": [
+     2,
+     0.5
+    ],
+    "solid": 0.6,
+    "same": false
+   },
+   {
+    "m": "^(fantasy_props_megakit_weaponstand|conv_medieval_weapons_pack_(sword|axe|claymore|spear|hammer_double|shield_heater))$",
+    "h": [
+     1.2,
+     1.6
+    ],
+    "ring": [
+     2.4,
+     3
+    ],
+    "face": "centre",
+    "solid": 0.4,
+    "same": false
+   },
+   {
+    "m": "^conv_medieval_village_pack_(bonfire_lit|cauldron)$",
+    "h": [
+     0.8,
+     1.0
+    ],
+    "at": [
+     -1.8,
+     0.5
+    ],
+    "glow": true,
+    "solid": 0.5
+   }
+  ],
+  "label": "a forge yard",
+  "poi": "work",
+  "activity": "smith",
+  "in_town": true
+ },
+ "tavern_tables": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^(fantasy_props_megakit_table_large|conv_furniture_pack_table(_\\d)?)$",
+    "h": [
+     0.8,
+     0.9
+    ],
+    "ring": [
+     1.8,
+     2
+    ],
+    "solid": 0.6
+   },
+   {
+    "m": "^(fantasy_props_megakit_(stool|bench)|conv_furniture_pack_2017_stool)$",
+    "h": [
+     0.45,
+     0.6
+    ],
+    "ring": [
+     2.8,
+     5
+    ],
+    "face": "centre",
+    "solid": 0.3,
+    "same": false
+   },
+   {
+    "m": "^fantasy_props_megakit_(mug|bottle_\\d|chalice)$",
+    "h": [
+     0.2,
+     0.3
+    ],
+    "scatter": [
+     1.5,
+     4
+    ],
+    "same": false,
+    "decor": true,
+    "y": 0.85
+   },
+   {
+    "m": "^(made_lamppost|fantasy_props_megakit_lantern_wall)$",
+    "h": [
+     2.8,
+     3.1
+    ],
+    "at": [
+     0,
+     3.2
+    ],
+    "glow": true,
+    "solid": 0.3
+   }
+  ],
+  "label": "outdoor tables",
+  "in_town": true,
+  "activity": "drink"
+ },
+ "town_well": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^(conv_medieval_village_pack_well|conv_farm_buildings_well|conv_modular_medieval_buildings_well)$",
+    "h": [
+     2,
+     2.6
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.9
+   },
+   {
+    "m": "^(fantasy_props_megakit_bucket_(metal|wooden_\\d)|pirate_kit_prop_bucket)$",
+    "h": [
+     0.4,
+     0.5
+    ],
+    "scatter": [
+     1.6,
+     2
+    ],
+    "same": false,
+    "decor": true
+   },
+   {
+    "m": "^(conv_medieval_village_pack_bench_\\d|fantasy_props_megakit_bench)$",
+    "h": [
+     0.6,
+     0.8
+    ],
+    "ring": [
+     2.6,
+     2
+    ],
+    "face": "centre",
+    "solid": 0.5
+   }
+  ],
+  "label": "the well",
+  "in_town": true
+ },
+ "crowd": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^conv_posed_background_characters_(male|female)_(standing|standing_hips|standing_waving|sitting_cheering|lookingup|walking|standing_coveringeyes)$",
+    "h": [
+     1.65,
+     1.8
+    ],
+    "ring": [
+     1.8,
+     4
+    ],
+    "face": "centre",
+    "solid": 0.5,
+    "same": false
+   },
+   {
+    "m": "^conv_posed_background_characters_woman_standing_waving$",
+    "h": [
+     1.6,
+     1.7
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.5,
+    "p": 0.5
+   }
+  ],
+  "label": "a gathering",
+  "in_town": true,
+  "activity": "chat"
+ },
+ "laundry_line": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^fantasy_props_megakit_rope_\\d$",
+    "h": [
+     1.6,
+     2
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "decor": true
+   },
+   {
+    "m": "^fantasy_props_megakit_(bucket_wooden_\\d|bag)$",
+    "h": [
+     0.4,
+     0.6
+    ],
+    "scatter": [
+     1.5,
+     2
+    ],
+    "same": false
+   },
+   {
+    "m": "^conv_ultimate_house_interior_pack_bathroom_towel$",
+    "h": [
+     0.6,
+     0.8
+    ],
+    "row": [
+     3,
+     0.8
+    ],
+    "decor": true,
+    "y": 1.0
+   }
+  ],
+  "in_town": true
+ },
+ "bell_square": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^(conv_medieval_village_pack_bell_tower|conv_medieval_village_pack_gazebo|made_fountain)$",
+    "h": [
+     3.2,
+     5.5
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.9
+   },
+   {
+    "m": "^(conv_medieval_village_pack_bench_\\d|fantasy_props_megakit_bench)$",
+    "h": [
+     0.6,
+     0.8
+    ],
+    "ring": [
+     3.4,
+     3
+    ],
+    "face": "centre",
+    "solid": 0.5
+   },
+   {
+    "m": "^(ultimate_stylized_nature_flower_\\d_clump|stylized_nature_megakit_flower_\\d_group)$",
+    "h": [
+     0.4,
+     0.6
+    ],
+    "ring": [
+     2.3,
+     6
+    ],
+    "decor": true,
+    "same": false
+   }
+  ],
+  "in_town": true,
+  "poi": "plaza"
+ },
+ "fishing_dock": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^(conv_cute_fish_pack_dock_(long|wide|long_norope)|pirate_kit_environment_dock|ultimate_fantasy_rts_dock_firstage)$",
+    "h": [
+     0.9,
+     1.4
+    ],
+    "at": [
+     0,
+     1.6
+    ],
+    "water_ok": true
+   },
+   {
+    "m": "^(conv_cute_fish_pack_boat|conv_ships_(boat|lifeboat))$",
+    "h": [
+     0.9,
+     1.3
+    ],
+    "at": [
+     2.4,
+     3.2
+    ],
+    "water_ok": true,
+    "p": 0.7
+   },
+   {
+    "m": "^conv_cute_fish_pack_fishingrod_lvl\\d$",
+    "h": [
+     1.4,
+     1.7
+    ],
+    "at": [
+     0.6,
+     0.2
+    ],
+    "decor": true
+   },
+   {
+    "m": "^(pirate_kit_prop_bucket_fishes|conv_cute_fish_pack_(goldfish|tuna|redsnapper|koi)|pirate_kit_prop_fish_(tuna|mackerel))$",
+    "h": [
+     0.3,
+     0.5
+    ],
+    "scatter": [
+     1.2,
+     2
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "label": "a fishing dock",
+  "near_water": true,
+  "poi": "dock",
+  "activity": "fish"
+ },
+ "shipwreck": {
+  "r": 5.0,
+  "parts": [
+   {
+    "m": "^(pirate_kit_ship_small|conv_ships_(viking_boat|sail_ship|boatwsail))$",
+    "h": [
+     3,
+     5
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.8,
+    "water_ok": true
+   },
+   {
+    "m": "^pirate_kit_(prop_(barrel|cannon|cannonball|chest_closed|anchor|bomb)|environment_skulls)$",
+    "h": [
+     0.5,
+     1.0
+    ],
+    "scatter": [
+     4,
+     5
+    ],
+    "same": false,
+    "solid": 0.4
+   },
+   {
+    "m": "^pirate_kit_environment_largebones$",
+    "h": [
+     2,
+     3
+    ],
+    "at": [
+     3.5,
+     -2
+    ],
+    "p": 0.4,
+    "solid": 0.6
+   }
+  ],
+  "label": "a shipwreck",
+  "poi": "landmark",
+  "near_water": true
+ },
+ "pirate_cache": {
+  "r": 3.0,
+  "parts": [
+   {
+    "m": "^(pirate_kit_prop_chest_gold|pirate_kit_prop_chest_closed)$",
+    "h": [
+     0.7,
+     0.9
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.5
+   },
+   {
+    "m": "^pirate_kit_(prop_(coins|goldbag|bottle_\\d|skull)|ui_gem_\\w+)$",
+    "h": [
+     0.25,
+     0.45
+    ],
+    "scatter": [
+     1.4,
+     5
+    ],
+    "same": false,
+    "decor": true
+   },
+   {
+    "m": "^conv_survival_pack_shovel$",
+    "h": [
+     1.0,
+     1.2
+    ],
+    "at": [
+     1,
+     0.5
+    ],
+    "decor": true
+   }
+  ],
+  "label": "a buried cache",
+  "edge": 0.6
+ },
+ "ruined_shrine": {
+  "r": 5.0,
+  "parts": [
+   {
+    "m": "^(made_ruin_arch|medieval_village_megakit_wall_arch)$",
+    "h": [
+     3.5,
+     4.5
+    ],
+    "at": [
+     0,
+     1.5
+    ],
+    "yaw": 0,
+    "solid": 0.6
+   },
+   {
+    "m": "^(made_ruin_column|conv_modular_dungeon_pack_column(_broken(_\\d)?)?)$",
+    "h": [
+     2.4,
+     4
+    ],
+    "ring": [
+     3.4,
+     4
+    ],
+    "solid": 0.8,
+    "same": false
+   },
+   {
+    "m": "^(conv_modular_dungeon_pack_(candle|candelabrum)|fantasy_props_megakit_candlestick_triple)$",
+    "h": [
+     0.4,
+     1.2
+    ],
+    "scatter": [
+     1.2,
+     3
+    ],
+    "glow": true,
+    "same": false
+   },
+   {
+    "m": "^fantasy_props_megakit_vase_(rubble_medium|\\d)$",
+    "h": [
+     0.5,
+     0.9
+    ],
+    "scatter": [
+     3,
+     3
+    ],
+    "same": false,
+    "solid": 0.3
+   }
+  ],
+  "label": "a ruined shrine",
+  "poi": "landmark",
+  "activity": "pray"
+ },
+ "bone_pile": {
+  "r": 3.0,
+  "parts": [
+   {
+    "m": "^(conv_modular_dungeon_pack_bones(_\\d)?|pirate_kit_environment_skulls|conv_ultimate_rpg_items_pack_(skull(_\\d)?|bone))$",
+    "h": [
+     0.4,
+     0.9
+    ],
+    "scatter": [
+     2,
+     6
+    ],
+    "same": false,
+    "decor": true
+   },
+   {
+    "m": "^pirate_kit_environment_largebones$",
+    "h": [
+     2,
+     3.2
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.6,
+    "p": 0.6
+   },
+   {
+    "m": "^(conv_medieval_weapons_pack_(sword|shield_round|axe)|conv_knight_helmet_\\d)$",
+    "h": [
+     0.5,
+     0.9
+    ],
+    "scatter": [
+     2,
+     2
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "label": "old bones",
+  "edge": 0.5
+ },
+ "graveside": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^made_gravestone_(1|2|3|cross)$",
+    "h": [
+     0.9,
+     1.3
+    ],
+    "row": [
+     3,
+     1.4
+    ],
+    "yaw": 0,
+    "solid": 0.7,
+    "same": false
+   },
+   {
+    "m": "^(conv_survival_pack_shovel|conv_survival_pack_woodentorch_fire)$",
+    "h": [
+     1.1,
+     1.4
+    ],
+    "at": [
+     2.4,
+     0.8
+    ],
+    "glow": true
+   },
+   {
+    "m": "^(stylized_nature_megakit_deadtree_\\d|ultimate_stylized_nature_deadtree_\\d+)$",
+    "h": [
+     4,
+     6
+    ],
+    "at": [
+     -3,
+     1.8
+    ],
+    "solid": 0.5
+   }
+  ],
+  "label": "lonely graves"
+ },
+ "witch_hut_yard": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^conv_medieval_village_pack_cauldron$",
+    "h": [
+     0.9,
+     1.1
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "glow": true,
+    "solid": 0.6
+   },
+   {
+    "m": "^(fantasy_props_megakit_(potion_\\d|smallbottles_\\d|bottle_\\d)|conv_ultimate_rpg_items_pack_potion\\d+_filled)$",
+    "h": [
+     0.25,
+     0.45
+    ],
+    "scatter": [
+     1.6,
+     6
+    ],
+    "same": false,
+    "decor": true
+   },
+   {
+    "m": "^(fantasy_props_megakit_(bookstand|book_stack_\\d|cage_small)|conv_modular_dungeon_pack_book_open)$",
+    "h": [
+     0.6,
+     1.2
+    ],
+    "ring": [
+     2.1,
+     3
+    ],
+    "face": "centre",
+    "same": false,
+    "solid": 0.4
+   },
+   {
+    "m": "^(stylized_nature_megakit_mushroom_(common|laetiporus)|conv_nature_crops_pack_mushroom_crop)$",
+    "h": [
+     0.4,
+     0.8
+    ],
+    "scatter": [
+     3,
+     5
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "label": "a witch's brewing spot",
+  "activity": "brew"
+ },
+ "knight_camp": {
+  "r": 5.0,
+  "parts": [
+   {
+    "m": "^conv_survival_pack_tent$",
+    "h": [
+     1.8,
+     2.1
+    ],
+    "ring": [
+     3.2,
+     2
+    ],
+    "face": "centre",
+    "solid": 0.8
+   },
+   {
+    "m": "^(fantasy_props_megakit_(weaponstand|dummy|banner_\\d)|conv_modular_medieval_buildings_(banner|target(witharrows)?|dummy))$",
+    "h": [
+     1.6,
+     2.6
+    ],
+    "scatter": [
+     3.5,
+     3
+    ],
+    "same": false,
+    "solid": 0.5
+   },
+   {
+    "m": "^made_campfire_stones$",
+    "h": [
+     0.6,
+     0.7
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "glow": true,
+    "solid": 0.5
+   },
+   {
+    "m": "^(conv_knight_(helmet_\\d|shoulderpads)|conv_ultimate_rpg_items_pack_armor_(metal(_\\d)?|leather))$",
+    "h": [
+     0.4,
+     0.7
+    ],
+    "scatter": [
+     2,
+     2
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "label": "a knights' camp",
+  "poi": "camp",
+  "activity": "campfire"
+ },
+ "training_ground": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^(fantasy_props_megakit_dummy|conv_modular_medieval_buildings_dummy)$",
+    "h": [
+     1.8,
+     2
+    ],
+    "row": [
+     3,
+     2.2
+    ],
+    "yaw": 0,
+    "solid": 0.5
+   },
+   {
+    "m": "^conv_modular_medieval_buildings_target(witharrows)?$",
+    "h": [
+     1.6,
+     1.9
+    ],
+    "at": [
+     0,
+     3
+    ],
+    "yaw": 3.14,
+    "solid": 0.5,
+    "same": false
+   },
+   {
+    "m": "^fantasy_props_megakit_weaponstand$",
+    "h": [
+     1.4,
+     1.6
+    ],
+    "at": [
+     -3.2,
+     -1
+    ],
+    "solid": 0.5
+   }
+  ],
+  "label": "a training ground",
+  "in_town": true,
+  "activity": "train"
+ },
+ "mushroom_ring": {
+  "r": 3.0,
+  "parts": [
+   {
+    "m": "^(stylized_nature_megakit_mushroom_(common|laetiporus)|conv_nature_crops_pack_mushroom_crop|conv_textured_fantasy_nature_mushroom|cube_world_mushroom)$",
+    "h": [
+     0.5,
+     1.0
+    ],
+    "ring": [
+     2.0,
+     9
+    ],
+    "decor": true,
+    "glow": true,
+    "same": true
+   },
+   {
+    "m": "^(conv_textured_fantasy_nature_mushroom|stylized_nature_megakit_mushroom_laetiporus)$",
+    "h": [
+     1.4,
+     2.2
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.4
+   }
+  ],
+  "label": "a fairy ring",
+  "activity": "wonder"
+ },
+ "flower_meadow": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^(ultimate_stylized_nature_flower_\\d_clump|stylized_nature_megakit_flower_\\d_group|conv_nature_crops_pack_flowers_crop|conv_ultimate_nature_pack_flowers)$",
+    "h": [
+     0.4,
+     0.7
+    ],
+    "scatter": [
+     3.5,
+     16
+    ],
+    "same": false,
+    "decor": true
+   },
+   {
+    "m": "^(ultimate_stylized_nature_bush_(small_)?flowers|stylized_nature_megakit_bush_common_flowers)$",
+    "h": [
+     0.8,
+     1.2
+    ],
+    "scatter": [
+     3,
+     3
+    ],
+    "same": false,
+    "solid": 0.3
+   }
+  ]
+ },
+ "boulder_field": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^(stylized_nature_megakit_rock_medium_\\d|conv_ultimate_nature_pack_rock_\\d|conv_simple_nature_pack_rock_\\d|ultimate_fantasy_rts_rock_group)$",
+    "h": [
+     1.0,
+     3.2
+    ],
+    "scatter": [
+     4,
+     6
+    ],
+    "same": false,
+    "solid": 0.85
+   },
+   {
+    "m": "^(stylized_nature_megakit_pebble_(round|square)_\\d)$",
+    "h": [
+     0.2,
+     0.4
+    ],
+    "scatter": [
+     4,
+     8
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "label": "tumbled boulders"
+ },
+ "fallen_giant": {
+  "r": 5.0,
+  "parts": [
+   {
+    "m": "^(conv_ultimate_nature_pack_woodlog(_moss)?|conv_survival_pack_woodlog)$",
+    "h": [
+     1.1,
+     1.4
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "yaw": 0.3,
+    "solid": 0.7
+   },
+   {
+    "m": "^conv_ultimate_nature_pack_treestump(_moss)?$",
+    "h": [
+     1.0,
+     1.4
+    ],
+    "at": [
+     3.6,
+     0.8
+    ],
+    "solid": 0.7
+   },
+   {
+    "m": "^(stylized_nature_megakit_(fern_\\d|mushroom_laetiporus)|conv_ultimate_nature_pack_plant_\\d)$",
+    "h": [
+     0.4,
+     0.8
+    ],
+    "scatter": [
+     3,
+     6
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "label": "a fallen tree"
+ },
+ "pond_life": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^conv_ultimate_nature_pack_lilypad$",
+    "h": [
+     0.08,
+     0.1
+    ],
+    "scatter": [
+     2.4,
+     6
+    ],
+    "decor": true,
+    "water_ok": true
+   },
+   {
+    "m": "^(stylized_nature_megakit_fern_\\d|conv_ultimate_nature_pack_plant_\\d|stylized_nature_megakit_grass_wispy_tall)$",
+    "h": [
+     0.6,
+     1.0
+    ],
+    "ring": [
+     3.6,
+     7
+    ],
+    "decor": true,
+    "same": false
+   }
+  ],
+  "near_water": true
+ },
+ "bamboo_grove": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^(conv_nature_crops_pack_bamboo_crop|conv_nature_crops_pack_bamboo_\\d|cube_world_bamboo(_mid|_small)?|sushi_restaurant_kit_decoration_bamboo)$",
+    "h": [
+     2.6,
+     4.5
+    ],
+    "scatter": [
+     2.4,
+     9
+    ],
+    "same": false,
+    "solid": 0.25
+   }
+  ],
+  "label": "a bamboo grove"
+ },
+ "crystal_cluster": {
+  "r": 3.0,
+  "parts": [
+   {
+    "m": "^(conv_ultimate_rpg_items_pack_crystal\\d|cube_world_crystal_(big|small)|ultimate_space_kit_rock_large_\\d)$",
+    "h": [
+     0.8,
+     2.6
+    ],
+    "scatter": [
+     1.8,
+     5
+    ],
+    "same": false,
+    "glow": true,
+    "solid": 0.6
+   }
+  ],
+  "label": "glowing crystals",
+  "activity": "wonder"
+ },
+ "crash_site": {
+  "r": 5.5,
+  "parts": [
+   {
+    "m": "^(ultimate_spaceships_\\w+|ultimate_space_kit_spaceship_\\w+)$",
+    "h": [
+     2.5,
+     4
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "yaw": 0.5,
+    "solid": 0.85
+   },
+   {
+    "m": "^(cube_world_block_(coal|stone)|ultimate_space_kit_rock_\\d|toon_shooter_game_kit_debris_pile)$",
+    "h": [
+     0.6,
+     1.5
+    ],
+    "scatter": [
+     4,
+     6
+    ],
+    "same": false,
+    "solid": 0.6
+   },
+   {
+    "m": "^(toon_shooter_game_kit_(explodingbarrel(_spilled)?|gastank|debris_tires)|sci_fi_essentials_kit_prop_barrel_\\d)$",
+    "h": [
+     0.8,
+     1.2
+    ],
+    "scatter": [
+     3.5,
+     3
+    ],
+    "same": false,
+    "solid": 0.5
+   }
+  ],
+  "label": "a crash site",
+  "poi": "landmark"
+ },
+ "supply_depot": {
+  "r": 5.0,
+  "parts": [
+   {
+    "m": "^(toon_shooter_game_kit_container_(long|small)|zombie_apocalypse_kit_container_(green|red))$",
+    "h": [
+     2.4,
+     2.8
+    ],
+    "row": [
+     2,
+     4.4
+    ],
+    "yaw": 0,
+    "solid": 0.9,
+    "same": false
+   },
+   {
+    "m": "^(sci_fi_essentials_kit_prop_(crate(_large|_tarp(_large)?)?|ammo(_closed|_small)?)|toon_shooter_game_kit_(crate|pallet|cardboardboxes_\\d))$",
+    "h": [
+     0.6,
+     1.3
+    ],
+    "scatter": [
+     3.5,
+     6
+    ],
+    "same": false,
+    "solid": 0.6
+   },
+   {
+    "m": "^(toon_shooter_game_kit_(sacktrench(_small)?|barrier_(fixed|large|single))|zombie_apocalypse_kit_plasticbarrier)$",
+    "h": [
+     0.9,
+     1.2
+    ],
+    "ring": [
+     4.4,
+     4
+    ],
+    "face": "out",
+    "solid": 0.7,
+    "same": false
+   }
+  ],
+  "label": "a supply depot",
+  "poi": "camp"
+ },
+ "checkpoint": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^(zombie_apocalypse_kit_trafficbarrier_\\d|toon_shooter_game_kit_barrier_(large|single))$",
+    "h": [
+     1.0,
+     1.2
+    ],
+    "row": [
+     4,
+     1.6
+    ],
+    "yaw": 0,
+    "solid": 0.7
+   },
+   {
+    "m": "^(zombie_apocalypse_kit_trafficcone_\\d|conv_public_transport_pack_trafficcone|toon_shooter_game_kit_trafficcone)$",
+    "h": [
+     0.5,
+     0.7
+    ],
+    "scatter": [
+     3,
+     4
+    ],
+    "same": false,
+    "decor": true
+   },
+   {
+    "m": "^(zombie_apocalypse_kit_vehicle_(pickup|sports|truck)(_armored)?|conv_realistic_car_pack_\\w+|conv_tank_pack_tank\\d?)$",
+    "h": [
+     1.5,
+     2.6
+    ],
+    "at": [
+     0,
+     3.2
+    ],
+    "yaw": 1.57,
+    "solid": 0.85
+   }
+  ],
+  "label": "a checkpoint"
+ },
+ "bus_stop": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^(conv_public_transport_pack_(bus|schoolbus|taxi|ambulance)|conv_realistic_car_pack_(taxi|cop|suv))$",
+    "h": [
+     1.8,
+     3
+    ],
+    "at": [
+     0,
+     1.8
+    ],
+    "yaw": 1.57,
+    "solid": 0.85
+   },
+   {
+    "m": "^conv_street_pack_(sign_\\w+|streetlight_(single|double))$",
+    "h": [
+     2.4,
+     4
+    ],
+    "at": [
+     -2.6,
+     -1
+    ],
+    "solid": 0.3,
+    "glow": true
+   },
+   {
+    "m": "^(conv_public_transport_pack_(bicycle|squareframebicycle)|zombie_apocalypse_kit_trashbag_\\d)$",
+    "h": [
+     0.6,
+     1.0
+    ],
+    "scatter": [
+     2,
+     2
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "in_town": true
+ },
+ "lab_outpost": {
+  "r": 5.0,
+  "parts": [
+   {
+    "m": "^(conv_ultimate_modular_sci_fi_props_(capsule|pod|vessel(_tall)?|computer|teleporter_\\d|laser|statue)|cyberpunk_game_kit_quaterniu_(computer_large|tv_\\d|antenna_\\d))$",
+    "h": [
+     1.2,
+     2.6
+    ],
+    "ring": [
+     3,
+     5
+    ],
+    "face": "centre",
+    "same": false,
+    "solid": 0.6
+   },
+   {
+    "m": "^(conv_ultimate_modular_sci_fi_props_(crate(long)?|containerfull|chest|base)|sci_fi_essentials_kit_prop_(locker|satellitedish|desk_medium))$",
+    "h": [
+     0.8,
+     1.6
+    ],
+    "scatter": [
+     3.5,
+     3
+    ],
+    "same": false,
+    "solid": 0.6
+   },
+   {
+    "m": "^cyberpunk_game_kit_quaterniu_(cable_(long|thick|small)|pipe_\\d)$",
+    "h": [
+     0.3,
+     0.6
+    ],
+    "scatter": [
+     3,
+     3
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "label": "a research outpost",
+  "poi": "work",
+  "activity": "repair"
+ },
+ "solar_array": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^ultimate_space_kit_solarpanel_(ground|structure)$",
+    "h": [
+     1.4,
+     2.0
+    ],
+    "row": [
+     3,
+     2.4
+    ],
+    "rows": 2,
+    "row_gap": 2.6,
+    "yaw": 0,
+    "solid": 0.6
+   },
+   {
+    "m": "^ultimate_space_kit_(rover_\\w+|pickup_(crate|jar|sphere))$",
+    "h": [
+     0.8,
+     1.8
+    ],
+    "scatter": [
+     3.5,
+     2
+    ],
+    "same": false,
+    "solid": 0.6
+   }
+  ]
+ },
+ "railway": {
+  "r": 6.0,
+  "parts": [
+   {
+    "m": "^conv_train_pack_railwaytrack_straight$",
+    "h": [
+     0.3,
+     0.3
+    ],
+    "row": [
+     5,
+     2.5
+    ],
+    "yaw": 1.57,
+    "decor": true
+   },
+   {
+    "m": "^conv_train_pack_(locomotive_front|cargotrain_(front|wagon|container|coalcontainer)|locomotive_(passengerwagon|wagon))$",
+    "h": [
+     2.6,
+     3.2
+    ],
+    "at": [
+     2.5,
+     0
+    ],
+    "yaw": 1.57,
+    "solid": 0.85,
+    "p": 0.7
+   }
+  ],
+  "label": "old railway tracks"
+ },
+ "torii_path": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^sushi_restaurant_kit_environment_toriigate$",
+    "h": [
+     4.2,
+     5.0
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "solid": 0.3
+   },
+   {
+    "m": "^(sushi_restaurant_kit_decoration_(light|sakuraflower)|sushi_restaurant_kit_decoration_wallight)$",
+    "h": [
+     1.0,
+     1.6
+    ],
+    "ring": [
+     2.8,
+     2
+    ],
+    "glow": true,
+    "solid": 0.3
+   },
+   {
+    "m": "^sushi_restaurant_kit_decoration_sakuratree$",
+    "h": [
+     5,
+     7
+    ],
+    "at": [
+     3.6,
+     1.6
+    ],
+    "solid": 0.5
+   }
+  ],
+  "label": "a torii gate",
+  "poi": "landmark",
+  "activity": "pray"
+ },
+ "tea_stall": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^(sushi_restaurant_kit_environment_(counter_straight(_\\d)?|table|bench)|sushi_restaurant_kit_environment_cuttingtable)$",
+    "h": [
+     0.9,
+     1.1
+    ],
+    "row": [
+     2,
+     1.8
+    ],
+    "yaw": 0,
+    "solid": 0.6,
+    "same": false
+   },
+   {
+    "m": "^sushi_restaurant_kit_environment_(stool|chair_\\d)$",
+    "h": [
+     0.5,
+     0.7
+    ],
+    "ring": [
+     2.2,
+     3
+    ],
+    "face": "centre",
+    "same": false,
+    "solid": 0.3
+   },
+   {
+    "m": "^(sushi_restaurant_kit_(environment_(bowl|bottle|pot_\\d_filled|chukamansteamer)|food_\\w+)|conv_ultimate_food_pack_sushi_\\w+)$",
+    "h": [
+     0.2,
+     0.4
+    ],
+    "scatter": [
+     1.2,
+     4
+    ],
+    "same": false,
+    "decor": true,
+    "y": 0.9
+   },
+   {
+    "m": "^sushi_restaurant_kit_decoration_sign(_\\d)?$",
+    "h": [
+     1.6,
+     2.2
+    ],
+    "at": [
+     0,
+     1.8
+    ],
+    "solid": 0.3
+   }
+  ],
+  "label": "a tea stall",
+  "activity": "shop",
+  "in_town": true
+ },
+ "coin_trail": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^(platformer_game_kit_coin|conv_platformer_pack_coin)$",
+    "h": [
+     0.5,
+     0.6
+    ],
+    "row": [
+     6,
+     1.2
+    ],
+    "glow": true,
+    "decor": true,
+    "y": 0.6
+   },
+   {
+    "m": "^(platformer_game_kit_(cube_question|cube_exclamation)|conv_platformer_pack_yellowbox)$",
+    "h": [
+     1.0,
+     1.1
+    ],
+    "at": [
+     0,
+     2
+    ],
+    "solid": 0.6,
+    "y": 0.0
+   }
+  ],
+  "label": "a trail of coins"
+ },
+ "block_tower": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^platformer_game_kit_cube_(grass|dirt)_(single|center|1x1center|side)$",
+    "h": [
+     1.4,
+     1.6
+    ],
+    "ring": [
+     1.3,
+     4
+    ],
+    "solid": 0.8,
+    "same": false
+   },
+   {
+    "m": "^platformer_game_kit_(cube_question|cube_bricks|cube_crate)$",
+    "h": [
+     1.4,
+     1.6
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.8,
+    "y": 1.5
+   },
+   {
+    "m": "^(platformer_game_kit_(goal_flag|star)|conv_platformer_pack_flag)$",
+    "h": [
+     1.4,
+     1.8
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "y": 3.0
+   }
+  ],
+  "label": "a stack of blocks",
+  "poi": "landmark"
+ },
+ "spike_trap": {
+  "r": 3.0,
+  "parts": [
+   {
+    "m": "^(platformer_game_kit_(spikes|hazard_spiketrap|spikyball)|conv_platformer_pack_spike_(group|single))$",
+    "h": [
+     0.5,
+     0.9
+    ],
+    "scatter": [
+     2,
+     4
+    ],
+    "same": false,
+    "solid": 0.6
+   },
+   {
+    "m": "^(platformer_game_kit_(chest|heart)|conv_platformer_pack_(heart_full|key))$",
+    "h": [
+     0.6,
+     0.8
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "decor": true
+   }
+  ],
+  "label": "a trapped prize"
+ },
+ "pipe_garden": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^(platformer_game_kit_pipe(_\\d)?|platformer_game_kit_pipe_end|conv_platformer_pack_pipe)$",
+    "h": [
+     1.4,
+     2.2
+    ],
+    "scatter": [
+     2.5,
+     3
+    ],
+    "same": false,
+    "solid": 0.7
+   },
+   {
+    "m": "^(platformer_game_kit_(plant_(large|small)|bush_fruit|fruit)|conv_platformer_pack_mushroom)$",
+    "h": [
+     0.7,
+     1.5
+    ],
+    "scatter": [
+     3,
+     4
+    ],
+    "same": false,
+    "solid": 0.3
+   }
+  ]
+ },
+ "voxel_mine": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^cube_world_block_(stone|coal|diamond|crystal|dirt|grass|greybricks)$",
+    "h": [
+     1,
+     1
+    ],
+    "scatter": [
+     2.6,
+     8
+    ],
+    "same": false,
+    "solid": 0.8
+   },
+   {
+    "m": "^cube_world_(cart|rail_straight|rail_corner)$",
+    "h": [
+     0.8,
+     1.0
+    ],
+    "at": [
+     2.6,
+     0
+    ],
+    "solid": 0.5
+   },
+   {
+    "m": "^cube_world_(pickaxe_\\w+|shovel_\\w+)$",
+    "h": [
+     0.6,
+     0.8
+    ],
+    "at": [
+     0,
+     2.2
+    ],
+    "decor": true
+   }
+  ],
+  "label": "a block quarry",
+  "activity": "mine"
+ },
+ "voxel_farm": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^cube_world_fence_(center|end|corner|t)$",
+    "h": [
+     0.9,
+     1.0
+    ],
+    "ring": [
+     3,
+     8
+    ],
+    "face": "centre",
+    "solid": 0.5,
+    "same": false
+   },
+   {
+    "m": "^cube_world_(pig|sheep|chicken|chick|horse)$",
+    "h": [
+     0.6,
+     1.4
+    ],
+    "scatter": [
+     2,
+     3
+    ],
+    "same": false,
+    "solid": 0.4
+   },
+   {
+    "m": "^cube_world_(grass_big|flowers_\\d|plant_\\d)$",
+    "h": [
+     0.4,
+     0.8
+    ],
+    "scatter": [
+     2.4,
+     6
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "label": "a block pen"
+ },
+ "parlour": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^(conv_ultimate_house_interior_pack_couch_(l|large_\\d|medium_\\d)|conv_furniture_pack_2017_sofa(double|long)?)$",
+    "h": [
+     0.9,
+     1.1
+    ],
+    "at": [
+     0,
+     1.6
+    ],
+    "yaw": 3.14,
+    "solid": 0.7
+   },
+   {
+    "m": "^(conv_ultimate_house_interior_pack_table_round(large|small(_\\d)?)|conv_furniture_pack_2017_coffeetable(_\\d)?)$",
+    "h": [
+     0.5,
+     0.75
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.5
+   },
+   {
+    "m": "^(conv_ultimate_house_interior_pack_(light_floor_\\d|light_stand_\\d|houseplant_\\d|bookshelf)|conv_furniture_pack_2017_(lamp(_\\d)?|plant|bookcaselarge(books)?))$",
+    "h": [
+     1.2,
+     2.2
+    ],
+    "ring": [
+     2.8,
+     3
+    ],
+    "face": "centre",
+    "same": false,
+    "solid": 0.5,
+    "glow": true
+   },
+   {
+    "m": "^conv_ultimate_house_interior_pack_carpet(_\\d|_round)$",
+    "h": [
+     0.05,
+     0.05
+    ],
+    "at": [
+     0,
+     0.2
+    ],
+    "decor": true
+   }
+  ],
+  "label": "a sitting room",
+  "activity": "chat"
+ },
+ "library_corner": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^(conv_ultimate_house_interior_pack_bookshelf|conv_furniture_pack_bookcase_books|fantasy_props_megakit_bookcase_\\d)$",
+    "h": [
+     2.2,
+     2.6
+    ],
+    "row": [
+     3,
+     1.6
+    ],
+    "yaw": 0,
+    "solid": 0.8,
+    "same": false
+   },
+   {
+    "m": "^(fantasy_props_megakit_(bookstand|book_stack_\\d|bookgroup_medium_\\d)|conv_furniture_pack_desk)$",
+    "h": [
+     0.6,
+     1.2
+    ],
+    "scatter": [
+     1.6,
+     3
+    ],
+    "same": false,
+    "solid": 0.4
+   },
+   {
+    "m": "^(fantasy_props_megakit_candlestick(_stand|_triple)?|conv_ultimate_house_interior_pack_light_desk)$",
+    "h": [
+     0.5,
+     1.6
+    ],
+    "at": [
+     1.8,
+     -1.2
+    ],
+    "glow": true
+   }
+  ],
+  "label": "dusty bookshelves",
+  "activity": "read"
+ },
+ "dining_hall": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^(fantasy_props_megakit_table_large|conv_furniture_pack_table(_\\d)?)$",
+    "h": [
+     0.85,
+     0.95
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.8
+   },
+   {
+    "m": "^(fantasy_props_megakit_chair_\\d|conv_furniture_pack_2017_chair(cushioned|handle)?)$",
+    "h": [
+     1.0,
+     1.1
+    ],
+    "ring": [
+     1.7,
+     6
+    ],
+    "face": "centre",
+    "solid": 0.3,
+    "same": true
+   },
+   {
+    "m": "^(fantasy_props_megakit_(chandelier|candlestick_triple)|conv_ultimate_house_interior_pack_light_chandelier)$",
+    "h": [
+     0.6,
+     1.0
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "glow": true,
+    "y": 0.9
+   },
+   {
+    "m": "^(conv_ultimate_food_pack_(steak|chickenleg|bread|cookingpot_soup|plate(_\\d)?)|fantasy_props_megakit_(table_plate|mug|chalice))$",
+    "h": [
+     0.15,
+     0.3
+    ],
+    "scatter": [
+     0.8,
+     5
+    ],
+    "same": false,
+    "decor": true,
+    "y": 0.92
+   }
+  ],
+  "label": "a long dining table"
+ },
+ "torture_chamber": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^conv_modular_dungeon_pack_bars$",
+    "h": [
+     2.2,
+     2.6
+    ],
+    "row": [
+     3,
+     1.6
+    ],
+    "yaw": 0,
+    "solid": 0.8
+   },
+   {
+    "m": "^(fantasy_props_megakit_(chain_coil|cage_small)|conv_modular_dungeon_pack_bones2?)$",
+    "h": [
+     0.4,
+     1.0
+    ],
+    "scatter": [
+     2,
+     4
+    ],
+    "same": false
+   },
+   {
+    "m": "^conv_modular_dungeon_pack_torch_wall$",
+    "h": [
+     1.6,
+     2
+    ],
+    "at": [
+     2.6,
+     0.4
+    ],
+    "glow": true
+   }
+  ],
+  "label": "old cells",
+  "activity": "wonder"
+ },
+ "sarcophagus_hall": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^(conv_ultimate_rpg_items_pack_chest_closed|conv_modular_dungeon_pack_chest(_gold)?)$",
+    "h": [
+     1.0,
+     1.3
+    ],
+    "row": [
+     3,
+     2.2
+    ],
+    "yaw": 0,
+    "solid": 0.7,
+    "same": false
+   },
+   {
+    "m": "^(conv_modular_dungeon_pack_candelabrum(_tall)?|fantasy_props_megakit_candlestick_stand)$",
+    "h": [
+     1.4,
+     2
+    ],
+    "ring": [
+     3.4,
+     4
+    ],
+    "glow": true,
+    "solid": 0.3
+   },
+   {
+    "m": "^(conv_ultimate_rpg_items_pack_(skull(_\\d)?|crown(_\\d)?|chalice|necklace_\\d)|conv_ultimate_rpg_items_pack_coin_skull)$",
+    "h": [
+     0.25,
+     0.4
+    ],
+    "scatter": [
+     2.5,
+     5
+    ],
+    "same": false,
+    "decor": true
+   }
+  ],
+  "label": "a tomb hall",
+  "poi": "landmark"
+ },
+ "mine_cart_line": {
+  "r": 5.0,
+  "parts": [
+   {
+    "m": "^conv_train_pack_railwaytrack_straight$",
+    "h": [
+     0.3,
+     0.3
+    ],
+    "row": [
+     4,
+     2.4
+    ],
+    "yaw": 1.57,
+    "decor": true
+   },
+   {
+    "m": "^cube_world_cart$",
+    "h": [
+     1.0,
+     1.2
+    ],
+    "at": [
+     0.6,
+     0
+    ],
+    "solid": 0.6
+   },
+   {
+    "m": "^(ultimate_fantasy_rts_resource_gold_\\d|conv_ultimate_rpg_items_pack_(gold_ingots|mineral|crystal\\d))$",
+    "h": [
+     0.4,
+     0.9
+    ],
+    "scatter": [
+     3,
+     5
+    ],
+    "same": false,
+    "glow": true,
+    "solid": 0.4
+   },
+   {
+    "m": "^(fantasy_props_megakit_lantern_wall|conv_survival_pack_woodentorch_fire)$",
+    "h": [
+     1.2,
+     1.5
+    ],
+    "ring": [
+     3.6,
+     3
+    ],
+    "glow": true
+   }
+  ],
+  "label": "a mine-cart line",
+  "activity": "mine"
+ },
+ "throne_dais": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^made_throne$",
+    "h": [
+     2.2,
+     2.5
+    ],
+    "at": [
+     0,
+     1.5
+    ],
+    "yaw": 3.14,
+    "solid": 0.9
+   },
+   {
+    "m": "^made_banner_stand$",
+    "h": [
+     3.0,
+     3.4
+    ],
+    "at": [
+     -2.2,
+     1.6
+    ],
+    "solid": 0.4
+   },
+   {
+    "m": "^made_banner_stand$",
+    "h": [
+     3.0,
+     3.4
+    ],
+    "at": [
+     2.2,
+     1.6
+    ],
+    "solid": 0.4
+   },
+   {
+    "m": "^made_brazier$",
+    "h": [
+     1.6,
+     1.9
+    ],
+    "at": [
+     -1.6,
+     -1.0
+    ],
+    "glow": true,
+    "solid": 0.5
+   },
+   {
+    "m": "^made_brazier$",
+    "h": [
+     1.6,
+     1.9
+    ],
+    "at": [
+     1.6,
+     -1.0
+    ],
+    "glow": true,
+    "solid": 0.5
+   }
+  ],
+  "label": "a throne",
+  "poi": "throne"
+ },
+ "shrine_altar": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^made_altar$",
+    "h": [
+     1.3,
+     1.5
+    ],
+    "at": [
+     0,
+     1.0
+    ],
+    "yaw": 3.14,
+    "solid": 0.8
+   },
+   {
+    "m": "^made_rune_obelisk$",
+    "h": [
+     3.0,
+     3.8
+    ],
+    "ring": [
+     3.0,
+     3
+    ],
+    "face": "centre",
+    "glow": true,
+    "solid": 0.5
+   },
+   {
+    "m": "^made_brazier$",
+    "h": [
+     1.5,
+     1.8
+    ],
+    "at": [
+     0,
+     -1.6
+    ],
+    "glow": true,
+    "solid": 0.4,
+    "p": 0.7
+   }
+  ],
+  "label": "an old shrine",
+  "poi": "shrine"
+ },
+ "crypt_rest": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^made_sarcophagus$",
+    "h": [
+     1.2,
+     1.4
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.9
+   },
+   {
+    "m": "^made_coffin$",
+    "h": [
+     0.55,
+     0.65
+    ],
+    "row": [
+     3,
+     1.2
+    ],
+    "at": [
+     0,
+     2.4
+    ],
+    "solid": 0.6,
+    "p": 0.9
+   },
+   {
+    "m": "^made_brazier$",
+    "h": [
+     1.5,
+     1.8
+    ],
+    "at": [
+     2.4,
+     -1
+    ],
+    "glow": true,
+    "solid": 0.4
+   }
+  ],
+  "label": "a burial chamber",
+  "poi": "tomb"
+ },
+ "dragon_hoard": {
+  "r": 4.5,
+  "parts": [
+   {
+    "m": "^made_treasure_pile$",
+    "h": [
+     0.7,
+     1.0
+    ],
+    "at": [
+     0,
+     0
+    ],
+    "solid": 0.9
+   },
+   {
+    "m": "^made_treasure_pile$",
+    "h": [
+     0.4,
+     0.6
+    ],
+    "scatter": [
+     2.6,
+     2
+    ],
+    "solid": 0.5
+   },
+   {
+    "m": "^made_brazier$",
+    "h": [
+     1.5,
+     1.8
+    ],
+    "at": [
+     2.6,
+     1.2
+    ],
+    "glow": true,
+    "solid": 0.4,
+    "p": 0.6
+   }
+  ],
+  "label": "a treasure hoard",
+  "poi": "hoard"
+ },
+ "tavern_front": {
+  "r": 4.0,
+  "parts": [
+   {
+    "m": "^made_tavern_sign$",
+    "h": [
+     2.8,
+     3.1
+    ],
+    "at": [
+     0,
+     1.8
+    ],
+    "solid": 0.3
+   },
+   {
+    "m": "^fantasy_props_megakit_barrel$",
+    "h": [
+     0.9,
+     1.1
+    ],
+    "row": [
+     2,
+     1.0
+    ],
+    "at": [
+     -1.8,
+     0.8
+    ],
+    "solid": 0.6
+   },
+   {
+    "m": "^(fantasy_props_megakit_bench|medieval_village_megakit_prop_bench)",
+    "h": [
+     0.6,
+     0.8
+    ],
+    "at": [
+     1.6,
+     0
+    ],
+    "solid": 0.5,
+    "p": 0.8
+   }
+  ],
+  "label": "the tavern",
+  "poi": "tavern",
+  "activity": "chat"
+ },
+ "market_square": {
+  "r": 5.0,
+  "parts": [
+   {
+    "m": "^made_market_stall$",
+    "h": [
+     2.4,
+     2.7
+    ],
+    "at": [
+     -2.0,
+     0.6
+    ],
+    "yaw": 0.2,
+    "solid": 0.9
+   },
+   {
+    "m": "^made_market_stall$",
+    "h": [
+     2.4,
+     2.7
+    ],
+    "at": [
+     2.2,
+     0.4
+    ],
+    "yaw": -0.2,
+    "solid": 0.9,
+    "p": 0.8
+   },
+   {
+    "m": "^made_banner_stand$",
+    "h": [
+     3.0,
+     3.3
+    ],
+    "at": [
+     0,
+     2.4
+    ],
+    "solid": 0.3
+   }
+  ],
+  "label": "the market",
+  "poi": "market",
+  "activity": "stall"
+ },
+ "armory_corner": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^made_weapon_rack$",
+    "h": [
+     1.4,
+     1.6
+    ],
+    "at": [
+     0,
+     1.2
+    ],
+    "yaw": 3.14,
+    "solid": 0.7
+   },
+   {
+    "m": "^made_statue_knight$",
+    "h": [
+     2.4,
+     2.8
+    ],
+    "at": [
+     -2.0,
+     0.6
+    ],
+    "solid": 0.7,
+    "p": 0.8
+   },
+   {
+    "m": "^made_banner_stand$",
+    "h": [
+     2.8,
+     3.2
+    ],
+    "at": [
+     2.0,
+     0.8
+    ],
+    "solid": 0.3,
+    "p": 0.8
+   }
+  ],
+  "label": "an armory",
+  "poi": "armory"
+ },
+ "library_nook": {
+  "r": 3.5,
+  "parts": [
+   {
+    "m": "^made_bookshelf_full$",
+    "h": [
+     2.0,
+     2.2
+    ],
+    "row": [
+     2,
+     1.5
+    ],
+    "at": [
+     0,
+     1.5
+    ],
+    "yaw": 3.14,
+    "solid": 0.8
+   },
+   {
+    "m": "^made_brazier$",
+    "h": [
+     1.3,
+     1.6
+    ],
+    "at": [
+     2.0,
+     -0.4
+    ],
+    "glow": true,
+    "solid": 0.4,
+    "p": 0.6
+   }
+  ],
+  "label": "a library corner",
+  "poi": "library"
+ }
+}

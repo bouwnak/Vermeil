@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Circuit Lab</title>
+  <link rel="stylesheet" href="../vendor/fonts/nunito.css">
+  <link rel="stylesheet" href="lab.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "../vendor/three/build/three.module.js",
+      "three/addons/": "../vendor/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <button class="ghost" id="back" title="Back to Vermeil">← Vermeil</button>
+    <input id="projName" value="My circuit" aria-label="Project name" maxlength="60">
+    <button id="btnSave">💾 Save</button>
+    <button class="ghost" id="btnOpen">📂 Open</button>
+    <button class="ghost" id="btnNew">＋ New</button>
+    <select id="examples" aria-label="Examples"><option value="">Examples…</option></select>
+    <span class="sep"></span>
+    <div class="seg" role="group" aria-label="View">
+      <button id="v2d" class="on">2D</button><button id="v3d">3D</button>
+    </div>
+    <label class="wirecol" title="Colour of new wires">Wire <select id="wireColor">
+      <option value="#2f8f3a">green</option><option value="#d62c2c">red</option><option value="#111111">black</option>
+      <option value="#2c6bd6">blue</option><option value="#e8a800">yellow</option><option value="#ff7a1a">orange</option>
+      <option value="#8b2fc9">purple</option><option value="#eeeeee">white</option></select></label>
+    <span class="sep"></span>
+    <button id="btnAsk" class="ghost" title="Vermeil looks at your circuit and code and finds mistakes">🤖 Check my circuit</button>
+    <button id="btnSim" class="sim">▶ Start simulation</button>
+  </header>
+
+  <main class="lab">
+    <aside class="palette" aria-label="Components">
+      <input id="partSearch" type="search" placeholder="Search parts…" aria-label="Search parts">
+      <div id="partList"></div>
+      <p class="hint">Click a part, then click where to put it. Click a pin or hole to start a wire, click another to finish (click empty space for a bend). <b>R</b> rotate · <b>Del</b> delete · <b>Ctrl+Z</b> undo · wheel = zoom · drag background = move.</p>
+    </aside>
+
+    <section class="stage">
+      <div id="stage2d" class="view"></div>
+      <div id="stage3d" class="view" hidden></div>
+      <div id="simBadge" class="badge" hidden>● Simulating</div>
+      <div id="warnings" class="warnings" aria-live="polite"></div>
+    </section>
+
+    <aside class="side">
+      <div class="box" id="propsBox"><h3>Selected</h3><div id="props"><p class="muted">Nothing selected. Click a part or wire.</p></div></div>
+      <div class="box grow">
+        <div class="row"><h3>Code</h3><span class="muted small" id="codeBoard"></span><button class="ghost small" id="codeHelp" title="What the simulator understands">?</button></div>
+        <div class="code-wrap"><pre id="lineNos" aria-hidden="true"></pre><textarea id="code" spellcheck="false" aria-label="Arduino code"></textarea></div>
+      </div>
+      <div class="box">
+        <div class="row"><h3>Serial monitor</h3><button class="ghost small" id="serialClear">Clear</button></div>
+        <pre id="serial" class="serial" aria-live="off"></pre>
+        <form id="serialForm" class="row"><input id="serialIn" placeholder="Send to the Arduino…" aria-label="Serial input"><button>Send</button></form>
+      </div>
+    </aside>
+  </main>
+
+  <div id="drawer" class="drawer" hidden>
+    <div class="row"><h3>Vermeil's check</h3><button class="ghost small" id="drawerClose">×</button></div>
+    <textarea id="askQ" rows="2" placeholder="Optional: what's wrong / what should it do? e.g. “the LED doesn't light”"></textarea>
+    <button id="askGo">Check it</button>
+    <div id="askOut" class="md"></div>
+  </div>
+  <div id="modal" class="modal" hidden><div class="modal-box"><div id="modalBody"></div><button class="ghost" id="modalClose">Close</button></div></div>
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="lab.js"></script>
+</body>
+</html>
