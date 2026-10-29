@@ -1,4 +1,4 @@
-﻿// app.js - connects the window to Python (app.py) and drives the room.
+// app.js - connects the window to Python (app.py) and drives the room.
 import { Room } from "./room.js";
 import { CATALOG, CozyRoom, THEMES, TIME_PRESETS } from "./cozyroom.js";
 import { initPlanner } from "./planner.js";
@@ -20,6 +20,7 @@ import { initPlugins } from "./plugins.js";
 import { initElectronics } from "./electronics.js";
 import { initGenerator } from "./generator.js";
 import { initMyMusic } from "./mymusic.js";
+import { initAvatar } from "./avatar.js";
 const $ = (id) => document.getElementById(id);
 const room = new Room($("scene"));
 let api = null;
@@ -31,7 +32,7 @@ let voices = [];
 let viewTimer = null;
 
 // ---------------- planner, study, code (their own files) ----------------
-let musicPanel = null, elecPanel = null, genPanel = null, planner = null, study = null, codePanel = null, mind = null, gym = null, baking = null, cooking = null, focusPanel = null, chat = null, missionsPanel = null, spotifyPanel = null;
+let musicPanel = null, elecPanel = null, genPanel = null, avatarPanel = null, planner = null, study = null, codePanel = null, mind = null, gym = null, baking = null, cooking = null, focusPanel = null, chat = null, missionsPanel = null, spotifyPanel = null;
 const renderPlanner = () => planner?.render();
 
 function showHistory(history) {
@@ -390,6 +391,7 @@ function openPanel(name) {
   if (name === "gym" && open) gym.load();
   if (name === "electronics" && open) elecPanel.load();
   if (name === "generator" && open) genPanel.load();
+  if (name === "avatar" && open) avatarPanel?.load();
   if (name === "music" && open) musicPanel.load();
   if (name === "baking" && open) baking.load();
   if (name === "cooking" && open) cooking.load();
@@ -892,6 +894,7 @@ for (const box of document.querySelectorAll("input[data-setting]")) {
 }
 
 $("newChar").addEventListener("click", () => openEditor(null));
+$("openAvatarStudio")?.addEventListener("click", () => openPanel("avatar"));
 $("importModel").addEventListener("click", async () => {
   const name = await api.import_model();
   if (!name) return;
@@ -899,6 +902,23 @@ $("importModel").addEventListener("click", async () => {
   fillModelSelect(name);
   toast(`Imported ${name}. Save the character to use it.`);
 });
+
+window.onAvatarCharacterSaved = async (res) => {
+  if (res?.state) {
+    state = res.state;
+  } else {
+    state = await api.get_state();
+  }
+  if (res?.model && !state.models.includes(res.model)) {
+    state.models.push(res.model);
+  }
+  renderCharacters();
+  if (res?.id) {
+    openEditor(res.id);
+  }
+  await loadCharacter();
+  say(`Hi! I'm ${activeChar().name}.`);
+};
 // "copy a character": type a name (Rick Sanchez, Jake the Dog…), press ✓ (or Enter) -> the AI writes how they talk
 async function makePersonality() {
   const who = $("personaFrom").value.trim();
@@ -1186,6 +1206,7 @@ room.onPoke = () => say(["Hey! That tickles~", "Mm? Yes?", "Careful~"][Math.floo
   gym = initGym(api);
   elecPanel = initElectronics(api);
   genPanel = initGenerator(api);
+  avatarPanel = initAvatar(api);
   musicPanel = initMyMusic(api);
   baking = initBaking(api, "baking");
   cooking = initBaking(api, "cooking");

@@ -146,6 +146,12 @@ def download(url, dest):
 
 
 def ui_files():
+    download("https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+             os.path.join(UI_VENDOR, "three", "build", "three.module.js"))
+    download("https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/exporters/GLTFExporter.js",
+             os.path.join(UI_VENDOR, "three", "examples", "jsm", "exporters", "GLTFExporter.js"))
+    download("https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/TextureUtils.js",
+             os.path.join(UI_VENDOR, "three", "examples", "jsm", "utils", "TextureUtils.js"))
     download("https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.1.0/lib/three-vrm.module.min.js",
              os.path.join(UI_VENDOR, "three-vrm", "three-vrm.module.min.js"))
     css = []

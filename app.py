@@ -2007,6 +2007,37 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
+    # ---------- PS1 Anime Avatar Creator (skills/avatar_creator.py) ----------
+    def avatar_analyze(self, image_data, aesthetic="y2k_cyber_fairy"):
+        import avatar_creator
+        return avatar_creator.process_reference_image(image_data, aesthetic)
+
+    def avatar_presets(self):
+        import avatar_creator
+        return avatar_creator.list_presets()
+
+    def avatar_save_preset(self, name, config):
+        import avatar_creator
+        return avatar_creator.save_preset(name, config)
+
+    def avatar_delete_preset(self, name):
+        import avatar_creator
+        return avatar_creator.delete_preset(name)
+
+    def avatar_export(self, name, data, ext="png"):
+        import avatar_creator
+        return avatar_creator.save_export_file(name, data, ext)
+
+    def avatar_apply_as_character(self, name, glb_data_b64, prompt="", voice=""):
+        import avatar_creator
+        res = avatar_creator.apply_as_character(name, glb_data_b64, prompt, voice)
+        if res.get("ok"):
+            self._characters = _read_json(CHARACTERS_FILE, DEFAULT_CHARACTERS)
+            self._apply_character()
+            res["state"] = self.get_state()
+            self.emit({"type": "character"})
+        return res
+
     # ---------- Games hub (ui/games/): Retro Games from RetroGames.cc ----------
     def retro_games(self, platform="", page=1, query=""):
         import retrogames

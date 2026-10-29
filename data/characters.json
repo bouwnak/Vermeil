@@ -1,5 +1,5 @@
 {
-  "active": "pip",
+  "active": "avatar_62ac09",
   "characters": [
     {
       "id": "vermeil",
@@ -64,6 +64,23 @@
       "pitch": "+0Hz",
       "volume": 100,
       "voice_online": "kokoro:af_heart",
+      "language": "auto",
+      "translate": false,
+      "outfit": "",
+      "hair": ""
+    },
+    {
+      "id": "avatar_62ac09",
+      "name": "Y2K Cyber Fairy",
+      "prompt": "You are Y2K Cyber Fairy, a cool, sleepy-eyed anime companion with cat ears, an alt-grunge aesthetic, and relaxed demeanor. You speak in concise dialogue under 45 words.",
+      "voice": "piper:en_US-amy-medium",
+      "model": "avatar_62ac09.glb",
+      "memory_key": "avatar_62ac09",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "volume": 100,
+      "emotion": 100,
+      "flip": false,
       "language": "auto",
       "translate": false,
       "outfit": "",
