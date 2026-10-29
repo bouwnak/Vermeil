@@ -1,6 +1,6 @@
 """autosetup.py - gets the big optional AI parts ready by itself, in the background, when the app opens.
 
-  UniMate (Rig & animate):  installs Miniconda if it's missing, then the UniMate code, its own Python 3.10
+  UniMate (Rig & animate):  installs Miniconda if it's missing, then the UniMate code, its own Python 3.10, its libraries
                             environment and the checkpoint. Its libraries are installed by YOU with pip
                             (the Animate box shows the exact command) - pip never runs behind your back.
 
@@ -63,11 +63,15 @@ def _log(text):
         pass
 
 
-def _run(cmd, cwd=None):
-    """Run one command quietly; raises with the last lines of its output if it fails."""
+def _run(cmd, cwd=None, path_first=None):
+    """Run one command quietly; raises with the last lines of its output if it fails.
+    path_first: a folder put first on PATH (pip needs git there for UniMate's CLIP)."""
     _log("$ " + " ".join(str(c) for c in cmd))
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    if path_first:
+        env["PATH"] = path_first + os.pathsep + env.get("PATH", "")
     p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       env={**os.environ, "PYTHONIOENCODING": "utf-8"}, creationflags=NO_WINDOW)
+                       env=env, creationflags=NO_WINDOW)
     out = (p.stdout or "") + (p.stderr or "")
     _log(out)
     if p.returncode != 0:
@@ -156,8 +160,8 @@ def _portable_git(dest):
 
 
 def _unimate(step):
-    """Everything except pip: Miniconda, the code, its own Python 3.10 and the checkpoint. The libraries are
-    installed by you (the Animate box shows the exact pip command), so pip is never run behind your back."""
+    """Everything: Miniconda, the code, its own Python 3.10, the checkpoint and its libraries (about 2 GB, into
+    the "unimate" environment only - the app's own Python isn't touched)."""
     import animate
     if animate.status()["ready"]:
         return ""
@@ -195,5 +199,12 @@ def _unimate(step):
         snapshot_download("Linzhan/UniMate", local_dir=os.path.join(code, "outputs"),
                           allow_patterns=["unimate_uniml3d_f60_v3/*.json", "unimate_uniml3d_f60_v3/*.npy",
                                           "unimate_uniml3d_f60_v3/checkpoints/checkpoint_step_150000.pt"])
-        did = "UniMate is downloaded - install its libraries with the command in the Animate box."
+        did = "UniMate is downloaded."
+    if not animate.libraries_installed():
+        step(75, "Installing UniMate's libraries (about 2 GB, the long part)...")
+        py = animate.env_python()
+        _run([py, "-m", "pip", "install", "setuptools<81"])
+        _run([py, "-m", "pip", "install", "-r", os.path.join(code, "requirements.txt"), "--no-build-isolation"],
+             cwd=code, path_first=os.path.dirname(git))
+        did = "UniMate is ready - press Animate it on a rigged character."
     return did
