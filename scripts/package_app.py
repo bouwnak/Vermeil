@@ -180,7 +180,10 @@ def feature_files(p, a, tmp):
                   if not rel(os.path.join(r, f)).startswith("tools/ollama/models/")]
     if getattr(a, "with_wheels", False) is True and p.get("pip"):        # only the real --with-wheels switch
         files += feature_wheels(p, tmp)
-    return files
+    seen = {}                                                 # a model in both the pack and "files" goes in once
+    for f in files:
+        seen.setdefault(os.path.normcase(os.path.abspath(f)), f)
+    return list(seen.values())
 
 
 def _torch_index():
