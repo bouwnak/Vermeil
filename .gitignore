@@ -20,6 +20,7 @@ __pycache__/
 *.so
 .Python
 build/
+!ui/vendor/three/build/
 develop-eggs/
 dist/
 downloads/

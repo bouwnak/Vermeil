@@ -1,12 +1,22 @@
 {
  "recent": [
   {
+   "title": "Sonic The Hedgehog (USA, Europe)",
+   "url": "https://www.retrogames.cc/mastersystem-games/sonic-the-hedgehog-usa-europe.html",
+   "image": "https://i.987967.xyz/screenshot/77/d/30899_acc786ae8f4fe4ef9ff4a74d5c3a77fabaa240ca.png",
+   "platform": "SEGA Master System",
+   "likes": 140,
+   "id": "30899",
+   "played": 1793250911.3041658
+  },
+  {
    "title": "Pokemon Fire Red Extended (v2.0.4)",
    "url": "https://www.retrogames.cc/gameboyadvance-games/pokemon-fire-red-extended-v2-0-4.html",
    "image": "https://i.987967.xyz/screenshot/43/2023/07/13/42834_c085463d791f1e140c13797e56e64a3aa25a39d3.png",
    "platform": "Game Boy Advance",
    "id": "42834",
-   "played": 1792807959.3433425
+   "played": 1792807959.3433425,
+   "saved": false
   },
   {
    "title": "2 in 1 - Sonic Advance & Sonic Battle (E)(Rising Sun)",
@@ -15,7 +25,7 @@
    "platform": "",
    "id": "27979",
    "played": 1792775407.0502603,
-   "saved": true
+   "saved": false
   },
   {
    "title": "Dragon Ball Z - Supersonic Warriors (K)(ProjectG)",
@@ -25,7 +35,7 @@
    "likes": 218,
    "id": "28096",
    "played": 1792769165.7392192,
-   "saved": true
+   "saved": false
   },
   {
    "title": "Sonic Classic Heroes",
@@ -45,7 +55,7 @@
    "likes": 612,
    "id": "40238",
    "played": 1792744869.1139462,
-   "saved": true
+   "saved": false
   },
   {
    "title": "Pokemon - Liquid Crystal Version",
@@ -55,7 +65,7 @@
    "likes": 137,
    "id": "42136",
    "played": 1792744680.2192192,
-   "saved": true
+   "saved": false
   }
  ],
  "favorites": []

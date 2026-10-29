@@ -31,9 +31,9 @@
   "ui": {
     "view": {
       "pos": [
-        3.324,
-        1.03,
-        5.321
+        0.764,
+        0.959,
+        3.188
       ],
       "target": [
         -0.1,
@@ -258,9 +258,8 @@
       "missions",
       "mind",
       "code",
-      "gym",
-      "cooking",
-      "planner"
+      "planner",
+      "gym"
     ],
     "theme": {
       "accent": "#3e8eff",

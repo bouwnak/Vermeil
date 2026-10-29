@@ -6,6 +6,7 @@
   <title>Vermeil</title>
   <link rel="stylesheet" href="vendor/fonts/nunito.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="avatar.css">
   <script type="importmap">
   {
     "imports": {
@@ -52,6 +53,10 @@
       <button class="item" data-panel="generator" aria-controls="panel-generator">
         <span class="item-title">Generator</span>
         <span class="item-sub">Pictures, slides, videos</span>
+      </button>
+      <button class="item" data-panel="avatar" aria-controls="panel-avatar">
+        <span class="item-title">Avatar</span>
+        <span class="item-sub">PS1 anime avatar creator</span>
       </button>
       <button class="item" data-panel="baking" aria-controls="panel-baking">
         <span class="item-title">Baking</span>
@@ -171,6 +176,9 @@
     <section class="panel wide" id="panel-generator" hidden aria-label="Generator">
       <header><h2>Generator</h2><button class="close" aria-label="Close">×</button></header>
       <div id="genBody"></div>
+    </section>
+
+    <section class="panel wide" id="panel-avatar" hidden aria-label="Avatar Creator">
     </section>
 
     <section class="panel wide" id="panel-baking" hidden aria-label="Baking">
@@ -307,7 +315,10 @@
           <label>Outfit <select name="outfit" id="outfitSelect"></select></label>
           <label>Hair <select name="hair" id="hairSelect"></select></label>
         </div>
-        <button type="button" class="ghost" id="importModel">Import a model (.glb, .vrm)…</button>
+        <div class="row">
+          <button type="button" class="ghost" id="importModel">Import a model (.glb, .vrm)…</button>
+          <button type="button" class="ghost" id="openAvatarStudio" title="Open the PS1 Anime Avatar Creator to build custom 3D models">🎨 Avatar Studio ✦</button>
+        </div>
         <div class="row">
           <button type="submit" class="primary">Save character</button>
           <button type="button" class="ghost" id="useChar">Talk to this character</button>
