@@ -69,7 +69,7 @@ POSITION_EVERY = 0.15         # seconds between head-tracking updates sent to th
 
 
 class Presence:
-    def __init__(self, on_event=print, camera_index=0):
+    def __init__(self, on_event=print, camera_index=-1):
         self.on_event = on_event
         self.camera_index = camera_index
         self.running = False
@@ -173,16 +173,17 @@ class Presence:
         self._set_state(False, None, None, None)
 
     def _open_camera(self, cv2):
-        """Try the fast Windows camera driver first, then the others (some webcams only work with one)."""
-        backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY] if os.name == "nt" else [cv2.CAP_ANY]
-        for backend in backends:
-            cap = cv2.VideoCapture(self.camera_index, backend)
-            if cap.isOpened():
-                ok, _ = cap.read()
-                if ok:
-                    return cap
-            cap.release()
-        return None
+        """Chosen camera first (every Windows driver, with warm-up reads), then any other working camera."""
+        import devices
+        index = devices.pick_camera(self.camera_index)
+        cap = devices.open_camera(index)
+        if cap is None:
+            for cam in devices.list_cameras(fresh=True):
+                if cam["index"] != index:
+                    cap = devices.open_camera(cam["index"])
+                    if cap is not None:
+                        break
+        return cap
 
     def _loop(self):
         try:

@@ -423,6 +423,9 @@ paused_at = None         # time.time() when paused, else None
 restart_at = None        # seek/replay: the worker restarts the song at this many seconds
 song_length = 0
 NORMALIZE = True         # even out loud/quiet songs (ffmpeg dynaudnorm)
+# Short look-ahead on purpose: the default (31 x 0.5 s) holds back ~15 s of sound, and ffplay quits
+# before playing that held-back tail - that was why every song cut off ~15 s before the end.
+NORM_FILTER = "dynaudnorm=f=200:g=5"
 
 
 def _music_changed():
@@ -438,18 +441,77 @@ def _ffplay_path():
 
 
 now_info = {}            # the song playing now: id, title, channel, thumb (cover), duration, query
+SONG_CACHE = data_file("music_cache")     # full copies of recent songs, so a dropped stream resumes from disk
+CACHE_KEEP = 40
+
+
+def _cache_path(vid):
+    # ".a.m4a" = remuxed by ffmpeg, so jumping to a time (-ss) works; older plain ".m4a" copies were raw DASH files
+    return os.path.join(SONG_CACHE, f"{vid}.a.m4a") if vid else ""
+
+
+def _ffmpeg_dir():
+    return os.path.dirname(BUNDLED_FFPLAY) if os.path.exists(BUNDLED_FFPLAY) else None
+
+
+def _download_song(info, opts):
+    """Save the whole song to data/music_cache (takes 1-3 s). Playing from disk can't be cut off by YouTube
+    closing the stream early - that was why songs stopped 10-20 s before the end."""
+    vid = info.get("id")
+    path = _cache_path(vid)
+    if not vid:
+        return False
+    if os.path.exists(path):
+        return True
+    try:
+        import yt_dlp
+        os.makedirs(SONG_CACHE, exist_ok=True)
+        o = {**opts, "outtmpl": os.path.join(SONG_CACHE, "%(id)s.part.%(ext)s"), "default_search": None,
+             "noprogress": True, "quiet": True, "no_warnings": True}
+        if _ffmpeg_dir():
+            o["ffmpeg_location"] = _ffmpeg_dir()            # lets yt-dlp fix the DASH m4a so seeking works
+        with yt_dlp.YoutubeDL(o) as y:
+            got = y.extract_info(f"https://www.youtube.com/watch?v={vid}", download=True)
+            done = y.prepare_filename(got)
+        if os.path.exists(done):
+            os.replace(done, path)
+        old = sorted((os.path.join(SONG_CACHE, f) for f in os.listdir(SONG_CACHE)), key=os.path.getmtime)
+        for f in old[:-CACHE_KEEP] + [f for f in old if f.endswith(".m4a") and not f.endswith(".a.m4a")]:
+            try: os.remove(f)
+            except OSError: pass
+        return os.path.exists(path)
+    except Exception as e:
+        print(f"[music cache] {e}")
+        return False
+
+
+def _cache_song(info, opts):
+    """download in the background (used when the quick download didn't finish in time)"""
+    threading.Thread(target=_download_song, args=(info, opts), daemon=True).start()
+
+
+def _headers_args(info):
+    """YouTube throttles or drops streams that don't look like the browser yt-dlp pretended to be"""
+    h = info.get("http_headers") or {}
+    lines = "".join(f"{k}: {v}\r\n" for k, v in h.items() if k.lower() != "user-agent")
+    out = []
+    if h.get("User-Agent"):
+        out += ["-user_agent", h["User-Agent"]]
+    if lines:
+        out += ["-headers", lines]
+    return out
 
 
 def _play_worker():
     """Background worker that plays songs from the queue one by one."""
-    global current_process, is_playing, now_playing, now_info
+    global current_process, is_playing, now_playing, now_info, user_stopped
     import yt_dlp
     while True:
         song = music_queue.get()
         if song is None:
             break
         try:
-            opts = {"format": "bestaudio/best", "noplaylist": True, "quiet": True,
+            opts = {"format": "bestaudio[ext=m4a]/bestaudio/best", "noplaylist": True, "quiet": True,
                     "default_search": "ytsearch1"}
             if os.path.exists(COOKIES_FILE):
                 opts["cookiefile"] = COOKIES_FILE
@@ -457,12 +519,18 @@ def _play_worker():
                 info = ydl.extract_info(song, download=False)
                 if "entries" in info:
                     info = info["entries"][0]
-            global current_url, current_query, play_started, paused_at, restart_at, song_length, now_info
+            global current_url, current_query, play_started, paused_at, restart_at, song_length
             is_playing = True
             now_playing = info.get("title", song)
             now_info = {"id": info.get("id"), "title": now_playing, "channel": info.get("channel") or info.get("uploader") or "",
                         "thumb": info.get("thumbnail") or "", "duration": int(info.get("duration") or 0), "query": song}
             current_url, current_query, song_length = info["url"], song, int(info.get("duration") or 0)
+            local = _cache_path(info.get("id"))
+            got = threading.Thread(target=_download_song, args=(info, opts), daemon=True)
+            got.start()
+            got.join(timeout=20)                         # usually 1-3 s; a slow connection streams instead
+            if local and os.path.exists(local):
+                current_url = local                      # play the saved copy: nothing can cut it off
             print(f"▶ Now playing: {now_playing}")
             _save_queue()
             try:
@@ -472,20 +540,52 @@ def _play_worker():
                 pass
             _music_changed()
             pos = 0
+            retries = 0
+            last_resume = None
+            user_stopped = False
             while True:
-                # -reconnect options stop YouTube streams from cutting off early
-                cmd = [_ffplay_path(), "-nodisp", "-autoexit", "-loglevel", "quiet",
-                       "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5"]
+                cmd = [_ffplay_path(), "-nodisp", "-autoexit", "-loglevel", "quiet"]
+                if current_url.startswith("http"):
+                    # -reconnect options + the browser headers stop YouTube streams from cutting off early
+                    cmd += ["-reconnect", "1", "-reconnect_streamed", "1",
+                            "-reconnect_on_network_error", "1", "-reconnect_delay_max", "3"] + _headers_args(info)
                 if pos:
                     cmd += ["-ss", str(int(pos))]
                 if NORMALIZE:
-                    cmd += ["-af", "dynaudnorm"]
+                    cmd += ["-af", NORM_FILTER]
                 proc = subprocess.Popen(cmd + [current_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 current_process, play_started, paused_at = proc, _time.time() - pos, None
+                _remember_player(proc)
                 proc.wait()
-                if restart_at is None:
-                    break
-                pos, restart_at = max(0, restart_at), None
+                if restart_at is not None:
+                    pos, restart_at = max(0, restart_at), None
+                    continue
+                # If cut off early due to network drop or URL timeout, and wasn't stopped by the user, resume!
+                elapsed = _time.time() - play_started
+                if not user_stopped and song_length > 20 and elapsed < (song_length - 3) and retries < 6:
+                    retries += 1
+                    pos = max(0, int(elapsed) - 1)
+                    if last_resume is not None and pos <= last_resume + 2:
+                        break                            # resuming didn't get any further - stop instead of looping
+                    last_resume = pos
+                    local = _cache_path(info.get("id"))
+                    for _ in range(20):                  # the background copy is usually done; give it a few seconds if not
+                        if os.path.exists(local):
+                            break
+                        _time.sleep(0.5)
+                    if os.path.exists(local):
+                        current_url = local
+                    else:
+                        try:
+                            with yt_dlp.YoutubeDL(opts) as ydl:
+                                fresh = ydl.extract_info(song, download=False)
+                                if "entries" in fresh: fresh = fresh["entries"][0]
+                                if fresh.get("url"): current_url, info = fresh["url"], fresh
+                        except Exception:
+                            pass
+                    print(f"[music] stream ended early at {pos}s of {song_length}s - resuming")
+                    continue
+                break
         except Exception as e:
             print(f"Music worker error: {e}")
         finally:
@@ -496,6 +596,65 @@ def _play_worker():
             current_url = ""
             _save_queue()
             _music_changed()
+
+
+PLAYER_PID_FILE = data_file("music_player.pid")
+
+
+def _remember_player(proc):
+    """Note the ffplay process id, so a song left playing after Vermeil closed can be stopped next time."""
+    try:
+        with open(PLAYER_PID_FILE, "w") as f:
+            f.write(str(proc.pid))
+    except OSError:
+        pass
+
+
+def stop_leftover_player():
+    """ffplay is its own program: if Vermeil closed (or crashed) mid-song, the song kept playing while the new
+    Vermeil thought nothing was playing (Music showed 0:00 and the play button). Stop that leftover song."""
+    try:
+        with open(PLAYER_PID_FILE) as f:
+            pid = int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        return False
+    try:
+        os.remove(PLAYER_PID_FILE)
+    except OSError:
+        pass
+    if not pid or (current_process and current_process.pid == pid):
+        return False
+    try:
+        import psutil
+        p = psutil.Process(pid)
+        if "ffplay" not in (p.name() or "").lower():
+            return False                         # that number belongs to another program now
+        p.resume() if p.status() == psutil.STATUS_STOPPED else None
+        p.kill()
+        return True
+    except Exception:
+        return False
+
+
+def _stop_on_exit():
+    """Closing Vermeil stops the music too."""
+    p = current_process
+    if p and p.poll() is None:
+        try:
+            if paused_at:
+                import psutil
+                psutil.Process(p.pid).resume()
+            p.kill()
+        except Exception:
+            pass
+    try:
+        os.remove(PLAYER_PID_FILE)
+    except OSError:
+        pass
+
+
+import atexit
+atexit.register(_stop_on_exit)
 
 
 def _ensure_player():
@@ -578,8 +737,9 @@ def _put_first(song):
 
 def _stop_current_song():
     """End the song that's playing now, so the player moves on to the next one in the queue."""
-    global restart_at
+    global restart_at, user_stopped
     restart_at = None
+    user_stopped = True
     p = current_process
     if p and p.poll() is None:
         if paused_at:                            # a paused (suspended) player must be woken before it can be closed
@@ -649,7 +809,8 @@ def music_control(action, query="", when="now"):
             _stop_current_song()
             is_playing = False
             return "Stopped music and cleared the queue."
-        if action == "skip":
+        if action in ("skip", "next"):
+            user_stopped = True
             if _stop_current_song():
                 return "Skipped to the next song." if not music_queue.empty() else "Skipped — the queue is empty now."
             return "No song to skip."
@@ -789,9 +950,10 @@ def view_calendar():
 
 # ------- Alerts: reminders and events that are due -------- #
 def due_alerts(now=None):
-    """Reminders/events whose time has come and that haven't alerted yet. Marks them so each alerts once."""
+    """Reminders/events/tasks whose time has come and that haven't alerted yet. Marks them so each alerts once."""
     now = now or _now()
     stamp = now.strftime("%Y-%m-%d %H:%M")
+    today_str = now.strftime("%Y-%m-%d")
     alerts = []
     for r in user_data["reminders"]:
         dt = r.get("date_time")
@@ -810,6 +972,12 @@ def due_alerts(now=None):
             if start - datetime.timedelta(minutes=10) <= now <= start + datetime.timedelta(minutes=30):
                 e["alerted"] = True
                 alerts.append(f"Coming up at {e['time']}: {e['title']}")
+    for t in user_data["tasks"]:
+        if not t.get("done") and not t.get("alerted") and t.get("time"):
+            day_str = t.get("deadline") or today_str
+            if _valid_date(day_str) and _valid_time(t["time"]) and f"{day_str} {t['time']}" <= stamp:
+                t["alerted"] = True
+                alerts.append(f"Task due: {t['task']}")
     if alerts:
         save_data(user_data)
     return alerts

@@ -7,7 +7,7 @@ import * as A from "./assets.js";
 import { Animator, styleFor } from "./anim.js";
 
 const HEIGHT = { humanoid: 1.75, quadruped: 1.25, flyer: 1.3, blob: 1.0, serpent: 0.9 };
-const PAINT_FACE = /^rpg_characters_(warrior|ranger)$/;      // these models have no eyes or mouth in their texture
+const PAINT_FACE = /^$/;      // no model gets painted eyes any more (the warrior and ranger look better without them)
 
 // what each class carries when nothing else is equipped (and what non-human species show in the creation preview)
 export const CLASS_KIT = {

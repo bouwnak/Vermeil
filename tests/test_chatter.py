@@ -60,5 +60,33 @@ class WhenToUse(unittest.TestCase):
         self.assertEqual(normal.call_args[0][0], "Hi")                            # the tag isn't read out
 
 
+class FirstSoundSoon(unittest.TestCase):
+    """a short paragraph: she starts after one short piece (~2.5 s with Chatterbox), not after the whole reply"""
+    REPLY = ("Oh, I love that idea! Let's start with something simple, like a short walk around the block, and then we "
+             "can grab a warm drink together. Honestly, little breaks like that make the whole day feel lighter.")
+
+    def pieces(self, whole):
+        got = []
+        with mock.patch.object(pm, "WHOLE_REPLY", whole), mock.patch.object(pm.SpeechStream, "_push",
+                                                                            lambda s, t: (got.append(t.strip()), setattr(s, "pushed", s.pushed + 1))):
+            ss = pm.SpeechStream(voice="x", rvc={})
+            for w in self.REPLY.split(" "):
+                ss.feed(w + " ")
+            ss.finish()
+        return got
+
+    def test_short_first_pieces(self):
+        for whole in (True, False):
+            got = self.pieces(whole)
+            self.assertEqual(got[0], "Oh, I love that idea!")
+            self.assertEqual(got[1], "Let's start with something simple,")             # early pieces cut at commas
+            self.assertEqual(" ".join(got), self.REPLY)
+
+    def test_runaway_cap_and_slow_guard(self):
+        self.assertLess(chatter._max_tokens("Oh, I love that idea!"), 120)
+        with mock.patch.object(chatter, "_slow_until", [1e12]), mock.patch.object(pm, "VOICE_CHATTER", True):
+            self.assertFalse(pm._use_chatter("Hello there"))                     # too slow a moment ago: normal voice
+
+
 if __name__ == "__main__":
     unittest.main()

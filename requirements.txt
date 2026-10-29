@@ -1,41 +1,57 @@
-# Core (needed to start Vermeil)
+# Vermeil - everything the app and its features need (Python 3.11 - 3.13, Windows 10/11)
+#
+#   python -m pip install -r requirements.txt
+#
+# The heavy AI voice parts are in requirements-ai.txt, because they need PyTorch from its own
+# download site (about 3 GB): torch, torchaudio, scipy, librosa, faiss-cpu (Voice clones / RVC)
+# and chatterbox-tts (Emotional voice). Every package a plugin installs with pip is in one of the two files.
+# The app downloads the UniMate code/checkpoint BY ITSELF in the background
+# (skills/autosetup.py, log in data/auto_setup.log). UniMate's own libraries go into its separate conda env -
+# the two pip commands the Animate box shows (already done on my PC). Nothing new to install here.
+# The animal heroes (blender/heroes: models, rigs, face bones and Idle/Walk/Attack/Dodge animations) are made with the Blender program, nothing from pip.
+# The Unity game (C:\Users\jpant\My project) needs nothing from pip either: its voice server
+# (game_tools/unity_voice_server.py) only uses the standard library plus the app's own voice code.
+# Its new monsters (Tools/blender_monsters.py) and the --drive packager (scripts/package_app.py) need nothing new from pip.
+# Installing features from the Google Drive folder link only uses requests (already below).
+
+# --- Core: needed to start Vermeil ---
 requests
-SpeechRecognition
-PyAudio
-sounddevice
-soundfile
+pywebview>=5.0           # the window app (python app.py)
+numpy
 rapidfuzz
 vaderSentiment
 keyboard
+psutil                   # also stops a song left playing after Vermeil closed
+pillow
+winotify
+pycaw                    # set volume
+comtypes                 # set volume
 
-# Main AI: Groq (online). No extra package needed - it uses requests + GROQ_API_KEY in .env
+# --- Voice: hearing you and talking back ---
+sounddevice
+soundfile
+SpeechRecognition
+PyAudio
+faster-whisper           # speech recognition (Whisper), offline
+piper-tts                # offline voices
+kokoro-onnx              # natural offline voices (Kokoro)
+onnxruntime              # CPU build. Faster voices: swap it yourself for "onnxruntime-gpu[cuda,cudnn]" (NVIDIA) or onnxruntime-directml (any card) - see README
+edge-tts                 # online voices for Japanese, Korean, Filipino...
+huggingface_hub          # downloads voice models the first time you use them
 
-# Backup AI (runs on your PC - also install the Ollama app: https://ollama.com, then run setup_local.py)
-faster-whisper   # speech recognition (Whisper), offline
-piper-tts        # voices, offline
+# --- Camera: seeing and recognising you ---
+opencv-python>=4.8
 
-# The window app (python app.py)
-pywebview
-numpy
-opencv-python    # camera: seeing and recognising you (needs version 4.8 or newer)
-
-# Study mode (reading your lecture files)
+# --- Study, Gym, Generator ---
 pypdf
 python-docx
 python-pptx
-openpyxl                 # gym mode: import your workout Excel file
+openpyxl                 # import your workout Excel file
+sympy                    # solve maths
+moviepy                  # Generator: turn pictures + voice into a video
 
-# Computer control (apps, screen, system status, notifications)
-psutil
-pillow
-winotify
-
-# Features (only loaded when you use them)
-playwright       # her own browser window for filling forms (uses your Edge/Chrome - no extra download)
-edge-tts         # online voices for languages Piper doesn't have (Japanese, Korean, Filipino...)
-google-api-python-client   # optional: ADD events to Google Calendar (see Settings for the 5-minute setup)
+# --- Music, browser, calendar ---
+yt-dlp                   # play music (also needs ffplay: comes with the Music plugin pack)
+playwright               # her own browser window for filling forms (uses your Edge/Chrome)
+google-api-python-client # optional: add events to Google Calendar
 google-auth-oauthlib
-sympy            # solve math
-yt-dlp           # play music
-pycaw            # set volume
-comtypes         # set volume

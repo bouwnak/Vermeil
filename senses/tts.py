@@ -161,8 +161,19 @@ def _voice(key):
     with _load_lock:
         if key not in _loaded:
             from piper import PiperVoice
+            import gpu
             path = download_voice(key)
-            _loaded[key] = PiperVoice.load(path)
+            try:                                    # on the graphics card when there is one: ~2x faster
+                if gpu.kind() == "directml":        # AMD / Intel / any card (Piper itself only knows CUDA)
+                    from piper.config import PiperConfig
+                    with open(path + ".json", encoding="utf-8") as f:
+                        config = PiperConfig.from_dict(json.load(f))
+                    _loaded[key] = PiperVoice(session=gpu.session(path), config=config)
+                else:
+                    _loaded[key] = PiperVoice.load(path, use_cuda=gpu.cuda())
+            except Exception as e:
+                print(f"[TTS] graphics card didn't work for Piper ({str(e)[:80]}) - using the CPU.")
+                _loaded[key] = PiperVoice.load(path)
         return _loaded[key]
 
 

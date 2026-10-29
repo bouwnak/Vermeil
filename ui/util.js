@@ -80,12 +80,98 @@ export function md(text) {
   return out.join("");
 }
 
-/** Put Markdown into an element; links open in the real browser. */
+function sanitizeLatex(str) {
+  return String(str || "")
+    .replace(/\\mathbfr'/g, "\\mathbf{r}'")
+    .replace(/\\mathbfr(?![a-zA-Z])/g, "\\mathbf{r}")
+    .replace(/\\mathbf\s+([a-zA-Z])(?![a-zA-Z])/g, "\\mathbf{$1}")
+    .replace(/\\vec\s+([a-zA-Z])(?![a-zA-Z])/g, "\\vec{$1}")
+    .replace(/\\hat\s+([a-zA-Z])(?![a-zA-Z])/g, "\\hat{$1}")
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+/** Put Markdown into an element; links open in the real browser; LaTeX math is rendered via KaTeX. */
 export function setMd(node, text, api) {
-  node.innerHTML = md(text);
+  if (!node) return;
+  if (!text) { node.innerHTML = ""; return; }
+  let raw = String(text).replace(/\r/g, "");
+
+  // Extract and protect math equations before Markdown escaping
+  const mathTokens = [];
+  const tokenFor = (math, display) => {
+    const idx = mathTokens.length;
+    mathTokens.push({ math: sanitizeLatex(math), display });
+    return `%%%KATEX_BLOCK_${idx}%%%`;
+  };
+
+  // 1. Display math $$...$$ and \[...\]
+  raw = raw.replace(/\$\$([\s\S]+?)\$\$/g, (_, m) => tokenFor(m, true));
+  raw = raw.replace(/\\\[([\s\S]+?)\\\]/g, (_, m) => tokenFor(m, true));
+
+  // 2. Inline math $...$ and \(...\)
+  raw = raw.replace(/\$([^\$\n]+?)\$/g, (_, m) => tokenFor(m, false));
+  raw = raw.replace(/\\\(([^\n]+?)\\\)/g, (_, m) => tokenFor(m, false));
+
+  // 3. Standalone bare equations (lines with \mathbf, \frac, \sqrt without delimiters)
+  raw = raw.replace(/(?:^|\n)\s*([^\n]*?\\(?:mathbf|frac|sqrt|vec|int|sum|partial|nabla|lim)\b[^\n]*)(?=\n|$)/g, (full, line) => {
+    if (line.includes("%%%KATEX_BLOCK_")) return full;
+    return "\n" + tokenFor(line.trim(), true) + "\n";
+  });
+
+  let html = md(raw);
+
+  // Restore and render math tokens
+  for (let i = 0; i < mathTokens.length; i++) {
+    const { math, display } = mathTokens[i];
+    let rendered = "";
+    if (typeof window !== "undefined" && window.katex) {
+      try {
+        rendered = window.katex.renderToString(math.trim(), {
+          displayMode: display,
+          throwOnError: false,
+        });
+        if (display) rendered = `<div class="katex-display-wrap">${rendered}</div>`;
+        else rendered = `<span class="katex-inline-wrap">${rendered}</span>`;
+      } catch {
+        rendered = display ? `<pre class="katex-fallback">${esc(math)}</pre>` : `<code>${esc(math)}</code>`;
+      }
+    } else {
+      rendered = display ? `<pre class="katex-fallback">${esc(math)}</pre>` : `<code>${esc(math)}</code>`;
+    }
+    html = html.split(`%%%KATEX_BLOCK_${i}%%%`).join(rendered);
+  }
+
+  node.innerHTML = html;
   for (const a of node.querySelectorAll("a[data-url]")) {
     a.addEventListener("click", (e) => { e.preventDefault(); api?.open_url(a.dataset.url); });
   }
+}
+
+export function renderMath(node) {
+  // Backwards compatibility hook
+  if (!node || typeof window === "undefined" || !window.katex) return;
+}
+
+export function loadingCard(message = "Working…") {
+  const c = document.createElement("div");
+  c.className = "loading-card";
+  c.innerHTML = `<div class="loading-spin"></div><p>${message}</p>`;
+  return c;
+}
+
+export function setupDropZone(el, onDropFiles) {
+  if (!el) return;
+  el.addEventListener("dragover", (e) => { e.preventDefault(); e.stopPropagation(); el.classList.add("drop-active"); });
+  // Only clear when the pointer really leaves the box, not when it moves over a child (stops the flicker).
+  el.addEventListener("dragleave", (e) => { e.preventDefault(); e.stopPropagation(); if (!el.contains(e.relatedTarget)) el.classList.remove("drop-active"); });
+  el.addEventListener("drop", (e) => {
+    e.preventDefault(); e.stopPropagation(); el.classList.remove("drop-active");
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (files.length && onDropFiles) onDropFiles(files, e);
+  });
 }
 
 export function busy(button, on, label = "Working…") {

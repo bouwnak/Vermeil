@@ -43,6 +43,14 @@ class GameAPI:
         from . import voices as _voices
         _voices.VERMEIL_ONLINE = vermeil_voice_online
 
+    def _sync_clone(self):
+        """the companion's voice clone follows the character chosen in the assistant"""
+        try:
+            prof = self.companion() if callable(self.companion) else None
+            voices.COMPANION_CLONE = (prof or {}).get("rvc") or None
+        except Exception:
+            voices.COMPANION_CLONE = None
+
     def _g(self):
         if not self.game: raise GameError("No adventure is running - start or load one.")
         return self.game
@@ -249,6 +257,8 @@ class GameAPI:
     def speak(self, speaker, text):
         g = self._g()
         if not g.camp["settings"].get("voice", True): return {"error": "voice is off"}
+        if speaker == "vermeil":
+            self._sync_clone()
         return voices.speak(g.camp, speaker, text)
 
     @_safe

@@ -5,9 +5,11 @@
     "2026-10-22",
     "2026-10-23",
     "2026-10-24",
+    "2026-10-27",
+    "2026-10-28",
     "2026-10-29"
   ],
-  "messages": 393,
+  "messages": 667,
   "milestones": [
     {
       "date": "2026-10-21",
@@ -17,6 +19,16 @@
     {
       "date": "2026-10-23",
       "text": "100 messages exchanged",
+      "kind": "messages"
+    },
+    {
+      "date": "2026-10-29",
+      "text": "7 days of talking together",
+      "kind": "days"
+    },
+    {
+      "date": "2026-10-29",
+      "text": "500 messages exchanged",
       "kind": "messages"
     }
   ],
@@ -29,6 +41,26 @@
     {
       "date": "2026-10-24",
       "text": "You shared that you finally finished your thesis defense with flying colors!",
+      "auto": true
+    },
+    {
+      "date": "2026-10-25",
+      "text": "You told me you finished your thesis defense with flying colors!",
+      "auto": true
+    },
+    {
+      "date": "2026-10-25",
+      "text": "You shared that you finally booked your dream vacation trip!",
+      "auto": true
+    },
+    {
+      "date": "2026-10-27",
+      "text": "You told me you finally finished your thesis defense with flying colors!",
+      "auto": true
+    },
+    {
+      "date": "2026-10-27",
+      "text": "You shared that you booked your dream vacation trip!",
       "auto": true
     }
   ],

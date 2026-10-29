@@ -31,17 +31,17 @@
   "ui": {
     "view": {
       "pos": [
-        0.764,
-        0.959,
-        3.188
+        -5.346,
+        0.786,
+        4.039
       ],
       "target": [
-        -0.1,
-        1.15,
-        -0.6
+        -0.097,
+        1.13,
+        -0.572
       ]
     },
-    "study_tab": "Language",
+    "study_tab": "Research",
     "collapsed": false,
     "code_workspace": "C:\\Users\\jpant\\OneDrive\\Desktop\\test",
     "outfit": {
@@ -51,7 +51,7 @@
       "color": "#3e8eff"
     },
     "sfx": true,
-    "sfx_volume": 0.5,
+    "sfx_volume": 0.6,
     "fx": true,
     "den_v1": true,
     "room_before_den": {
@@ -251,15 +251,8 @@
     "hidden_panels": [
       "camera",
       "voice",
-      "baking",
-      "focus",
-      "music",
       "spotify",
-      "missions",
-      "mind",
-      "code",
-      "planner",
-      "gym"
+      "code"
     ],
     "theme": {
       "accent": "#3e8eff",
@@ -268,7 +261,10 @@
     },
     "own_music_v1": true,
     "bgm_theme": "cello",
-    "sfx_style": "clickhigh",
-    "bgm_volume": 1
+    "sfx_style": "crystal",
+    "bgm_volume": 1,
+    "bgm": true,
+    "sfx_pitch": "low",
+    "kitchen_tab": "baking"
   }
 }

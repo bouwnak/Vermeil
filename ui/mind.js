@@ -1,5 +1,5 @@
 // mind.js - Journal (decisions, ideas, goals, stories), Think tools, and Search everything.
-import { $, el, toast, setMd, busy } from "./util.js";
+import { $, el, toast, setMd, busy, loadingCard } from "./util.js";
 
 const KINDS = {
   decision: { label: "Decisions", one: "Decision", hint: "What did you decide, and why?", title: "e.g. Took the solar dryer thesis topic" },
@@ -126,7 +126,7 @@ export function initMind(api) {
   }
 
   async function runThink(mode, question, btn) {
-    output.replaceChildren(el("p", { class: "note" }, "Thinking… (this uses the bigger model and can take ~20 seconds)"));
+    output.replaceChildren(loadingCard("Vermeil is thinking and exploring ideas… (~15-20 s)"));
     if (btn) busy(btn, true, "Thinking…");
     try {
       const r = await api.think(mode, question);
@@ -140,8 +140,6 @@ export function initMind(api) {
         if (g.error) return toast(g.error);
         ev.target.disabled = true; toast("Saved to Goals — tick the steps off as you go.");
       } }, `Save ${r.steps.length} steps as a goal`));
-      if (mode === "grow") output.append(el("button", { class: "ghost small", onclick: async () => {
-        await api.journal_add({ kind: "idea", title: question.split(".")[0].slice(0, 80), text: r.answer }); toast("Saved to Ideas."); } }, "Save this to Ideas"));
     } finally { if (btn) busy(btn, false); }
   }
 

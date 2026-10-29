@@ -342,6 +342,28 @@ export const PARTS = {
       `<text class="mode" x="1.5" y="-3.6" text-anchor="middle" class="tiny" font-size="1">V</text>` + legs([[0, 0, 0, -0.8]], "#111") + legs([[3, 0, 3, -0.8]], "#d22"),
     update2d(g, p, st) { g.querySelector(".reading").textContent = st.reading ?? "0.00"; g.querySelector(".mode").textContent = p.props.mode === "A" ? "A (mA)" : "V DC"; },
   },
+  seg7: {
+    name: "7-segment display (common cathode)", cat: "Output", props: { value: 0 },
+    pins: () => [pin("GND", 0, 0, "COM/GND"), pin("A", 1, 0, "Seg A"), pin("B", 2, 0, "Seg B"), pin("C", 3, 0, "Seg C"), pin("D", 0, 5, "Seg D"), pin("E", 1, 5, "Seg E"), pin("F", 2, 5, "Seg F"), pin("G", 3, 5, "Seg G")],
+    model: () => ["A", "B", "C", "D", "E", "F", "G"].map((s) => ({ t: "D", p: s, n: "GND", vf: 1.9, id: `seg_${s}` })),
+    draw2d: () => `<rect x="-0.8" y="0.5" width="4.6" height="4.0" rx="0.3" fill="#1b1c20" stroke="#333" stroke-width="0.1"/>` +
+      `<text class="seg-val" x="1.5" y="3.3" text-anchor="middle" font-size="2.6" font-weight="900" font-family="monospace" fill="#ff3344">8</text>`,
+    update2d(g, p, st) { const val = p.props.value ?? 8; g.querySelector(".seg-val").textContent = String(val); },
+  },
+  slide_switch: {
+    name: "Slide switch (SPDT)", cat: "Input", props: { on: false },
+    pins: () => [pin("1", 0, 0, "L"), pin("COM", 1, 0, "COM"), pin("2", 2, 0, "R")],
+    model: (p) => p.props.on ? [{ t: "R", a: "COM", b: "2", r: 0.05 }] : [{ t: "R", a: "COM", b: "1", r: 0.05 }],
+    draw2d: (p) => `<rect x="-0.4" y="-1.6" width="2.8" height="1.4" rx="0.2" fill="#555" stroke="#333" stroke-width="0.08"/>` +
+      `<rect x="${p.props.on ? 1.4 : 0}" y="-1.8" width="0.8" height="1.8" rx="0.15" fill="#ddd"/>` + legs([[0, 0, 0, -0.6], [1, 0, 1, -0.6], [2, 0, 2, -0.6]]),
+  },
+  relay: {
+    name: "5V Relay module", cat: "Output", props: { active: false },
+    pins: () => [pin("VCC", 0, 0, "VCC"), pin("GND", 1, 0, "GND"), pin("IN", 2, 0, "IN"), pin("COM", 0, 4, "COM"), pin("NO", 1, 4, "NO"), pin("NC", 2, 4, "NC")],
+    model: (p) => p.props.active ? [{ t: "R", a: "COM", b: "NO", r: 0.05 }, { t: "R", a: "VCC", b: "GND", r: 70 }] : [{ t: "R", a: "COM", b: "NC", r: 0.05 }, { t: "R", a: "VCC", b: "GND", r: 70 }],
+    draw2d: () => `<rect x="-0.6" y="0.6" width="3.2" height="2.8" rx="0.2" fill="#0044aa" stroke="#002266" stroke-width="0.1"/>` +
+      `<text x="1.0" y="2.2" font-size="0.9" fill="#fff" text-anchor="middle" font-weight="bold">RELAY</text>`,
+  },
 };
 
 export const CATEGORIES = ["Breadboards", "Microcontrollers", "Basic", "Input", "Output", "Power", "Tools"];

@@ -117,6 +117,21 @@ def _missing():
     return ""
 
 
+def _session():
+    """the ONNX session: on the graphics card when onnxruntime-gpu is installed (much faster), else every CPU core,
+    with all of onnxruntime's speed-ups on"""
+    import onnxruntime as ort
+    import gpu
+    so = ort.SessionOptions()
+    so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+    if os.environ.get("KOKORO_DEVICE", "").lower() == "cpu":
+        sess = ort.InferenceSession(model_path(), so, providers=["CPUExecutionProvider"])
+    else:
+        sess = gpu.session(model_path(), so)      # the graphics card when there is one (see gpu.py)
+    _state["device"] = "GPU" if gpu.on_gpu(sess) else "CPU"
+    return sess
+
+
 def _load():
     """Load the model (a few seconds). Safe to call from several threads."""
     with _load_lock:
@@ -127,10 +142,10 @@ def _load():
         t0 = time.time()
         try:
             from kokoro_onnx import Kokoro
-            _state["engine"] = Kokoro(model_path(), os.path.join(folder(), VOICES_FILE))
+            _state["engine"] = Kokoro.from_session(_session(), os.path.join(folder(), VOICES_FILE))
             _state["engine"].create("Hi.", voice="af_heart", speed=1.0, lang="en-us")    # warm-up: the 1st sentence is slow
             _state["ready"] = True
-            print(f"[Kokoro] ready ({time.time() - t0:.1f}s, inside the app).")
+            print(f"[Kokoro] ready ({time.time() - t0:.1f}s, inside the app, on the {_state.get('device', 'CPU')}).")
         except Exception as e:
             _state["engine"] = None
             _state["error"] = f"Couldn't load Kokoro: {e}"

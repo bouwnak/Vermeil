@@ -9,10 +9,12 @@ gives the LANGUAGE, so English, Tagalog, Japanese and Korean all work - then RVC
     vec-768-layer-12.onnx   (ContentVec - "what is being said")
     rmvpe.pt                (RMVPE - "what pitch is it sung at")
 - The .index file (optional) makes the voice closer to the original. It needs:  python -m pip install faiss-cpu
-- Runs on the CPU with torch + onnxruntime (no fairseq, no librosa).
+- Runs with torch + onnxruntime (no fairseq, no librosa). The two torch networks (the voice and RMVPE) run on the
+  graphics card when torch can use one (CUDA) - several times faster; RVC_DEVICE=cpu in .env keeps them on the CPU.
 
 Test from the project folder:  python senses\\rvc.py "Rick Sanchez" "Hello there!"
 """
+import contextlib
 import json
 import os
 import re
@@ -44,7 +46,32 @@ PAD = SR16                        # 1 s of context added on both sides while con
 MARGIN = 10                       # frames (0.1 s) of that context the voice network also makes, so the edges are clean
 
 _lock = threading.Lock()          # one conversion at a time (each one already uses every CPU core)
-_cache = {"models": {}, "vec": {}, "rmvpe": None, "index": {}}
+_cache = {"models": {}, "vec": {}, "rmvpe": None, "index": {}, "device": None}
+
+
+def _device():
+    """"cuda" when torch can use the graphics card (and RVC_DEVICE isn't "cpu"), else "cpu"."""
+    if _cache["device"] is None:
+        dev = "cpu"
+        if os.environ.get("RVC_DEVICE", "").lower() != "cpu":
+            try:
+                import torch
+                dev = "cuda" if torch.cuda.is_available() else "cpu"
+            except Exception:
+                pass
+        _cache["device"] = dev
+    return _cache["device"]
+
+
+def _use_cpu():
+    """the graphics card failed (out of memory...): move everything back to the CPU for good"""
+    _cache["device"] = "cpu"
+    for name, (net, info) in list(_cache["models"].items()):
+        _cache["models"][name] = (net.to("cpu"), info)
+    if _cache["rmvpe"] is not None:
+        _cache["rmvpe"] = _cache["rmvpe"].to("cpu")
+    _cache["vec"].clear()                                  # ContentVec loads again, on the CPU
+    _cache["vec_cpu"] = True
 
 
 # ---------------- the voice library ----------------
@@ -88,10 +115,28 @@ def _find_index(pth):
     return os.path.join(folder, found[0]) if found else None
 
 
-def import_voice(pth, index=None, name=None):
-    """Copy an RVC voice into data\\rvc_voices. Returns its info dict. The original files are not touched."""
+def _copy(src, dst, progress, start, end, text):
+    """shutil.copy2, but tells progress(pct, text) how far it is (index files can be hundreds of MB)"""
+    total = max(1, os.path.getsize(src))
+    done = 0
+    with open(src, "rb") as a, open(dst, "wb") as b:
+        while True:
+            chunk = a.read(4 << 20)
+            if not chunk:
+                break
+            b.write(chunk)
+            done += len(chunk)
+            progress(start + (end - start) * done / total, f"{text} ({done >> 20} / {total >> 20} MB)")
+    shutil.copystat(src, dst)
+
+
+def import_voice(pth, index=None, name=None, progress=None):
+    """Copy an RVC voice into data\\rvc_voices. Returns its info dict. The original files are not touched.
+    progress(pct 0..1, text) is told how far it is, for the loading bar."""
+    progress = progress or (lambda pct, text: None)
     if not pth or not os.path.isfile(pth) or not pth.lower().endswith(".pth"):
         raise ValueError("Pick the voice's .pth file.")
+    progress(0.03, "Reading the voice…")
     info, _ = read_model_info(pth)
     index = index or _find_index(pth)
     stem = os.path.splitext(os.path.basename(pth))[0]
@@ -100,15 +145,17 @@ def import_voice(pth, index=None, name=None):
     name = _clean_name(name)
     folder = _voice_dir(name)
     os.makedirs(folder, exist_ok=True)
-    shutil.copy2(pth, os.path.join(folder, "model.pth"))
-    if index and os.path.isfile(index):
-        shutil.copy2(index, os.path.join(folder, "model.index"))
+    has_index = bool(index and os.path.isfile(index))
+    _copy(pth, os.path.join(folder, "model.pth"), progress, 0.15, 0.5 if has_index else 0.95, "Copying the voice")
+    if has_index:
+        _copy(index, os.path.join(folder, "model.index"), progress, 0.5, 0.95, "Copying its index (the likeness)")
     info.update({"name": name, "has_index": os.path.exists(os.path.join(folder, "model.index")),
                  "source": os.path.basename(pth)})
     with open(os.path.join(folder, "info.json"), "w", encoding="utf-8") as f:
         json.dump(info, f, indent=1)
     _cache["models"].pop(name, None)
     _cache["index"].pop(name, None)
+    progress(1.0, "Done")
     return info
 
 
@@ -194,7 +241,7 @@ def _load_model(name):
     missing, _unused = net.load_state_dict({k: v.float() for k, v in state.items()}, strict=False)
     if missing:
         raise ValueError(f"The RVC model '{name}' is missing parts: {', '.join(missing[:4])}")
-    net.eval()
+    net.eval().to(_device())
     _cache["models"][name] = (net, info)
     return net, info
 
@@ -206,7 +253,12 @@ def _contentvec(version):
         if not os.path.exists(path):
             raise FileNotFoundError(SETUP_HINT if version == "v2" else
                                     f"This is an old (v1) RVC model - it also needs tools\\rvc\\{CONTENTVEC['v1']}.")
-        _cache["vec"][version] = ort.InferenceSession(path, providers=["CPUExecutionProvider"])
+        if os.environ.get("RVC_DEVICE", "").lower() != "cpu" and not _cache.get("vec_cpu"):
+            # on the graphics card (NVIDIA, or any card with DirectML): ~5-10x faster (1.3 s -> 0.14 s a long line)
+            import gpu
+            _cache["vec"][version] = gpu.session(path)
+        else:
+            _cache["vec"][version] = ort.InferenceSession(path, providers=["CPUExecutionProvider"])
     return _cache["vec"][version]
 
 
@@ -219,7 +271,7 @@ def _rmvpe():
             raise FileNotFoundError(SETUP_HINT)
         net = E2E(4, 1, (2, 2))
         net.load_state_dict(torch.load(path, map_location="cpu", weights_only=True))
-        net.eval()
+        net.eval().to(_device())
         _cache["rmvpe"] = net
     return _cache["rmvpe"]
 
@@ -296,7 +348,7 @@ def pitch_track(audio16):
     n_frames = mel.shape[-1]
     mel = torch.nn.functional.pad(mel, (0, 32 * ((n_frames - 1) // 32 + 1) - n_frames))
     with torch.no_grad():
-        salience = net(mel)[0, :n_frames].numpy()
+        salience = net(mel.to(_device()))[0, :n_frames].float().cpu().numpy()
     # the weighted average of the 9 bins around the strongest one -> cents -> Hz
     cents_map = np.pad(20 * np.arange(360) + 1997.3794084376191, (4, 4))
     center = np.argmax(salience, axis=1) + 4
@@ -331,7 +383,18 @@ def _features(audio16, version):
 # ---------------- converting ----------------
 def convert(samples, sr, cfg):
     """Turn speech (samples at sr) into the RVC voice. cfg: {"model", "pitch" (semitones), "index_rate", "protect"}.
-    Returns (samples, samplerate)."""
+    Returns (samples, samplerate). On the graphics card when there is one; if that fails, on the CPU."""
+    if _device() != "cpu":
+        try:
+            return _convert(samples, sr, cfg)
+        except RuntimeError as e:                       # e.g. CUDA out of memory (a 4 GB card shared with UniMate...)
+            print(f"[RVC] graphics card failed ({str(e)[:80]}) - using the CPU from now on.")
+            with _lock:
+                _use_cpu()
+    return _convert(samples, sr, cfg)
+
+
+def _convert(samples, sr, cfg):
     import torch
     from scipy import signal
     name = cfg.get("model")
@@ -348,7 +411,7 @@ def convert(samples, sr, cfg):
             _rmvpe()
         if index_rate > 0:
             _index(name)
-    tgt_sr = info["sr"]
+    tgt_sr, dev = info["sr"], _device()
     b, a = signal.butter(N=5, Wn=48, btype="high", fs=SR16)
     audio = signal.filtfilt(b, a, audio).astype(np.float32)
     audio_pad = np.pad(audio, (PAD, PAD), mode="reflect" if len(audio) > PAD else "constant")
@@ -386,11 +449,13 @@ def convert(samples, sr, cfg):
     feats, n = feats[lo:hi], hi - lo
     if info["f0"]:
         f0 = f0[lo:hi]
-        pitch = torch.from_numpy(_coarse(f0)).unsqueeze(0)
-        pitchf = torch.from_numpy(f0.astype(np.float32)).unsqueeze(0)
-    with torch.inference_mode():
-        out = net.infer(torch.from_numpy(np.ascontiguousarray(feats, dtype=np.float32)).unsqueeze(0),
-                        torch.tensor([n]), pitch, pitchf, torch.tensor([0]))[0, 0].numpy()
+        pitch = torch.from_numpy(_coarse(f0)).unsqueeze(0).to(dev)
+        pitchf = torch.from_numpy(f0.astype(np.float32)).unsqueeze(0).to(dev)
+    # on the graphics card in half precision (float16): ~25% faster, sounds the same
+    half = torch.autocast("cuda", dtype=torch.float16) if dev != "cpu" else contextlib.nullcontext()
+    with torch.inference_mode(), half:
+        out = net.infer(torch.from_numpy(np.ascontiguousarray(feats, dtype=np.float32)).unsqueeze(0).to(dev),
+                        torch.tensor([n], device=dev), pitch, pitchf, torch.tensor([0], device=dev))[0, 0].float().cpu().numpy()
     trim = (PAD // HOP - cut) * HOP * tgt_sr // SR16
     out = out[trim:len(out) - trim] if len(out) > 2 * trim else out
     peak = np.abs(out).max() if len(out) else 0

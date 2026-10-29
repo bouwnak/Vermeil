@@ -62,7 +62,7 @@ export function autoOutfit(ctx) {
 export function sceneFor(ctx) {
   if (ctx.birthday) return "party";
   if (ctx.focus) return "focus";
-  if (ctx.study || ctx.style === "tutor") return "study";
+  if (ctx.style === "tutor") return "study";             // just opening the Study panel leaves your lights alone
   if (ctx.voiceStyle === "storyteller") return "story";
   return null;
 }
@@ -102,6 +102,7 @@ export function initLife(room, { getContext, onActivity = () => {} }) {
     if (performance.now() < nextIdle) return;
     nextIdle = performance.now() + 40000 + Math.random() * 40000;
     const spots = room.spots?.() || [];
+    const hour = (ctx.date || new Date()).getHours();
     const plan = spots.some((s) => s.kind === "gym") ? [["gym", "working out 💪", "happy", 1, 1]]          // in the gym room
       : idlePlan((ctx.date || new Date()).getHours()).filter(([kind]) => spots.some((s) => s.kind === kind));
     if (!plan.length) {                                                  // no matching furniture: stretch in place

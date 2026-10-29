@@ -609,6 +609,10 @@ def run_tool(name, arguments, confirm=None):
         result = fn(**args)
     except TypeError as e:
         return f"Wrong arguments for {name}: {e}"
+    except ModuleNotFoundError as e:
+        import plugins
+        p = next((q for q in plugins.PLUGINS if any(c.endswith(f"/{e.name}.py") for c in q.get("code", []))), None)
+        return f"{p['name'] if p else e.name} isn't installed - install it in Settings → Plugins first."
     except Exception as e:
         return f"{name} failed: {e}"
     return str(result) if result is not None else "Done."

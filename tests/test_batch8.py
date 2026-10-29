@@ -66,7 +66,8 @@ class StreamingTests(unittest.TestCase):
         said = []
         fake_pool = SimpleNamespace(submit=lambda fn, text, *a: (said.append(text), SimpleNamespace(result=lambda timeout=None: (np.zeros(80, np.float32), SR)))[1])
         with mock.patch.object(pm, "tts_ready", True), mock.patch.object(tts, "_pool", fake_pool), \
-                mock.patch.object(pm, "barge_in", False), mock.patch.object(pm, "emit"):
+                mock.patch.object(pm, "barge_in", False), mock.patch.object(pm, "emit"), \
+                mock.patch.object(pm, "WHOLE_REPLY", False):        # sentence by sentence (not the default)
             ss = pm.SpeechStream(voice="piper:x")
             for piece in ["Good morning, darling! ", "Today you have ", "two classes and gym. Don't for", "get water."]:
                 ss.feed(piece)

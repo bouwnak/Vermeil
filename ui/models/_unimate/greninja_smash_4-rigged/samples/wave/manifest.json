@@ -1,0 +1,61 @@
+{
+  "format": "unimate-samples/1",
+  "motions_dir": "motions",
+  "runs": [
+    {
+      "exp_dir": "outputs/unimate_uniml3d_f60_v3",
+      "checkpoint": "outputs/unimate_uniml3d_f60_v3\\checkpoints\\checkpoint_step_150000.pt",
+      "cfg_scale": 3.0,
+      "seed": null,
+      "mode": "text"
+    }
+  ],
+  "assets": {
+    "greninja_smash_4_rigged": {
+      "source": "c:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\greninja_smash_4-rigged\\asset",
+      "dataset": null,
+      "cond_path": "c:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\greninja_smash_4-rigged\\asset\\cond.npy",
+      "cond_key": "greninja_smash_4_rigged",
+      "canonical_glb": "c:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\greninja_smash_4-rigged\\asset\\greninja_smash_4_rigged.glb",
+      "stats_dataset": "general",
+      "joint_names": [
+        "spine",
+        "spine.001",
+        "thigh.L",
+        "thigh.R",
+        "spine.002",
+        "shin.L",
+        "shin.R",
+        "spine.003",
+        "foot.L",
+        "foot.R",
+        "shoulder.L",
+        "shoulder.R",
+        "spine.004",
+        "toe.L",
+        "toe.R",
+        "upper_arm.L",
+        "upper_arm.R",
+        "head",
+        "forearm.L",
+        "forearm.R",
+        "head_end",
+        "hand.L",
+        "hand.R",
+        "hand_end.L",
+        "hand_end.R"
+      ],
+      "frame_digest": "7cfc709d6a0e7e0ba1a27dfef98c1285bd2ca919"
+    }
+  },
+  "samples": {
+    "greninja_smash_4_rigged-an_object_waves_with_its_right_hand-rep_0-0.npy": {
+      "asset": "greninja_smash_4_rigged",
+      "case_id": "greninja_smash_4_rigged-an_object_waves_with_its_right_hand",
+      "prompt": "An object waves with its right hand.",
+      "kind": "sample",
+      "run": 0,
+      "frame_digest": "7cfc709d6a0e7e0ba1a27dfef98c1285bd2ca919"
+    }
+  }
+}

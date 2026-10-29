@@ -88,3 +88,55 @@ class GymTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CaloriesAndMonthlyTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.p = [mock.patch.object(gym, n, os.path.join(self.tmp, f))
+                  for n, f in (("LOG_FILE", "l.json"), ("STATS_FILE", "s.json"), ("PROFILE_FILE", "p.json"))]
+        for p in self.p: p.start()
+
+    def tearDown(self):
+        for p in self.p: p.stop()
+        shutil.rmtree(self.tmp)
+
+    def test_calories(self):
+        r = gym.calories(175, 80, 25, "male", "moderate")
+        self.assertEqual((r["bmi"], r["category"], r["bmr"], r["maintenance"]), (26.1, "Overweight", 1774, 2750))
+        plans = {p["key"]: p for p in r["plans"]}
+        self.assertEqual(plans["cut"]["kcal"], 2250)
+        self.assertAlmostEqual(plans["cut"]["kg_week"], -0.45)
+        self.assertGreater(plans["bulk"]["weight_in_3_months"], 80)
+        self.assertLess(gym.calories(175, 80, 25, "female", "moderate")["bmr"], r["bmr"])
+        self.assertIn("error", gym.calories("", 80, 25, "male"))
+
+    def test_profile_saves_weight_to_stats(self):
+        r = gym.save_profile({"height": "170", "weight": "70", "age": "30", "gender": "female", "activity": "light"})
+        self.assertEqual(r["profile"]["activity"], "light")
+        self.assertEqual(gym.get_stats()[-1]["weight"], 70)
+        self.assertEqual(gym.get_profile()["height"], "170")
+
+    def test_monthly_progress(self):
+        with open(gym.LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump({"2026-09-03": {"sets": [{"exercise": "Bench", "set": 1, "kg": 50, "reps": "10"}]},
+                       "2026-10-02": {"sets": [{"exercise": "Bench", "set": 1, "kg": 55, "reps": "8"},
+                                               {"exercise": "Bench", "set": 2, "kg": 55, "reps": "6"}]}}, f)
+        rows = gym.monthly_progress()["exercises"]["Bench"]
+        self.assertEqual([r["month"] for r in rows], ["2026-09", "2026-10"])
+        self.assertEqual(rows[1]["best"], 55)
+        self.assertEqual(rows[1]["volume"], 55 * 14)
+        self.assertEqual(rows[1]["sets"], 2)
+        self.assertEqual(gym.e1rm(60, "10"), 80.0)
+
+    def test_meal_plan_for_each_goal(self):
+        self.assertIn("error", gym.meal_plan("bulk", profile={}))                 # needs the Calories tab first
+        me = {"height": "175", "weight": "75", "age": "28", "gender": "male", "activity": "moderate"}
+        plans = {g: gym.meal_plan(g, profile=me) for g in ("bulk", "cut", "recomp")}
+        self.assertGreater(plans["bulk"]["kcal"], plans["recomp"]["kcal"])
+        self.assertGreater(plans["recomp"]["kcal"], plans["cut"]["kcal"])
+        self.assertEqual(plans["cut"]["protein"], round(75 * 2.2))
+        for p in plans.values():
+            self.assertEqual([m["name"] for m in p["meals"]], ["Breakfast", "Lunch", "Snack", "Dinner"])
+            self.assertLess(abs(p["totals"]["kcal"] - p["kcal"]), p["kcal"] * 0.15)   # the meals add up to the day
+        self.assertEqual(gym.meal_plan("nonsense", profile=me)["goal"], "recomp")

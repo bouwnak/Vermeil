@@ -307,6 +307,20 @@ class MyMusicTests(unittest.TestCase):
         self.assertEqual([s["title"] for s in r["songs"]], ["Power"])           # 'Lose Yourself' was already in it
         self.assertEqual(len(self.m.library()["playlists"]), 2)
 
+    def test_lyric_videos_win(self):
+        mv = {**self.m.song("Lose Yourself", "Eminem", "mv1", 326), "mv": True}
+        lyr = {**self.m.song("Lose Yourself", "Eminem", "ly1", 320), "lyric": True}
+        with mock.patch.object(self.m, "search", return_value=[mv, lyr]) as s:
+            self.assertEqual(self.m.find_one("Lose Yourself", "Eminem")["yt"], "ly1")
+            self.assertIn("lyrics", s.call_args.args[0])
+            self.assertEqual(self.m.find_one("Lose Yourself", "Eminem", lyrics=False)["yt"], "mv1")
+            p = self.m.create_playlist("Old", "", [self.m.song("Lose Yourself", "Eminem", "mv1", 326)])
+            r = self.m.convert_to_lyrics(p["id"])
+        self.assertEqual(r["changed"], 1)
+        self.assertEqual(r["songs"][0]["yt"], "ly1")
+        self.assertTrue(r["songs"][0]["lyric"])
+        self.assertTrue(self.m.play_query({"title": "Stronger", "artist": "Kanye West"}).endswith("lyrics"))
+
     def test_voice_routing_uses_my_playlists(self):
         import app
         self.m.create_playlist("Gym Hype", "", [self.m.song("Power", "Kanye West", "c3")])

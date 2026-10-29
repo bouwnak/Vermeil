@@ -1,5 +1,6 @@
 // planner.js - month calendar + "what's on this day" + add form.
 import { $, el, toast } from "./util.js";
+import * as fx from "./fx.js";
 
 const KINDS = {
   event: { label: "Event", cls: "k-event" },
@@ -28,6 +29,8 @@ export function initPlanner(api) {
       el("button", { class: "ghost small", onclick: () => { shown = new Date(); shown.setDate(1); selected = iso(new Date()); render(); } }, "Today"),
       el("button", { class: "ghost small", style: "margin-left:auto", title: "Records with your microphone, then writes a summary, decisions and action items",
         onclick: () => window.dispatchEvent(new CustomEvent("vermeil:meeting")) }, "🎙 Record meeting notes"),
+      el("button", { class: "ghost small", title: "Play the planner notification sound",
+        onclick: () => { fx.play("notify"); toast("🔔 Planner notification sound"); } }, "🔔"),
       el("button", { class: "ghost small", onclick: async () => {
         const r = await api.find_free_time_ui(selected); toast(r, 8000); } }, "Find free time")),
     el("div", { class: "cal-grid", id: "calGrid", role: "grid" }),
@@ -137,6 +140,26 @@ export function initPlanner(api) {
     const next = lists.events[0];
     $("plannerSub").textContent = next ? `Next: ${next.title}` : "Calendar, tasks, reminders";
   }
+
+  const notified = new Set();
+  async function checkDueClient() {
+    try {
+      const now = new Date();
+      const today = iso(now);
+      const hm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const items = await api.planner_day(today);
+      for (const it of items || []) {
+        if (!it.time || it.done) continue;
+        const k = `${today}|${it.kind}|${it.title}|${it.time}`;
+        if (it.time === hm && !notified.has(k)) {
+          notified.add(k);
+          fx.play("notify");
+          toast(`⏰ ${it.kind === "reminder" ? "Reminder" : it.kind === "task" ? "Task due" : "Coming up"}: ${it.title}`, 10000);
+        }
+      }
+    } catch { /* ignore */ }
+  }
+  setInterval(checkDueClient, 25000);
 
   return { render };
 }

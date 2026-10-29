@@ -143,12 +143,13 @@ class RealModelTests(unittest.TestCase):
             with mock.patch.object(rvc, "VOICES_DIR", tmp), mock.patch.dict(rvc._cache["models"], clear=True):
                 rvc.import_voice(RICK, name="Rick")
                 net, info = rvc._load_model("Rick")
-                frames = 100
+                frames, dev = 100, next(net.parameters()).device          # the graphics card when there is one
                 with torch.no_grad():
-                    out = net.infer(torch.randn(1, frames, 768), torch.LongTensor([frames]),
-                                    torch.randint(1, 255, (1, frames)), torch.full((1, frames), 200.0), torch.LongTensor([0]))
+                    out = net.infer(torch.randn(1, frames, 768, device=dev), torch.LongTensor([frames]).to(dev),
+                                    torch.randint(1, 255, (1, frames), device=dev), torch.full((1, frames), 200.0, device=dev),
+                                    torch.LongTensor([0]).to(dev))
                 self.assertEqual(out.shape[-1], frames * info["sr"] // 100)
-                self.assertTrue(np.isfinite(out.numpy()).all())
+                self.assertTrue(np.isfinite(out.float().cpu().numpy()).all())
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 

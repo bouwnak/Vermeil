@@ -1,0 +1,65 @@
+{
+  "format": "unimate-samples/1",
+  "motions_dir": "motions",
+  "runs": [
+    {
+      "exp_dir": "outputs/unimate_uniml3d_f60_v3",
+      "checkpoint": "outputs/unimate_uniml3d_f60_v3\\checkpoints\\checkpoint_step_150000.pt",
+      "cfg_scale": 3.0,
+      "seed": null,
+      "mode": "text"
+    }
+  ],
+  "assets": {
+    "pikachu_rigged": {
+      "source": "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\pikachu-rigged\\asset",
+      "dataset": null,
+      "cond_path": "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\pikachu-rigged\\asset\\cond.npy",
+      "cond_key": "pikachu_rigged",
+      "canonical_glb": "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\pikachu-rigged\\asset\\pikachu_rigged.glb",
+      "stats_dataset": "general",
+      "joint_names": [
+        "spine",
+        "spine.001",
+        "thigh.L",
+        "thigh.R",
+        "tail",
+        "spine.003",
+        "shin.L",
+        "shin.R",
+        "tail.001",
+        "spine.004",
+        "upper_arm.R",
+        "upper_arm.L",
+        "foot.L",
+        "foot.R",
+        "tail_end",
+        "head",
+        "forearm.R",
+        "forearm.L",
+        "toe.L",
+        "toe.R",
+        "ear.L",
+        "ear.R",
+        "head_end",
+        "hand.R",
+        "hand.L",
+        "ear_end.L",
+        "ear_end.R",
+        "hand_end.R",
+        "hand_end.L"
+      ],
+      "frame_digest": "8ce9f9b4d06e36c6541d7fb0d20c5bd03ecd758a"
+    }
+  },
+  "samples": {
+    "pikachu_rigged-an_object_stands_in_place_and_breathes_calmly-rep_0-0.npy": {
+      "asset": "pikachu_rigged",
+      "case_id": "pikachu_rigged-an_object_stands_in_place_and_breathes_calmly",
+      "prompt": "An object stands in place and breathes calmly.",
+      "kind": "sample",
+      "run": 0,
+      "frame_digest": "8ce9f9b4d06e36c6541d7fb0d20c5bd03ecd758a"
+    }
+  }
+}

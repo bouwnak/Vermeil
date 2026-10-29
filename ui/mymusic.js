@@ -3,7 +3,7 @@
 import { $, el, toast, busy } from "./util.js";
 
 const fmt = (s) => `${Math.floor((s || 0) / 60)}:${String(Math.floor((s || 0) % 60)).padStart(2, "0")}`;
-const TABS = [["library", "Your Library"], ["search", "Search"], ["recent", "Recent"], ["import", "Import"], ["lab", "Playlist Lab"], ["spotify", "Spotify"]];
+const TABS = [["library", "Your Library"], ["search", "Search"], ["queue", "Queue"], ["recent", "Recent"], ["import", "Import"], ["lab", "Playlist Lab"]];
 const STYLES = [["similar", "Similar (same + similar artists)"], ["discover", "Discover (only new artists)"], ["mix", "Mix (some favourites + new)"],
   ["chill", "Chill version"], ["hype", "Hype / gym version"]];
 
@@ -69,6 +69,7 @@ export function initMyMusic(api) {
     toast(r.message || r.error); setTimeout(refresh, 1500);
   }
   const mosaic = (p, cls = "mm-cover") => p.id === "liked" ? el("div", { class: `${cls} liked` }, "♥") :
+    p.cover ? el("div", { class: cls }, el("img", { src: p.cover, alt: "" })) :
     p.covers?.length >= 4 ? el("div", { class: `${cls} grid` }, p.covers.slice(0, 4).map((c) => el("img", { src: c, alt: "" }))) :
       p.covers?.length ? el("div", { class: cls }, el("img", { src: p.covers[0], alt: "" })) : el("div", { class: cls, style: `background:${p.color}` }, "♪");
 
@@ -82,17 +83,89 @@ export function initMyMusic(api) {
     lib = await mm("library");
     if (openPl) return drawPlaylist();
     if (tab === "search") return drawSearch();
+    if (tab === "queue") return drawQueue();
     if (tab === "recent") return drawRecent();
     if (tab === "import") return drawImport();
     if (tab === "lab") return drawLab();
-    if (tab === "spotify") return drawSpotify();
     drawLibrary();
   }
 
-  // ---------------- Spotify lives inside Music now (the old Spotify panel, moved into this tab) ----------------
-  function drawSpotify() {
-    if (spBody) view.replaceChildren(spBody);
-    window.__spotifyPanel?.load?.();
+  // ---------------- Queue: view, skip, clear ----------------
+  async function drawQueue() {
+    view.replaceChildren(el("p", { class: "note" }, "Loading queue…"));
+    now = await mm("now");
+    const s = now?.song;
+    const qList = now?.queue || [];
+
+    const nowCard = el("div", { class: "mm-now-card", style: "background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:16px;margin-bottom:16px;display:flex;gap:16px;align-items:center;" },
+      s?.thumb
+        ? el("img", { src: s.thumb, alt: "", style: "width:64px;height:64px;border-radius:8px;object-fit:cover;flex-shrink:0;" })
+        : el("div", { style: "width:64px;height:64px;border-radius:8px;background:var(--accent,#3e8eff);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;flex-shrink:0;" }, "♪"),
+      el("div", { style: "flex:1;min-width:0;" },
+        el("span", { style: "font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accent,#3e8eff);letter-spacing:.06em;" }, now?.playing && !now?.paused ? "● NOW PLAYING" : "NOW PLAYING"),
+        el("h3", { style: "margin:4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px;" }, s ? s.title : "Nothing playing"),
+        el("small", { style: "color:rgba(255,255,255,0.7);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" }, s ? s.artist : "Choose a song to start listening")
+      ),
+      el("div", { style: "display:flex;gap:6px;align-items:center;flex-shrink:0;" },
+        el("button", { class: "ic", title: "Play / Pause", onclick: async () => { await cmd(now?.paused ? "resume" : now?.playing ? "pause" : "resume"); drawQueue(); } }, now?.playing && !now?.paused ? "⏸" : "▶"),
+        el("button", { class: "ic", title: "Next song", onclick: async () => { await cmd("skip"); toast("Skipped to next song."); setTimeout(drawQueue, 800); } }, "⏭")
+      )
+    );
+
+    const actionRow = el("div", { class: "row mm-actions", style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;" },
+      el("button", { class: "primary small", style: "font-weight:600;", onclick: async () => { await cmd("skip"); toast("Skipped to next song."); setTimeout(drawQueue, 800); } }, "⏭ Next song"),
+      el("button", { class: "ghost small", onclick: async () => { await cmd("shuffle"); toast("Queue shuffled."); drawQueue(); } }, "🔀 Shuffle"),
+      el("button", { class: "danger small", onclick: async () => { if (confirm("Clear all upcoming songs from the queue?")) { await mm("clear_queue"); toast("Queue cleared."); drawQueue(); } } }, "🗑 Clear Queue"),
+      el("button", { class: "ghost small", onclick: () => drawQueue() }, "🔄 Refresh")
+    );
+
+    const listContainer = el("div", {});
+    if (qList.length) {
+      listContainer.append(
+        el("div", { style: "display:flex;justify-content:space-between;align-items:center;margin:12px 0 8px;" },
+          el("h4", { style: "margin:0;font-size:14px;" }, `Up Next (${qList.length} track${qList.length > 1 ? "s" : ""})`),
+          el("small", { class: "muted" }, "Tracks play in order")
+        ),
+        el("ol", { class: "mm-queue-list", style: "list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;" },
+          qList.map((item, idx) => {
+            const row = el("li", { style: "display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:8px 12px;transition:background .15s;" },
+              el("span", { style: "font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);min-width:20px;text-align:center;" }, String(idx + 1).padStart(2, "0")),
+              el("div", { style: "width:32px;height:32px;border-radius:6px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(255,255,255,0.7);flex-shrink:0;" }, "♪"),
+              el("div", { style: "flex:1;min-width:0;" },
+                el("b", { style: "display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;" }, String(item)),
+                el("small", { class: "muted", style: "font-size:11px;" }, "Queued song")
+              ),
+              el("div", { style: "display:flex;gap:4px;flex-shrink:0;" },
+                el("button", { class: "ghost small", title: "Play this song right now", style: "padding:2px 8px;font-size:11px;", onclick: async () => {
+                  const r = await mm("play_queued_index", idx);
+                  toast(r.message || "Playing now");
+                  setTimeout(drawQueue, 1000);
+                } }, "▶ Play"),
+                el("button", { class: "ic x", title: "Remove from queue", "aria-label": "Remove", style: "font-size:14px;width:26px;height:26px;", onclick: async () => {
+                  await mm("remove_from_queue", idx);
+                  toast("Removed track from queue.");
+                  drawQueue();
+                } }, "×")
+              )
+            );
+            row.addEventListener("mouseenter", () => { row.style.background = "rgba(255,255,255,0.08)"; });
+            row.addEventListener("mouseleave", () => { row.style.background = "rgba(255,255,255,0.03)"; });
+            return row;
+          })
+        )
+      );
+    } else {
+      listContainer.append(
+        el("div", { style: "text-align:center;padding:32px 16px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.12);border-radius:12px;margin-top:12px;" },
+          el("div", { style: "font-size:36px;margin-bottom:8px;opacity:0.6;" }, "🎵"),
+          el("h4", { style: "margin:0 0 6px;" }, "The queue is empty"),
+          el("p", { class: "muted small", style: "margin:0 0 16px;" }, "Use Search, Liked Songs, or any playlist to queue up tracks!"),
+          el("button", { class: "ghost small", onclick: () => { tab = "library"; load(); } }, "Browse Library")
+        )
+      );
+    }
+
+    view.replaceChildren(nowCard, actionRow, listContainer);
   }
 
   function drawLibrary() {
@@ -118,12 +191,73 @@ export function initMyMusic(api) {
       el("div", { class: "row mm-actions" },
         el("button", { class: "mm-play", "aria-label": "Play", onclick: async () => { const r = await mm("play_playlist", p.id, 0, false); toast(r.message || r.error); setTimeout(refresh, 1500); } }, "▶"),
         el("button", { class: "ghost", onclick: async () => { const r = await mm("play_playlist", p.id, 0, true); toast(r.message || r.error); setTimeout(refresh, 1500); } }, "🔀 Shuffle"),
-        editable ? el("button", { class: "ghost small", onclick: async () => { const n = prompt("New name:", p.name); if (n) { openPl = await mm("update", p.id, n, null); drawPlaylist(); } } }, "✎ Rename") : null,
+        editable ? el("button", { class: "ghost small", onclick: () => editDetails(p) }, "✎ Edit details") : null,
         editable ? el("button", { class: "ghost small", onclick: () => { tab = "lab"; labPick = p.id; openPl = null; load(); } }, "🧪 Analyse / make similar") : null,
         editable ? el("button", { class: "danger small", onclick: async () => { if (!confirm(`Delete “${p.name}”?`)) return; await mm("delete", p.id); openPl = null; load(); } }, "🗑 Delete") : null,
+        p.count ? el("button", { class: "ghost small", title: "Swaps music videos for lyric videos: no skits or long intros, and songs play to the end", onclick: async (e) => {
+          busy(e.target, true, "Finding lyric videos…");
+          try { const r = await mm("to_lyrics", p.id); if (r.error) return toast(r.error, 6000); toast(r.message, 5000); openPl = r; drawPlaylist(); }
+          finally { busy(e.target, false); }
+        } }, "🎤 Use lyric videos") : null,
         el("button", { class: "ghost small", onclick: () => { openPl = null; load(); } }, "← Back")),
       p.songs.length ? el("ol", { class: "mm-list" }, p.songs.map((s, i) => songRow(s, i, p.songs, { pid: p.id })))
         : el("p", { class: "none" }, "No songs yet. Use Search and press “＋ Playlist” on a song."));
+  }
+
+  function editDetails(p) {
+    const titleIn = el("input", { value: p.name, style: "width:100%;font-size:16px;font-weight:700;", "aria-label": "Playlist title" });
+    const descIn = el("textarea", { rows: 3, style: "width:100%;", placeholder: "Description (optional)", "aria-label": "Description" });
+    descIn.value = p.description || "";
+    const coverUrlIn = el("input", { type: "text", style: "width:100%;", placeholder: "Image URL (https://...) or choose a file below", value: p.cover || "" });
+    const fileIn = el("input", { type: "file", accept: "image/*" });
+    let coverVal = p.cover || "";
+    fileIn.addEventListener("change", () => {
+      const f = fileIn.files?.[0];
+      if (f) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          coverVal = e.target.result;
+          coverUrlIn.value = coverVal.slice(0, 50) + "…";
+          previewImg.src = coverVal;
+          previewImg.hidden = false;
+        };
+        reader.readAsDataURL(f);
+      }
+    });
+    const previewImg = el("img", { src: p.cover || "", style: "width:80px;height:80px;object-fit:cover;border-radius:8px;border:1.5px solid var(--line);", hidden: !p.cover });
+    coverUrlIn.addEventListener("input", () => {
+      coverVal = coverUrlIn.value.trim();
+      previewImg.src = coverVal;
+      previewImg.hidden = !coverVal;
+    });
+
+    const saveBtn = el("button", { class: "primary", onclick: async () => {
+      busy(saveBtn, true, "Saving…");
+      try {
+        const name = titleIn.value.trim() || p.name;
+        const desc = descIn.value.trim();
+        openPl = await mm("update", p.id, name, desc, coverVal);
+        toast("Playlist updated!");
+        drawTabs();
+        drawPlaylist();
+      } finally {
+        busy(saveBtn, false);
+      }
+    } }, "Save details");
+
+    view.replaceChildren(
+      el("div", { class: "mm-head" }, el("div", {}, el("h3", {}, `Edit: ${p.name}`), el("p", { class: "note" }, "Change the cover image, title, and description."))),
+      el("div", { style: "max-width:500px;display:grid;gap:12px;margin:12px 0;" },
+        el("label", {}, el("b", {}, "Title"), titleIn),
+        el("label", {}, el("b", {}, "Description"), descIn),
+        el("label", {}, el("b", {}, "Cover Image"), coverUrlIn, fileIn),
+        previewImg,
+        el("div", { class: "row" },
+          saveBtn,
+          el("button", { class: "ghost", onclick: () => drawPlaylist() }, "Cancel")
+        )
+      )
+    );
   }
 
   function drawSearch() {
@@ -172,8 +306,12 @@ export function initMyMusic(api) {
       el("h4", {}, "From a list of songs"), text, el("div", { class: "row" }, name2, b2), out);
     mm("spotify_playlists").then((r) => {
       if (r.error) return spBox.replaceChildren(el("p", { class: "warn" }, r.error));
-      if (!r.connected) return spBox.replaceChildren(el("p", { class: "note" }, "Connect Spotify once (in the Spotify tab) and all your playlists show up here to import."),
-        el("button", { class: "ghost small", onclick: () => { tab = "spotify"; load(); } }, "Open the Spotify tab"));
+      if (!r.connected) return spBox.replaceChildren(el("p", { class: "note" }, "Connect Spotify and all your playlists show up here to import into Vermeil Music."),
+        el("button", { class: "primary small", onclick: async () => {
+          toast("Connecting to Spotify in browser…");
+          await api.spotify_connect();
+          setTimeout(drawImport, 3500);
+        } }, "Connect Spotify"));
       spBox.replaceChildren(el("p", { class: "note" }, "Each song is found on YouTube so it plays right here (~1 s per song)."),
         el("div", { class: "mm-sp-list" }, r.playlists.map((p) => {
           const b = el("button", { class: "small", onclick: async () => {

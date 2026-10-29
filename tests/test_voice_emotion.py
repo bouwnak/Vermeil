@@ -57,7 +57,7 @@ class StreamTests(unittest.TestCase):
             ss._push("It has twelve seats.")
             ss._push("The bus leaves at nine.")
             items = [ss.q.get_nowait() for _ in range(4)]
-        self.assertEqual(calls[0][0], "Hehe! That's so wonderful!")               # a giggle is said out loud
+        self.assertEqual(calls[0][0], "That's so wonderful!")                    # she talks plainly: no "Hehe!"
         self.assertEqual(calls[1][0], "The bus leaves at nine.")                  # other *actions* aren't read aloud
         self.assertNotEqual(calls[0][1], "+0%")
         self.assertEqual(calls[3][1:3], ("+0%", "+0Hz"))                         # the mood has faded

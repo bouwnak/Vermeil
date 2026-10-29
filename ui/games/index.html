@@ -19,6 +19,7 @@
       <p class="muted">Pick something to play. Your chat is saved while you're away.</p>
     </div>
     <div class="hub-tools">
+      <button class="btn ghost icon" id="gamesBtn" type="button" title="Add or remove games (from this PC or a Google Drive link)" aria-label="Add or remove games"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20V5M3 9l4-4 4 4"/><path d="M17 4v15M13 15l4 4 4-4"/></svg></button>
       <button class="btn ghost icon" id="musicBtn" type="button" title="Music on / off" aria-label="Music on / off" aria-pressed="true">🎵</button>
       <button class="btn ghost" id="backApp" type="button">← Back to Vermeil</button>
     </div>
@@ -36,14 +37,7 @@
         <span class="hub-text"><b>Retro Games</b><small>Classic NES, SNES, Sega, Game Boy, PlayStation and arcade games</small></span>
         <span class="hub-go" aria-hidden="true">›</span>
       </button>
-      <div class="hub-card soon" aria-disabled="true" data-preview="soon">
-        <span class="hub-art" aria-hidden="true">?</span>
-        <span class="hub-text"><b>Game 3</b><small>Coming soon</small></span>
-      </div>
-      <div class="hub-card soon" aria-disabled="true" data-preview="soon">
-        <span class="hub-art" aria-hidden="true">?</span>
-        <span class="hub-text"><b>Game 4</b><small>Coming soon</small></span>
-      </div>
+      <div class="my-games" id="myGames"></div>
     </div>
 
     <!-- the picture of the game you're pointing at -->
@@ -56,7 +50,7 @@
         <div class="pv-collage" id="collage"></div>
         <div class="pv-retro-title">RETRO</div>
       </div>
-      <div class="pv pv-soon" data-pv="soon"><span>?</span><b>Coming soon</b></div>
+      <div class="pv pv-mine" data-pv="mine"><span class="pv-mine-icon" aria-hidden="true">🎮</span><b id="pvMineName">Your game</b><small>Opens in its own window — Vermeil stays here</small></div>
     </aside>
   </div>
 </section>
@@ -114,8 +108,28 @@
   </div>
 </div>
 
+<!-- your own games: add (upload from this PC / download from a link) and remove -->
+<div class="modal" id="gamesDlg" hidden>
+  <div class="dialog wide" role="dialog" aria-modal="true" aria-labelledby="gamesTitle">
+    <h2 id="gamesTitle">Your games</h2>
+    <p class="muted">Add a game you made (like your Unity game) or downloaded. It's copied into Vermeil, so it comes along to another PC.</p>
+    <div class="found" id="gamesFound"></div>
+    <div class="add-row">
+      <button class="btn primary" id="gamesPick" type="button">⬆ Add from this PC (.exe or .zip)</button>
+    </div>
+    <form class="add-row" id="gamesLinkForm">
+      <input id="gamesLink" type="url" placeholder="…or paste a Google Drive link to a game's .zip (empty = all games in the Vermeil Drive folder)" autocomplete="off" spellcheck="false">
+      <button class="btn" id="gamesGet" type="submit">⬇ Download</button>
+    </form>
+    <div class="load-bar" id="gamesBar" hidden role="progressbar" aria-label="Adding the game"><i></i><span></span><b>0%</b></div>
+    <ul class="games-list" id="gamesList"></ul>
+    <div class="dialog-btns"><button class="btn ghost" id="gamesClose" type="button">Done</button></div>
+  </div>
+</div>
+
 <!-- loading screen -->
 <div class="loading" id="loading" hidden>
+  <div class="loading-art" id="loadingArt" aria-hidden="true"></div>
   <div class="spinner"></div>
   <p class="loading-title" id="loadingTitle">Loading…</p>
   <p class="muted" id="loadingSub">Getting the game ready</p>

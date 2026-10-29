@@ -512,6 +512,234 @@ def add_stats(values, when=None):
     return entry
 
 
+# ------------------------------------------------------------------ calories (BMI / TDEE)
+PROFILE_FILE = data_file("gym_profile.json")
+KCAL_PER_KG = 7700          # about how many calories one kilo of body weight is
+ACTIVITY = [                 # how hard you train in a week -> how much to multiply your resting calories by
+    ("none", "No training (desk job)", 1.2),
+    ("light", "Light: 1-3 workouts a week", 1.375),
+    ("moderate", "Moderate: 3-5 workouts a week", 1.55),
+    ("hard", "Hard: 6-7 workouts a week", 1.725),
+    ("athlete", "Very hard: twice a day / physical job", 1.9),
+]
+
+
+def bmi_category(bmi):
+    return ("Underweight" if bmi < 18.5 else "Healthy" if bmi < 25 else "Overweight" if bmi < 30 else "Obese")
+
+
+def calories(height_cm, weight_kg, age, gender, activity="moderate"):
+    """BMI, resting calories (Mifflin-St Jeor) and the calories to cut, keep or bulk,
+    with how fast your weight should change on each."""
+    h, w, a = _num(height_cm), _num(weight_kg), _num(age)
+    if not h or not w or not a or h < 80 or w < 25 or not 10 <= a <= 100:
+        return {"error": "Type your height (cm), weight (kg) and age."}
+    male = str(gender or "").lower().startswith("m")
+    bmr = 10 * w + 6.25 * h - 5 * a + (5 if male else -161)
+    mult = next((m for k, _, m in ACTIVITY if k == activity), 1.55)
+    keep = bmr * mult
+    bmi = w / (h / 100) ** 2
+
+    def plan(key, label, delta):
+        kcal = round((keep + delta) / 10) * 10
+        week = delta * 7 / KCAL_PER_KG
+        return {"key": key, "label": label, "kcal": kcal, "kg_week": round(week, 2), "kg_month": round(week * 30 / 7, 1),
+                "weight_in_3_months": round(w + week * 13, 1)}
+
+    return {
+        "bmi": round(bmi, 1), "category": bmi_category(bmi), "bmr": round(bmr), "maintenance": round(keep / 10) * 10,
+        "healthy_weight": [round(18.5 * (h / 100) ** 2, 1), round(24.9 * (h / 100) ** 2, 1)],
+        "protein_g": [round(w * 1.6), round(w * 2.2)],
+        "plans": [plan("cut", "Deficit (lose fat)", -500), plan("mild_cut", "Small deficit", -250),
+                  plan("keep", "Maintenance", 0), plan("lean_bulk", "Lean bulk", 250), plan("bulk", "Bulk (gain)", 500)],
+    }
+
+
+def get_profile():
+    p = _read(PROFILE_FILE, {})
+    return p if isinstance(p, dict) else {}
+
+
+def save_profile(profile):
+    keep = {k: profile.get(k) for k in ("height", "weight", "age", "gender", "activity") if profile.get(k) not in (None, "")}
+    _write(PROFILE_FILE, keep)
+    result = calories(keep.get("height"), keep.get("weight"), keep.get("age"), keep.get("gender"), keep.get("activity", "moderate"))
+    if not result.get("error") and keep.get("weight"):
+        stats = get_stats()                        # the weight also goes into Body stats (once a day)
+        today = date.today().isoformat()
+        if not any(s.get("date") == today and s.get("weight") == _num(keep["weight"]) for s in stats):
+            add_stats({**next((s for s in stats if s.get("date") == today), {}), "weight": keep["weight"]})
+    return {"profile": keep, **result}
+
+
+# ------------------------------------------------------------------ meal planner (bulk / cut / recomp)
+# per 100 g: kcal, protein, fat, carbs  (cooked weights for meat, rice and potato)
+FOODS = {
+    "Eggs": (143, 12.6, 9.5, 0.7), "Oats": (389, 17, 7, 66), "Banana": (89, 1.1, 0.3, 23),
+    "Chicken breast": (165, 31, 3.6, 0), "Rice": (130, 2.7, 0.3, 28), "Vegetables": (34, 2.8, 0.4, 7),
+    "Olive oil": (884, 0, 100, 0), "Greek yogurt": (59, 10, 0.4, 3.6), "Almonds": (579, 21, 50, 22),
+    "Whey protein": (400, 80, 6, 8), "Milk": (61, 3.2, 3.3, 4.8), "Peanut butter": (588, 25, 50, 20),
+    "Salmon": (208, 20, 13, 0), "Lean beef": (250, 26, 15, 0), "Tuna (in water)": (116, 26, 1, 0),
+    "Sweet potato": (86, 1.6, 0.1, 20), "Whole-wheat bread": (247, 13, 3.4, 41), "Tofu": (144, 17, 9, 3),
+    "Pasta": (158, 5.8, 0.9, 31),
+}
+GOALS = {   # kcal vs maintenance, protein g/kg, fat g/kg
+    "bulk": {"label": "Bulk", "delta": 300, "protein": 1.8, "fat": 1.0,
+             "note": "A small surplus: you gain muscle with as little fat as possible (about +0.25 kg a week)."},
+    "cut": {"label": "Cut", "delta": -500, "protein": 2.2, "fat": 0.8,
+            "note": "A deficit with high protein so you keep your muscle while losing fat (about -0.5 kg a week)."},
+    "recomp": {"label": "Recomposition", "delta": 0, "protein": 2.2, "fat": 0.9,
+               "note": "Eat at maintenance with high protein and train hard: slowly lose fat and gain muscle at the same weight."},
+}
+# Dishes: (name, protein food, carb food, fat food or None, fixed extras {food: grams}, how to make it).
+# The grams of the first three are worked out so each meal hits its share of the day's protein, carbs and fats.
+DISHES = {
+    "breakfast": [
+        ("Scrambled eggs on toast", "Eggs", "Whole-wheat bread", "Olive oil", {"Vegetables": 80},
+         "Scramble the eggs in the oil, add spinach or tomato, serve on toasted bread."),
+        ("Overnight oats", "Greek yogurt", "Oats", "Peanut butter", {"Banana": 100, "Milk": 150},
+         "Stir oats, milk and yogurt in a jar the night before; top with banana and peanut butter."),
+        ("Protein oatmeal", "Whey protein", "Oats", "Almonds", {"Milk": 200, "Banana": 80},
+         "Cook the oats in the milk, stir in the protein powder off the heat, top with banana and almonds."),
+        ("Veggie omelette & sweet potato", "Eggs", "Sweet potato", "Olive oil", {"Vegetables": 120},
+         "Pan-fry diced sweet potato, then pour the beaten eggs over the vegetables and fold."),
+    ],
+    "lunch": [
+        ("Chicken rice bowl", "Chicken breast", "Rice", "Olive oil", {"Vegetables": 150},
+         "Grill or pan-fry the chicken, slice it over rice with vegetables and a drizzle of oil."),
+        ("Tuna sandwich & salad", "Tuna (in water)", "Whole-wheat bread", "Olive oil", {"Vegetables": 120},
+         "Mix tuna with a little oil, lemon and pepper; make a sandwich and have a side salad."),
+        ("Beef & sweet potato bowl", "Lean beef", "Sweet potato", "Olive oil", {"Vegetables": 150},
+         "Brown the beef with garlic, serve with roasted sweet potato and greens."),
+        ("Tofu stir-fry", "Tofu", "Rice", "Olive oil", {"Vegetables": 200},
+         "Fry tofu cubes until golden, add vegetables and soy sauce, serve over rice."),
+    ],
+    "dinner": [
+        ("Salmon & sweet potato", "Salmon", "Sweet potato", None, {"Vegetables": 150},
+         "Bake the salmon and sweet potato at 200 C for about 20 minutes, with steamed vegetables."),
+        ("Chicken adobo with rice", "Chicken breast", "Rice", "Olive oil", {"Vegetables": 100},
+         "Simmer chicken in soy sauce, vinegar, garlic and bay leaf until tender; serve with rice."),
+        ("Beef stir-fry", "Lean beef", "Rice", "Olive oil", {"Vegetables": 200},
+         "Stir-fry thin beef strips on high heat, add vegetables and sauce, serve over rice."),
+        ("Chicken pasta", "Chicken breast", "Pasta", "Olive oil", {"Vegetables": 120},
+         "Toss cooked pasta with pan-fried chicken, vegetables, garlic and a little oil."),
+    ],
+    "snack": [
+        ("Greek yogurt & banana", "Greek yogurt", "Banana", "Almonds", {},
+         "Yogurt in a bowl, sliced banana and a few almonds on top."),
+        ("Protein shake", "Whey protein", "Banana", "Peanut butter", {"Milk": 250},
+         "Blend milk, protein powder, banana and peanut butter."),
+        ("Tuna on toast", "Tuna (in water)", "Whole-wheat bread", None, {},
+         "Tuna with pepper and lemon on toasted bread."),
+        ("Boiled eggs & fruit", "Eggs", "Banana", None, {},
+         "Hard-boil a few eggs (10 minutes) and have them with a banana."),
+    ],
+}
+# how the day is split for each number of meals: (name, kind of dish, share of the day)
+MEAL_SPLITS = {
+    2: [("Lunch", "lunch", 0.5), ("Dinner", "dinner", 0.5)],
+    3: [("Breakfast", "breakfast", 0.3), ("Lunch", "lunch", 0.4), ("Dinner", "dinner", 0.3)],
+    4: [("Breakfast", "breakfast", 0.25), ("Lunch", "lunch", 0.35), ("Snack", "snack", 0.1), ("Dinner", "dinner", 0.3)],
+    5: [("Breakfast", "breakfast", 0.22), ("Morning snack", "snack", 0.1), ("Lunch", "lunch", 0.3),
+        ("Afternoon snack", "snack", 0.1), ("Dinner", "dinner", 0.28)],
+    6: [("Breakfast", "breakfast", 0.2), ("Morning snack", "snack", 0.1), ("Lunch", "lunch", 0.25),
+        ("Afternoon snack", "snack", 0.1), ("Dinner", "dinner", 0.25), ("Evening snack", "snack", 0.1)],
+}
+
+
+def _macros(items):
+    t = [0.0, 0.0, 0.0, 0.0]
+    for food, g in items.items():
+        for i, v in enumerate(FOODS[food]):
+            t[i] += v * g / 100
+    return {"kcal": round(t[0]), "protein": round(t[1]), "fat": round(t[2]), "carbs": round(t[3])}
+
+
+def meal_plan(goal="recomp", profile=None, meals=4, dishes=None):
+    """A day of meals for bulk / cut / recomp, from the Calories tab numbers: calories, protein, fat and carbs
+    for the day, split over 2-6 meals. Each meal is a dish with gram amounts (estimates).
+    dishes: optional list with the dish number for each meal (the "Other dish" button changes one)."""
+    goal = goal if goal in GOALS else "recomp"
+    try:
+        meals = min(6, max(2, int(meals)))
+    except (TypeError, ValueError):
+        meals = 4
+    p = profile if profile is not None else get_profile()
+    base = calories(p.get("height"), p.get("weight"), p.get("age"), p.get("gender"), p.get("activity", "moderate"))
+    if base.get("error"):
+        return {"error": "Fill in the Calories tab first (height, weight, age) - the meal plan is made from it."}
+    g, w = GOALS[goal], _num(p["weight"])
+    kcal = round((base["maintenance"] + g["delta"]) / 10) * 10
+    protein, fat = round(w * g["protein"]), round(w * g["fat"])
+    carbs = max(50, round((kcal - protein * 4 - fat * 9) / 4))
+    picks = list(dishes or [])
+    out, seen = [], {}
+    for i, (name, kind, share) in enumerate(MEAL_SPLITS[meals]):
+        options = DISHES[kind]
+        n = seen.get(kind, 0)                              # two snacks in a day get different dishes
+        seen[kind] = n + 1
+        try:
+            pick = int(picks[i]) % len(options)
+        except (IndexError, TypeError, ValueError):
+            pick = n % len(options)
+        dish, pf, cf, ff, extra, how = options[pick]
+        items = dict(extra)
+        want = {"protein": protein * share, "fat": fat * share, "carbs": carbs * share}
+        now = _macros(items)
+        items[cf] = items.get(cf, 0) + max(0, (want["carbs"] - now["carbs"]) / FOODS[cf][3] * 100)     # carbs first
+        now = _macros(items)
+        items[pf] = items.get(pf, 0) + max(0, (want["protein"] - now["protein"]) / FOODS[pf][1] * 100)  # then protein
+        if ff:                                                                                         # fat tops up the rest
+            now = _macros(items)
+            items[ff] = max(0, (want["fat"] - now["fat"]) / FOODS[ff][2] * 100)
+        items = {f: int(round(v / 5) * 5) for f, v in items.items() if v >= 5}
+        out.append({"name": name, "dish": dish, "how": how, "pick": pick, "choices": len(options),
+                    "items": [{"food": f, "grams": v} for f, v in items.items()], **_macros(items)})
+    totals = {k: sum(m[k] for m in out) for k in ("kcal", "protein", "fat", "carbs")}
+    return {"goal": goal, "label": g["label"], "note": g["note"], "kcal": kcal, "protein": protein, "fat": fat,
+            "carbs": carbs, "maintenance": base["maintenance"], "meals": out, "meal_count": meals, "totals": totals,
+            "goals": [[k, v["label"]] for k, v in GOALS.items()], "meal_options": sorted(MEAL_SPLITS)}
+
+
+# ------------------------------------------------------------------ monthly lifting graphs
+def e1rm(kg, reps):
+    """estimated one-rep max (Epley): 60 kg x 10 -> 80 kg"""
+    kg, reps = _num(kg) or 0, rep_value(reps) or 0
+    if not kg or not reps or reps > 30:
+        return kg or 0
+    return round(kg * (1 + reps / 30), 1)
+
+
+def monthly_progress():
+    """Per exercise, per month: heaviest set (weight + the reps done with it), best estimated 1RM, total volume,
+    number of sets. Plus every Body stats entry (weight, arms, thighs, chest, waist). Oldest first."""
+    months = {}
+    for d, entry in _log().items():
+        m = d[:7]
+        for st in entry.get("sets", []):
+            kg, reps = _num(st.get("kg")) or 0, rep_value(st.get("reps")) or 0
+            row = months.setdefault(st["exercise"], {}).setdefault(m, {"month": m, "best": 0, "reps": 0, "e1rm": 0, "volume": 0, "sets": 0, "days": set()})
+            if kg > row["best"] or (kg == row["best"] and reps > row["reps"]):
+                row["reps"] = reps
+            row["best"] = max(row["best"], kg)
+            row["e1rm"] = max(row["e1rm"], e1rm(kg, st.get("reps")))
+            row["volume"] += kg * reps
+            row["sets"] += 1
+            row["days"].add(d)
+    out = {}
+    for ex, by in months.items():
+        rows = [{**r, "volume": round(r["volume"]), "days": len(r["days"])} for _, r in sorted(by.items())]
+        out[ex] = rows
+    weights = {}
+    for s in get_stats():
+        if s.get("weight"):
+            weights.setdefault(s["date"][:7], []).append(s["weight"])
+    body = [{"month": m, "weight": round(sum(v) / len(v), 1)} for m, v in sorted(weights.items()) if re.match(r"\d{4}-\d\d", m)]
+    stats = [{"label": s.get("date", ""), **{f: s.get(f) for f in STAT_FIELDS}} for s in get_stats()]
+    return {"exercises": dict(sorted(out.items(), key=lambda kv: -sum(r["sets"] for r in kv[1]))), "body": body,
+            "stats": stats, "stat_fields": STAT_FIELDS}
+
+
 # ------------------------------------------------------------------ text for the AI
 def plan_text(day_num=None):
     p = day_plan(day_num)

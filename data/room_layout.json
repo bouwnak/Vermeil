@@ -1,9 +1,20 @@
 {
   "shell": {
-    "wall": "#d98a4b",
+    "wall": "#5d7896",
     "floor": "light wood",
-    "sky": "auto",
-    "brightness": 1.15
+    "sky": "dawn",
+    "brightness": 1.15,
+    "wallpaper": "none",
+    "windowItem": true,
+    "house": {
+      "rooms": [
+        {
+          "side": "right",
+          "w": 5,
+          "d": 6
+        }
+      ]
+    }
   },
   "items": [
     {

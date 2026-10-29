@@ -126,16 +126,174 @@
       "image_tried": true
     },
     {
-      "title": "New recipe",
-      "ingredients": [],
-      "steps": [],
-      "id": "69970045",
-      "servings": null,
-      "nutrition": null,
-      "updated": "2026-10-29 14:22",
-      "image": "",
-      "image_tried": true,
-      "image_v": 2
+      "title": "Pork Bicol Express",
+      "source": "https://www.youtube.com/watch?v=EglwOEDdsHU",
+      "servings": 4,
+      "ingredients": [
+        {
+          "qty": 1.0,
+          "unit": "lb",
+          "name": "pork belly or shoulder, cut into 1-inch cubes",
+          "text": "1 lb pork belly or shoulder, cut into 1-inch cubes",
+          "id": "68b3d0"
+        },
+        {
+          "qty": 2.0,
+          "unit": "tbsp",
+          "name": "vegetable oil",
+          "text": "2 tbsp vegetable oil",
+          "id": "cfade2"
+        },
+        {
+          "qty": 4.0,
+          "unit": "clove",
+          "name": "garlic, minced",
+          "text": "4 cloves garlic, minced",
+          "id": "fb1324"
+        },
+        {
+          "qty": 1.0,
+          "unit": "",
+          "name": "medium onion, sliced",
+          "text": "1 medium onion, sliced",
+          "id": "bb027c"
+        },
+        {
+          "qty": 1.0,
+          "unit": "",
+          "name": "red bell pepper, sliced",
+          "text": "1 red bell pepper, sliced",
+          "id": "3d6359"
+        },
+        {
+          "qty": 2.0,
+          "unit": "tbsp",
+          "name": "fresh ginger, minced",
+          "text": "2 tbsp fresh ginger, minced",
+          "id": "ebc27e"
+        },
+        {
+          "qty": 2.0,
+          "unit": "tbsp",
+          "name": "chili sauce or sliced fresh chilies",
+          "text": "2 tbsp chili sauce or sliced fresh chilies",
+          "id": "499e90"
+        },
+        {
+          "qty": 0.5,
+          "unit": "cup",
+          "name": "tomato sauce",
+          "text": "1/2 cup tomato sauce",
+          "id": "5e4c76"
+        },
+        {
+          "qty": 1.0,
+          "unit": "can",
+          "name": "(14 oz) coconut milk",
+          "text": "1 can (14 oz) coconut milk",
+          "id": "a8ece6"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "fish sauce",
+          "text": "1 tbsp fish sauce",
+          "id": "22fd02"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tsp",
+          "name": "sugar",
+          "text": "1 tsp sugar",
+          "id": "959fd0"
+        },
+        {
+          "qty": 0.5,
+          "unit": "tsp",
+          "name": "salt",
+          "text": "1/2 tsp salt",
+          "id": "007743"
+        },
+        {
+          "qty": 0.25,
+          "unit": "tsp",
+          "name": "black pepper",
+          "text": "1/4 tsp black pepper",
+          "id": "03f1ed"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "sliced green onions or chives",
+          "text": "1 cup sliced green onions or chives",
+          "id": "edee38"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "fresh cilantro, chopped (optional)",
+          "text": "1 tbsp fresh cilantro, chopped (optional)",
+          "id": "f1c080"
+        }
+      ],
+      "steps": [
+        "Heat oil in a large pan over medium heat. Add garlic, onion, ginger and sauté until fragrant and onions are translucent.",
+        "Add pork cubes and cook until they start to brown, about 5-7 minutes.",
+        "Stir in chili sauce or fresh chilies, tomato sauce, coconut milk, fish sauce, sugar, salt and pepper.",
+        "Bring to a gentle boil.",
+        "Reduce heat to low, cover and let the stew simmer for 25-30 minutes, or until the pork is tender and the sauce thickens.",
+        "Adjust seasoning if needed. Stir in green onions and cilantro (if using) right before serving.",
+        "Serve hot over steamed rice."
+      ],
+      "nutrition": {
+        "per": "serving",
+        "servings": 4,
+        "rows": [
+          {
+            "label": "Calories",
+            "value": "820 kcal"
+          },
+          {
+            "label": "Total fat",
+            "value": "68 g"
+          },
+          {
+            "label": "Saturated fat",
+            "value": "13 g"
+          },
+          {
+            "label": "Cholesterol",
+            "value": "110 mg"
+          },
+          {
+            "label": "Sodium",
+            "value": "600 mg"
+          },
+          {
+            "label": "Carbohydrates",
+            "value": "9 g"
+          },
+          {
+            "label": "Fiber",
+            "value": "2 g"
+          },
+          {
+            "label": "Sugar",
+            "value": "4 g"
+          },
+          {
+            "label": "Protein",
+            "value": "26 g"
+          }
+        ],
+        "source": "estimated by AI"
+      },
+      "notes": "From a video - the written recipe was worked out by the AI, so check it against the video.",
+      "image": "https://i.ytimg.com/vi/EglwOEDdsHU/hqdefault.jpg",
+      "image_v": 2,
+      "id": "bdb9df46",
+      "updated": "2026-10-24 17:55",
+      "saved": true
     }
   ]
 }

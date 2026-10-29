@@ -1,0 +1,79 @@
+{
+  "format": "unimate-samples/1",
+  "motions_dir": "motions",
+  "runs": [
+    {
+      "exp_dir": "outputs/unimate_uniml3d_f60_v3",
+      "checkpoint": "outputs/unimate_uniml3d_f60_v3\\checkpoints\\checkpoint_step_150000.pt",
+      "cfg_scale": 3.0,
+      "seed": null,
+      "mode": "text"
+    }
+  ],
+  "assets": {
+    "pikachu": {
+      "source": "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\pikachu\\asset",
+      "dataset": null,
+      "cond_path": "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\pikachu\\asset\\cond.npy",
+      "cond_key": "pikachu",
+      "canonical_glb": "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\pikachu\\asset\\pikachu.glb",
+      "stats_dataset": "general",
+      "joint_names": [
+        "Waist_03",
+        "Spine1_023",
+        "Hips_04",
+        "Spine2_024",
+        "RThigh_013",
+        "LThigh_07",
+        "Tail1_019",
+        "Feeler_05",
+        "EndHips_01",
+        "Head_025",
+        "LShoulder_035",
+        "RShoulder_040",
+        "RLeg_014",
+        "LLeg_08",
+        "Tail2_020",
+        "EndFeeler_06",
+        "REar1_031",
+        "LEar1_027",
+        "EndHead_026",
+        "LArm_036",
+        "RArm_041",
+        "RFoot_015",
+        "LFoot_09",
+        "Tail3_021",
+        "REar2_032",
+        "LEar2_028",
+        "LForeArm_037",
+        "RForeArm_042",
+        "RToe_017",
+        "EndRFoot_016",
+        "LToe_011",
+        "EndLFoot_010",
+        "EndTail3_022",
+        "REar3_033",
+        "LEar3_029",
+        "LHand_038",
+        "RHand_043",
+        "EndRToe_018",
+        "EndLToe_012",
+        "EndREar3_034",
+        "EndLEar3_030",
+        "EndLHand_039",
+        "EndRHand_044"
+      ],
+      "frame_digest": "7efcf94d467741a0396471364c6914a999ea7db3"
+    }
+  },
+  "samples": {
+    "pikachu-an_object_walks_forward-rep_0-0.npy": {
+      "asset": "pikachu",
+      "case_id": "pikachu-an_object_walks_forward",
+      "prompt": "An object walks forward.",
+      "kind": "sample",
+      "run": 0,
+      "frame_digest": "7efcf94d467741a0396471364c6914a999ea7db3"
+    }
+  }
+}

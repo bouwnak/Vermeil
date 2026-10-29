@@ -7,6 +7,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { CozyRoom, CATALOG } from "./cozyroom.js";
+import { inPlace } from "./inplace.js";
 import { buildGymRoom, GYM_LAYOUT } from "./gymroom.js";
 
 const INK = 0x2e2135;
@@ -75,12 +76,15 @@ export class Room {
       minPolarAngle: 0.9, maxPolarAngle: 1.62, minAzimuthAngle: -0.85, maxAzimuthAngle: 0.85,
     });
 
-    this.controls.addEventListener("end", () => !this._dio && this.onViewChange?.({
+    this.controls.addEventListener("end", () => !this._dio && !this._roomIdx && this.onViewChange?.({   // the main room's view is the one kept
       pos: this.camera.position.toArray().map((v) => +v.toFixed(3)),
       target: this.controls.target.toArray().map((v) => +v.toFixed(3)),
     }));
     this.cozy = new CozyRoom(this.scene);
     this.cozy.onChange = () => this.onLayoutChange?.();
+    this.cozy.onItemChanged = (id) => {
+      if (this.selectedId === id) this.select(id);
+    };
     this.cozy.onLighting = (st) => {
       if (this.gym) return;                     // the gym room keeps its own lighting
       r.toneMappingExposure = st.exp * 1.05 * this.cozy.brightness;
@@ -90,6 +94,14 @@ export class Room {
       }
     };
     this.cozy.load(null);
+    this.cozy.charPos = () => this.char?.root.position;               // pets come to her
+    this.cozy.onPetVisit = (pet, says) => {
+      if (this.editMode || this.char?.seat) return;
+      this.setExpression("happy", 3);
+      this.onPetVisit?.(pet, says);
+    };
+    this.undoStack = [];
+    this._pops = [];
     this.selectBox = new THREE.BoxHelper(undefined, 0xe0ae4a);
     this.selectBox.visible = false;
     this.scene.add(this.selectBox);
@@ -130,7 +142,7 @@ export class Room {
   }
 
   // ---------------- room editing ----------------
-  loadLayout(layout) { this.select(null); this.cozy.load(layout); }
+  loadLayout(layout) { if (this.editMode) this._remember(); this.select(null); this.cozy.load(layout); this._cutaway(!!this._dio); this._houseChanged(); }
   /** The gym's equipment layout (saved on its own). */
   gymLayout() { return this.gym ? { items: this.cozy.serialize().items } : null; }
 
@@ -141,8 +153,93 @@ export class Room {
     return L;
   }
 
+  /** Undo: a copy of the room is kept before every change (up to 40 steps back). */
+  _remember() {
+    if (this.gym) return;
+    const snap = JSON.stringify(this.cozy.serialize());
+    if (this.undoStack.at(-1) !== snap) this.undoStack.push(snap);
+    if (this.undoStack.length > 40) this.undoStack.shift();
+    this.onUndoChange?.(this.undoStack.length);
+  }
+  undo() {
+    const snap = this.undoStack.pop();
+    this.onUndoChange?.(this.undoStack.length);
+    if (!snap) return false;
+    const keep = this.selectedId;
+    this.cozy.load(JSON.parse(snap));
+    this._cutaway(!!this._dio);
+    this._houseChanged();
+    this.select(this.cozy.items.has(keep) ? keep : null);
+    this.onLayoutChange?.();
+    return true;
+  }
+
+  /** a little "pop" when furniture lands: it grows in with a bounce and a puff of sparkles */
+  _pop(item, k = 1) {
+    if (!item) return;
+    this._pops.push({ group: item.group, t: 0, k });
+    const sp = (this._sparkGeo ??= new THREE.SphereGeometry(0.035, 6, 6));
+    const box = new THREE.Box3().setFromObject(item.group);
+    const c = box.isEmpty() ? item.group.position.clone() : box.getCenter(new THREE.Vector3());
+    const y = box.isEmpty() ? item.group.position.y + 0.1 : box.min.y + 0.05;
+    for (let i = 0; i < 14; i++) {
+      const m = new THREE.Mesh(sp, new THREE.MeshBasicMaterial({ color: [0xffe08a, 0xffffff, 0x9fd8ff][i % 3], transparent: true }));
+      const a = (i / 14) * Math.PI * 2;
+      m.position.set(c.x, y, c.z);
+      m.userData.v = new THREE.Vector3(Math.cos(a) * 1.4, 1.2 + Math.random(), Math.sin(a) * 1.4);
+      this.scene.add(m);
+      this._pops.push({ spark: m, t: 0 });
+    }
+  }
+  _updatePops(dt) {
+    for (let i = this._pops.length - 1; i >= 0; i--) {
+      const P = this._pops[i];
+      P.t += dt;
+      if (P.spark) {
+        P.spark.position.addScaledVector(P.spark.userData.v, dt);
+        P.spark.userData.v.y -= 4 * dt;
+        P.spark.material.opacity = Math.max(0, 1 - P.t / 0.7);
+        if (P.t > 0.7) { this.scene.remove(P.spark); P.spark.material.dispose(); this._pops.splice(i, 1); }
+        continue;
+      }
+      const x = Math.min(1, P.t / 0.45);
+      const e = 1 + Math.sin(x * Math.PI * 2.5) * (1 - x) * 0.35 * P.k;      // springy overshoot
+      const s = P.k === 1 ? Math.min(1, x * 3) * e : e;
+      P.group.scale.set(s, P.k === 1 ? s : 2 - e, s);
+      if (x >= 1) { P.group.scale.set(1, 1, 1); this._pops.splice(i, 1); }
+    }
+  }
+
+  /** The extra rooms (Edit room > Rooms). Furniture and she move inside if their place is gone. */
+  setHouse(cfg) {
+    if (performance.now() - (this._lastHouse || 0) > 700) this._remember();     // dragging a slider = one undo step
+    this._lastHouse = performance.now();
+    const H = this.cozy.setHouse(cfg);
+    this._houseChanged();
+    this.onLayoutChange?.();
+    return H;
+  }
+
+  _houseChanged() {
+    const c = this.char, cozy = this.cozy;
+    if (c && !this.gym) {
+      const p = c.root.position;
+      if (!c.seat && !cozy.walkable(p.x, p.z)) {                     // a wall moved onto her
+        const q = cozy.house.clampPoint(p.x, p.z, 0.6);
+        p.x = q.x; p.z = q.z; this.walkTarget = null; this._path = [];
+      }
+    }
+    if (this._dioBase) {                                             // the grass and slab fit the house
+      const shown = !!this._dioBase.parent;
+      this.scene.remove(this._dioBase);
+      this._dioBase = this._buildDioramaBase();
+      if (shown) this.scene.add(this._dioBase);
+    }
+  }
+
   setEditMode(on) {
     this.editMode = !!on;
+    this.cozy.editing = this.editMode;
     if (!on) this.select(null);
     this._editGrid(this.editMode);
     this._diorama(this.editMode);
@@ -160,9 +257,10 @@ export class Room {
       this.scene.add(this._dioBase);
       this.scene.background = new THREE.Color(0x5b8a4c);
       this.scene.fog = new THREE.Fog(0x5b8a4c, 34, 80);
-      Object.assign(ctl, { minDistance: 9, maxDistance: 34, minPolarAngle: 0.45, maxPolarAngle: 1.25, minAzimuthAngle: -1.45, maxAzimuthAngle: 1.45 });
+      const b = cozy.house.bounds(), cx = (b.minX + b.maxX) / 2, k = Math.max(1, (b.maxX - b.minX) / 10), y = 0;
+      Object.assign(ctl, { minDistance: 9, maxDistance: 34 * k + 6, minPolarAngle: 0.45, maxPolarAngle: 1.25, minAzimuthAngle: -Infinity, maxAzimuthAngle: Infinity });
       this._cutaway(true);
-      this._tweenCamera(new THREE.Vector3(12.5, 11.5, 15.5), new THREE.Vector3(0, 0.5, 0.3), 30);
+      this._tweenCamera(new THREE.Vector3(cx + 12.5 * k, 11.5 * k + y, 15.5 * k), new THREE.Vector3(cx, 0.5 + y, 0.3), 30);
     } else {
       const d = this._dio; this._dio = null;
       this.scene.remove(this._dioBase);
@@ -173,16 +271,8 @@ export class Room {
     }
   }
 
-  /** Hide what would block the diorama view (the near wall, the ceiling and things hanging there). */
-  _cutaway(on) {
-    const cozy = this.cozy;
-    if (cozy.rightWall) cozy.rightWall.visible = !on;
-    if (cozy.ceiling) cozy.ceiling.visible = !on;
-    for (const item of cozy.items.values()) {
-      const high = item.def.mount !== "wall" && (item.spec.y || 0) > 2.2;
-      if (item.spec.wall === "right" || high) item.group.visible = !on && !cozy.hidden;
-    }
-  }
+  /** Hide what would block the diorama view (the near walls, the ceilings and things hanging there). */
+  _cutaway(on) { this.cozy.setCut(on); }
 
   _buildDioramaBase() {
     const g = new THREE.Group();
@@ -197,14 +287,43 @@ export class Room {
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(14, 14);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), new THREE.MeshStandardMaterial({ map: tex, roughness: 1 }));
     ground.rotation.x = -Math.PI / 2; ground.position.y = -0.62; ground.receiveShadow = true; g.add(ground);
-    // the room's base: a thick slab like a cut-out piece of a house
-    const W = 5, BACK = -4, FRONT = 4.5;
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(W * 2 + 0.3, 0.6, FRONT - BACK + 0.3), new THREE.MeshStandardMaterial({ color: 0xb8692f, roughness: 0.9 }));
-    slab.position.set(0, -0.31, (FRONT + BACK) / 2 - 0.15 + 0.15); slab.castShadow = true; slab.receiveShadow = true; g.add(slab);
-    const lip = new THREE.Mesh(new THREE.BoxGeometry(W * 2 + 0.34, 0.06, FRONT - BACK + 0.34), new THREE.MeshStandardMaterial({ color: 0x7b4a2a, roughness: 0.9 }));
-    lip.position.set(0, -0.62 + 0.03, slab.position.z); g.add(lip);
+    // the house's base: a thick slab like a cut-out piece of a house, one under each room so it follows their shape
+    const slabMat = new THREE.MeshStandardMaterial({ color: 0xb8692f, roughness: 0.9 }), lipMat = new THREE.MeshStandardMaterial({ color: 0x7b4a2a, roughness: 0.9 });
+    for (const r of this.cozy.house.rects()) {
+      const w = r.maxX - r.minX, d = r.maxZ - r.minZ, cx = (r.minX + r.maxX) / 2, cz = (r.minZ + r.maxZ) / 2;
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, 0.6, d + 0.3), slabMat);
+      slab.position.set(cx, -0.31, cz); slab.castShadow = true; slab.receiveShadow = true; slab.name = "slab"; g.add(slab);
+      const lip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.34, 0.06, d + 0.34), lipMat);
+      lip.position.set(cx, -0.62 + 0.03, cz); g.add(lip);
+    }
     const sun = new THREE.HemisphereLight(0xfff1d6, 0x4a6a3a, 0.6); g.add(sun);       // soft daylight on the grass
     return g;
+  }
+
+  /** Which room she's standing in: 0 = the main room, 1, 2.. = the extra rooms (in house.rects() order). */
+  _roomAt(p) {
+    const R = this.cozy.house.rects();
+    for (let i = 1; i < R.length; i++) {
+      const r = R[i], inL = r.side === "right" ? 0.35 : 0, inR = r.side === "left" ? 0.35 : 0;   // a little past the doorway
+      if (p.x > r.minX + inL && p.x < r.maxX - inR) return i;
+    }
+    return 0;
+  }
+
+  /** The camera follows her from room to room: each room gets a view like the main room's, from its open front. */
+  _followRoom() {
+    const c = this.char;
+    if (!c || this.gym || this._dio || this.editMode || this.cozy.shellHidden) return;
+    const i = this._roomAt(c.root.position), from = this._roomIdx || 0;
+    if (i === from) return;
+    this._roomIdx = i;
+    if (from === 0) {                                               // remember the main room's view to come back to
+      const T = this._camTween;
+      this._mainView = { pos: (T ? T.p1 : this.camera.position).clone(), target: (T ? T.t1 : this.controls.target).clone(), fov: T ? T.f1 : this.camera.fov };
+    }
+    if (i === 0) { const v = this._mainView; if (v) this._tweenCamera(v.pos, v.target, v.fov); return; }
+    const r = this.cozy.house.rects()[i], cx = (r.minX + r.maxX) / 2, d = r.maxZ - r.minZ;
+    this._tweenCamera(new THREE.Vector3(cx + 0.2, 1.85, r.maxZ + 1.8), new THREE.Vector3(cx - 0.1, 1.15, r.minZ + d * 0.4), this.camera.fov);
   }
 
   _tweenCamera(pos, target, fov) {
@@ -223,16 +342,21 @@ export class Room {
   addItem(type) {
     const def = CATALOG[type];
     if (!def) return;
-    const spec = def.mount === "wall" ? { type, wall: "back", u: -3 + Math.random() * 1.5 } : { type, x: 1.8 + Math.random() * 0.8, z: 2.3 + Math.random() * 0.6 }   // in view, beside the character;
-    if (type === "poster") spec.variant = Math.floor(Math.random() * 4);
+    this._remember();
+    const r = Math.random;
+    const spec = def.mount === "wall" ? { type, wall: "back", u: -3 + r() * 1.5 }
+      : { type, x: 1.8 + r() * 0.8, z: 2.3 + r() * 0.6 };   // in view, beside the character
+    if (type === "poster") spec.variant = Math.floor(r() * 4);
     const item = this.cozy.addItem(spec);
     this.setEditMode(true);
     this.select(item.id);
+    this._pop(item);
     this.onLayoutChange?.();
   }
 
   rotateSelected(angle) {
     if (this.selectedId == null) return;
+    this._remember();
     this.cozy.rotateItem(this.selectedId, angle);
     this.select(this.selectedId);
     this.onLayoutChange?.();
@@ -240,6 +364,7 @@ export class Room {
 
   raiseSelected(dy) {
     if (this.selectedId == null) return;
+    this._remember();
     this.cozy.raiseItem(this.selectedId, dy);
     this.select(this.selectedId);
     this.onLayoutChange?.();
@@ -247,13 +372,19 @@ export class Room {
 
   removeSelected() {
     if (this.selectedId == null) return;
+    this._remember();
     this.cozy.removeItem(this.selectedId);
     this.select(null);
     this.onLayoutChange?.();
   }
 
-  setWallColor(hex) { this.cozy.setWallColor(hex); this.onLayoutChange?.(); }
-  setFloor(style) { this.cozy.setFloor(style); this.onLayoutChange?.(); }
+  setWallColor(hex) {
+    if (performance.now() - (this._lastWall || 0) > 700) this._remember();
+    this._lastWall = performance.now();
+    this.cozy.setWallColor(hex); this.onLayoutChange?.();
+  }
+  setFloor(style) { this._remember(); this.cozy.setFloor(style); this.onLayoutChange?.(); }
+  setWallpaper(kind) { this._remember(); this.cozy.setWallpaper(kind); this.onLayoutChange?.(); }
   setSky(mode) { this.cozy.setSky(mode); this.onLayoutChange?.(); }
   setBrightness(v) { this.cozy.setBrightness(v); this.onLayoutChange?.(); }
 
@@ -266,16 +397,17 @@ export class Room {
     if (mount !== "wall") {
       return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), p) ? { point: p } : null;
     }
+    const house = this.cozy.house, hb = this.gym ? { minX: -5, maxX: 5 } : house.bounds(), y0 = 0;
     const walls = [
       ["back", new THREE.Plane(new THREE.Vector3(0, 0, 1), 4)],
-      ["left", new THREE.Plane(new THREE.Vector3(1, 0, 0), 5)],
-      ["right", new THREE.Plane(new THREE.Vector3(-1, 0, 0), 5)],
+      ...(this.gym || !house.hasRoom("left") ? [["left", new THREE.Plane(new THREE.Vector3(1, 0, 0), 5)]] : []),    // an open side has no wall
+      ...(this.gym || !house.hasRoom("right") ? [["right", new THREE.Plane(new THREE.Vector3(-1, 0, 0), 5)]] : []),
     ];
     let best = null;
     for (const [wall, plane] of walls) {
       const q = new THREE.Vector3();
       if (!ray.ray.intersectPlane(plane, q)) continue;
-      if (Math.abs(q.x) > 5.01 || q.z < -4.01 || q.z > 4.5 || q.y < 0 || q.y > 3.2) continue;
+      if (q.x < hb.minX - 0.01 || q.x > hb.maxX + 0.01 || (wall !== "back" && Math.abs(q.x) > 5.01) || q.z < -4.01 || q.z > 4.5 || q.y < y0 || q.y > y0 + 3.2) continue;
       const d = q.distanceTo(ray.ray.origin);
       if (!best || d < best.d) best = { wall, point: q, d };
     }
@@ -357,10 +489,19 @@ export class Room {
       if (m) ears.push({ bone: o, side: m[1].toUpperCase() === "L" ? 1 : -1 });
     });
     if (!head) root.traverse((o) => { if (o.isBone && /^spine\.?005$/i.test(o.name)) head = o; });   // Rigify-style rigs
-    const c = { kind: "gltf", root, head, headBase: head?.rotation.clone(), mouths, mixer: null, actions: {}, ears };
+    // fingers the animations don't move: the app curls them a little by itself (relaxed hands, grip when holding a book)
+    const animated = new Set(gltf.animations.flatMap((a) => a.tracks.map((tr) => tr.name.split(".")[0])));
+    const fingers = [];
+    root.traverse((o) => {
+      if (!o.isBone || animated.has(o.name) || /(end|nub|tip|top)$/i.test(o.name)) return;
+      if (!/(finger|thumb|index|middle|ring|pinky|^f_)/i.test(o.name)) return;
+      fingers.push({ bone: o, base: o.quaternion.clone(), thumb: /thumb/i.test(o.name), k: Math.random() * 6 });
+    });
+    const c = { kind: "gltf", root, head, headBase: head?.rotation.clone(), mouths, mixer: null, actions: {}, ears, fingers };
     this._findLooks(c);
     this._findFace(c, file);
     if (gltf.animations.length) {
+      inPlace(gltf.animations);                  // a walk that moves the hips would jump back at every loop
       c.mixer = new THREE.AnimationMixer(root);
       const find = (re) => gltf.animations.find((a) => re.test(a.name));
       const idle = find(/idle|breath|stand/i) || gltf.animations[0];
@@ -654,6 +795,12 @@ export class Room {
   /** Swap the cozy room for the gym room (true) and back (false). startedAt = workout start (ms) for the TV clock. */
   setGymRoom(on, startedAt = null, layout = null) {
     on = !!on;
+    if (on && this.char && this._roomIdx) {                         // workouts happen in the main room
+      const c = this.char;
+      c.seat = null; c.baseY = 0; c.root.position.copy(HOME); this.walkTarget = null; this._path = [];
+      this._roomIdx = 0;
+      if (this._mainView) this._tweenCamera(this._mainView.pos, this._mainView.target, this._mainView.fov);
+    }
     if (on === !!this.gym) { if (this.gym && startedAt) this.gym.startedAt = startedAt; return; }
     const r = this.renderer;
     if (on) {
@@ -728,8 +875,6 @@ export class Room {
         const p = item.group.position;
         out.push({ kind: "window", label: item.def.label, x: p.x + nx * 0.75, z: p.z + nz * 0.75, use: { clip: "lookout", face: Math.atan2(-nx, -nz) } });
       }
-      if (!out.some((o) => o.kind === "window") && this.cozy.showWindow !== false && !this.cozy.hidden)
-        out.push({ kind: "window", label: "Window", x: 2, z: -3.1, use: { clip: "lookout", face: Math.PI } });
     }
     return out;
   }
@@ -752,9 +897,9 @@ export class Room {
     const yaw = item.group.rotation.y;
     this.walkTo(front.x, front.z);
     const m = this._measureSeat(item, use.at);                     // the furniture is solid: find its real seat
-    const top = m?.top ?? use.seat;
+    const top = m?.top ?? use.seat + item.group.position.y;
     const drop = use.clip === "lie" ? 0.28 : 0;                    // lying: her back rests on the mattress, not her hips
-    this._pendingUse = { use, yaw, seat: new THREE.Vector3(seatPos.x, top - SEAT_IN_CLIP - drop, seatPos.z), front: front.setY(0),
+    this._pendingUse = { use, yaw, seat: new THREE.Vector3(seatPos.x, top - SEAT_IN_CLIP - drop, seatPos.z), front: front.setY(this._groundY || 0),
                          item, top, edge: m?.edge ?? null, back: m?.back ?? null };
   }
 
@@ -764,13 +909,13 @@ export class Room {
     this._seatRay ??= new THREE.Raycaster();
     const ray = this._seatRay, down = new THREE.Vector3(0, -1, 0);
     const heightAt = (z) => {
-      const p = item.group.localToWorld(new THREE.Vector3(at[0], 0, z)); p.y = 3;
+      const p = item.group.localToWorld(new THREE.Vector3(at[0], 0, z)); p.y = item.group.position.y + 3;
       ray.set(p, down); ray.far = 3.2;
       const hit = ray.intersectObject(item.group, true).find((h) => h.object.visible !== false);
       return hit ? hit.point.y : 0;
     };
     const top = heightAt(at[1]);
-    if (top < 0.2) return null;
+    if (top < item.group.position.y + 0.2) return null;
     let edge = null;
     for (let z = at[1]; z < at[1] + 1.4; z += 0.02) if (heightAt(z) < top - 0.1) { edge = z; break; }
     // backrest: look backwards along the seat a bit above it; the first thing that rises clearly above the seat
@@ -1013,11 +1158,22 @@ export class Room {
     if (S.t >= 1 && !S.leaving) this._settle(c, S, dt);
     c.baseY = c.root.position.y;
     if (S.t >= 1 && S.leaving) {                                    // stood up: carry on walking
-      c.seat = null; c.baseY = 0; c.root.position.y = 0;
+      c.seat = null; c.baseY = this._groundY || 0; c.root.position.y = c.baseY;
       if (S.then) this._planWalk(S.then);
       return false;
     }
     return true;
+  }
+
+  /** Fingers: relaxed and slightly curled, a little twitch while talking, a fist when holding a book. */
+  _moveFingers(c, t, dt, talk) {
+    const grip = c.book ? 1 : 0;
+    c._grip = (c._grip ?? 0) + (grip - (c._grip ?? 0)) * Math.min(1, dt * 6);
+    const q = new THREE.Quaternion(), X = new THREE.Vector3(1, 0, 0);
+    for (const f of c.fingers) {
+      const curl = 0.22 + Math.sin(t * 1.3 + f.k) * 0.04 + talk * Math.sin(t * 7 + f.k) * 0.08 + c._grip * 0.9;
+      f.bone.quaternion.copy(f.base).multiply(q.setFromAxisAngle(X, curl * (f.thumb ? 0.5 : 1)));
+    }
   }
 
   /** Floppy ears: the animation keeps them hanging down; on top of that they react to feelings and movement.
@@ -1138,10 +1294,11 @@ export class Room {
     const b = this.cozy.walkBounds;
     const target = new THREE.Vector3(THREE.MathUtils.clamp(x, b.minX, b.maxX), 0, THREE.MathUtils.clamp(z, b.minZ, b.maxZ));
     this._pendingUse = null;
+    this._afterWalk = null;
     if (c.seat && !c.seat.leaving) {                                // get up first, then walk
       const S = c.seat;
       if (S.chairBase && S.item) this.cozy.place(S.item);           // chair goes back where it belongs
-      c.seat = { from: c.root.position.clone(), to: S.front ? S.front.clone() : c.root.position.clone().setY(0), yaw0: c.root.rotation.y,   // from where she really sat
+      c.seat = { from: c.root.position.clone(), to: S.front ? S.front.clone() : c.root.position.clone().setY(this._groundY || 0), yaw0: c.root.rotation.y,   // from where she really sat
                  yaw1: S.front ? c.root.rotation.y : c.root.rotation.y, t: 0, dur: S.front ? 0.8 : 0.3, leaving: true, then: target };
       c.activity = null;
       return;
@@ -1155,20 +1312,22 @@ export class Room {
   _planWalk(target) {
     const c = this.char;
     const b = this.cozy.walkBounds, cell = 0.2, R = 0.32;          // R = how close she gets to furniture (her body is ~0.4 m wide)
+    const y0 = 0;
     const nx = Math.ceil((b.maxX - b.minX) / cell) + 1, nz = Math.ceil((b.maxZ - b.minZ) / cell) + 1;
     const blocked = new Uint8Array(nx * nz);
     const boxes = [];
     for (const item of this.cozy.items.values()) {
-      if (item.def.mount === "wall" || item.def.flat || (item.spec.y || 0) > 1.0 || !item.group.visible) continue;
+      if (item.def.mount === "wall" || item.def.flat || (item.spec.y || 0) > 1.0) continue;
       let walkable = false; item.group.traverse((o) => { if (o.userData.floor) walkable = true; });
       if (walkable) continue;
       const box = new THREE.Box3().setFromObject(item.group);
-      if (box.max.y < 0.08) continue;                              // flat things (rugs) don't block
+      if (box.max.y - y0 < 0.08) continue;                         // flat things (rugs) don't block
       boxes.push(box);
     }
     const X = (i) => b.minX + i * cell, Z = (j) => b.minZ + j * cell;
     for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
       const x = X(i), z = Z(j);
+      if (!this.cozy.walkable(x, z)) { blocked[i * nz + j] = 1; continue; }           // walls between rooms
       for (const bx of boxes) if (x > bx.min.x - R && x < bx.max.x + R && z > bx.min.z - R && z < bx.max.z + R) { blocked[i * nz + j] = 1; break; }
     }
     const toCell = (v) => [Math.round((v.x - b.minX) / cell), Math.round((v.z - b.minZ) / cell)].map((n, k) => Math.max(0, Math.min(k ? nz - 1 : nx - 1, n)));
@@ -1461,6 +1620,8 @@ export class Room {
 
   recolorSelected(hex) {
     if (this.selectedId == null) return;
+    if (performance.now() - (this._lastPaint || 0) > 700) this._remember();     // dragging the colour picker = one step
+    this._lastPaint = performance.now();
     this.cozy.recolorItem(this.selectedId, hex);
     this.onLayoutChange?.();
   }
@@ -1473,7 +1634,7 @@ export class Room {
     const c = this.char, a = c?.actions?.[name];
     if (!a) return false;
     this.walkTarget = null; this._path = [];
-    if (c.seat) { c.seat = null; c.baseY = 0; c.root.position.y = 0; }
+    if (c.seat) { c.seat = null; c.baseY = this._groundY || 0; c.root.position.y = c.baseY; }
     this._dropBook(c); c.activity = null;
     const once = a.loop === THREE.LoopOnce;
     this._forced = { clip: name, until: this.clock.elapsedTime + (once ? a.getClip().duration + 0.2 : seconds) };
@@ -1542,20 +1703,32 @@ export class Room {
       down = [e.clientX, e.clientY];
       if (!this.editMode) return;
       const hit = this._pick(e);
-      const id = hit?.object.userData.itemId;
+      let id = hit?.object?.userData?.itemId;
+      if (id == null && hit?.object) {
+        let cur = hit.object;
+        while (cur && id == null) {
+          if (cur.userData?.itemId != null) id = cur.userData.itemId;
+          cur = cur.parent;
+        }
+      }
       if (id != null) {
         this.select(id);
-        this._drag = { id, mount: this.cozy.items.get(id).def.mount, moved: false };
+        const it = this.cozy.items.get(id);
+        this._drag = { id, mount: it.def.mount, moved: false, snap: JSON.stringify(this.cozy.serialize()) };
         this.controls.enabled = false;
         this.canvas.setPointerCapture(e.pointerId);
       }
     });
     this.canvas.addEventListener("pointerup", (e) => {
       if (this._drag) {
-        const moved = this._drag.moved;
+        const { moved, snap, id } = this._drag;
         this._drag = null;
         this.controls.enabled = true;
-        if (moved) this.onLayoutChange?.();
+        if (moved) {
+          if (!this.gym) { this.undoStack.push(snap); if (this.undoStack.length > 40) this.undoStack.shift(); this.onUndoChange?.(this.undoStack.length); }
+          this._pop(this.cozy.items.get(id), 0.5);                   // a soft bounce where it lands
+          this.onLayoutChange?.();
+        }
         return;
       }
       if (this.editMode) {
@@ -1617,8 +1790,10 @@ export class Room {
     }
     this.controls.update();
     this.cozy.update(t, dt);
+    if (this._pops.length) this._updatePops(dt);
     if (this.editMode) { this._updateFootprint(); const sel = this.cozy.items.get(this.selectedId); if (sel) this.selectBox.setFromObject(sel.group); }
     if (this.gym) this.gym.setClock((Date.now() - this.gym.startedAt) / 1000);
+    this._followRoom();
     const c = this.char;
     if (c) {
       const L = this.look;
@@ -1642,6 +1817,9 @@ export class Room {
           c.speed = 0;
           const P = this._pendingUse;
           this._pendingUse = null;
+          const after = this._afterWalk;
+          this._afterWalk = null;
+          if (after) after();
           if (P?.seat) {                                          // turn around and sit down smoothly
             c.seat = { from: pos.clone(), to: P.seat.clone(), yaw0: c.root.rotation.y, yaw1: P.yaw, t: 0, dur: 0.9, front: P.front, clip: P.use.clip,
                        item: P.item, top: P.top, edge: P.edge, back: P.back };
@@ -1702,6 +1880,7 @@ export class Room {
         if (c.head && !c.mixer) c.head.rotation.copy(c.headBase);
         if (c.head) { c.head.rotation.y += lookX; c.head.rotation.x += lookY; }
         for (const [mesh, i] of c.mouths) mesh.morphTargetInfluences[i] = talk;
+        if (c.fingers.length) this._moveFingers(c, t, dt, talk);
         if (c.face) this._faceLife(c, t, dt, this.expr?.until > t ? this.expr.name : "neutral", talk);
         else if (!c.mouths.length && this.speaking && c.head) c.head.rotation.x += talk * 0.06;
       } else if (c.kind === "penguin") {

@@ -1,0 +1,45 @@
+{
+  "name": "pikachu_rigged",
+  "profile": "general",
+  "inputs": [
+    "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\pikachu-rigged.glb"
+  ],
+  "annotate": "rule",
+  "profile_auto": true,
+  "annotate_names": "rule",
+  "annotate_face": "rule",
+  "animated": false,
+  "n_joints_export": 29,
+  "rig_glb": null,
+  "stats_dataset": "general",
+  "dropped_translation": {
+    "max_share_of_extent": 0.0,
+    "clip": null,
+    "joint": null
+  },
+  "face_pair": {
+    "r_hip": {
+      "raw": "thigh.R",
+      "clean": "Right Thigh"
+    },
+    "l_hip": {
+      "raw": "thigh.L",
+      "clean": "Left Thigh"
+    },
+    "source": "thigh"
+  },
+  "annotation_notes": [
+    "sources: joint names rule, face pair rule"
+  ],
+  "n_joints": 29,
+  "model_joint_limit": {
+    "max_joints": 71,
+    "source": "released UniML3D models",
+    "fits": true
+  },
+  "n_clips": 0,
+  "cond": "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\pikachu-rigged\\asset\\cond.npy",
+  "canonical_glb": "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\pikachu-rigged\\asset\\pikachu_rigged.glb",
+  "notes": [],
+  "preview": "C:\\Users\\jpant\\OneDrive\\Desktop\\coding\\2025\\2025\\ui\\models\\_unimate\\pikachu-rigged\\asset\\preview.png"
+}

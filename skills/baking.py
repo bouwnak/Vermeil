@@ -50,35 +50,40 @@ def get_recipe(rid, kind="baking"):
     return next((r for r in _load(kind)["recipes"] if r["id"] == rid), None)
 
 
-def save_recipe(recipe, kind="baking"):
-    """Add or update a recipe (ingredients may be given as text lines or dicts)."""
-    d = _load(kind)
+def save_recipe(recipe, kind="baking", sync=True):
+    """Add or update a recipe (ingredients may be given as text lines or dicts). Syncs to both baking and cooking."""
     r = dict(recipe or {})
     r["id"] = r.get("id") or uuid.uuid4().hex[:8]
     r["title"] = (r.get("title") or "My recipe").strip()[:120]
     r["ingredients"] = [ingredient(i) for i in r.get("ingredients", []) if (i if isinstance(i, str) else i.get("text") or i.get("name"))]
-    r["steps"] = [s.strip() for s in r.get("steps", []) if str(s).strip()]
+    r["steps"] = _flatten_steps(r.get("steps", []))
     r.setdefault("servings", None)
     r.setdefault("nutrition", None)
     r["updated"] = time.strftime("%Y-%m-%d %H:%M")
-    if any(x["id"] == r["id"] for x in d["recipes"]):
-        d["recipes"] = [r if x["id"] == r["id"] else x for x in d["recipes"]]
-    else:
-        d["recipes"].append(r)
-    _save(d, kind)
+
+    # Update both baking and cooking stores so they stay in sync
+    targets = ("baking", "cooking") if sync else (kind,)
+    for k in targets:
+        d = _load(k)
+        if any(x["id"] == r["id"] for x in d["recipes"]):
+            d["recipes"] = [r if x["id"] == r["id"] else x for x in d["recipes"]]
+        else:
+            d["recipes"].append(r)
+        _save(d, k)
     return r
 
 
 def delete_recipe(rid, kind="baking"):
-    d = _load(kind)
-    d["recipes"] = [r for r in d["recipes"] if r["id"] != rid]
-    _save(d, kind)
+    for k in ("baking", "cooking"):
+        d = _load(k)
+        d["recipes"] = [r for r in d["recipes"] if r["id"] != rid]
+        _save(d, k)
     return {"ok": True}
 
 
 def toggle_saved(rid, kind="baking"):
     """The ★ Save button: saved recipes stay at the top of your list."""
-    r = get_recipe(rid, kind)
+    r = get_recipe(rid, kind) or get_recipe(rid, "cooking" if kind == "baking" else "baking")
     if not r:
         return {"error": "Recipe not found."}
     r["saved"] = not r.get("saved")
@@ -308,17 +313,43 @@ def alternatives(name):
 
 
 # ------------------------------------------------------------------ importing from a website
+def _split_clumped_text(text):
+    text = re.sub(r"<[^>]+>", "", text or "").strip()
+    if not text:
+        return []
+    lines = [p.strip() for p in re.split(r"\r?\n+", text) if p.strip()]
+    out = []
+    for line in lines:
+        parts = re.split(r"(?:^|\s+)(?:Step\s*\d+[:.]?|\d+[.)])\s+", line, flags=re.I)
+        parts = [p.strip() for p in parts if p.strip()]
+        if len(parts) > 1:
+            out.extend(parts)
+            continue
+        if len(line) > 120 and re.search(r"[.!?]\s+[A-Z]", line):
+            sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", line) if s.strip()]
+            if len(sentences) > 1:
+                out.extend(sentences)
+                continue
+        out.append(line)
+    return out
+
+
 def _flatten_steps(x):
     out = []
     for s in x if isinstance(x, list) else [x]:
         if isinstance(s, str):
-            out += [p.strip() for p in re.split(r"\n+", s) if p.strip()]
+            out += _split_clumped_text(s)
         elif isinstance(s, dict):
             if s.get("@type") == "HowToSection":
                 out += _flatten_steps(s.get("itemListElement", []))
             elif s.get("text"):
-                out.append(s["text"].strip())
-    return [re.sub(r"<[^>]+>", "", s).strip() for s in out if s]
+                out += _split_clumped_text(s["text"])
+    cleaned = []
+    for s in out:
+        c = re.sub(r"^(?:Step\s*\d+[:.]?|\d+[.)]|-|\*)\s*", "", s).strip()
+        if c:
+            cleaned.append(c)
+    return cleaned
 
 
 def _find_recipe_ld(page):
@@ -457,7 +488,7 @@ COOK_SAMPLE = {"title": "Chicken Adobo", "servings": 4, "source": "",
 
 def ensure_sample(kind="baking"):
     if not _load(kind)["recipes"]:
-        save_recipe(COOK_SAMPLE if kind == "cooking" else SAMPLE, kind)
+        save_recipe(COOK_SAMPLE if kind == "cooking" else SAMPLE, kind, sync=False)
 
 
 # ------------------------------------------------------------------ searching online (websites, YouTube, TikTok...)

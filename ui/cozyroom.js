@@ -4,6 +4,9 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { DEN_CATALOG, DEN_LAYOUT } from "./denroom.js";
 import { GYM_CATALOG } from "./gymroom.js";
+import { DND_FURNITURE_CATALOG } from "./dnd_furniture.js";
+import { PET_CATALOG } from "./pets.js";
+import { House } from "./house.js";
 
 const W = 5, BACK = -4, FRONT = 4.5, H = 3.2;     // room: x -5..5, z -4..4.5, height 3.2 m
 
@@ -558,6 +561,70 @@ function carpetTexture() {
 }
 
 // ---------- more floors (patterns drawn on a canvas) ----------
+// ---------- wallpapers ----------
+// Drawn in light and dark greys on white: the wall colour you pick tints them, so every wallpaper works with every colour.
+export const WALLPAPERS = {
+  none: "Plain paint", stripes: "Stripes", pinstripe: "Pinstripes", dots: "Polka dots", damask: "Damask",
+  floral: "Little flowers", brick: "Brick", panels: "Wood panels", checks: "Checks", stars: "Stars", hearts: "Hearts", waves: "Waves",
+};
+function wallpaperTexture(kind) {
+  return canvasTexture(512, 512, (g, w, h) => {
+    const r = rng(21);
+    g.fillStyle = "#ffffff"; g.fillRect(0, 0, w, h);
+    const ink = (a) => `rgba(60,50,60,${a})`, hi = (a) => `rgba(255,255,255,${a})`;
+    const shape = (x, y, s, draw) => { g.save(); g.translate(x, y); g.scale(s, s); g.beginPath(); draw(); g.fill(); g.restore(); };
+    if (kind === "stripes") {
+      for (let x = 0; x < w; x += 64) { g.fillStyle = ink(0.13); g.fillRect(x, 0, 32, h); }
+    } else if (kind === "pinstripe") {
+      for (let x = 0; x < w; x += 32) { g.fillStyle = ink(0.22); g.fillRect(x, 0, 3, h); }
+    } else if (kind === "dots") {
+      g.fillStyle = ink(0.2);
+      for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) shape(x * 64 + (y % 2) * 32 + 16, y * 64 + 32, 1, () => g.arc(0, 0, 9, 0, Math.PI * 2));
+    } else if (kind === "damask") {
+      g.fillStyle = ink(0.16);
+      for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) shape(x * 128 + (y % 2) * 64 + 32, y * 128 + 64, 1, () => {
+        g.moveTo(0, -46); g.bezierCurveTo(30, -30, 26, 0, 0, 46); g.bezierCurveTo(-26, 0, -30, -30, 0, -46);
+        for (const s of [-1, 1]) { g.moveTo(0, 6); g.bezierCurveTo(s * 34, -6, s * 42, 22, s * 20, 30); g.bezierCurveTo(s * 30, 14, s * 16, 8, 0, 6); }
+      });
+    } else if (kind === "floral") {
+      for (let i = 0; i < 70; i++) {
+        const x = r() * w, y = r() * h, s = 0.6 + r() * 0.5;
+        g.fillStyle = ink(0.15);
+        for (let k = 0; k < 5; k++) shape(x, y, s, () => { g.rotate((k * Math.PI * 2) / 5); g.ellipse(0, -9, 5, 9, 0, 0, Math.PI * 2); });
+        g.fillStyle = ink(0.3); shape(x, y, s, () => g.arc(0, 0, 4, 0, Math.PI * 2));
+      }
+    } else if (kind === "brick") {
+      g.fillStyle = ink(0.28); g.fillRect(0, 0, w, h);
+      const bh = 32, bw = 96;
+      for (let y = 0; y < h; y += bh) for (let x = -(y / bh % 2) * bw / 2; x < w; x += bw) {
+        g.fillStyle = `rgba(255,255,255,${0.8 + r() * 0.2})`; g.fillRect(x + 3, y + 3, bw - 6, bh - 6);
+      }
+    } else if (kind === "panels") {
+      for (let x = 0; x < w; x += 64) {
+        g.fillStyle = `rgba(80,55,40,${0.08 + r() * 0.08})`; g.fillRect(x, 0, 64, h);
+        g.fillStyle = ink(0.3); g.fillRect(x, 0, 3, h); g.fillStyle = hi(0.6); g.fillRect(x + 3, 0, 2, h);
+        for (let i = 0; i < 5; i++) { g.fillStyle = ink(0.05); g.fillRect(x + 8 + r() * 50, r() * h, 1.5, 40 + r() * 120); }
+      }
+    } else if (kind === "checks") {
+      for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if ((x + y) % 2) { g.fillStyle = ink(0.12); g.fillRect(x * 64, y * 64, 64, 64); }
+    } else if (kind === "stars") {
+      g.fillStyle = ink(0.2);
+      for (let i = 0; i < 40; i++) shape(r() * w, r() * h, 0.5 + r() * 0.7, () => {
+        for (let k = 0; k < 10; k++) { const a = (k * Math.PI) / 5 - Math.PI / 2, rr = k % 2 ? 6 : 15; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+        g.closePath();
+      });
+    } else if (kind === "hearts") {
+      g.fillStyle = ink(0.18);
+      for (let y = 0; y < 6; y++) for (let x = 0; x < 6; x++) shape(x * 86 + (y % 2) * 43 + 20, y * 86 + 40, 0.9, () => {
+        g.moveTo(0, 10); g.bezierCurveTo(-24, -6, -10, -26, 0, -12); g.bezierCurveTo(10, -26, 24, -6, 0, 10);
+      });
+    } else if (kind === "waves") {
+      g.strokeStyle = ink(0.18); g.lineWidth = 6;
+      for (let y = 16; y < h + 32; y += 40) { g.beginPath(); for (let x = 0; x <= w; x += 8) g.lineTo(x, y + Math.sin((x / w) * Math.PI * 8) * 9); g.stroke(); }
+    }
+  });
+}
+
 function patternTexture(kind, o = {}) {
   return canvasTexture(1024, 1024, (g, w, h) => {
     const r = rng(9);
@@ -809,7 +876,29 @@ export const THEMES = {
   empty: { label: "Empty room", layout: { shell: { wall: "#e9e1d4", floor: "light wood", sky: "auto" }, items: [] } },
 };
 
-Object.assign(CATALOG, DEN_CATALOG, GYM_CATALOG);
+// the big window that shows the time of day (it used to be part of the walls; now you can move it or delete it)
+CATALOG.bigWindow = { label: "Big window (time of day)", mount: "wall", defaultY: 1.75, withShell: true, build(ctx) {
+  const room = ctx._room, g = new THREE.Group();
+  const sky = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 2.4), room.skyMat);
+  sky.position.z = -0.02; sky.userData.keepLook = true;          // the shared sky picture: never recoloured or thrown away
+  g.add(sky);
+  const frame = std(0x15101a);
+  for (const x of [-1.8, -0.6, 0.6, 1.8]) g.add(box(0.06, 2.5, 0.08, frame, x, 0, 0.01));
+  for (const y of [-1.2, 1.2, 0]) g.add(box(3.7, 0.06, 0.08, frame, 0, y, 0.01));
+  g.add(box(3.8, 0.06, 0.25, std(0x3a2a40), 0, -1.23, 0.1));
+  for (const x of [-2.05, 2.05]) g.add(box(0.45, 2.9, 0.12, std(0x3b2050, { roughness: 1 }), x, -0.15, 0.12, 0.04));
+  const glow = new THREE.PointLight(0xa88cff, 6, 6, 2);           // the sky's light coming in (follows the time of day)
+  glow.position.set(0, 0.05, 0.77); g.add(glow);
+  ctx.glow = glow; room._lightWindow(glow);
+  return { group: g, interact: { label: "Window: next time of day", onClick: () => {
+    const order = ["dawn", "morning", "day", "golden", "sunset", "dusk", "night"];
+    const next = order[(order.indexOf(room.sky) + 1) % order.length];
+    room.setSky(next); room.onChange?.();
+    return TIME_PRESETS[next].label.toLowerCase();
+  } } };
+} };
+
+Object.assign(CATALOG, DEN_CATALOG, GYM_CATALOG, DND_FURNITURE_CATALOG, PET_CATALOG);
 
 // ======================================================================
 // The room
@@ -821,25 +910,55 @@ export class CozyRoom {
     this.nextId = 1;
     this.screenName = "Vermeil";
     this.brightness = 1;
-    this.walkBounds = { minX: -4.3, maxX: 4.3, minZ: -3.5, maxZ: 3.8 };
     const before = new Set(scene.children);
     this._buildShell();
     this.shell = scene.children.filter((o) => !before.has(o));      // walls, window, lights (hidden in the gym room)
     this.hidden = false;
+    this.cut = false;                                               // Edit room: near walls and ceilings cut away
+    this.house = new House(scene, { wall: this.wallMat, ceiling: this.ceilMat });   // extra rooms on the left and right
+  }
+
+  /** Where she may walk: the whole house (only the main room while the gym room is showing). */
+  get walkBounds() { return this.shellHidden ? { minX: -4.3, maxX: 4.3, minZ: -3.5, maxZ: 3.8 } : this.house.walkBounds(); }
+  walkable(x, z) { return this.house.walkable(x, z, !!this.shellHidden); }
+
+  /** Change the house (the extra rooms). Furniture in places that are gone moves inside. */
+  setHouse(cfg) {
+    const H = this.house.set(cfg);
+    for (const item of this.items.values()) {
+      if (item.def.mount !== "wall") { const p = this.house.clampPoint(item.spec.x, item.spec.z); item.spec.x = p.x; item.spec.z = p.z; }
+      else if (item.spec.wall === "back") { const b = this.house.bounds(); item.spec.u = THREE.MathUtils.clamp(item.spec.u, b.minX + 0.4, b.maxX - 0.4); }
+      this.place(item);
+    }
+    this._syncShell();
+    return H;
+  }
+
+  /** Edit room view: hide the near (right) walls, the ceilings and things hanging from them. */
+  setCut(on) { this.cut = !!on; this._syncShell(); }
+
+  _syncShell() {
+    const off = this.hidden || this.shellHidden;
+    for (const o of this.shell) o.visible = !off;
+    if (this.leftWall) this.leftWall.visible = !off && !this.house.hasRoom("left");
+    if (this.rightWall) this.rightWall.visible = !off && !this.house.hasRoom("right") && !this.cut;
+    if (this.ceiling) this.ceiling.visible = !off && !this.cut;
+    this.house.group.visible = !off;
+    this.house.setCut(this.cut);
+    for (const item of this.items.values()) item.group.visible = this._shows(item);
+  }
+
+  /** Is this piece seen right now? Not on cut-away walls; the big window goes away with the walls (gym room). */
+  _shows(item) {
+    const high = item.def.mount !== "wall" && (item.spec.y || 0) > 2.2;
+    return !this.hidden && !(item.def.withShell && this.shellHidden) && !(this.cut && (item.spec.wall === "right" || high));
   }
 
   /** Hide the whole cozy room (used while the gym room is showing). */
   /** Hide only the walls/window/lights (the gym room brings its own) - furniture stays usable. */
-  setShellHidden(on) {
-    this.shellHidden = !!on;
-    for (const o of this.shell) o.visible = !on && (this.showWindow !== false || !(this.windowParts || []).includes(o));
-  }
+  setShellHidden(on) { this.shellHidden = !!on; this._syncShell(); }
 
-  setHidden(on) {
-    this.hidden = !!on;
-    for (const o of this.shell) o.visible = !on && (this.showWindow !== false || !(this.windowParts || []).includes(o));
-    for (const item of this.items.values()) item.group.visible = !on;
-  }
+  setHidden(on) { this.hidden = !!on; this._syncShell(); }
 
   // ---------- walls, floor, window, base lights ----------
   _buildShell() {
@@ -856,7 +975,7 @@ export class CozyRoom {
     for (const side of [-1, 1]) {
       const wall = add(new THREE.Mesh(new THREE.PlaneGeometry(FRONT - BACK, H), this.wallMat));
       wall.position.set(side * W, H / 2, (FRONT + BACK) / 2); wall.rotation.y = -side * Math.PI / 2; wall.receiveShadow = true;
-      if (side > 0) this.rightWall = wall;
+      if (side > 0) this.rightWall = wall; else this.leftWall = wall;
     }
     this.ceilMat = std(0x1d1522);
     const ceil = this.ceiling = add(new THREE.Mesh(new THREE.PlaneGeometry(W * 2, FRONT - BACK), this.ceilMat));
@@ -876,28 +995,18 @@ export class CozyRoom {
     s.add(key, key.target);
     this.keyLight = key;
 
-    // window
-    const beforeWindow = new Set(s.children);
+    // the sky picture the big window shows (CATALOG.bigWindow)
     this.skyMat = new THREE.MeshBasicMaterial({ map: skyTexture(timeState(23)), toneMapped: false });
     this.sky = "night";
     this.hour = 23;
     this._skyHour = 23;
-    const win = add(new THREE.Mesh(new THREE.PlaneGeometry(3.6, 2.4), this.skyMat));
-    win.position.set(2, 1.75, BACK + 0.01);
-    const frame = std(0x15101a);
-    for (const x of [0.2, 1.4, 2.6, 3.8]) add(box(0.06, 2.5, 0.08, frame, x, 1.75, BACK + 0.04));
-    for (const y of [0.55, 2.95, 1.75]) add(box(3.7, 0.06, 0.08, frame, 2, y, BACK + 0.04));
-    add(box(3.8, 0.06, 0.25, std(0x3a2a40), 2, 0.52, BACK + 0.13));
-    for (const x of [-0.05, 4.05]) add(box(0.45, 2.9, 0.12, std(0x3b2050, { roughness: 1 }), x, 1.6, BACK + 0.15, 0.04));
-    this.windowGlow = new THREE.PointLight(0xa88cff, 6, 6, 2);
-    this.windowGlow.position.set(2, 1.8, BACK + 0.8); s.add(this.windowGlow);
-    this.windowParts = s.children.filter((o) => !beforeWindow.has(o) && o !== this.windowGlow);
-    win.userData.interactive = { label: "Window: next time of day", onClick: () => {
-      const order = ["dawn", "morning", "day", "golden", "sunset", "dusk", "night"];
-      const next = order[(order.indexOf(this.sky) + 1) % order.length];
-      this.setSky(next); this.onChange?.();
-      return TIME_PRESETS[next].label.toLowerCase();
-    } };
+  }
+
+  /** A window's glow takes the colour of the sky outside. */
+  _lightWindow(glow) {
+    const st = this._skyState || timeState(this.hour);
+    glow.color.set(st.glow);
+    glow.intensity = 6 + st.town * 6;
   }
 
   /** mode: "auto", "cycle", or a preset name like "morning" (old saves used "night"/"sunset"). */
@@ -925,8 +1034,8 @@ export class CozyRoom {
     const p = day ? (this.hour - 6) / 13 : 0.5;
     this.moonlight.position.set(6 - p * 9, 3 + Math.sin(p * Math.PI) * 3, -7);
     this.hemi.color.set(st.hemiS); this.hemi.groundColor.set(st.hemiG); this.hemi.intensity = st.hemiI;
-    this.windowGlow.color.set(st.glow);
-    this.windowGlow.intensity = 6 + st.town * 6;
+    this._skyState = st;
+    for (const item of this.items.values()) if (item.ctx.glow) this._lightWindow(item.ctx.glow);
     this.exposure = st.exp;
     this.onLighting?.(st);
   }
@@ -944,6 +1053,19 @@ export class CozyRoom {
     this.ceilMat.color.set(hex).multiplyScalar(0.8);     // ceiling a little darker than the walls
   }
 
+  /** Wallpaper on all the walls (WALLPAPERS); "none" = plain paint. The wall colour tints it. */
+  setWallpaper(kind) {
+    this.wallpaper = WALLPAPERS[kind] ? kind : "none";
+    this.wallMat.map?.dispose();
+    this.wallMat.map = null;
+    if (this.wallpaper !== "none") {
+      const t = wallpaperTexture(this.wallpaper);
+      t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(6, 2);           // ~1.6 m wide pattern tiles
+      this.wallMat.map = t;
+    }
+    this.wallMat.needsUpdate = true;
+  }
+
   setFloor(style) {
     this.floorStyle = FLOORS[style] ? style : "dark wood";
     const F = FLOORS[this.floorStyle];
@@ -951,6 +1073,7 @@ export class CozyRoom {
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(F.repeat || 3, F.repeat || 3);
     this.floorMat.map?.dispose(); this.floorMat.map = t; this.floorMat.needsUpdate = true;
     this.floorMat.roughness = FLOORS[this.floorStyle].carpet ? 1 : 0.55;
+    this.house?.syncFloor(this.floorMat);
   }
 
   static floorStyles() { return Object.keys(FLOORS); }
@@ -962,14 +1085,18 @@ export class CozyRoom {
     const id = this.nextId++;
     spec = { ...spec };
     if (def.mount === "wall") {
+      if (spec.u == null && spec.x != null) {           // was a floor piece in an older save (bathroom mirrors): onto the back wall
+        spec.u = spec.x; spec.y = def.defaultY ?? 1.8; delete spec.x; delete spec.z; delete spec.rot;
+      }
       spec.wall ??= "back"; spec.u ??= 0; spec.y ??= def.defaultY ?? 1.8;
     } else {
       spec.x ??= 0.4; spec.z ??= 0.7; spec.rot ??= 0; spec.y ??= def.defaultY ?? 0;
     }
-    const ctx = { spec, name: this.screenName };
+    const ctx = { spec, name: this.screenName, _room: this, _itemId: id };
     const built = def.build(ctx);
     if (built.update && !ctx.update) ctx.update = built.update;
     const group = built.group;
+    group.userData.itemId = id;
     group.traverse((o) => {
       if (o.isMesh) o.receiveShadow = true;
       o.userData.itemId = id;
@@ -977,12 +1104,28 @@ export class CozyRoom {
       if (built.walkable) o.userData.floor = true;
     });
     this.scene.add(group);
-    if (this.hidden) group.visible = false;
     const item = { id, spec, group, ctx, def };
     this.items.set(id, item);
     this.place(item);
+    group.visible = this._shows(item);
     if (spec.color) this.recolorItem(id, spec.color);
     return item;
+  }
+
+  onGLBLoaded(id) {
+    const item = this.items.get(id);
+    if (!item) return;
+    item.group.traverse((o) => {
+      if (o.isMesh) {
+        o.userData.itemId = id;
+        o.receiveShadow = true;
+      }
+    });
+    item.paint = null;
+    if (item.spec.color) {
+      this.recolorItem(id, item.spec.color);
+    }
+    this.onItemChanged?.(id);
   }
 
   /** Put an item where its spec says. */
@@ -1007,10 +1150,12 @@ export class CozyRoom {
     if (item.def.mount === "wall") {
       if (wall) item.spec.wall = wall;
       item.spec.y = c(point.y, 0.4, H - 0.3);
-      item.spec.u = item.spec.wall === "back" ? c(point.x, -W + 0.4, W - 0.4) : c(point.z, BACK + 0.4, FRONT - 0.4);
+      const b = this.shellHidden ? { minX: -W, maxX: W } : this.house.bounds();       // the back wall runs along every room
+      item.spec.u = item.spec.wall === "back" ? c(point.x, b.minX + 0.4, b.maxX - 0.4) : c(point.z, BACK + 0.4, FRONT - 0.4);
     } else {
-      item.spec.x = c(point.x, -W + 0.2, W - 0.2);
-      item.spec.z = c(point.z, BACK + 0.2, FRONT - 0.2);
+      const p = this.house.clampPoint(point.x, point.z, 0.2, !!this.shellHidden);
+      item.spec.x = p.x;
+      item.spec.z = p.z;
     }
     this.place(item);
   }
@@ -1021,41 +1166,106 @@ export class CozyRoom {
   recolorItem(id, hex) {
     const item = this.items.get(id);
     if (!item) return;
+    if (!hex) {
+      if (item.paint) {
+        for (const [o, orig] of item.paint.parts) o.material = orig;
+      }
+      item.group.traverse((o) => {
+        if (o.isMesh && o.userData._origMat) {
+          o.material = o.userData._origMat;
+        }
+      });
+      delete item.spec.color;
+      return;
+    }
+    const col = new THREE.Color(hex);
+    const isGLB = item.def.isGLB || item.group.userData.isGLB;
+    if (isGLB) {
+      // a colour theme like the built-in furniture: the main colour becomes `hex`, every other part a matching
+      // lighter/darker shade of it; leaves stay green, and black / grey / white / metal parts stay as they are
+      const parts = [], weight = new Map(), SRGB = THREE.SRGBColorSpace;
+      item.group.traverse((o) => {
+        if (!o.isMesh || !o.material || o.isMirror || o.userData.keepLook) return;   // mirror glass and the sky keep their look
+        if (o.material === o.userData._origMat) o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone();
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        const origs = [].concat(o.userData._origMat || mats);
+        const n = o.geometry?.attributes?.position?.count || 1;
+        mats.forEach((m, i) => {
+          if (!m.color) return;
+          const oc = (origs[i] || m).color || m.color;
+          parts.push([m, oc]);
+          const h = oc.getHSL({}, SRGB);
+          if (h.s >= 0.08 && h.l >= 0.12 && h.l <= 0.92) weight.set(oc.getHex(), (weight.get(oc.getHex()) || 0) + n);
+        });
+      });
+      const mainHex = [...weight.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+      const M = mainHex == null ? null : new THREE.Color(mainHex).getHSL({}, SRGB), T = col.getHSL({}, SRGB);
+      const cl = (v, a, b) => Math.min(b, Math.max(a, v));
+      for (const [m, oc] of parts) {
+        const c = oc.getHSL({}, SRGB);
+        const leaf = c.h > 0.22 && c.h < 0.45 && c.s > 0.25 && (!M || Math.abs(c.h - M.h) > 0.05);
+        const neutral = c.s < 0.08 || c.l < 0.12 || c.l > 0.92 || (m.metalness || 0) > 0.6;
+        if (leaf || (neutral && M)) m.color.copy(oc);
+        else if (!M || oc.getHex() === mainHex) m.color.set(hex);
+        else m.color.setHSL(T.h, cl(T.s * (0.35 + 0.65 * Math.min(1.3, (c.s + 0.05) / (M.s + 0.05))), 0, 1), cl(T.l + (c.l - M.l), 0.06, 0.96), SRGB);
+        m.needsUpdate = true;
+      }
+      item.spec.color = hex;
+      return;
+    }
     if (!item.paint) {
       const vol = new Map(), parts = [];
       const size = new THREE.Vector3();
       item.group.traverse((o) => {
-        if (!o.isMesh || Array.isArray(o.material) || !o.material?.color) return;
-        if (o.material.emissive?.getHex() && o.material.emissiveIntensity > 0.3) return;      // lamps, screens
-        o.geometry.computeBoundingBox(); o.geometry.boundingBox.getSize(size);
-        const v = Math.max(size.x * size.y * size.z, 1e-6) * o.scale.x * o.scale.y * o.scale.z;
-        const key = o.material.color.getHex();
-        vol.set(key, (vol.get(key) || 0) + v);
-        parts.push([o, o.material]);
+        if (!o.isMesh) return;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) {
+          if (!m?.color) continue;
+          if (m.emissive?.getHex && m.emissive.getHex() && m.emissiveIntensity > 0.3) continue;
+          parts.push([o, m]);
+          const k = m.color.getHex();
+          vol.set(k, (vol.get(k) || 0) + 1);
+        }
       });
       const main = [...vol.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
       item.paint = { parts, main: main == null ? null : new THREE.Color(main).getHSL({}), clones: new Map() };
     }
     const P = item.paint;
-    if (!P.main) return;
-    if (!hex) {
-      for (const [o, orig] of P.parts) o.material = orig;
-      delete item.spec.color;
-      return;
-    }
-    const T = new THREE.Color(hex).getHSL({}), M = P.main;
-    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-    for (const [o, orig] of P.parts) {
-      const c = orig.color.getHSL({});
-      const leaf = c.h > 0.22 && c.h < 0.45 && c.s > 0.25 && Math.abs(c.h - M.h) > 0.05;     // plants stay green
-      const neutral = c.s < 0.08 || c.l < 0.12;                                              // black legs, grey metal
-      if (leaf || neutral) { o.material = orig; continue; }
-      let m = P.clones.get(orig);
-      if (!m) { m = orig.clone(); P.clones.set(orig, m); }
-      const isMain = orig.color.getHex() === new THREE.Color().setHSL(M.h, M.s, M.l).getHex();
-      if (isMain) m.color.set(hex);
-      else m.color.setHSL(T.h, clamp(T.s * (0.35 + 0.65 * Math.min(1.3, (c.s + 0.05) / (M.s + 0.05))), 0, 1), clamp(T.l + (c.l - M.l), 0.06, 0.96));
-      o.material = m;
+    if (P.main) {
+      const T = col.getHSL({}), M = P.main;
+      const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+      for (const [o, orig] of P.parts) {
+        const c = orig.color.getHSL({});
+        const leaf = c.h > 0.22 && c.h < 0.45 && c.s > 0.25 && Math.abs(c.h - M.h) > 0.05;
+        const neutral = c.s < 0.08 || c.l < 0.12;
+        if (leaf || neutral) { o.material = orig; continue; }
+        let m = P.clones.get(orig);
+        if (!m) { m = orig.clone(); P.clones.set(orig, m); }
+        const isMain = orig.color.getHex() === new THREE.Color().setHSL(M.h, M.s, M.l).getHex();
+        if (isMain) m.color.set(hex);
+        else m.color.setHSL(T.h, clamp(T.s * (0.35 + 0.65 * Math.min(1.3, (c.s + 0.05) / (M.s + 0.05))), 0, 1), clamp(T.l + (c.l - M.l), 0.06, 0.96));
+        m.needsUpdate = true;
+        o.material = m;
+      }
+    } else {
+      // GLB mesh recolor fallback: tint/clone all mesh materials
+      item.group.traverse((o) => {
+        if (!o.isMesh || !o.material || o.isMirror || o.userData.keepLook) return;   // mirror glass and the sky keep their look
+        if (!o.userData._origMat) o.userData._origMat = o.material;
+        if (Array.isArray(o.material)) {
+          o.material = o.material.map((m) => {
+            const clone = m.clone();
+            if (clone.color) clone.color.copy(col);
+            clone.needsUpdate = true;
+            return clone;
+          });
+        } else {
+          const clone = o.material.clone();
+          if (clone.color) clone.color.copy(col);
+          clone.needsUpdate = true;
+          o.material = clone;
+        }
+      });
     }
     item.spec.color = hex;
   }
@@ -1080,6 +1290,7 @@ export class CozyRoom {
     this.scene.remove(item.group);
     item.group.traverse((o) => {
       o.geometry?.dispose();
+      if (o.userData.keepLook) return;                      // the sky picture is shared: it stays
       for (const m of [].concat(o.material || [])) { m.map?.dispose(); m.dispose?.(); }
     });
     this.items.delete(id);
@@ -1093,19 +1304,24 @@ export class CozyRoom {
     this.clear();
     this.setWallColor(L.shell?.wall || DEFAULT_LAYOUT.shell.wall);
     this.setFloor(L.shell?.floor || DEFAULT_LAYOUT.shell.floor);
+    this.setWallpaper(L.shell?.wallpaper || "none");
     this.brightness = L.shell?.brightness ?? 1;
     this.keyLight.intensity = 18 * this.brightness;
     this.setSky(L.shell?.sky || "night");
-    this.showWindow = L.shell?.window !== false && !L.items.some((i) => i.type === "denWindow" && (i.wall || "back") === "back");
-    for (const o of this.windowParts || []) o.visible = this.showWindow && !this.hidden;
-    for (const spec of L.items) this.addItem(spec);
+    this.house.set(L.shell?.house);
+    for (const spec of L.items) this.addItem(spec);       // old back/front yard things aren't in the catalog any more: skipped
+    // layouts from before the window was an item: it goes where it always was (unless it was removed, or a den window is there)
+    if (!L.shell?.windowItem && L.shell?.window !== false && !L.items.some((i) => i.type === "bigWindow"
+        || (i.type === "denWindow" && (i.wall || "back") === "back"))) this.addItem({ type: "bigWindow", wall: "back", u: 2, y: 1.75 });
+    this._syncShell();
     this.setScreenName(this.screenName);
   }
 
   serialize() {
     const round = (v) => (typeof v === "number" ? Math.round(v * 1000) / 1000 : v);
     return {
-      shell: { wall: this.wallColor, floor: this.floorStyle, sky: this.sky, brightness: round(this.brightness) },
+      shell: { wall: this.wallColor, floor: this.floorStyle, sky: this.sky, brightness: round(this.brightness), wallpaper: this.wallpaper || "none",
+               windowItem: true, house: JSON.parse(JSON.stringify(this.house.cfg)) },
       items: [...this.items.values()].map(({ spec }) => Object.fromEntries(Object.entries(spec).map(([k, v]) => [k, round(v)]))),
     };
   }

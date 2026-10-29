@@ -380,5 +380,7 @@ export function sfx(kind) {
     [1175, 880, 659].forEach((f, i) => tone(f, t + i * 0.05, 0.3, 0.09));
   } else if (kind === "start") {
     [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, t + i * 0.07, 0.9, 0.11));
+  } else if (kind === "notify") {
+    [587.33, 880, 1174.66, 1567.98].forEach((f, i) => bell(sfxBus, f * sfxPitch, t + i * 0.085, 0.75, 0.16, 1.1));
   }
 }

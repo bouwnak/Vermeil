@@ -20,7 +20,6 @@ __pycache__/
 *.so
 .Python
 build/
-!ui/vendor/three/build/
 develop-eggs/
 dist/
 downloads/
@@ -133,3 +132,21 @@ data/game/made_preview.png
 
 # --- Archives and Old Backups ---
 _archive/
+
+# songs saved by the player so they never cut off (rebuilt automatically)
+data/music_cache/
+
+# --- Installed / downloaded by the app itself (too big for GitHub, rebuilt on each PC) ---
+tools/unimate/
+tools/unimate_bin/
+tools/_downloads/
+plugin_packs/
+data/chatterbox_refs/
+
+# --- This PC's own state and personal data ---
+data/people_faces.json
+data/gym_profile.json
+data/plugin_links.json
+data/plugins.json
+data/playlist_analyses.json
+data/auto_setup.json

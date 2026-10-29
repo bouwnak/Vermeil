@@ -147,6 +147,48 @@ class LibraryTests(unittest.TestCase):
         self.assertIn("P*L/4", prompt)
         self.assertEqual(r["used"][0], "Beams lecture.txt, part 1")
 
+    def test_grammar_and_paraphraser(self):
+        client = mock.Mock()
+        client.chat.completions.create.return_value = fake_reply("Rewritten natural sentence.")
+        with mock.patch.object(academic, "_client", return_value=client):
+            p = academic.paraphrase("This is a poorly worded sentence.")
+            self.assertEqual(p["paraphrase"], "Rewritten natural sentence.")
+
+        client.chat.completions.create.return_value = fake_reply(json.dumps({
+            "corrected": "There are many things to do.",
+            "summary": "Fixed homophone error.",
+            "score": 98,
+            "changes": [{"original": "Their", "corrected": "There", "type": "spelling", "explanation": "Homophone"}]
+        }))
+        with mock.patch.object(academic, "_client", return_value=client):
+            g = academic.correct_grammar("Their are many things to do.")
+            self.assertEqual(g["corrected"], "There are many things to do.")
+            self.assertEqual(g["score"], 98)
+            self.assertEqual(g["changes"][0]["original"], "Their")
+
+
+    def test_ai_detector_and_humanize(self):
+        ai = ("Moreover, it is important to note that technology plays a crucial role in education. Furthermore, it fosters a "
+              "holistic learning landscape. Additionally, students leverage robust tools to delve into topics. In conclusion, "
+              "technology is a testament to progress in the modern realm.")
+        human = ("I tried the bridge lab twice. First time? Total mess, the truss buckled before we'd even loaded it. My partner "
+                 "reckoned the gusset plates were too thin, and honestly he was right, so we rebuilt them overnight with thicker "
+                 "balsa and it held 4 kg.")
+        a, h = academic.detect_ai(ai, use_llm=False), academic.detect_ai(human, use_llm=False)
+        self.assertGreater(a["score"], 70)
+        self.assertLess(h["score"], 30)
+        self.assertIn("delve", a["phrases"])
+        self.assertTrue(a["flagged"])
+        self.assertIn("error", academic.detect_ai("Too short.", use_llm=False))
+
+        client = mock.Mock()
+        client.chat.completions.create.side_effect = [fake_reply(human), fake_reply(json.dumps({"corrected": human, "changes": []}))]
+        with mock.patch.object(academic, "_client", return_value=client):
+            r = academic.humanize(ai)
+        self.assertEqual(r["text"], human)
+        self.assertGreater(r["before"], r["after"])
+        style = client.chat.completions.create.call_args_list[0].kwargs["messages"][0]["content"]
+        self.assertIn("mix very short sentences", style)
 
 class CoderTests(unittest.TestCase):
     def setUp(self):
