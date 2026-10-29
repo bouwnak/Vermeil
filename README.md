@@ -440,8 +440,9 @@ If a model ever shows up tiny, huge or plain white, check `Tools\play.log` for l
   (RVC)** you **import an RVC model** (.pth + .index), pick it in the dropdown, and choose the base voice in **Speak with**.
 - **Rig & animate 3D models:** import a .glb/.gltf (or press 🦴 **Rig & animate**). Rig it automatically or place the bones
   yourself. Animations (idle, walk, wave, dance…) come from UniMate. Its code and Python set themselves up in the
-  background (Miniconda; needs Git for Windows). Its libraries are already installed on my PC; on another PC run the two
-  commands shown in the Animate box:
+  background, libraries included (Miniconda, a portable Git, the code, the checkpoint and about 2 GB of libraries in
+  its own "unimate" environment), so on a new PC you just open Vermeil and wait. If that fails, double-click
+  `scripts\setup_unimate.bat`, or run the two commands shown in the Animate box:
   `"%USERPROFILE%\miniconda3\envs\unimate\python.exe" -m pip install "setuptools<81"` and
   `"%USERPROFILE%\miniconda3\envs\unimate\python.exe" -m pip install -r tools\unimate\requirements.txt --no-build-isolation`.
   UniMate's models are for non-commercial use only.
