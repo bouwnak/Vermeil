@@ -72,6 +72,48 @@ class UniMateGitTests(unittest.TestCase):
         self.assertEqual(autosetup.state["unimate"]["status"], "ready")
 
 
+class UniMateOnceTests(unittest.TestCase):
+    """UniMate's setup starts by itself only the first time the app opens"""
+    def _open_app(self, running=False):
+        import autosetup
+        with mock.patch.object(autosetup, "_unimate", return_value="") as u, \
+                mock.patch.object(autosetup, "_watch_unimate", return_value="") as w, \
+                mock.patch.object(autosetup, "_builtins", return_value=""), \
+                mock.patch.object(autosetup, "_earlier_pip_running", return_value=running), \
+                mock.patch.object(autosetup, "_save"), mock.patch.object(autosetup, "_log"):
+            autosetup._work(lambda e: None)
+        return u, w
+
+    def setUp(self):
+        import autosetup
+        autosetup.state.clear()
+
+    def test_first_open_starts_it(self):
+        u, w = self._open_app()
+        u.assert_called_once()
+        w.assert_not_called()
+
+    def test_later_opens_do_not(self):
+        self._open_app()
+        u, w = self._open_app()
+        u.assert_not_called()
+        w.assert_not_called()
+
+    def test_later_open_follows_a_running_install(self):
+        self._open_app()
+        u, w = self._open_app(running=True)
+        u.assert_not_called()
+        w.assert_called_once()
+
+    def test_animate_box_can_still_start_it(self):
+        import autosetup
+        self._open_app()
+        with mock.patch.object(autosetup, "_unimate", return_value="") as u, \
+                mock.patch.object(autosetup, "_save"), mock.patch.object(autosetup, "_log"):
+            autosetup._work(lambda e: None, "unimate")
+        u.assert_called_once()
+
+
 class VoiceTests(unittest.TestCase):
     def test_whole_reply_is_default(self):
         self.assertTrue(pm.WHOLE_REPLY)
