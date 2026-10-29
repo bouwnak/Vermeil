@@ -1,8 +1,9 @@
 """autosetup.py - gets the big optional AI parts ready by itself, in the background, when the app opens.
 
-  UniMate (Rig & animate):  installs Miniconda if it's missing, then the UniMate code, its own Python 3.10, its libraries
-                            environment and the checkpoint. Its libraries are installed by YOU with pip
-                            (the Animate box shows the exact command) - pip never runs behind your back.
+  UniMate (Rig & animate):  installs Miniconda if it's missing, then the UniMate code, its own Python 3.10
+                            environment, the checkpoint and its libraries (pip, into that environment only).
+                            Closing the app doesn't stop pip, so a reopened app waits for it instead of starting
+                            a second one (data/unimate_pip.pid).
 
   Built-in parts:           voice commands, Kokoro, the Emotional voice (Chatterbox), voice clones (RVC), voices for
                             other languages, the camera, Google Calendar, the browser helper and the offline AI
@@ -27,6 +28,7 @@ from paths import data_file
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE_FILE = data_file("auto_setup.json")
 LOG_FILE = data_file("auto_setup.log")
+PIP_PID_FILE = data_file("unimate_pip.pid")
 RETRY_AFTER = 24 * 3600
 MINICONDA_URL = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
 MINICONDA_DIR = os.path.join(os.path.expanduser("~"), "miniconda3")
@@ -63,20 +65,65 @@ def _log(text):
         pass
 
 
-def _run(cmd, cwd=None, path_first=None):
+def _run(cmd, cwd=None, path_first=None, pid_file=None):
     """Run one command quietly; raises with the last lines of its output if it fails.
-    path_first: a folder put first on PATH (pip needs git there for UniMate's CLIP)."""
+    path_first: a folder put first on PATH (pip needs git there for UniMate's CLIP).
+    pid_file: holds the command's process id while it runs."""
     _log("$ " + " ".join(str(c) for c in cmd))
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
     if path_first:
         env["PATH"] = path_first + os.pathsep + env.get("PATH", "")
-    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       env=env, creationflags=NO_WINDOW)
-    out = (p.stdout or "") + (p.stderr or "")
+    p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                         encoding="utf-8", errors="replace", env=env, creationflags=NO_WINDOW)
+    if pid_file:
+        try:
+            with open(pid_file, "w") as f:
+                f.write(str(p.pid))
+        except OSError:
+            pass
+    try:
+        out = p.communicate()[0] or ""
+    finally:
+        if pid_file:
+            try:
+                os.remove(pid_file)
+            except OSError:
+                pass
     _log(out)
     if p.returncode != 0:
         raise RuntimeError("\n".join(out.strip().splitlines()[-4:]) or f"{cmd[0]} failed (exit {p.returncode})")
     return out
+
+
+def _alive(pid):
+    """True while process `pid` is still running (Windows; elsewhere False)."""
+    if os.name != "nt":
+        return False
+    import ctypes
+    k32 = ctypes.windll.kernel32
+    h = k32.OpenProcess(0x1000, False, pid)            # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return False
+    code = ctypes.c_ulong()
+    ok = k32.GetExitCodeProcess(h, ctypes.byref(code))
+    k32.CloseHandle(h)
+    return bool(ok) and code.value == 259              # STILL_ACTIVE
+
+
+def _wait_for_earlier_pip(step):
+    """An install started before the app was last closed keeps running: wait for it instead of starting another."""
+    try:
+        with open(PIP_PID_FILE) as f:
+            pid = int(f.read().strip())
+    except (OSError, ValueError):
+        return
+    while _alive(pid):
+        step(75, "Installing UniMate's libraries (about 2 GB, the long part)...")
+        time.sleep(10)
+    try:
+        os.remove(PIP_PID_FILE)
+    except OSError:
+        pass
 
 
 def status(part=None):
@@ -201,10 +248,12 @@ def _unimate(step):
                                           "unimate_uniml3d_f60_v3/checkpoints/checkpoint_step_150000.pt"])
         did = "UniMate is downloaded."
     if not animate.libraries_installed():
+        _wait_for_earlier_pip(step)
+    if not animate.libraries_installed():
         step(75, "Installing UniMate's libraries (about 2 GB, the long part)...")
         py = animate.env_python()
         _run([py, "-m", "pip", "install", "setuptools<81"])
         _run([py, "-m", "pip", "install", "-r", os.path.join(code, "requirements.txt"), "--no-build-isolation"],
-             cwd=code, path_first=os.path.dirname(git))
+             cwd=code, path_first=os.path.dirname(git), pid_file=PIP_PID_FILE)
         did = "UniMate is ready - press Animate it on a rigged character."
     return did
