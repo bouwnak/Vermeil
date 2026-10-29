@@ -234,8 +234,11 @@ You can also say: “what's my workout today?”, “log incline bench set 2, 22
 - **Room camera:** in **Edit room**, adding a room or dragging its Width/Depth zooms the camera so the whole house fits.
 - **RVC voices on a new PC:** the voice-clone helper files and the character voices now download with the voice-clone
   setup (from the Drive pack, or Hugging Face), instead of "RVC isn't set up yet".
-- **UniMate button:** if UniMate isn't ready, the button says **Set up UniMate** and starts the setup again right away
-  (or shows the pip commands you need to run). If it fails, the message says what went wrong and where the log is.
+- **UniMate on a PC without Git:** UniMate's scripts need Git's `bash`. If Git for Windows isn't installed, Vermeil now
+  downloads the official **portable Git** (about 60 MB, no installer, checked against its official checksum) into
+  `%LOCALAPPDATA%\Vermeil\PortableGit` and uses that. The button always says **Make the animations**; if UniMate isn't
+  ready yet, pressing it starts the setup right away (or shows the two pip commands you run yourself). If it fails,
+  the message says what went wrong and where the log is.
 
 ## New (29 Oct 2026, newest): every feature installs from your one Google Drive folder
 **Plugins = only the features in the sidebar (29 Oct 2026).** Voices (Kokoro, online voices, other languages),

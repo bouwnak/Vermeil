@@ -37,6 +37,41 @@ class UniMateShimTests(unittest.TestCase):
         self.assertIn("_blender_shim()", read("skills", "animate.py").split("def animate(")[1])
 
 
+class UniMateGitTests(unittest.TestCase):
+    """no Git for Windows on the PC: UniMate uses the portable Git the app downloads"""
+    def test_portable_git_is_found(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            for sub, exe in (("bin", "bash.exe"), ("cmd", "git.exe")):
+                os.makedirs(os.path.join(d, sub))
+                open(os.path.join(d, sub, exe), "w").close()
+            with mock.patch.object(animate, "PORTABLE_GIT", d), mock.patch("shutil.which", return_value=None), \
+                    mock.patch("os.path.exists", lambda p: p.startswith(d) and os.path.isfile(p)):
+                self.assertEqual(animate._bash(), os.path.join(d, "bin", "bash.exe"))
+                self.assertEqual(animate._git(), os.path.join(d, "cmd", "git.exe"))
+
+    def test_damaged_download_is_refused(self):
+        import autosetup
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            fake = lambda url, path: open(path, "wb").write(b"not git")
+            with mock.patch.dict(os.environ, {"TEMP": d}), mock.patch.object(autosetup.urllib.request, "urlretrieve", fake), \
+                    mock.patch.object(autosetup, "_run") as run:
+                with self.assertRaises(RuntimeError):
+                    autosetup._portable_git(os.path.join(d, "PortableGit"))
+                run.assert_not_called()
+
+    def test_old_git_failure_is_retried_now(self):
+        import autosetup
+        autosetup.state["unimate"] = {"status": "failed", "time": __import__("time").time(),
+                                      "text": "Git for Windows is needed for UniMate. Get it from https://git-scm.com"}
+        with mock.patch.object(autosetup, "_unimate", return_value="") as u, \
+                mock.patch.object(autosetup, "_save"), mock.patch.object(autosetup, "_log"):
+            autosetup._work(lambda e: None, "unimate")
+        u.assert_called_once()
+        self.assertEqual(autosetup.state["unimate"]["status"], "ready")
+
+
 class VoiceTests(unittest.TestCase):
     def test_whole_reply_is_default(self):
         self.assertTrue(pm.WHOLE_REPLY)

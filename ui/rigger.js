@@ -788,7 +788,7 @@ class Rigger {
       ${st.commands?.length ? `<p class="note">Then close and open this box again.</p>` : ""}
       <div class="rig-motions">${MOTIONS.map(([k, label], i) => `<label class="rig-check"><input type="checkbox" value="${k}" ${i < 3 ? "checked" : ""}> ${label}</label>`).join("")}</div>
       <p class="note">Ears and fingers are moved by the app itself, so you don't need animations for those.</p>
-      <button type="button" class="primary rig-make">${st.ready ? "Make the animations" : "Set up UniMate"}</button>`;
+      <button type="button" class="primary rig-make">Make the animations</button>`;
     side.querySelector(".rig-talk").addEventListener("click", () => this.autoTalk(name));
     side.querySelectorAll(".rig-cmd").forEach((pre) => pre.addEventListener("click", () => {
       navigator.clipboard?.writeText(pre.textContent).then(() => this.toast("Copied - paste it into a Command Prompt."), () => {});

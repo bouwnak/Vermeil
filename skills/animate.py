@@ -26,7 +26,9 @@ CHECKPOINT = os.path.join(UNIMATE_DIR, *EXP.split("/"), "checkpoints", "checkpoi
 ENV = "unimate"
 WORK_DIR = os.path.join(ROOT, "ui", "models", "_unimate")      # inside ui/ so the page can load the results
 SETUP_HINT = ("UniMate isn't set up yet. Double-click scripts\\setup_unimate.bat "
-              "(needs Miniconda and Git for Windows; it downloads about 2 GB).")
+              "(it gets Miniconda and a small Git by itself; it downloads about 2 GB).")
+# UniMate's scripts are bash scripts: without Git for Windows, the app downloads its portable copy here (no installer)
+PORTABLE_GIT = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "Vermeil", "PortableGit")
 
 PROMPTS = {
     "idle": "An object stands in place and breathes calmly.",
@@ -55,8 +57,16 @@ def _conda():
 
 
 def _bash():
-    for exe in (shutil.which("bash"), r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files (x86)\Git\bin\bash.exe"):
+    for exe in (shutil.which("bash"), r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files (x86)\Git\bin\bash.exe",
+                os.path.join(PORTABLE_GIT, "bin", "bash.exe")):
         if exe and os.path.exists(exe) and "system32" not in exe.lower():     # not WSL's bash
+            return exe
+    return None
+
+
+def _git():
+    for exe in (shutil.which("git"), r"C:\Program Files\Git\cmd\git.exe", os.path.join(PORTABLE_GIT, "cmd", "git.exe")):
+        if exe and os.path.exists(exe):
             return exe
     return None
 
@@ -89,7 +99,7 @@ def status():
     conda, bash = _conda(), _bash()
     env, libs = bool(env_python()), libraries_installed()
     ready = repo and ckpt and bool(conda) and bool(bash) and env and libs
-    missing = [n for n, ok in (("Miniconda", conda), ("Git for Windows", bash), ("the UniMate code", repo),
+    missing = [n for n, ok in (("Miniconda", conda), ("Git (for its bash)", bash), ("the UniMate code", repo),
                                ("its Python 3.10", env), ("the checkpoint", ckpt)) if not ok]
     hint, commands = "", []
     if not ready:

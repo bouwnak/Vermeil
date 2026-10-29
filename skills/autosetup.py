@@ -30,6 +30,9 @@ LOG_FILE = data_file("auto_setup.log")
 RETRY_AFTER = 24 * 3600
 MINICONDA_URL = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
 MINICONDA_DIR = os.path.join(os.path.expanduser("~"), "miniconda3")
+PORTABLE_GIT_URL = ("https://github.com/git-for-windows/git/releases/download/v2.51.0.windows.1/"
+                    "PortableGit-2.51.0-64-bit.7z.exe")
+PORTABLE_GIT_SHA256 = "a09b275d51ed3e829128e04cf4168fb54896cf6234bb30fecb8dc96a2bd321fa"   # from that release page
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 _lock = threading.Lock()
@@ -100,7 +103,8 @@ def _work(emit, only=None):
             if only and part != only:
                 continue
             old = state.get(part, {})
-            if old.get("status") == "failed" and time.time() - old.get("time", 0) < RETRY_AFTER:
+            old_git = old.get("text", "").startswith("Git for Windows is needed")    # the app gets Git itself now
+            if old.get("status") == "failed" and not old_git and time.time() - old.get("time", 0) < RETRY_AFTER:
                 continue
 
             def step(pct, text, part=part):
@@ -131,6 +135,26 @@ def _builtins(step):
 
 
 # ---------------- UniMate ----------------
+def _portable_git(dest):
+    """Git for Windows' portable copy (no installer, no admin): UniMate needs its bash and git.
+    The download is checked against the checksum on the official release page before it's unpacked."""
+    import hashlib
+    exe = os.path.join(os.environ.get("TEMP", os.path.expanduser("~")), "vermeil_portablegit.7z.exe")   # outside OneDrive
+    urllib.request.urlretrieve(PORTABLE_GIT_URL, exe)
+    with open(exe, "rb") as f:
+        ok = hashlib.sha256(f.read()).hexdigest() == PORTABLE_GIT_SHA256
+    if not ok:
+        os.remove(exe)
+        raise RuntimeError("The Git download was damaged - it will try again tomorrow")
+    shutil.rmtree(dest, ignore_errors=True)                     # a half-unpacked copy from an earlier try
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    _run([exe, "-o" + dest, "-y"])                              # it unpacks itself (7-Zip), no window
+    try:
+        os.remove(exe)
+    except OSError:
+        pass
+
+
 def _unimate(step):
     """Everything except pip: Miniconda, the code, its own Python 3.10 and the checkpoint. The libraries are
     installed by you (the Animate box shows the exact pip command), so pip is never run behind your back."""
@@ -151,9 +175,12 @@ def _unimate(step):
         conda = animate._conda()
         if not conda:
             raise RuntimeError("Miniconda didn't install. Install it from https://docs.conda.io/en/latest/miniconda.html")
-    git = shutil.which("git") or (r"C:\Program Files\Git\cmd\git.exe" if os.path.exists(r"C:\Program Files\Git\cmd\git.exe") else None)
-    if not git:
-        raise RuntimeError("Git for Windows is needed for UniMate. Get it from https://git-scm.com")
+    if not (animate._git() and animate._bash()):
+        step(10, "Getting a small Git for UniMate (about 60 MB download)...")
+        _portable_git(animate.PORTABLE_GIT)
+    git = animate._git()
+    if not (git and animate._bash()):
+        raise RuntimeError("Git didn't unpack. Install Git for Windows from https://git-scm.com, then open Vermeil again")
     code = animate.UNIMATE_DIR
     if not os.path.isdir(os.path.join(code, "unimate")):
         step(15, "Downloading the UniMate code...")
