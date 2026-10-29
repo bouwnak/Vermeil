@@ -7,7 +7,7 @@
    "platform": "SEGA Master System",
    "likes": 140,
    "id": "30899",
-   "played": 1793250911.3041658
+   "played": 1793104104.331111
   },
   {
    "title": "Pokemon Fire Red Extended (v2.0.4)",
@@ -16,7 +16,7 @@
    "platform": "Game Boy Advance",
    "id": "42834",
    "played": 1792807959.3433425,
-   "saved": false
+   "saved": true
   },
   {
    "title": "2 in 1 - Sonic Advance & Sonic Battle (E)(Rising Sun)",
@@ -25,7 +25,7 @@
    "platform": "",
    "id": "27979",
    "played": 1792775407.0502603,
-   "saved": false
+   "saved": true
   },
   {
    "title": "Dragon Ball Z - Supersonic Warriors (K)(ProjectG)",
@@ -35,7 +35,7 @@
    "likes": 218,
    "id": "28096",
    "played": 1792769165.7392192,
-   "saved": false
+   "saved": true
   },
   {
    "title": "Sonic Classic Heroes",
@@ -55,7 +55,7 @@
    "likes": 612,
    "id": "40238",
    "played": 1792744869.1139462,
-   "saved": false
+   "saved": true
   },
   {
    "title": "Pokemon - Liquid Crystal Version",
@@ -65,7 +65,7 @@
    "likes": 137,
    "id": "42136",
    "played": 1792744680.2192192,
-   "saved": false
+   "saved": true
   }
  ],
  "favorites": []

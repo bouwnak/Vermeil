@@ -14,6 +14,7 @@ How it fits in:
 
 Setup (once): python -m pip install chatterbox-tts   (the model, ~3 GB, downloads the first time)
 """
+import contextlib
 import os
 import re
 import sys
@@ -49,6 +50,21 @@ _model = None
 _conds = {}                      # base voice -> Chatterbox's copy of it
 _lock = threading.Lock()         # one line at a time: it uses the whole processor
 _status = None
+SLOW = 1.6                       # a line took longer than 1.6x its length to make: too slow to talk in real time
+_warmed = [False]
+_slow_until = [0.0]              # until then the fast normal voice is used (the graphics card is busy, e.g. Blender)
+
+
+def fast_enough():
+    """False for 2 minutes after a line came out too slowly - so she never stalls mid-reply waiting for it."""
+    import time
+    return time.time() >= _slow_until[0]
+
+
+def _max_tokens(text):
+    """Chatterbox makes 25 sound steps a second and sometimes doesn't stop (a short line turned into 16 s of
+    mumbling). Even slow speech needs under 2.5 steps per letter, so it's cut off there."""
+    return 50 + int(len(re.sub(r"\[[^\]]*\]", "", text)) * 2.5)
 
 
 def _no_torchvision():
@@ -133,7 +149,7 @@ def _load():
         _model = None
         if torch.cuda.is_available():                  # an NVIDIA graphics card: about 10x faster than the processor
             try:
-                _model = ChatterboxTurboTTS.from_local(path, "cuda")
+                _model = _fit_card(ChatterboxTurboTTS.from_local(path, "cpu"))
             except Exception as e:                     # e.g. not enough graphics memory
                 print(f"[Chatterbox] graphics card failed ({e.__class__.__name__}) - using the processor.")
                 _model = None
@@ -145,6 +161,25 @@ def _load():
         import chatterbox.tts_turbo as turbo
         turbo.librosa = _Librosa32()
     return _model
+
+
+MAX_STEPS = 2048                 # a line is under ~1200 steps (text + speech); its attention masks are cut to this
+
+
+def _fit_card(model):
+    """Chatterbox as it comes needs 4.8 GB of graphics memory: on a 4 GB card Windows quietly spills it into normal
+    memory and it gets ~60x slower (a 4 s line took a minute). Each of its 24 layers keeps an 8196x8196 mask (1.6 GB,
+    only for its slow fallback path) - cut to MAX_STEPS - and the text part runs in half precision: ~2.3 GB."""
+    for block in model.t3.tfmr.h:
+        b = getattr(block.attn, "bias", None)
+        if b is not None and b.dim() == 4 and b.shape[-1] > MAX_STEPS:
+            block.attn.bias = b[:, :, :MAX_STEPS, :MAX_STEPS].clone()
+    model.t3.half()
+    for part in (model.t3, model.s3gen, model.ve):
+        part.to("cuda")
+    model.device = "cuda"
+    model.half_t3 = True
+    return model
 
 
 def _ref_file(base):
@@ -190,13 +225,28 @@ def synth(text, base, make_ref):
     text = tagged(text)
     if not re.search(r"\w", re.sub(r"\[[^\]]*\]", "", text)) and "[" not in text:
         return np.zeros(2400, np.float32), 24000
+    import time
     with _lock:
         model = _load()
         _use_voice(model, base, make_ref)
+        import functools
         import torch
-        with torch.inference_mode():
-            wav = model.generate(text, temperature=0.8, top_p=0.95, repetition_penalty=1.2)
-    x = wav.squeeze(0).cpu().numpy().astype(np.float32)
+        t3, real = model.t3, model.t3.inference_turbo
+        t3.inference_turbo = functools.partial(real, max_gen_len=_max_tokens(text))
+        t0 = time.time()
+        half = torch.autocast("cuda", dtype=torch.float16) if getattr(model, "half_t3", False) else contextlib.nullcontext()
+        try:
+            with torch.inference_mode(), half:
+                wav = model.generate(text, temperature=0.8, top_p=0.95, repetition_penalty=1.2)
+        finally:
+            del t3.inference_turbo                 # back to the class's own (the partial was only on this object)
+        took = time.time() - t0
+    x = wav.squeeze(0).float().cpu().numpy().astype(np.float32)
+    secs = len(x) / model.sr
+    first, _warmed[0] = not _warmed[0], True       # the very first line also sets up the graphics card: not counted
+    if not first and took > 2.0 and took > SLOW * secs:
+        _slow_until[0] = time.time() + 120
+        print(f"[Chatterbox] {took:.1f}s for {secs:.1f}s of speech - too slow right now, using the normal voice for 2 minutes.")
     return x, int(model.sr)
 
 

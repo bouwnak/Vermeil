@@ -63,6 +63,14 @@ function whoosh(up = true, { dur = 0.22, gain = 0.18 } = {}) {
   src.start(t);
 }
 
+let lastNotify = 0;
+function playNotifyChime() {
+  if (performance.now() - lastNotify < 280) return;
+  lastNotify = performance.now();
+  psp.sfx("notify");
+  [587.33, 880, 1174.66, 1567.98].forEach((f, i) => tone(f, { dur: 0.24, gain: 0.18, at: i * 0.085, type: "triangle" }));
+}
+
 const SOUNDS = {
   hover: () => psp.sfx("hover"),
   tap: () => psp.sfx("click"),
@@ -72,7 +80,8 @@ const SOUNDS = {
   send: () => { tone(700, { dur: 0.06, gain: 0.16 }); tone(1050, { dur: 0.09, gain: 0.14, at: 0.06 }); },
   receive: () => { tone(660, { dur: 0.22, gain: 0.14, type: "triangle" }); tone(990, { dur: 0.3, gain: 0.1, type: "triangle", at: 0.09 }); },
   toast: () => tone(880, { to: 1320, dur: 0.08, gain: 0.12 }),
-  alert: () => { for (let i = 0; i < 3; i++) tone(1175, { dur: 0.12, gain: 0.16, at: i * 0.16, type: "triangle" }); },
+  alert: () => playNotifyChime(),
+  notify: () => playNotifyChime(),
   success: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, { dur: 0.16, gain: 0.12, at: i * 0.06, type: "triangle" })),
   error: () => { tone(180, { to: 120, dur: 0.22, gain: 0.14, type: "square" }); },
   on: () => tone(600, { to: 1200, dur: 0.12, gain: 0.14 }),
@@ -176,6 +185,9 @@ export function init(settingsFromApp = {}) {
       const t = toastEl.textContent || "";
       play(/^⏰/.test(t) ? "alert" : /(couldn't|can't|error|isn't|failed|missing|not )/i.test(t) ? "error" : "toast");
       toastEl.classList.remove("fx-pop"); void toastEl.offsetWidth; toastEl.classList.add("fx-pop");
+      if (/^(✓|♥|saved|added|done|installed|copied|made|switched|imported|created)|(saved|added|installed)/i.test(t) && opts.fx !== false) {
+        requestAnimationFrame(() => { const r = toastEl.getBoundingClientRect(); if (r.width) sparks(r.left + r.width / 2, r.top, 10); });
+      }
     }).observe(toastEl, { attributes: true, attributeFilter: ["hidden"], childList: true, characterData: true, subtree: true });
   }
 

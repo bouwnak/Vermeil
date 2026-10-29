@@ -50,8 +50,20 @@ const accent = () => getComputedStyle(document.documentElement).getPropertyValue
 
 // ---------------- loading screen ----------------
 const loader = {
-  show(title, sub = "Getting the game ready") {
+  show(title, sub = "Getting the game ready", image = "") {
     $("loadingTitle").textContent = title; $("loadingSub").textContent = sub;
+    // the game's cover art as a faded background
+    const art = $("loadingArt");
+    art.classList.remove("on"); art.style.backgroundImage = "";
+    if (image) {
+      const safeUrl = `url("${image.replace(/"/g, "%22")}")`;
+      art.style.backgroundImage = safeUrl;
+      const pic = new Image();
+      pic.referrerPolicy = "no-referrer";
+      pic.onload = () => { if (!$("loading").hidden) { art.style.backgroundImage = safeUrl; art.classList.add("on"); } };
+      pic.src = image;
+      if (pic.complete) art.classList.add("on");
+    }
     $("loadingFill").style.width = "8%";
     $("loading").classList.remove("out"); $("loading").hidden = false;
   },
@@ -89,7 +101,7 @@ $("confirm").onclick = (e) => { if (e.target === $("confirm")) $("confirmNo").cl
 $("confirmYes").onclick = () => {
   $("confirm").hidden = true;
   musicStop(0.3);                                  // the Adventure has its own music
-  loader.show("Opening the Dungeon Adventure…", "Loading the world");
+  loader.show("Opening the Dungeon Adventure…", "Loading the world", "img/adventure.jpg");
   loader.progress(0.4);
   setTimeout(() => { location.href = `../game/index.html${keep}`; }, 350);
 };
@@ -104,6 +116,97 @@ for (const c of document.querySelectorAll(".hub-card")) {
   c.addEventListener("focus", () => preview(c.dataset.preview));
 }
 preview("adventure");
+
+// ---------------- your own games (skills/mygames.py): a card each, and the ⇅ button to add / remove them ----------------
+const mine = { games: [], found: [], busy: false };
+function gameCard(g) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "hub-card" + (g.ok ? "" : " broken"); b.dataset.preview = "mine"; b.dataset.sfx = "open";
+  b.innerHTML = `<span class="hub-art art-mine" aria-hidden="true">🎮</span><span class="hub-text"><b></b><small></small></span><span class="hub-go" aria-hidden="true">›</span>`;
+  b.querySelector("b").textContent = g.name;
+  b.querySelector("small").textContent = g.ok ? `Your game · opens in its own window · ${g.mb} MB` : "Its files are missing - remove it and add it again (⇅)";
+  const point = () => { $("pvMineName").textContent = g.name; preview("mine"); };
+  b.addEventListener("mouseenter", point);
+  b.addEventListener("focus", point);
+  b.onclick = async () => {
+    if (!g.ok) { openGames(); return; }
+    loader.show(`Starting ${g.name}…`, "It opens in its own window");
+    loader.progress(0.6);
+    const r = await call("games_launch", g.id);
+    setTimeout(() => loader.hide(), 1400);
+    if (r?.error) { loader.hide(); toast(r.error); }
+  };
+  return b;
+}
+function renderMine(res) {
+  if (res && !res.error && res.games) { mine.games = res.games; mine.found = res.found || []; }
+  $("myGames").replaceChildren(...mine.games.map(gameCard));
+  const list = $("gamesList");
+  list.replaceChildren(...mine.games.map((g) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span><b></b> <small></small></span><button class="btn danger small" type="button">Remove</button>`;
+    li.querySelector("b").textContent = g.name;
+    li.querySelector("small").textContent = g.ok ? `${g.mb} MB · added ${g.added || ""}` : "files missing";
+    const btn = li.querySelector("button");
+    btn.onclick = async () => {
+      if (!btn.classList.contains("sure")) { btn.classList.add("sure"); btn.textContent = "Sure? Remove"; return; }
+      btn.disabled = true;
+      const r = await call("games_remove", g.id);
+      if (r?.error) toast(r.error); else toast(`Removed ${g.name}${r.freed_mb ? ` (${r.freed_mb} MB freed)` : ""}`);
+      renderMine(r);
+    };
+    return li;
+  }));
+  $("gamesFound").replaceChildren(...mine.found.map((f) => {
+    const row = document.createElement("div");
+    row.style.display = "contents";
+    row.innerHTML = `<span>Found your game <b></b> on this PC.</span><button class="btn primary small" type="button">Add it</button>`;
+    row.querySelector("b").textContent = f.name;
+    row.querySelector("button").onclick = () => addGame("games_add_file", f.path);
+    return row;
+  }));
+}
+function gameBar(e) {
+  const bar = $("gamesBar");
+  clearTimeout(bar._hide);
+  bar.hidden = false;
+  bar.classList.toggle("bad", !!e.error);
+  const pct = e.error ? 1 : Math.max(0, Math.min(1, e.pct || 0));
+  bar.querySelector("i").style.width = `${Math.round(pct * 100)}%`;
+  bar.querySelector("span").textContent = e.error || e.text || "";
+  bar.querySelector("b").textContent = e.error ? "" : `${Math.round(pct * 100)}%`;
+  bar.setAttribute("aria-valuenow", Math.round(pct * 100));
+  if (pct >= 1 && !e.error) bar._hide = setTimeout(() => { bar.hidden = true; }, 1500);
+}
+window.onPyEvent = (e) => { if (e?.type === "game_progress") gameBar(e); };   // Python reports the copy / download here
+async function addGame(name, arg) {
+  if (mine.busy) return;
+  mine.busy = true;
+  for (const id of ["gamesPick", "gamesGet"]) $(id).disabled = true;
+  const r = await call(name, arg);
+  mine.busy = false;
+  for (const id of ["gamesPick", "gamesGet"]) $(id).disabled = false;
+  if (!r) return;                                           // the file picker was closed
+  if (r.error) gameBar({ error: r.error });
+  else { const names = r.added?.join(", ") || r.game.name; gameBar({ pct: 1, text: `Added ${names}` }); toast(`${names} ${r.added?.length > 1 ? "are" : "is"} in your Games hub`); $("gamesLink").value = ""; }
+  renderMine(r);
+}
+async function openGames() {
+  $("gamesDlg").hidden = false;
+  $("gamesPick").focus();
+  renderMine(await call("games_list"));
+}
+$("gamesBtn").onclick = openGames;
+$("gamesClose").onclick = () => { if (!mine.busy) $("gamesDlg").hidden = true; };
+$("gamesDlg").onclick = (e) => { if (e.target === $("gamesDlg")) $("gamesClose").click(); };
+$("gamesPick").onclick = () => addGame("games_add_file");
+$("gamesLinkForm").onsubmit = (e) => {
+  e.preventDefault();
+  const url = $("gamesLink").value.trim();                   // empty = the games in the Vermeil Google Drive folder
+  if (url && !/^https?:\/\//i.test(url)) { gameBar({ error: "Paste a full link that starts with https://" }); return; }
+  addGame("games_add_url", url);
+};
+call("games_list").then(renderMine);
 
 // the Retro picture: a collage of the games inside, with RETRO across the middle
 async function buildCollage() {
@@ -123,6 +226,7 @@ buildCollage();
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (!$("confirm").hidden) $("confirmNo").click();
+  else if (!$("gamesDlg").hidden) $("gamesClose").click();
   else if (!$("stage").hidden) poke();
 });
 
@@ -416,8 +520,9 @@ function markSaved(g) {
 async function play(g, fromEl) {
   const token = ++playToken;
   const live = () => token === playToken;
-  await zoomFrom(fromEl, g.image);
-  loader.show(g.title, `${g.platform || "Retro"} · getting the game ready`);
+  const cover = g.image || fromEl?.querySelector?.("img")?.src || "";
+  await zoomFrom(fromEl, cover);
+  loader.show(g.title, `${g.platform || "Retro"} · getting the game ready`, cover);
   let found = 0.08;                                // the website can take a few seconds to answer
   const finding = setInterval(() => { found = Math.min(0.14, found + 0.004); loader.progress(found); }, 400);
   loader.sub("Finding the game…");
@@ -447,8 +552,9 @@ async function play(g, fromEl) {
 
   loader.progress(0.8);
   loader.sub("Starting the game…");
-  rg.playing = { ...g, id: info.id };
-  const q = new URLSearchParams({ core: info.core, rom: info.rom, bios: info.bios || "", parent: info.parent || "", id: info.id, name: g.title });
+  rg.playing = { ...g, id: info.id, image: cover };
+  try { sessionStorage.setItem("retro_cover", cover); } catch {}
+  const q = new URLSearchParams({ core: info.core, rom: info.rom, bios: info.bios || "", parent: info.parent || "", id: info.id, name: g.title, image: cover });
   const frame = document.createElement("iframe");
   frame.title = g.title;
   frame.allow = "autoplay; fullscreen; gamepad";
@@ -487,7 +593,8 @@ function failPlay(text) {
 function toast(text) {
   const t = document.createElement("div");
   t.className = "toast"; t.textContent = text;
-  $("stage").append(t);
+  if ($("stage").hidden) t.style.position = "fixed";          // on the hub (no game showing)
+  ($("stage").hidden ? document.body : $("stage")).append(t);
   setTimeout(() => t.classList.add("out"), 2600);
   setTimeout(() => t.remove(), 3100);
 }

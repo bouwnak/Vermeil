@@ -138,6 +138,18 @@ export class View2D {
       this.applyView();
     }, { passive: false });
     svg.addEventListener("contextmenu", (e) => { e.preventDefault(); this.cancelWire(); });
+    svg.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+    svg.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const type = e.dataTransfer.getData("part-type") || e.dataTransfer.getData("text/plain");
+      if (!type || !PARTS[type]) return;
+      const [x, y] = this.toWorld(e);
+      this.lab.placing = type;
+      this.lab.place(Math.round(x), Math.round(y));
+    });
     svg.addEventListener("pointerdown", (e) => this.down(e));
     svg.addEventListener("pointermove", (e) => this.move(e));
     window.addEventListener("pointerup", (e) => this.up(e));

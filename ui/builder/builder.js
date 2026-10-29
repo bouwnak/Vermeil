@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { AxisGizmo } from "../electronics/gizmo3d.js";
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, attrs = {}, ...kids) => {
@@ -68,6 +69,28 @@ function resize() {
   renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
 }
 addEventListener("resize", resize); resize();
+
+// Blender-style 3D Axis Gizmo for moving parts
+const gizmo = new AxisGizmo({
+  scene,
+  camera,
+  domElement: renderer.domElement,
+  controls,
+  stage: $("stage"),
+  onMove: (target) => {
+    selBox?.update();
+    labelsDirty = true;
+  },
+  onMoveEnd: (target) => {
+    recordMove(target);
+    selBox?.update();
+    labelsDirty = true;
+  },
+  onDelete: () => {
+    removeSelected();
+  },
+  isEnabled: () => manual,
+});
 
 // ------------------------------------------------------------------ materials per layer
 const LAYER = {
@@ -790,6 +813,7 @@ function select(o) {
   selected = o;
   if (selBox) { scene.remove(selBox); selBox = null; }
   if (o) { selBox = new THREE.BoxHelper(o, 0xffd36a); scene.add(selBox); }
+  gizmo?.attach(o);
   drawEdit();
 }
 function nudge(axis, amt) { if (!selected) return; selected.position[axis] += amt; recordMove(selected); selBox?.update(); }
@@ -1241,6 +1265,7 @@ renderer.setAnimationLoop(() => {
     if (simOn && (liveTick += dt) > 0.25) { liveTick = 0; if (!$("pane-live").hidden) drawLive(); }
   }
   controls.update();
+  gizmo?.update();
   renderer.render(scene, camera);
   updateLabels();
 });

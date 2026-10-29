@@ -5,7 +5,7 @@ import { $, el, toast } from "./util.js";
 export function initPlugins(api, { onChange } = {}) {
   let data = null;
   const picked = new Set();
-  const logs = {};                       // plugin id -> last lines of its install log
+  const jobs = {};                       // plugin id -> {pct, step} of its install / uninstall (the progress bar)
 
   // ---- Plugins is one of the Settings tabs (General · Her · You · AI & online · Test · Plugins)
   window.addEventListener("plugins-tab", () => refresh());
@@ -40,17 +40,34 @@ export function initPlugins(api, { onChange } = {}) {
     const btn = p.installed
       ? el("button", { class: "ghost small", disabled: p.busy, onclick: () => remove(p) }, "Uninstall")
       : el("button", { class: "small", disabled: p.busy, onclick: () => add([p.id]) }, "Install");
-    const lines = (logs[p.id] || p.log || []).slice(-3);
+    const job = jobs[p.id] || { pct: p.pct, step: p.step };
+    const bar = p.busy ? el("div", { class: "load-bar plugin-progress", role: "progressbar", "aria-label": `${p.name} progress`,
+      "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(job.pct || 0) },
+      el("i", { style: `width: ${Math.max(2, job.pct || 0)}%` }), el("span", {}, `${job.pct || 0}% · ${job.step || "Working…"}`)) : null;
     return el("article", { class: `plugin${p.installed ? " on" : ""}` },
       el("label", { class: "plugin-head" }, p.installed ? null : cb, el("span", { class: "plugin-icon", "aria-hidden": "true" }, p.icon),
         el("strong", {}, p.name), state),
       el("p", { class: "note" }, p.desc),
       el("p", { class: "note small" }, `Size: ${p.size}${p.installed && p.used_mb ? ` · using ${p.used_mb} MB now` : ""}` +
-        `${p.pack ? ` · installer copy: ${p.pack_mb} MB` : ""}${p.needs_ollama ? " · needs the Ollama app (ollama.com)" : ""}`),
+        `${p.pack ? ` · installer copy: ${p.pack_mb} MB` : ""}${p.on_drive && !p.pack ? ` · downloads ${p.zip}.zip from the Vermeil Drive folder` : ""}` +
+        `${p.needs_ollama ? " · needs the Ollama app (ollama.com)" : ""}`),
       p.installed && p.missing_pip.length ? el("p", { class: "note warn" }, `Missing packages: ${p.missing_pip.join(", ")} - press Install again or run: `, el("code", {}, p.pip_command)) : null,
-      lines.length ? el("pre", { class: "plugin-log" }, lines.join("\n")) : null,
+      bar, !p.busy && p.error ? el("p", { class: "plugin-error" }, p.error) : null,
+      p.needs_pack && !p.on_drive ? linkRow(p) : null,
       el("div", { class: "row" }, btn, !p.installed && p.pip_command ? el("button", { class: "ghost small", title: "Copy the pip command to run it yourself",
         onclick: () => { navigator.clipboard?.writeText(p.pip_command); toast(`Copied: ${p.pip_command}`, 3500); } }, "Copy pip command") : null));
+  }
+
+  // a feature whose zip isn't in the Vermeil Drive folder (or on this PC): paste a link to one (it's never shown back)
+  function linkRow(p) {
+    const input = el("input", { type: "url", value: "", placeholder: "Google Drive link of its .zip", spellcheck: "false",
+                                "aria-label": `Google Drive link for ${p.name}` });
+    const save = el("button", { class: "ghost small", onclick: async () => {
+      const r = await api.plugin_set_link(p.id, input.value);
+      toast(r.error || (input.value.trim() ? "Link saved - press Install." : "Link removed."), 4000);
+      if (!r.error) refresh();
+    } }, "Save link");
+    return el("div", { class: "row plugin-link" }, input, save);
   }
 
   async function add(ids) {
@@ -64,9 +81,9 @@ export function initPlugins(api, { onChange } = {}) {
   }
 
   async function remove(p, force = false) {
-    if (!force && !confirm(`Uninstall ${p.name}?\n\nIts files${p.used_mb ? ` (about ${Math.round(p.used_mb)} MB)` : ""} and the packages only it uses will be removed, and it disappears from the menu. You can install it again later.`)) return;
+    if (!force && !confirm(`Uninstall ${p.name}?\n\nIts files and Python packages${p.used_mb ? ` (about ${Math.round(p.used_mb)} MB)` : ""} will be removed, and it disappears from the menu. ${p.on_drive ? "Install downloads it again from the Vermeil Drive folder." : "You can install it again later."}`)) return;
     let removePack = false;
-    if (p.pack && !force) removePack = confirm(`Also delete the installer copy (${p.pack_mb} MB in plugin_packs)?\n\nOK = free that space too (to reinstall you'll need the installer package again).\nCancel = keep it so you can reinstall offline.`);
+    if (p.pack && !p.on_drive && !force) removePack = confirm(`Also delete the installer copy (${p.pack_mb} MB in plugin_packs)?\n\nOK = free that space too (to reinstall you'll need the installer package again).\nCancel = keep it so you can reinstall offline.`);
     const r = await api.plugin_uninstall(p.id, force, removePack);
     if (r.confirm) { if (confirm(r.confirm)) return remove(p, true); return; }
     toast(r.error || r.message, 5000);
@@ -81,7 +98,7 @@ export function initPlugins(api, { onChange } = {}) {
     show,
     /** a {type: "plugin"} event from Python */
     onEvent(e) {
-      (logs[e.id] ||= []).push(e.text); logs[e.id] = logs[e.id].slice(-6);
+      jobs[e.id] = { pct: e.pct || 0, step: e.step || "" };
       if (e.state !== "running") { toast(e.text.split("\n")[0], 5000); refresh().then(() => onChange?.()); }
       else if (visible()) refresh();
     },

@@ -43,6 +43,14 @@ class H(http.server.SimpleHTTPRequestHandler):
                   "retro_library": retrogames.library, "retro_favorite": retrogames.favorite,
                   "retro_downloads": retrogames.downloads, "retro_delete": retrogames.delete_download,
                   "retro_fullscreen": lambda on=True: {"ok": True}}.get(name)
+        if name.startswith("games_"):                 # the hub's own games (skills/mygames.py), kept in a test folder
+            import mygames
+            test_dir = os.path.join(os.environ["GAME_SAVE_DIR"], "mygames")
+            mygames.GAMES_DIR, mygames.LIST_FILE = os.path.join(test_dir, "games"), os.path.join(test_dir, "my_games.json")
+            fn = {"games_list": mygames.list_games, "games_remove": lambda g: {**mygames.remove(g), **mygames.list_games()},
+                  "games_add_file": lambda p=None: {**(mygames.add_path(p) if p else {"error": "Pick a file in the app (browser test: pass a path)."}), **mygames.list_games()},
+                  "games_add_url": lambda u: {**mygames.add_url(u), **mygames.list_games()},
+                  "games_launch": lambda g: {"ok": True, "name": "(test: not started)"}}.get(name)
         if name == "dev_preview_image":               # save a game picture for the Games hub (ui/games/img/<name>.jpg)
             def fn(pic, data_url):
                 import base64, re
@@ -52,6 +60,16 @@ class H(http.server.SimpleHTTPRequestHandler):
                 with open(os.path.join(ROOT, "ui", "games", "img", pic + ".jpg"), "wb") as f:
                     f.write(base64.b64decode(data_url.split(",", 1)[1]))
                 return {"ok": True}
+        if name == "dev_save_rigged_model":           # save a model rigged in the test page (same as the app's save_rigged_model)
+            def fn(model, data_b64):
+                import base64, re
+                model = re.sub(r'[\\/:*?"<>|]+', "_", os.path.basename(model or "")) or "model-rigged.glb"
+                data = base64.b64decode(data_b64)
+                if data[:4] != b"glTF" or not model.lower().endswith(".glb"):
+                    return {"error": "That isn't a .glb file."}
+                with open(os.path.join(ROOT, "ui", "models", model), "wb") as f:
+                    f.write(data)
+                return {"name": model}
         out = fn(*args) if fn and not name.startswith("_") else {"error": f"no api {name}"}
         body = json.dumps(out).encode()
         self.send_response(200)

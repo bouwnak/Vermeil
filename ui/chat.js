@@ -6,7 +6,7 @@ const CATS = [["anything", "Surprise me"], ["movies", "🎬 Movies"], ["shows", 
   ["games", "🎮 Games"], ["music", "🎵 Music"], ["food", "🍜 Food"], ["recipes", "🍳 Recipes"], ["activities", "🏃 Activities"],
   ["places", "📍 Places"], ["youtube", "▶ YouTube"], ["podcasts", "🎧 Podcasts"]];
 
-export function initChat(api) {
+export function initChat(api, herName = () => "Her") {
   let tab = "messages";
   let category = "anything";
   const tabs = $("chatTabs"), log = $("log"), other = $("chatOther"), searchRow = $("chatSearchRow");
@@ -22,7 +22,7 @@ export function initChat(api) {
   function messageItem(m) {
     const li = el("li", { class: m.who });
     const text = el("span", { class: "msg-text" }, m.text);
-    li.append(text);
+    li.append(el("span", { class: "who" }, m.who === "you" ? "You" : (herName() || "Her")), text);
     if (m.i == null) return li;
     const edit = () => {
       const box = el("textarea", { rows: 3 }, m.text);

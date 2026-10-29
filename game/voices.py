@@ -7,6 +7,9 @@ While the AI is online (Groq) and Kokoro is running on this PC, everyone speaks 
   their gender and 'voice kind' (deep, bright, gruff...) with pitch/speed changes so they sound different
 - at most MAX_LOADED Piper models stay in memory; older ones are unloaded
 - if speech fails, the game carries on with subtitles only
+- the voice clone (RVC) is only for your companion: when the companion's character has one (Settings -> character ->
+  Voice clone), her lines go through it, like in the assistant. Everyone else (the narrator, NPCs, allies, monsters)
+  uses the fast offline Piper voices, so their lines are ready almost at once.
 """
 import base64
 import hashlib
@@ -102,6 +105,13 @@ KOKORO_EN = {"female": ["af_bella", "af_nicole", "af_sarah", "bf_emma", "af_aoed
              "male": ["am_michael", "bm_lewis", "am_fenrir", "bm_daniel", "am_puck", "am_eric", "am_liam", "bm_fable",
                       "am_onyx", "am_echo", "am_adam"]}
 DM_ONLINE = "kokoro:bm_george"
+COMPANION_CLONE = None         # set by GameAPI: the companion's RVC clone {"model", "pitch", "index_rate", "base"} or None
+
+
+def clone_for(speaker):
+    """the RVC clone to use for this speaker - only the companion ever gets one"""
+    c = COMPANION_CLONE
+    return c if speaker == "vermeil" and isinstance(c, dict) and c.get("model") else None
 
 
 def online_ready():
@@ -148,7 +158,25 @@ def _unload_extra(key):
             loaded.pop(old, None)
 
 
-_cache = {}                     # (voice, rate, pitch, text) -> result: repeated lines (greetings, tests) play instantly
+def _cloned(text, voice, rate, pitch, clone):
+    """the companion's line: a normal voice says it (the clone's "Speak with" voice), then RVC turns it into the
+    clone. If RVC fails, the normal voice is used."""
+    T = _tts()
+    try:
+        import rvc
+        base = rvc.base_voice(clone, rvc.text_language(text), voice)
+    except Exception:
+        rvc, base = None, voice
+    samples, sr = T.synth(text, base, rate, pitch, voice)
+    if rvc is not None:
+        try:
+            samples, sr = rvc.convert(samples, sr, clone)
+        except Exception as e:
+            print(f"[game voice] RVC: {e} - using the normal voice.")
+    return samples, sr
+
+
+_cache = {}                     # (voice, rate, pitch, clone, text) -> result: repeated lines (greetings, tests) play instantly
 
 
 def speak(camp, speaker, text):
@@ -161,17 +189,22 @@ def speak(camp, speaker, text):
     v = camp.get("voices", {}).get(speaker) or camp.get("voices", {}).get("dm")
     if not v or not v.get("voice"): return {"error": "no voice installed"}
     voice, rate_s, pitch_s = v["voice"], v.get("rate", "+0%"), v.get("pitch", "+0Hz")
-    online = online_voice(camp, speaker) if online_ready() else None
+    clone = clone_for(speaker)
+    # only the companion may use Kokoro (her own online voice); everyone else stays on the fast offline voices
+    online = online_voice(camp, speaker) if speaker == "vermeil" and not clone and online_ready() else None
     if online:                                   # Kokoro voices already differ a lot: keep only small tweaks
         voice = online
-        if speaker == "vermeil" and voice == VERMEIL_ONLINE:
+        if voice == VERMEIL_ONLINE:
             rate_s, pitch_s = "+0%", "+0Hz"
-    key = (voice, rate_s, pitch_s, text[:3000])
+    key = (voice, rate_s, pitch_s, (clone or {}).get("model"), text[:3000])
     if key in _cache:
         return _cache[key]
     try:
         _unload_extra(voice)
-        samples, rate = T.synth(text[:3000], voice, rate_s, pitch_s, v["voice"]) if online else T.synth(text[:3000], voice, rate_s, pitch_s)
+        if clone:
+            samples, rate = _cloned(text[:3000], voice, rate_s, pitch_s, clone)
+        else:
+            samples, rate = T.synth(text[:3000], voice, rate_s, pitch_s, v["voice"]) if online else T.synth(text[:3000], voice, rate_s, pitch_s)
         wav = T.to_wav_bytes(samples, rate)
         out = {"audio": base64.b64encode(wav).decode("ascii"), "seconds": round(len(samples) / float(rate), 2), "voice": voice}
         _cache[key] = out

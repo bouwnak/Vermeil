@@ -619,8 +619,254 @@ def assignment_help(question, mode="explain", my_answer="", file_ids=None):
         context = ("\n\nRelevant parts of the student's own lecture files (use their methods and notation, "
                    "and cite them like (file, page)):\n" + "\n\n".join(f"[{h['label']}]\n{h['text'][:1800]}" for h in hits))
     prompt = (f"You are a patient tutor helping a university student with an assignment. {ASSIST_MODES.get(mode, ASSIST_MODES['explain'])} "
-              "Use clear headings and numbered steps. If the question is unclear or missing data, say what's missing."
+              "Use clear headings and numbered steps. If the question is unclear or missing data, say what's missing. "
+              "Format all mathematical equations, vector notations, formulas, and expressions using standard LaTeX enclosed in delimiters: "
+              "write inline math like $x^2 + y^2 = r^2$ or $\\mathbf{T}(t)$ and multiline/display equations with $$\\mathbf{T}(t) = \\frac{\\mathbf{r}'(t)}{\\|\\mathbf{r}'(t)\\|}$$ on their own line. "
+              "Always wrap vectors, fractions, integrals, and Greek letters inside $ or $$ delimiters with valid LaTeX syntax (e.g. use \\mathbf{r}'(t) with braces, never bare unescaped commands)."
               f"\n\nASSIGNMENT QUESTION:\n{question}"
               + (f"\n\nSTUDENT'S ANSWER:\n{my_answer}" if my_answer.strip() else "") + context)
     r = _client().chat.completions.create(model=STUDY_MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.3)
     return {"answer": (r.choices[0].message.content or "").strip(), "used": [h["label"] for h in hits]}
+
+
+# ====================================================================
+# Paraphraser
+# ====================================================================
+def paraphrase(text, style="standard", length="same"):
+    """Paraphrase text: sentence, paragraph or full text with various tones."""
+    if not (text or "").strip():
+        return {"error": "Please enter some text to paraphrase."}
+    prompt = (
+        f"You are an expert editor and writing assistant. Paraphrase the following text in a {style} style/tone, "
+        f"aiming for roughly {length} length while keeping the original meaning completely accurate and natural. "
+        "Return ONLY the paraphrased text without any intro or conversational filler.\n\n"
+        f"TEXT:\n{text.strip()}"
+    )
+    r = _client().chat.completions.create(model=STUDY_MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.5)
+    return {"paraphrase": (r.choices[0].message.content or "").strip()}
+
+
+# ====================================================================
+# Grammar & Style Corrector (Grammarly-style)
+# ====================================================================
+def correct_grammar(text, tone="academic", light=False):
+    """Grammar, spelling, punctuation, and clarity corrector (like Grammarly).
+    light=True only fixes real mistakes and leaves the wording alone (used after 'humanize',
+    so the polish doesn't make the text sound like AI again)."""
+    if not (text or "").strip():
+        return {"error": "Please enter some text to check."}
+    prompt = (
+        f"You are an expert grammar corrector and writing proofreader (like Grammarly Pro). "
+        + ("Fix ONLY real grammar, spelling and punctuation mistakes. Do NOT rephrase, polish, merge or split sentences, "
+           "and keep every contraction, short sentence and casual word exactly as written. "
+           if light else
+           f"Analyze the following text for grammar, spelling, punctuation, sentence flow, word choice, and clarity. ")
+        + f"Tone style to target: {tone} (options: academic, formal, concise, casual). "
+        f"Return ONLY a valid JSON object with these keys:\n"
+        f"- 'corrected': (string) the fully corrected, polished version of the text\n"
+        f"- 'summary': (string) a concise 1-sentence overview of the key fixes\n"
+        f"- 'score': (int 0-100) estimated overall quality score after improvements\n"
+        f"- 'changes': (list of objects) [{{ 'original': '...', 'corrected': '...', 'type': 'grammar'|'spelling'|'clarity'|'punctuation', 'explanation': '...' }}]\n\n"
+        f"TEXT TO CORRECT:\n{text.strip()}"
+    )
+    r = _client().chat.completions.create(
+        model=STUDY_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+    )
+    raw = (r.choices[0].message.content or "").strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
+    try:
+        parsed = json.loads(raw)
+        return parsed
+    except Exception:
+        return {
+            "corrected": raw,
+            "summary": "Corrected grammar, spelling, and phrasing.",
+            "score": 92,
+            "changes": [],
+        }
+
+
+# ====================================================================
+# AI-writing detector + "humanize" (paraphrase in a human voice, then fix grammar)
+# ====================================================================
+# Words and phrases that chat models overuse. Each hit nudges the score up.
+AI_PHRASES = [
+    "delve", "delves", "delving", "tapestry", "testament to", "in today's fast-paced", "it is important to note",
+    "it's important to note", "it is worth noting", "plays a crucial role", "plays a pivotal role", "pivotal",
+    "seamless", "seamlessly", "furthermore", "moreover", "additionally", "in conclusion", "overall,",
+    "navigate the complexities", "ever-evolving", "ever-changing", "landscape", "realm", "multifaceted",
+    "underscore", "underscores", "harness", "leverage", "leveraging", "robust", "holistic", "foster",
+    "fostering", "paramount", "intricate", "nuanced", "showcasing", "showcase", "embark", "elevate",
+    "unlock the potential", "a myriad of", "myriad", "in summary", "ultimately,", "notably,",
+    "serves as a", "stands as a", "not only", "but also", "vital role", "crucial", "comprehensive",
+    # the inspirational / generic register chat models fall into
+    "limitless", "boundless", "endless possibilities", "possibilities", "fresh chance", "new opportunity",
+    "opportunity to", "remarkable", "profound", "transformative", "empower", "empowering", "resilience",
+    "journey", "embrace", "the unknown", "unlock", "unleash", "greatness", "achievements", "accomplishments",
+    "day after day", "step by step", "every step", "snowball", "instantaneous", "vibrant", "dynamic",
+    "invaluable", "meaningful", "fulfilling", "thrive", "flourish", "cultivate", "enhance", "insights",
+    "a sense of", "in essence", "at its core", "when it comes to", "it's no secret", "game-changer",
+]
+_SENT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'(])")
+_TRIAD = re.compile(r"\b[\w'-]+(?: [\w'-]+){0,2}, [\w'-]+(?: [\w'-]+){0,2},? (?:and|or) [\w'-]+", re.I)
+_ONE = re.compile(r"\b(one's|oneself|one (?:can|must|should|may|might|makes|puts|remains|needs|has|is|will))\b", re.I)
+
+
+def _sentences(text):
+    return [s.strip() for s in _SENT.split(re.sub(r"\s+", " ", text.strip())) if len(s.strip()) > 2]
+
+
+def _phrase_hits(low):
+    return sorted({p for p in AI_PHRASES if re.search(r"(?<![a-z])" + re.escape(p) + r"(?![a-z])", low)})
+
+
+def _ai_signals(text):
+    """Cheap, offline statistics. Human writing is 'bursty': sentence lengths jump around, it has
+    specifics (names, numbers, 'I'), contractions and the odd short sentence. Chat-model writing is even,
+    generic and polished: stock phrases, lists of three, 'one should', semicolons and abstract nouns."""
+    text = text.replace("’", "'").replace("‘", "'")      # curly apostrophes count as contractions too
+    sents = _sentences(text)
+    words = re.findall(r"[A-Za-z']+", text.lower())
+    if len(words) < 25 or len(sents) < 2:
+        return None
+    lens = [len(re.findall(r"[A-Za-z']+", s)) for s in sents]
+    mean = sum(lens) / len(lens)
+    sd = math.sqrt(sum((l - mean) ** 2 for l in lens) / len(lens))
+    burst = sd / mean if mean else 0                       # humans ~0.5+, models ~0.25
+    low = text.lower()
+    hits = _phrase_hits(low)
+    per100 = len(hits) * 100 / len(words)
+    starts = Counter(s.split()[0].lower().strip(",") for s in sents if s.split())
+    repeat_start = max(starts.values()) / len(sents) if sents else 0
+    uniq = len(set(words)) / len(words)
+    personal = len(re.findall(r"\b(i|i'm|i've|i'd|i'll|my|me|we|our|us)\b", low)) / len(words)
+    contractions = len(re.findall(r"\b\w+'(t|s|re|ve|ll|d|m)\b", low)) / len(words)
+    triads = len(_TRIAD.findall(text))
+    impersonal = len(_ONE.findall(text))
+    polish = text.count(";") + text.count("—") + text.count(" – ")
+    specifics = len(re.findall(r"\b\d[\d,.:%]*\b", text)) + len(re.findall(r"(?<![.!?] )(?<!^)\b[A-Z][a-z]{2,}", text))
+    short = sum(1 for l in lens if l <= 6)
+    long_words = sum(1 for w in words if len(w) >= 9) / len(words)
+
+    # each part is 0..1, where 1 = "looks like AI"
+    parts = {
+        "Even sentence lengths": max(0.0, min(1.0, (0.55 - burst) / 0.35)),
+        "Stock AI phrases": min(1.0, per100 / 3.0),
+        "Lists of three": min(1.0, triads / max(1.0, len(sents) * 0.5)),
+        "Polished, impersonal tone": min(1.0, (impersonal * 0.5 + polish * 0.35)
+                                         + max(0.0, (long_words - 0.08) * 4)),
+        "No personal voice": 1.0 - min(1.0, personal * 40),
+        "No contractions": 1.0 - min(1.0, contractions * 60),
+        "No specifics or short sentences": max(0.0, 1.0 - min(1.0, specifics / max(1.0, len(sents)))
+                                               - min(0.6, short * 0.3)),
+        "Same sentence openers": max(0.0, min(1.0, (repeat_start - 0.15) / 0.35)) if len(sents) >= 4 else 0.0,
+    }
+    weights = {"Even sentence lengths": 0.18, "Stock AI phrases": 0.24, "Lists of three": 0.12,
+               "Polished, impersonal tone": 0.12, "No personal voice": 0.08, "No contractions": 0.09,
+               "No specifics or short sentences": 0.12, "Same sentence openers": 0.05}
+    score = sum(parts[k] * weights[k] for k in parts) * 100
+    # several strong signs together are much more telling than any one alone
+    strong = sum(1 for k in ("Even sentence lengths", "Stock AI phrases", "Lists of three", "Polished, impersonal tone")
+                 if parts[k] >= 0.6)
+    score = min(99.0, score * (1 + 0.12 * max(0, strong - 1)))
+    flagged = []
+    for s in sents:
+        sl = s.lower()
+        why = [p for p in hits if re.search(r"(?<![a-z])" + re.escape(p) + r"(?![a-z])", sl)][:3]
+        if _TRIAD.search(s):
+            why.append("list of three")
+        if _ONE.search(s):
+            why.append("impersonal 'one'")
+        if why:
+            flagged.append({"sentence": s, "why": ", ".join(why[:4])})
+    return {"score": round(score), "parts": {k: round(v * 100) for k, v in parts.items()}, "phrases": hits,
+            "flagged": flagged[:12], "burstiness": round(burst, 2), "vocabulary": round(uniq, 2),
+            "sentences": len(sents), "words": len(words)}
+
+
+def _verdict(score):
+    if score >= 70: return "Likely AI-written"
+    if score >= 45: return "Mixed: parts read like AI"
+    if score >= 25: return "Mostly human, a few AI-like spots"
+    return "Reads human-written"
+
+
+def _model_opinion(text):
+    """Ask the AI model for its own guess; None if it isn't reachable."""
+    try:
+        r = _client().chat.completions.create(model=STUDY_MODEL, temperature=0.1, messages=[{"role": "user", "content": (
+            "You are a strict AI-writing detector (like GPTZero). Decide how likely it is that this text was written by an "
+            "AI chatbot rather than a person. Signs of AI: even rhythm, generic inspirational or abstract wording, no concrete "
+            "details, lists of three, polished transitions, impersonal 'one', no contractions. Signs of a person: specific "
+            "details, quirks, uneven rhythm, opinions, small mistakes. Reply ONLY with JSON: "
+            '{"ai_percent": 0-100, "reason": "one short sentence"}\n\nTEXT:\n' + text.strip()[:6000])}])
+        raw = (r.choices[0].message.content or "").strip()
+        m = re.search(r"\{.*\}", raw, re.S)
+        j = json.loads(m.group(0)) if m else {}
+        return max(0, min(100, int(float(j.get("ai_percent"))))), str(j.get("reason") or "")[:240]
+    except Exception as e:
+        print(f"[AI detector] model opinion skipped: {e}")
+        return None, ""
+
+
+def detect_ai(text, use_llm=True):
+    """Guess how AI-written a text looks (0 = human, 100 = AI). Offline statistics first; if the AI model
+    answers, its opinion is blended in (half and half). No detector is certain."""
+    if not (text or "").strip():
+        return {"error": "Paste some text to check first."}
+    sig = _ai_signals(text)
+    if sig is None:
+        return {"error": "Paste at least 2–3 sentences (25+ words) so there's enough to judge."}
+    score, model_score, model_note = sig["score"], None, ""
+    if use_llm:
+        model_score, model_note = _model_opinion(text)
+        if model_score is not None:
+            score = round(score * 0.5 + model_score * 0.5)
+    return {**sig, "score": score, "stats_score": sig["score"], "model_score": model_score, "model_note": model_note,
+            "verdict": _verdict(score)}
+
+
+HUMAN_STYLE = (
+    "the way a real {tone_word} person would actually write it, NOT like an AI: mix very short sentences (3-6 words) with "
+    "longer ones; use contractions (it's, don't, you'll); use plain everyday words instead of grand ones "
+    "(no 'remarkable', 'limitless', 'journey', 'embrace', 'greatness', 'unlock', 'delve', 'moreover', 'furthermore'); "
+    "never list three things in a row - use two, or one; don't use 'one' as a pronoun ('one remains') - use 'you' or 'we'; "
+    "no semicolons or em dashes; add a small concrete example or a personal touch where it fits; keep every fact, number "
+    "and citation, and keep roughly the same length")
+
+
+def humanize(text, tone="academic"):
+    """The 'Make it sound human' button: rewrite in a natural human voice (paraphraser), then fix only real
+    grammar mistakes (so the polish doesn't undo it), then re-check. If it still reads like AI it gets one more,
+    stronger pass. Returns the best version with before/after scores."""
+    if not (text or "").strip():
+        return {"error": "Paste some text first."}
+    before = detect_ai(text, use_llm=False)
+    tone_word = {"academic": "student writing an essay", "formal": "professional", "casual": "friendly",
+                 "concise": "busy"}.get(str(tone).lower(), "")
+    best, current, changes, paraphrased = None, text, [], ""
+    for attempt in range(3):
+        style = HUMAN_STYLE.format(tone_word=tone_word)
+        if attempt:
+            style += (f". The last try still read {best[1]}% AI-like: be bolder - break up long sentences, "
+                      "cut the generic wording, sound like someone talking")
+        p = paraphrase(current, style=style)
+        if p.get("error"):
+            if best:
+                break
+            return p
+        g = correct_grammar(p["paraphrase"], "casual" if tone != "formal" else tone, light=True)
+        final = re.sub(r"\s*—\s*", " - ", (g.get("corrected") or p["paraphrase"]).strip())   # em dashes read as AI
+        score = (detect_ai(final, use_llm=False).get("score") or 0)
+        if best is None or score < best[1]:
+            best, changes, paraphrased = (final, score), g.get("changes", []), p["paraphrase"]
+        if score <= 30:
+            break
+        current = final
+    final, after = best
+    return {"text": final, "paraphrased": paraphrased, "changes": changes, "before": before.get("score"),
+            "after": after, "after_verdict": _verdict(after)}
+

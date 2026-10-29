@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vermeil</title>
   <link rel="stylesheet" href="vendor/fonts/nunito.css">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="avatar.css">
+  <script src="vendor/katex/katex.min.js"></script>
   <script type="importmap">
   {
     "imports": {
@@ -54,17 +55,9 @@
         <span class="item-title">Generator</span>
         <span class="item-sub">Pictures, slides, videos</span>
       </button>
-      <button class="item" data-panel="avatar" aria-controls="panel-avatar">
-        <span class="item-title">Avatar</span>
-        <span class="item-sub">PS1 anime avatar creator</span>
-      </button>
-      <button class="item" data-panel="baking" aria-controls="panel-baking">
-        <span class="item-title">Baking</span>
-        <span class="item-sub" id="bakingSub">Recipes &amp; kitchen timer</span>
-      </button>
-      <button class="item" data-panel="cooking" aria-controls="panel-cooking">
-        <span class="item-title">Cooking</span>
-        <span class="item-sub" id="cookingSub">Recipes &amp; kitchen timer</span>
+      <button class="item" data-panel="kitchen" aria-controls="panel-kitchen">
+        <span class="item-title">Cooking &amp; Baking</span>
+        <span class="item-sub" id="kitchenSub">Recipes &amp; kitchen timer</span>
       </button>
       <button class="item" data-panel="music" aria-controls="panel-music">
         <span class="item-title">Music</span>
@@ -102,10 +95,6 @@
         <span class="item-title">Characters</span>
         <span class="item-sub">Personality, voice and model</span>
       </button>
-      <button class="item" data-panel="room" aria-controls="panel-room">
-        <span class="item-title">Room</span>
-        <span class="item-sub">Furniture, walls, floor</span>
-      </button>
       <button class="item" data-panel="settings" aria-controls="panel-settings">
         <span class="item-title">Settings</span>
         <span class="item-sub">Face, behaviour</span>
@@ -122,6 +111,35 @@
     <div class="activity-tag" id="activityTag" hidden></div>
     <div class="loading" id="loading" hidden>Loading model…</div>
     <button class="editBtn" id="editBtn" aria-pressed="false">Edit room</button>
+    <div class="edit-bar" id="editBar" hidden>
+      <div class="edit-top">
+        <button type="button" class="edit-done" id="editDone">✓ Done editing</button>
+        <button type="button" class="edit-undo" id="editUndo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶ Undo</button>
+        <div class="edit-cats" id="catalogTabs" role="tablist" aria-label="What to change"></div>
+      </div>
+      <div class="edit-drawer" id="editDrawer">
+        <div class="catalog" id="catalog"></div>
+        <div class="edit-pane" data-pane="style" hidden><div class="themes" id="themes"></div></div>
+        <div class="edit-pane" data-pane="walls" hidden>
+          <div class="swatches" id="wallSwatches"></div>
+          <label class="inline">Any colour <input type="color" id="wallColor" value="#2c2034"></label>
+        </div>
+        <div class="edit-pane" data-pane="floor" hidden><select id="floorSelect" aria-label="Floor"></select></div>
+        <div class="edit-pane" data-pane="time" hidden>
+          <label class="check"><input type="checkbox" id="autoTime"> Follow my real time of day</label>
+          <select id="skySelect" aria-label="Time of day"></select>
+          <label class="inline">Brightness <output id="brightOut">100%</output>
+            <input type="range" id="brightness" min="30" max="150" step="5" value="100">
+          </label>
+          <p class="note" id="clockNote"></p>
+        </div>
+        <div class="edit-pane house-pane" data-pane="house" hidden id="housePane"></div>
+        <div class="edit-pane" data-pane="reset" hidden>
+          <p class="note">Puts every piece of furniture back where it started (you can undo it).</p>
+          <button class="danger" id="resetRoom">Reset the room</button>
+        </div>
+      </div>
+    </div>
     <div class="item-tools" id="itemTools" hidden>
       <div class="paint-pop" id="paintPop" hidden></div>
       <button type="button" class="tool" id="toolRotate" title="Turn (R)" aria-label="Turn"><svg viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -133,6 +151,7 @@
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
 
+    <div class="talk-guide" id="talkGuide" hidden aria-label="Things you can say"></div>
     <form class="talk" id="talkForm" autocomplete="off">
       <input id="talkInput" type="text" placeholder="Talk to Vermeil…" aria-label="Message">
       <button type="submit">Send</button>
@@ -178,17 +197,14 @@
       <div id="genBody"></div>
     </section>
 
-    <section class="panel wide" id="panel-avatar" hidden aria-label="Avatar Creator">
-    </section>
-
-    <section class="panel wide" id="panel-baking" hidden aria-label="Baking">
-      <header><h2>Baking</h2><button class="close" aria-label="Close">×</button></header>
-      <div id="bakingBody"></div>
-    </section>
-
-    <section class="panel wide" id="panel-cooking" hidden aria-label="Cooking">
-      <header><h2>Cooking</h2><button class="close" aria-label="Close">×</button></header>
+    <section class="panel wide" id="panel-kitchen" hidden aria-label="Cooking and Baking">
+      <header><h2>Cooking &amp; Baking</h2><button class="close" aria-label="Close">×</button></header>
+      <div class="tabs" role="tablist" id="kitchenTabs">
+        <button type="button" role="tab" data-kind="cooking" aria-selected="true">🍳 Cooking</button>
+        <button type="button" role="tab" data-kind="baking" aria-selected="false">🧁 Baking</button>
+      </div>
       <div id="cookingBody"></div>
+      <div id="bakingBody" hidden></div>
     </section>
 
     <section class="panel wide" id="panel-gym" hidden aria-label="Gym">
@@ -282,6 +298,7 @@
             <button type="button" class="ghost" id="rvcImport">Import a voice (.pth + .index)…</button>
             <button type="button" class="ghost" id="rvcDelete" hidden>Remove this clone</button>
           </div>
+          <div class="load-bar" id="rvcBar" hidden role="progressbar" aria-label="Importing the voice"><i></i><span></span><b>0%</b></div>
           <label>Speak with
             <select id="rvcBase">
               <option value="own">The voice picked above</option>
@@ -317,7 +334,7 @@
         </div>
         <div class="row">
           <button type="button" class="ghost" id="importModel">Import a model (.glb, .vrm)…</button>
-          <button type="button" class="ghost" id="openAvatarStudio" title="Open the PS1 Anime Avatar Creator to build custom 3D models">🎨 Avatar Studio ✦</button>
+          <button type="button" class="ghost" id="rigModel" title="Give the model bones, then animate it with UniMate">🦴 Rig &amp; animate</button>
         </div>
         <div class="row">
           <button type="submit" class="primary">Save character</button>
@@ -327,46 +344,6 @@
       </form>
     </section>
 
-    <section class="panel" id="panel-room" hidden aria-label="Room">
-      <header><h2>Room</h2><button class="close" aria-label="Close">×</button></header>
-      <h3>Room style</h3>
-      <div class="themes" id="themes"></div>
-
-      <h3>Time of day</h3>
-      <label class="check"><input type="checkbox" id="autoTime"> Follow my real time of day</label>
-      <p class="note" id="clockNote"></p>
-      <select id="skySelect" aria-label="Time of day"></select>
-      <label>Brightness <output id="brightOut">100%</output>
-        <input type="range" id="brightness" min="30" max="150" step="5" value="100">
-      </label>
-
-      <h3>Furniture</h3>
-      <label class="check"><input type="checkbox" id="editToggle"> Edit furniture (drag things to move them)</label>
-
-      <div class="selected" id="selectedBox" hidden>
-        <p class="note">Selected: <strong id="selectedName"></strong></p>
-        <div class="row">
-          <button class="ghost" id="turnLeft" title="Turn left (Q)">Turn left</button>
-          <button class="ghost" id="turnRight" title="Turn right (E)">Turn right</button>
-          <button class="ghost" id="raise">Raise</button>
-          <button class="ghost" id="lower">Lower</button>
-        </div>
-        <button class="danger" id="removeItem">Remove from room (Delete)</button>
-      </div>
-      <p class="note" id="editHint">Turn on editing, then click a piece of furniture to select it.</p>
-
-      <h3>Add furniture</h3>
-      <nav class="tabs cat-tabs" id="catalogTabs" role="tablist" aria-label="Furniture categories"></nav>
-      <div class="catalog" id="catalog"></div>
-
-      <h3>Walls</h3>
-      <div class="swatches" id="wallSwatches"></div>
-      <label>Custom colour <input type="color" id="wallColor" value="#2c2034"></label>
-
-      <h3>Floor</h3>
-      <select id="floorSelect" aria-label="Floor"></select>
-      <button class="danger" id="resetRoom">Reset the room to the original layout</button>
-    </section>
 
     <section class="panel" id="panel-settings" hidden aria-label="Settings">
       <header><h2>Settings</h2><button class="close" aria-label="Close">×</button></header>
@@ -381,6 +358,13 @@
         </div>
         <div id="pluginList" class="plugin-list"></div>
       </div>
+
+      <h3>Voice commands</h3>
+      <p class="note">Say “vermi” and then any of these (or type them in the chat). Every feature in the sidebar opens with
+        “open …”, like “open the gym”. You don't have to say them exactly: she understands your own words too.
+        Say “what can I say?” to come back here.</p>
+      <input type="search" id="voiceHelpFind" placeholder="Find a command (e.g. timer, music, reminder)" aria-label="Find a voice command">
+      <div id="voiceHelp" class="help-list"></div>
 
       <h3>Your face</h3>
       <p class="note" id="faceNote">Teach the AI your face so it knows when it's you.</p>
@@ -553,6 +537,12 @@
         <button type="button" class="ghost" id="setVoiceBtn">Voice: off</button>
         <button type="button" class="ghost" id="setCameraBtn">Camera: off</button>
       </div>
+      <div class="dev-pick" id="devicePick">
+        <label>📷 Camera <select id="camSelect" aria-label="Camera"><option value="-1">Automatic</option></select></label>
+        <label>🎙 Microphone <select id="micSelect" aria-label="Microphone"><option value="-1">Automatic (Windows default)</option></select></label>
+        <button type="button" class="ghost small" id="findDevices" title="Checks every camera and microphone again">🔄 Find devices</button>
+      </div>
+      <p class="note" id="devNote">Only cameras that really give a picture are listed.</p>
       <label>Pronunciations (one per line: <code>word = how to say it</code>)
         <textarea id="pronunciations" rows="4" spellcheck="false" placeholder="Vermeil = Ver-may&#10;Kuya = Koo-yah&#10;SQL = sequel"></textarea>
       </label>

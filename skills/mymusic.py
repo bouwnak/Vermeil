@@ -57,9 +57,16 @@ def song(title, artist="", yt=None, duration=0, thumb=""):
             "duration": int(duration or 0), "thumb": thumb or (f"https://i.ytimg.com/vi/{yt}/hqdefault.jpg" if yt else "")}
 
 
+_LYRIC = re.compile(r"\blyric", re.I)
+_MV = re.compile(r"official (music )?video|\bM/?V\b", re.I)
+
+
 def play_query(s):
-    """what the player is given: the exact YouTube video when known, else a search"""
-    return f"https://www.youtube.com/watch?v={s['yt']}" if s.get("yt") else f"{s.get('artist', '')} - {s.get('title', '')}".strip(" -")
+    """what the player is given: the exact YouTube video when known, else a search (lyric videos first:
+    music videos often have intros, skits and endings that aren't in the song)"""
+    if s.get("yt"):
+        return f"https://www.youtube.com/watch?v={s['yt']}"
+    return f"{s.get('artist', '')} - {s.get('title', '')} lyrics".strip(" -")
 
 
 def split_title(video_title, channel=""):
@@ -130,7 +137,8 @@ def _fast_search(q, n):
             continue
         ch = "".join(x.get("text", "") for x in (v.get("ownerText") or v.get("longBylineText") or {}).get("runs", []))
         t, a = split_title(title, ch)
-        out.append(song(t, a, vid, _secs((v.get("lengthText") or {}).get("simpleText", "")), f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"))
+        out.append({**song(t, a, vid, _secs((v.get("lengthText") or {}).get("simpleText", "")), f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"),
+                    "lyric": bool(_LYRIC.search(title)), "mv": bool(_MV.search(title))})
         if len(out) >= n:
             break
     return out
@@ -154,15 +162,22 @@ def search(query, n=12):
     return (songs or out)[:n]
 
 
-def find_one(title, artist=""):
+def find_one(title, artist="", lyrics=True):
+    """the best YouTube video for a song. With lyrics=True a lyric video wins over the music video
+    (no skits or long intros, and the song plays to the end)"""
     try:
-        r = search(f"{artist} {title}".strip(), 3)
+        r = search(f"{artist} {title}{' lyrics' if lyrics else ''}".strip(), 5 if lyrics else 3)
     except Exception as e:
         print(f"[music] {e}")
         return None
     a = (artist or "").lower().split(",")[0].strip()
-    good = [s for s in r if a and (a in s["artist"].lower() or a in s["title"].lower())]
-    hit = (good or r or [None])[0]
+    t = re.sub(r"[^a-z0-9 ]", "", (title or "").lower()).strip()
+    good = [s for s in r if a and (a in s["artist"].lower() or a in s["title"].lower())] or \
+           [s for s in r if t and t[:20] in re.sub(r"[^a-z0-9 ]", "", s["title"].lower())]
+    pool = good or r
+    if lyrics:
+        pool = sorted(pool, key=lambda s: (not s.get("lyric"), bool(s.get("mv"))))     # stable: keeps YouTube's order otherwise
+    hit = (pool or [None])[0]
     if hit:                                         # keep the clean names the AI/user gave
         hit = {**hit, "title": title or hit["title"], "artist": artist or hit["artist"]}
     return hit
@@ -183,12 +198,15 @@ def _pl(d, pid):
 
 
 def _public(p, full=False):
-    out = {k: p[k] for k in ("id", "name", "description", "color", "created")}
-    out["count"] = len(p["songs"])
-    out["minutes"] = round(sum(s.get("duration") or 0 for s in p["songs"]) / 60)
-    out["covers"] = [s["thumb"] for s in p["songs"] if s.get("thumb")][:4]
+    out = {k: p.get(k, "") for k in ("id", "name", "description", "color", "created", "cover")}
+    out["count"] = len(p.get("songs") or [])
+    out["minutes"] = round(sum(s.get("duration") or 0 for s in p.get("songs") or []) / 60)
+    if p.get("cover"):
+        out["covers"] = [p["cover"]]
+    else:
+        out["covers"] = [s["thumb"] for s in p.get("songs") or [] if s.get("thumb")][:4]
     if full:
-        out["songs"] = p["songs"]
+        out["songs"] = p.get("songs") or []
     return out
 
 
@@ -219,15 +237,72 @@ def create_playlist(name, description="", songs=None):
     return _public(p, full=True)
 
 
-def update_playlist(pid, name=None, description=None):
+def convert_to_lyrics(pid):
+    """swap every music video in a playlist (or Liked Songs) for its lyric video. Songs already on a
+    lyric video, or with no lyric video on YouTube, stay as they are."""
+    d = _load()
+    songs = d["liked"] if pid == "liked" else _pl(d, pid).get("songs") or []
+    todo = [i for i, s in enumerate(songs) if not s.get("lyric")]
+    found = find_many([(songs[i]["title"], songs[i]["artist"]) for i in todo]) if todo else []
+    changed = 0
+    for i, hit in zip(todo, found):
+        if hit and hit.get("lyric") and hit.get("yt"):
+            old = songs[i]
+            songs[i] = {**old, "yt": hit["yt"], "duration": hit["duration"] or old.get("duration", 0), "lyric": True,
+                        "thumb": old.get("thumb") if old.get("thumb") and "ytimg" not in old.get("thumb", "") else hit["thumb"]}
+            changed += 1
+        elif hit is not None:
+            songs[i] = {**songs[i], "lyric": songs[i].get("lyric", False), "checked": True}
+    d = _load()                                                # re-read: playing may have touched the file meanwhile
+    if pid == "liked":
+        d["liked"] = songs
+    else:
+        _pl(d, pid)["songs"] = songs
+    _save(d)
+    out = get_playlist(pid)
+    out["message"] = (f"Switched {changed} song{'s' if changed != 1 else ''} to lyric videos." if changed
+                      else "No music videos to switch: they're lyric videos already, or YouTube has no lyric version.")
+    out["changed"] = changed
+    return out
+
+
+def update_playlist(pid, name=None, description=None, cover=None):
     d = _load()
     p = _pl(d, pid)
-    if name is not None and name.strip():
-        p["name"] = name.strip()[:80]
+    if name is not None and str(name).strip():
+        p["name"] = str(name).strip()[:80]
     if description is not None:
-        p["description"] = description[:300]
+        p["description"] = str(description)[:300]
+    if cover is not None:
+        p["cover"] = str(cover)
     _save(d)
     return _public(p, full=True)
+
+
+def clear_queue():
+    f1._clear_queue()
+    f1._save_queue()
+    return {"message": "Queue cleared."}
+
+
+def remove_from_queue(idx):
+    items = list(f1.music_queue.queue)
+    if 0 <= idx < len(items):
+        removed = items.pop(idx)
+        f1._clear_queue()
+        for x in items:
+            f1.music_queue.put(x)
+        f1._save_queue()
+        return {"message": f"Removed from queue.", "queue": items}
+    return {"message": "Item not found in queue."}
+
+
+def play_queued_index(idx):
+    items = list(f1.music_queue.queue)
+    if 0 <= idx < len(items):
+        song = items.pop(idx)
+        return {"message": f1.play_now(song)}
+    return {"message": "Track not found."}
 
 
 def delete_playlist(pid):

@@ -59,7 +59,7 @@ load_env()
 
 WAKE_WORD = "vermi"
 WAKE_ALIASES = ("vermi", "vermeil", "vermie", "vermy", "bermi", "vermee")
-MIC_INDEX = int(os.environ.get("MIC_INDEX", "1"))
+MIC_INDEX = int(os.environ["MIC_INDEX"]) if os.environ.get("MIC_INDEX", "").strip().lstrip("-").isdigit() else None   # None = Windows default mic; Settings can pick another
 LLM_MODEL = "chat"            # local model role, see llm.py / data/local_models.json
 HISTORY_MESSAGES = 20          # how many past messages are sent to the AI each time
 MEMORY_LIMIT = 1000            # messages kept in vermeil_memory_0.json; older ones go to the archive
@@ -79,6 +79,7 @@ VOICE_RVC = None               # RVC voice clone {"model", "pitch", "index_rate"
 VOICE_EMOTION = 1.0            # how much her feelings change her voice (0 = flat, 1 = normal, 1.5 = dramatic), voice_emotion.py
 VOICE_NATURAL = True           # breaths, real pauses and a speech melody (senses/expressive.py)
 VOICE_CHATTER = False          # "Emotional voice": Chatterbox makes the English base voice (senses/chatter.py)
+WHOLE_REPLY = True             # True = voice the whole reply in one go (the default); False = sentence by sentence
 barge_in = False               # stop talking when the user starts talking (Settings; best with headphones)
 voice_mood = None              # (mood, time) from voicemood.py
 heard_language = None          # (language code, time) the user last spoke in
@@ -271,10 +272,33 @@ def strip_emoji(text):
     return re.sub(r" +([,.!?])", r"\1", text).strip()
 
 
+# Filler sounds ("Hm...", "Ahh~", "Hmph...", "Mmm~", "Uhm,") - she talks plainly, like a person, without them.
+_FILLER_WORD = r"(?:h+m+p*h*|m+h*m+|m{2,}|a+h{1,}|u+h*m+|u+h+|e+h+m*|err+m*|ara(?: ara)?|ehe+|hehe+|ufufu+|fufu+)"
+_FILLER = re.compile(r"(?i)(?:^\s*|(?<=[.!?…]\s))" + _FILLER_WORD + r"(?![\w'-])[~….,!?—–\-]*\s*")
+_FILLER_INLINE = re.compile(r"(?i)(?<=\s)" + _FILLER_WORD + r"(?:[~…]+|\.{2,}|,)\s*"            # "... um, okay" / "so... hmm~ yes"
+                            r"|,?\s+" + _FILLER_WORD + r"[~…]*(?=[?!.]*\s*$)")                   # "camera, ahh?"
+
+
+def strip_fillers(text):
+    """'Mmm~ Hm... I'm just simmering' -> "I'm just simmering"."""
+    if not text:
+        return text
+    out, prev = text, None
+    while out != prev:                                # "Mmm~ Hm... I'm" has two in a row
+        prev, out = out, _FILLER.sub("", out)
+    out = _FILLER_INLINE.sub("", out)
+    out = re.sub(r"~+", "", out)
+    out = re.sub(r"\s{2,}", " ", out).strip()
+    out = re.sub(r"([.!?…]\s+)([a-z])", lambda m: m.group(1) + m.group(2).upper(), out)
+    if out and out[0].islower() and text.strip()[:1] != out[:1]:
+        out = out[0].upper() + out[1:]
+    return out
+
+
 def clean_text(response):
-    """Remove *actions*, emojis and any hidden <think> notes from replies."""
+    """Remove *actions*, emojis, filler sounds and any hidden <think> notes from replies."""
     response = re.sub(r"<think>.*?(</think>|$)", "", response, flags=re.S)
-    return clean_endearments(strip_emoji(re.sub(r"\*.*?\*", "", response)))
+    return strip_fillers(clean_endearments(strip_emoji(re.sub(r"\*.*?\*", "", response))))
 
 
 # ---------------------- Seeing through the camera ---------------------#
@@ -392,7 +416,9 @@ def _extra_notes(user_input, emotion="neutral"):
     import mind
     if emotion == "neutral" and voice_mood and time.time() - voice_mood[1] < 90 and voice_mood[0] in ("stressed", "tired"):
         emotion = voice_mood[0]
-    notes = [f"Style: {mind.style_note(style)}", mind.humor_note(humor_level, emotion), mind.EMERGENCY_NOTE]
+    notes = [f"Style: {mind.style_note(style)}", mind.humor_note(humor_level, emotion), mind.EMERGENCY_NOTE,
+             "Talk like a real person in a spoken conversation: plain words, no filler sounds (hm, hmm, ahh, mmm, "
+             "hmph, uhm), no ~, no lists or headings unless asked."]
     if voice_mood and time.time() - voice_mood[1] < 90 and voice_mood[0] != "calm":
         notes.append(f"From their tone of voice the user sounds {voice_mood[0]}; respond to that gently.")
     lang = persona.get("language") or "auto"
@@ -484,14 +510,20 @@ def get_vermeil_response(user_id, user_input, memory, none_on_error=False, on_te
             print(f"[vision error] {e} - answering without the picture")
             system = system.replace(camera_note, "You tried to look through the camera but it didn't work; say so.")
     used_tools = False
-    prefix = random.choice(['Mmm~', 'Oh?', 'Hehe~', 'Well, well~', 'Hmph~', 'Oh my~']) if style == "companion" and random.random() < 0.5 else ""
-    live = {"words": 0, "started": False}
+    prefix = ""                                       # (no "Mmm~ / Hmph~" openers: she talks plainly)
+    live = {"words": 0, "started": False, "head": ""}
 
     def stream_piece(piece):                         # words go to the voice as soon as they're written
-        if not live["started"]:
+        if not live["started"]:                      # hold the first few words back so a filler opener can be cut
+            live["head"] += piece
+            if len(live["head"]) < 24 and not re.search(r"[.!?]\s", live["head"]):
+                return
             live["started"] = True
-            if prefix:
-                on_text(prefix + " ")
+            piece = strip_fillers(live["head"]) + (" " if live["head"].endswith(" ") else "")
+            if not piece.strip():
+                return
+        else:
+            piece = _FILLER_INLINE.sub("", piece.replace("~", ""))
         left = _word_limit(used_tools) - live["words"]
         if left <= 0:
             return
@@ -549,7 +581,7 @@ def get_vermeil_response(user_id, user_input, memory, none_on_error=False, on_te
             print(f"[AI error] {e}")
             if none_on_error:
                 return None
-            return "Mmm, my mind went blank for a second. Say that again?"
+            return "My mind went blank for a second. Say that again?"
 
     reply = reply.replace("I'm an AI", f"I'm {persona['name']}")
     reply = reply.replace("I’m just an AI", f"I'm {persona['name']}")
@@ -714,12 +746,16 @@ class SpeechStream:
                 self.on_text(clean_endearments(strip_emoji(self.all)))
             except Exception:
                 pass
+        if WHOLE_REPLY and self.pushed:               # the first piece goes now (she starts in ~2-3 s); the rest
+            return                                    # waits for the whole reply (finish) and keeps its melody
         while True:                                   # cut off every finished sentence - or a long one at a comma
             cut = self._cut(self.buf)
             if cut is None:
                 return
             self._push(self.buf[:cut])
             self.buf = self.buf[cut:]
+            if WHOLE_REPLY:
+                return
 
     FIRST_CLAUSE, CLAUSE, EARLY = 12, 40, 3      # the first 3 pieces are cut at any comma, later ones only when long
 
@@ -728,20 +764,30 @@ class SpeechStream:
         too when the piece is long enough: very early for the first piece (she starts talking in about a second),
         and for long sentences after that - short pieces are voiced side by side, so the next one is ready in time,
         while short sentences stay whole so they keep their natural melody."""
+        end = None
         for m in re.finditer(r"[.!?~…]+[\"')\]]*\s+|\n+", buf):
-            if len(buf[:m.end()].strip()) >= self.MIN_SENTENCE:
-                return m.end()
+            if len(buf[:m.end()].strip()) >= (self.FIRST_CLAUSE if not self.pushed else self.MIN_SENTENCE):
+                end = m.end()
+                break
         least = self.FIRST_CLAUSE if self.pushed < self.EARLY else self.CLAUSE
         for m in re.finditer(r"[,;:—–]\s+", buf):
+            if end is not None and (m.end() >= end or self.pushed >= self.EARLY):
+                break                                 # (an early piece cuts at a comma even inside a finished sentence)
             piece = buf[:m.end()].strip()
             if len(piece) >= least and len(piece.split()) >= 3:     # "Good morning, darling!" stays whole
                 return m.end()
-        return None
+        return end
 
     def finish(self, text=None):
         print(f"{persona['name']}: {self.all or text}")
         if not self.fed and text:
             self.feed(text)
+        while WHOLE_REPLY:                            # the rest sentence by sentence, so each is ready before she needs it
+            cut = self._cut(self.buf)
+            if cut is None:
+                break
+            self._push(self.buf[:cut])
+            self.buf = self.buf[cut:]
         if self.buf.strip():
             self._push(self.buf)
         self.buf = ""
@@ -844,8 +890,34 @@ def _use_chatter(text):
         return False
     if heard_language and time.time() - heard_language[1] < 90 and heard_language[0] != "en":
         return False
+    import chatter
+    if not chatter.fast_enough():              # it was too slow a moment ago: the fast voice, so she doesn't stall
+        return False
     letters = re.sub(r"[^\w]", "", re.sub(r"\[[^\]]*\]", "", text or ""))
     return bool(letters) and sum(c.isascii() for c in letters) >= 0.9 * len(letters)
+
+
+_warm_key = [None]
+
+
+def warm_voice():
+    """Say one short line silently in the background, through the whole chain she'll use (the voice, the melody and
+    the RVC clone), so her FIRST real reply isn't slow: loading the libraries, the models and the graphics card
+    happens now instead of while you wait. Only runs again when the voice or clone changes."""
+    key = (active_voice(), (VOICE_RVC or {}).get("model"), VOICE_EMOTION > 0 or VOICE_NATURAL)
+    if not tts_ready or _warm_key[0] == key:
+        return
+    _warm_key[0] = key
+
+    def go():
+        try:
+            import expressive
+            text = "Hello there, it's lovely to see you!"
+            style = expressive.plan(text, "happy", 0.6, 1.0, natural=True, first=True, sound=None) if key[2] else None
+            synth_voice(text, key[0], VOICE_RATE, VOICE_PITCH, VOICE, VOICE_RVC, style)
+        except Exception as e:
+            print(f"[voice warm-up] {e}")
+    threading.Thread(target=go, daemon=True, name="voice-warm").start()
 
 
 def warm_chatter():

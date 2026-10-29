@@ -78,8 +78,7 @@ body.playing .hub-waves { display: none; }
 .hub-card:nth-child(2) { animation-delay: .05s; }
 .hub-card:nth-child(3) { animation-delay: .1s; }
 .hub-card:nth-child(4) { animation-delay: .15s; }
-.hub-card:not(.soon):hover { transform: translateX(6px); border-color: var(--blue); box-shadow: 0 8px 30px -10px var(--blue-glow); }
-.hub-card.soon { cursor: default; opacity: .5; border-style: dashed; }
+.hub-card:hover { transform: translateX(6px); border-color: var(--blue); box-shadow: 0 8px 30px -10px var(--blue-glow); }
 .hub-art {
   flex: none; display: grid; place-items: center;
   width: 68px; height: 68px; border-radius: 14px;
@@ -120,6 +119,17 @@ body.playing .hub-waves { display: none; }
   transition: opacity .35s;
 }
 .loading.out { opacity: 0; pointer-events: none; }
+/* the game's cover art, faded behind the loading screen (set by loader.show(..., image)) */
+.loading-art {
+  position: absolute; inset: -40px; z-index: -1; pointer-events: none;
+  background: center / cover no-repeat; filter: blur(10px) saturate(1.18);
+  opacity: 0; transform: scale(1.06); transition: opacity .45s ease, transform 6s ease;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 45%, transparent 88%);
+          mask-image: radial-gradient(ellipse at 50% 45%, #000 45%, transparent 88%);
+}
+.loading-art.on { opacity: .38; transform: scale(1); }
+.loading { isolation: isolate; }
+.loading > :not(.loading-art) { position: relative; }
 .spinner { width: 76px; height: 76px; border-radius: 50%; border: 4px solid rgba(var(--accent-rgb), .2); border-top-color: var(--blue); animation: spin 1s linear infinite; margin-bottom: 8px; }
 .loading-title { margin: 0; font-size: 22px; font-weight: 900; color: var(--strong); text-align: center; max-width: 80vw; }
 .loading p { margin: 0; }
@@ -306,8 +316,10 @@ body.playing .hub-waves { display: none; }
   font: 900 clamp(54px, 9vw, 120px) var(--font); letter-spacing: .14em; color: #fff;
   text-shadow: 0 0 24px rgba(var(--accent-rgb), .9), 0 0 60px rgba(var(--accent-rgb), .6), 0 6px 0 rgba(0,0,0,.6);
 }
-.pv-soon { display: grid; place-content: center; justify-items: center; gap: 6px; color: var(--muted); border: 2px dashed var(--line); border-radius: inherit; }
-.pv-soon span { font-size: 70px; font-weight: 900; }
+.pv-mine { display: grid; place-content: center; justify-items: center; gap: 8px; text-align: center; padding: 24px;
+           background: radial-gradient(ellipse at 30% 25%, rgba(var(--accent-rgb), .35), #0b0d11 72%); color: var(--muted); }
+.pv-mine-icon { font-size: 88px; filter: drop-shadow(0 0 30px var(--blue-glow)); }
+.pv-mine b { font-size: 28px; font-weight: 900; color: var(--strong); }
 @keyframes drift { to { transform: rotate(-4deg) translate(-3%, -4%); } }
 
 /* ---------- playing: the game fills the whole window ---------- */
@@ -344,3 +356,34 @@ body.playing { overflow: hidden; }
   .hub-preview { position: relative; top: 0; order: -1; min-height: 200px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- your own games (the ⇅ button) ---------- */
+.my-games { display: contents; }
+.art-mine { background: linear-gradient(145deg, #3b2a6b, #120d22); color: #fff; border-color: #5a45a0; }
+.hub-card.broken { opacity: .55; }
+.dialog.wide { width: min(560px, calc(100vw - 32px)); text-align: left; }
+.dialog.wide h2, .dialog.wide > p { text-align: center; }
+.add-row { display: flex; gap: 8px; margin-top: 10px; }
+.add-row .btn.primary { flex: 1; }
+.add-row input { flex: 1; min-width: 0; padding: 10px 14px; font: inherit; font-size: 14px; color: var(--ink);
+                 background: var(--raised); border: 1px solid var(--line); border-radius: 999px; outline: none; }
+.add-row input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+.found:empty { display: none; }
+.found { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px;
+         background: var(--blue-soft); border: 1px solid rgba(var(--accent-rgb), .45); }
+.found span { flex: 1; font-size: 14px; }
+.games-list { list-style: none; margin: 16px 0 18px; padding: 0; display: grid; gap: 8px; }
+.games-list:empty::before { content: "No games added yet."; color: var(--muted); font-size: 14px; display: block; text-align: center; }
+.games-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--raised); border: 1px solid var(--line); }
+.games-list li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.games-list li small { color: var(--muted); }
+/* the loading bar: the same dark glass + blue glow as the main room's */
+.load-bar { position: relative; height: 30px; margin: 14px 0 2px; border-radius: 999px; background: rgba(22,25,30,.92); border: 1px solid var(--line); overflow: hidden; animation: fade .2s ease; }
+.load-bar > i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit; background: linear-gradient(90deg, rgba(var(--accent-rgb), .55), var(--blue)); box-shadow: 0 0 14px var(--blue-glow); transition: width .35s ease; overflow: hidden; }
+.load-bar > i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent); animation: barShine 1.4s linear infinite; }
+.load-bar > span, .load-bar > b { position: relative; line-height: 28px; font-size: 12.5px; color: var(--strong); }
+.load-bar > span { display: block; padding: 0 52px 0 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.load-bar > b { position: absolute; top: 0; right: 12px; font-weight: 700; }
+.load-bar.bad { border-color: var(--danger); }
+.load-bar.bad > i { width: 100% !important; background: rgba(255,92,108,.35); box-shadow: none; }
+@keyframes barShine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }

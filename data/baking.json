@@ -400,6 +400,348 @@
       "updated": "2026-10-22 03:05",
       "image_tried": true,
       "image_v": 2
+    },
+    {
+      "title": "BEST Carrot Cake",
+      "source": "https://www.youtube.com/watch?v=zRNcE-2beRA",
+      "servings": 12,
+      "ingredients": [
+        {
+          "qty": 2.0,
+          "unit": "cup",
+          "name": "all-purpose flour",
+          "text": "2 cups all-purpose flour",
+          "id": "e45943"
+        },
+        {
+          "qty": 1.5,
+          "unit": "cup",
+          "name": "granulated sugar",
+          "text": "1 1/2 cups granulated sugar",
+          "id": "bcdba1"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "packed light brown sugar",
+          "text": "1 cup packed light brown sugar",
+          "id": "9bd5fe"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tsp",
+          "name": "baking soda",
+          "text": "1 tsp baking soda",
+          "id": "d45117"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tsp",
+          "name": "baking powder",
+          "text": "1 tsp baking powder",
+          "id": "44ab7b"
+        },
+        {
+          "qty": 0.5,
+          "unit": "tsp",
+          "name": "salt",
+          "text": "1/2 tsp salt",
+          "id": "7b3b27"
+        },
+        {
+          "qty": 2.0,
+          "unit": "tsp",
+          "name": "ground cinnamon",
+          "text": "2 tsp ground cinnamon",
+          "id": "06ffc5"
+        },
+        {
+          "qty": 0.5,
+          "unit": "tsp",
+          "name": "ground nutmeg",
+          "text": "1/2 tsp ground nutmeg",
+          "id": "398ed2"
+        },
+        {
+          "qty": 0.5,
+          "unit": "tsp",
+          "name": "ground ginger",
+          "text": "1/2 tsp ground ginger",
+          "id": "3f79f5"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "vegetable oil",
+          "text": "1 cup vegetable oil",
+          "id": "6fd6e2"
+        },
+        {
+          "qty": 4.0,
+          "unit": "",
+          "name": "large eggs",
+          "text": "4 large eggs",
+          "id": "4b69ed"
+        },
+        {
+          "qty": 2.0,
+          "unit": "cup",
+          "name": "grated carrots (about 4 medium carrots)",
+          "text": "2 cups grated carrots (about 4 medium carrots)",
+          "id": "2b985c"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "chopped pecans (optional)",
+          "text": "1 cup chopped pecans (optional)",
+          "id": "2c2f75"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tsp",
+          "name": "vanilla extract",
+          "text": "1 tsp vanilla extract",
+          "id": "cc380f"
+        },
+        {
+          "qty": 0.5,
+          "unit": "cup",
+          "name": "crushed pineapple, drained (optional)",
+          "text": "1/2 cup crushed pineapple, drained (optional)",
+          "id": "6d0a22"
+        }
+      ],
+      "steps": [
+        "Preheat oven to 350°F (175°C). Grease and flour a 9x13-inch baking pan or two 9-inch round pans.",
+        "In a large bowl, whisk together flour, sugar, brown sugar, baking soda, baking powder, salt, cinnamon, nutmeg, and ginger.",
+        "In a separate bowl, beat the eggs, then whisk in the oil, vanilla, and pineapple if using.",
+        "Add the wet ingredients to the dry ingredients and stir until just combined.",
+        "Fold in grated carrots and pecans, if using.",
+        "Pour batter into prepared pan(s) and smooth the top with a spatula.",
+        "Bake for 35-40 minutes (round pans) or 45-50 minutes (sheet pan), or until a toothpick inserted into the center comes out clean.",
+        "Let the cake cool in the pan for 10 minutes, then transfer to a wire rack to cool completely.",
+        "Once cooled, cream cheese frosting can be spread over the cake for the classic finish."
+      ],
+      "nutrition": {
+        "per": "serving",
+        "servings": 12,
+        "rows": [
+          {
+            "label": "Calories",
+            "value": "210 kcal"
+          },
+          {
+            "label": "Total fat",
+            "value": "11 g"
+          },
+          {
+            "label": "Saturated fat",
+            "value": "1.5 g"
+          },
+          {
+            "label": "Cholesterol",
+            "value": "55 mg"
+          },
+          {
+            "label": "Sodium",
+            "value": "200 mg"
+          },
+          {
+            "label": "Carbohydrates",
+            "value": "33 g"
+          },
+          {
+            "label": "Fiber",
+            "value": "2 g"
+          },
+          {
+            "label": "Sugar",
+            "value": "18 g"
+          },
+          {
+            "label": "Protein",
+            "value": "3 g"
+          }
+        ],
+        "source": "estimated by AI"
+      },
+      "notes": "From a video - the written recipe was worked out by the AI, so check it against the video.",
+      "image": "https://i.ytimg.com/vi/zRNcE-2beRA/hqdefault.jpg",
+      "image_v": 2,
+      "id": "1781bb1c",
+      "updated": "2026-10-24 15:07",
+      "saved": true
+    },
+    {
+      "title": "Pork Bicol Express",
+      "source": "https://www.youtube.com/watch?v=EglwOEDdsHU",
+      "servings": 4,
+      "ingredients": [
+        {
+          "qty": 1.0,
+          "unit": "lb",
+          "name": "pork belly or shoulder, cut into 1-inch cubes",
+          "text": "1 lb pork belly or shoulder, cut into 1-inch cubes",
+          "id": "68b3d0"
+        },
+        {
+          "qty": 2.0,
+          "unit": "tbsp",
+          "name": "vegetable oil",
+          "text": "2 tbsp vegetable oil",
+          "id": "cfade2"
+        },
+        {
+          "qty": 4.0,
+          "unit": "clove",
+          "name": "garlic, minced",
+          "text": "4 cloves garlic, minced",
+          "id": "fb1324"
+        },
+        {
+          "qty": 1.0,
+          "unit": "",
+          "name": "medium onion, sliced",
+          "text": "1 medium onion, sliced",
+          "id": "bb027c"
+        },
+        {
+          "qty": 1.0,
+          "unit": "",
+          "name": "red bell pepper, sliced",
+          "text": "1 red bell pepper, sliced",
+          "id": "3d6359"
+        },
+        {
+          "qty": 2.0,
+          "unit": "tbsp",
+          "name": "fresh ginger, minced",
+          "text": "2 tbsp fresh ginger, minced",
+          "id": "ebc27e"
+        },
+        {
+          "qty": 2.0,
+          "unit": "tbsp",
+          "name": "chili sauce or sliced fresh chilies",
+          "text": "2 tbsp chili sauce or sliced fresh chilies",
+          "id": "499e90"
+        },
+        {
+          "qty": 0.5,
+          "unit": "cup",
+          "name": "tomato sauce",
+          "text": "1/2 cup tomato sauce",
+          "id": "5e4c76"
+        },
+        {
+          "qty": 1.0,
+          "unit": "can",
+          "name": "(14 oz) coconut milk",
+          "text": "1 can (14 oz) coconut milk",
+          "id": "a8ece6"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "fish sauce",
+          "text": "1 tbsp fish sauce",
+          "id": "22fd02"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tsp",
+          "name": "sugar",
+          "text": "1 tsp sugar",
+          "id": "959fd0"
+        },
+        {
+          "qty": 0.5,
+          "unit": "tsp",
+          "name": "salt",
+          "text": "1/2 tsp salt",
+          "id": "007743"
+        },
+        {
+          "qty": 0.25,
+          "unit": "tsp",
+          "name": "black pepper",
+          "text": "1/4 tsp black pepper",
+          "id": "03f1ed"
+        },
+        {
+          "qty": 1.0,
+          "unit": "cup",
+          "name": "sliced green onions or chives",
+          "text": "1 cup sliced green onions or chives",
+          "id": "edee38"
+        },
+        {
+          "qty": 1.0,
+          "unit": "tbsp",
+          "name": "fresh cilantro, chopped (optional)",
+          "text": "1 tbsp fresh cilantro, chopped (optional)",
+          "id": "f1c080"
+        }
+      ],
+      "steps": [
+        "Heat oil in a large pan over medium heat. Add garlic, onion, ginger and sauté until fragrant and onions are translucent.",
+        "Add pork cubes and cook until they start to brown, about 5-7 minutes.",
+        "Stir in chili sauce or fresh chilies, tomato sauce, coconut milk, fish sauce, sugar, salt and pepper.",
+        "Bring to a gentle boil.",
+        "Reduce heat to low, cover and let the stew simmer for 25-30 minutes, or until the pork is tender and the sauce thickens.",
+        "Adjust seasoning if needed. Stir in green onions and cilantro (if using) right before serving.",
+        "Serve hot over steamed rice."
+      ],
+      "nutrition": {
+        "per": "serving",
+        "servings": 4,
+        "rows": [
+          {
+            "label": "Calories",
+            "value": "820 kcal"
+          },
+          {
+            "label": "Total fat",
+            "value": "68 g"
+          },
+          {
+            "label": "Saturated fat",
+            "value": "13 g"
+          },
+          {
+            "label": "Cholesterol",
+            "value": "110 mg"
+          },
+          {
+            "label": "Sodium",
+            "value": "600 mg"
+          },
+          {
+            "label": "Carbohydrates",
+            "value": "9 g"
+          },
+          {
+            "label": "Fiber",
+            "value": "2 g"
+          },
+          {
+            "label": "Sugar",
+            "value": "4 g"
+          },
+          {
+            "label": "Protein",
+            "value": "26 g"
+          }
+        ],
+        "source": "estimated by AI"
+      },
+      "notes": "From a video - the written recipe was worked out by the AI, so check it against the video.",
+      "image": "https://i.ytimg.com/vi/EglwOEDdsHU/hqdefault.jpg",
+      "image_v": 2,
+      "id": "bdb9df46",
+      "updated": "2026-10-24 17:55",
+      "saved": true
     }
   ]
 }

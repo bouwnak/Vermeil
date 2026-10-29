@@ -17,14 +17,20 @@ import uuid
 import folders  # noqa: F401  - lets Python find brain/, senses/, skills/ (import this first)
 import webview
 
+# pywebview 5+ renamed the dialog constants (the old ones print a deprecation warning)
+_FD = getattr(webview, "FileDialog", None)
+_OPEN_DIALOG = _FD.OPEN if _FD else webview.OPEN_DIALOG
+_FOLDER_DIALOG = _FD.FOLDER if _FD else webview.FOLDER_DIALOG
+
 import f1
 import pinakamain as pm
 import tts
 from presence import Presence
 import academic
-import missions
+import optional
 import relationship
-from coder import CodingAgent
+missions = optional.load("missions")          # Missions and the Coding helper can be uninstalled (Settings -> Plugins)
+CodingAgent = optional.load("coder").CodingAgent
 from Vprompt import VERMEIL_PROMPT
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +41,56 @@ CHARACTERS_FILE = data_file("characters.json")
 ROOM_FILE = data_file("room_layout.json")
 SETTINGS_FILE = data_file("app_settings.json")
 MODEL_TYPES = (".glb", ".gltf", ".vrm")
+
+
+TEXTURE_TYPES = (".png", ".jpg", ".jpeg", ".webp", ".bin", ".ktx2")
+
+
+def copy_model_files(paths, dest):
+    """Copy one model and the texture files that go with it into dest.
+    - a .gltf keeps its textures in separate files: every buffer/image it names is copied too (same sub-folders)
+    - extra pictures picked together with a .glb/.vrm go into <model>_face/ (where the room looks for
+      eyes_*.png / mouth_*.png talking pictures); with a .gltf they go next to it
+    Returns {"name": model file name, "textures": how many extra files} or {"error": ...}."""
+    import json as _json
+    paths = [p for p in paths if p]
+    models = [p for p in paths if p.lower().endswith(MODEL_TYPES)]
+    if not models:
+        return {"error": "Pick a 3D model (.glb, .gltf or .vrm) too, not only pictures."}
+    src = models[0]
+    name = os.path.basename(src)
+    os.makedirs(dest, exist_ok=True)
+    shutil.copy2(src, os.path.join(dest, name))
+    copied = set()
+
+    def put(file, rel):
+        rel = os.path.normpath(rel)
+        if rel.startswith("..") or os.path.isabs(rel) or not os.path.isfile(file):
+            return
+        target = os.path.join(dest, rel)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        shutil.copy2(file, target)
+        copied.add(os.path.normcase(os.path.abspath(file)))
+
+    if name.lower().endswith(".gltf"):
+        try:
+            with open(src, encoding="utf-8") as f:
+                doc = _json.load(f)
+            from urllib.parse import unquote
+            for item in doc.get("buffers", []) + doc.get("images", []):
+                uri = item.get("uri") or ""
+                if uri and not uri.startswith("data:"):
+                    put(os.path.join(os.path.dirname(src), unquote(uri)), unquote(uri))
+        except (OSError, ValueError) as e:
+            print(f"[import] couldn't read the textures of {name}: {e}")
+    face = os.path.splitext(name)[0] + "_face"
+    for p in paths:
+        if p is src or not p.lower().endswith(TEXTURE_TYPES):
+            continue
+        if os.path.normcase(os.path.abspath(p)) in copied:
+            continue
+        put(p, os.path.basename(p) if name.lower().endswith(".gltf") else os.path.join(face, os.path.basename(p)))
+    return {"name": name, "textures": len(copied)}
 GREET_AFTER_AWAY = 120          # seconds you must be gone before she greets you again
 
 DEFAULT_CHARACTERS = {
@@ -131,11 +187,18 @@ REACTIONS = {
 REACTION_COOLDOWN = 8       # seconds between comments, so she doesn't talk over every click
 
 
+# how a reply should be written so the voice reads it like a real person (added to auto-written personalities)
+SPOKEN_WRITING = ("write the way people talk out loud: short spoken sentences, commas and full stops for the pauses, "
+                "\"...\" for a trailing-off pause, \"!\" or \"?\" to carry the feeling, numbers and symbols written "
+                "as words, no emojis, no *actions*, no brackets, no filler sounds like hm, ahh or mmm, no ~.")
+
+
 class Api:
     """Everything the window can ask Python to do (called from ui/app.js)."""
 
     def __init__(self):
         self._window = None
+        f1.stop_leftover_player()                         # a song still playing from last time Vermeil was open
         self._memory = pm.load_memory()
         pm._memory_ref = self._memory
         self._command_map = pm.build_command_map()
@@ -156,8 +219,15 @@ class Api:
             self._settings["music_source"] = "youtube"
             self._ui["hidden_panels"] = sorted(set(self._ui.get("hidden_panels") or []) | {"spotify"})
             _write_json(SETTINGS_FILE, {**self._settings, "ui": self._ui})
-        self._presence = Presence(on_event=self._on_presence)
+        old = set(self._ui.get("hidden_panels") or [])
+        if old & {"baking", "cooking"}:                    # Cooking and Baking are one menu item ("kitchen") now
+            self._ui["hidden_panels"] = sorted((old - {"baking", "cooking"}) | {"kitchen"})
+        if self._ui.get("open_panel") in ("baking", "cooking"):
+            self._ui["kitchen_tab"] = self._ui["open_panel"]
+            self._ui["open_panel"] = "kitchen"
+        self._presence = Presence(on_event=self._on_presence, camera_index=int(self._ui.get("camera_index", -1)))
         f1.presence = self._presence
+        threading.Thread(target=self._apply_mic, daemon=True).start()
         self._listening = False
         self._voice_thread = None
         self._answers = queue.Queue()
@@ -227,10 +297,12 @@ class Api:
         """menu entries of uninstalled plugins (hidden) + whether this is the first start after installing"""
         try:
             import plugins
-            return {"hidden_panels": plugins.hidden_panels(), "fresh": bool(plugins._load().get("fresh"))}
+            owner = {k: {"id": p["id"], "name": p["name"]} for p in plugins.PLUGINS
+                     if not plugins.is_installed(p["id"]) for k in p.get("panels", [])}
+            return {"hidden_panels": plugins.hidden_panels(), "owner": owner, "fresh": bool(plugins._load().get("fresh"))}
         except Exception as e:
             print(f"[plugins] {e}")
-            return {"hidden_panels": [], "fresh": False}
+            return {"hidden_panels": [], "owner": {}, "fresh": False}
 
     # ---------- reminders & events that are due ----------
     def _alert_loop(self):
@@ -290,7 +362,7 @@ class Api:
 
     # ---------- missions ----------
     def missions_list(self):
-        return missions.list_missions()
+        return missions.list_missions() or []
 
     def mission_create(self, goal):
         if not (goal or "").strip():
@@ -306,7 +378,7 @@ class Api:
         if not fn:
             return {"error": "Unknown action."}
         fn(mission_id)
-        return {"missions": missions.list_missions()}
+        return {"missions": missions.list_missions() or []}
 
     # ---------- chat editing, our story, recommendations, screenshots ----------
     def _convo(self):
@@ -528,7 +600,7 @@ class Api:
                 "review_types": academic.REVIEW_TYPES, "kinds": list(academic.KINDS)}
 
     def study_add_files(self, kind="lecture", subject=""):
-        paths = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True,
+        paths = self._window.create_file_dialog(_OPEN_DIALOG, allow_multiple=True,
                                                 file_types=("Study files (*.pdf;*.docx;*.pptx;*.txt;*.md;*.png;*.jpg;*.jpeg;*.webp;*.bmp)",))
         added, errors = [], []
         for p in paths or []:
@@ -536,6 +608,35 @@ class Api:
                 added.append(academic.add_file(p, kind, subject))
             except Exception as e:
                 errors.append(f"{os.path.basename(p)}: {e}")
+        return {"added": added, "errors": errors, **self.study_files()}
+
+    def study_add_file_path(self, path, kind="lecture", subject=""):
+        added, errors = [], []
+        if path and os.path.exists(path):
+            try:
+                added.append(academic.add_file(path, kind, subject))
+            except Exception as e:
+                errors.append(f"{os.path.basename(path)}: {e}")
+        return {"added": added, "errors": errors, **self.study_files()}
+
+    def study_import_file_data(self, filename, base64_data, kind="lecture", subject=""):
+        import base64
+        added, errors = [], []
+        if not filename or not base64_data:
+            return {"added": [], "errors": ["Missing file or data."], **self.study_files()}
+        try:
+            if "," in base64_data:
+                base64_data = base64_data.split(",", 1)[1]
+            raw = base64.b64decode(base64_data)
+            upload_dir = os.path.join(DATA_DIR, "study_uploads")
+            os.makedirs(upload_dir, exist_ok=True)
+            safe_name = os.path.basename(filename).replace(" ", "_")
+            target_path = os.path.join(upload_dir, safe_name)
+            with open(target_path, "wb") as f:
+                f.write(raw)
+            added.append(academic.add_file(target_path, kind, subject))
+        except Exception as e:
+            errors.append(f"{filename}: {e}")
         return {"added": added, "errors": errors, **self.study_files()}
 
     def study_remove_file(self, file_id):
@@ -751,6 +852,30 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
+    def study_paraphrase(self, text, style="standard", length="same"):
+        try:
+            return academic.paraphrase(text, style, length)
+        except Exception as e:
+            return {"error": str(e)}
+
+    def study_grammar_check(self, text, tone="academic"):
+        try:
+            return academic.correct_grammar(text, tone)
+        except Exception as e:
+            return {"error": str(e)}
+
+    def study_ai_detect(self, text):
+        try:
+            return academic.detect_ai(text)
+        except Exception as e:
+            return {"error": str(e)}
+
+    def study_humanize(self, text, tone="academic"):
+        try:
+            return academic.humanize(text, tone)
+        except Exception as e:
+            return {"error": str(e)}
+
     def open_url(self, url):
         import webbrowser
         if isinstance(url, str) and url.startswith(("http://", "https://")):
@@ -765,7 +890,22 @@ class Api:
     def code_choose_folder(self):
         import coder
         start = self._coder.workspace or (coder.PROJECTS_DIR if os.path.isdir(coder.PROJECTS_DIR) else os.path.expanduser("~"))
-        folders = self._window.create_file_dialog(webview.FOLDER_DIALOG, directory=start)
+        folders = None
+        try:
+            res = []
+            def _pick():
+                try:
+                    res.append(self._window.create_file_dialog(_FOLDER_DIALOG, directory=start))
+                except Exception:
+                    pass
+            t = threading.Thread(target=_pick)
+            t.daemon = True
+            t.start()
+            t.join()
+            if res:
+                folders = res[0]
+        except Exception:
+            pass
         if not folders:
             return self.code_state()
         folder = folders[0] if isinstance(folders, (list, tuple)) else folders
@@ -856,7 +996,7 @@ class Api:
         """Window preferences (hidden menu, camera angle...). Saved in app_settings.json."""
         if isinstance(prefs, dict):
             for k, v in prefs.items():
-                if k in ("collapsed", "view", "open_panel", "study_tab", "sfx", "sfx_volume", "bgm", "bgm_volume", "bgm_theme", "sfx_style", "sfx_pitch", "fx", "outfit", "alarm_volume", "den_v1", "hidden_panels", "theme") \
+                if k in ("collapsed", "view", "open_panel", "study_tab", "kitchen_tab", "sfx", "sfx_volume", "bgm", "bgm_volume", "bgm_theme", "sfx_style", "sfx_pitch", "fx", "outfit", "alarm_volume", "den_v1", "hidden_panels", "theme") \
                         and len(json.dumps(v)) < 2000 or (k in ("room_before_den", "gym_layout") and len(json.dumps(v)) < 60000):
                     self._ui[k] = v
             self._save_settings()
@@ -885,6 +1025,8 @@ class Api:
         """Called by the window once it has loaded."""
         threading.Thread(target=self._start_tts, daemon=True).start()
         threading.Thread(target=self._start_ai, daemon=True).start()
+        import autosetup
+        autosetup.start(self.emit)                          # UniMate's code and checkpoint download themselves the first time
         if self._settings["hotkeys"]:
             self._register_hotkeys()
         threading.Thread(target=self._alert_loop, daemon=True).start()
@@ -1020,7 +1162,7 @@ class Api:
     def objects_now(self):
         return {"on": self._presence.watch_objects and self._presence.running, "items": self._presence.objects}
 
-    # ---------- Spotify ----------
+    # ---------- Spotify (only used for importing playlists into Vermeil Music) ----------
     def _use_spotify(self):
         src = getattr(self, "_settings", {}).get("music_source", "auto")
         if src == "youtube":
@@ -1051,10 +1193,13 @@ class Api:
                "play_playlist": lambda pid, start=0, shuffle=False: {"message": mymusic.play_playlist(pid, start, shuffle)},
                "queue_song": lambda s: {"message": f1.music_control("play", mymusic.play_query(s), "later")},
                "cmd": lambda a, v=None: {"message": music.seek(v) if a == "seek" else f1.music_control(a)},
+               "clear_queue": mymusic.clear_queue,
+               "remove_from_queue": mymusic.remove_from_queue,
+               "play_queued_index": mymusic.play_queued_index,
                "import_youtube": mymusic.import_youtube, "import_text": mymusic.import_text,
                "spotify_playlists": mymusic.spotify_playlists, "import_spotify": mymusic.import_spotify,
                "analyse": mymusic.analyse, "analysis": lambda pid: mymusic.analysis(pid) or {},
-               "make": mymusic.make_from}
+               "make": mymusic.make_from, "to_lyrics": mymusic.convert_to_lyrics}
         if action not in fns:
             return {"error": "Unknown music action."}
         try:
@@ -1159,7 +1304,7 @@ class Api:
 
     def gcal_choose_file(self):
         import gcal
-        paths = self._window.create_file_dialog(webview.OPEN_DIALOG, file_types=("Google OAuth file (*.json)",))
+        paths = self._window.create_file_dialog(_OPEN_DIALOG, file_types=("Google OAuth file (*.json)",))
         if not paths:
             return gcal.status()
         try:
@@ -1260,6 +1405,36 @@ class Api:
         else:
             self._presence.stop()
         return bool(on)
+
+    # ---------- which camera / microphone ----------
+    def list_devices(self, fresh=False):
+        """Working cameras and microphones on this PC, plus the ones chosen in Settings (-1 = automatic)."""
+        import devices
+        cams = [] if self._presence.running and not fresh else devices.list_cameras(fresh=bool(fresh))
+        if self._presence.running:          # the camera in use can't be opened twice, so list it as working
+            idx = devices.pick_camera(self._ui.get("camera_index", -1))
+            if not any(c["index"] == idx for c in cams):
+                cams = [{"index": idx, "name": f"Camera {idx + 1} (in use)", "ok": True}] + cams
+        return {"cameras": cams, "mics": devices.list_mics(),
+                "camera": self._ui.get("camera_index", -1), "mic": self._ui.get("mic_index", -1)}
+
+    def set_devices(self, camera=None, mic=None):
+        if camera is not None:
+            self._ui["camera_index"] = int(camera)
+            self._presence.camera_index = int(camera)
+            if self._presence.running:          # reopen on the new camera
+                self._presence.stop()
+                self._presence.start()
+        if mic is not None:
+            self._ui["mic_index"] = int(mic)
+            self._apply_mic()
+        _write_json(SETTINGS_FILE, {**self._settings, "ui": self._ui})
+        return self.list_devices()
+
+    def _apply_mic(self):
+        import devices
+        pm.MIC_INDEX = devices.pick_mic(self._ui.get("mic_index", -1)) if "MIC_INDEX" not in os.environ else pm.MIC_INDEX
+        pm._recognizer = None                   # recalibrate on the new mic next time
 
     def set_preview(self, on):
         self._presence.preview = bool(on)
@@ -1449,6 +1624,7 @@ class Api:
         if pm.VOICE_RVC:
             import rvc
             rvc.warm(clone["model"])
+        pm.warm_voice()                                     # the first reply isn't slow (loads everything once)
 
     def set_active(self, char_id):
         if any(c["id"] == char_id for c in self._characters["characters"]):
@@ -1510,8 +1686,10 @@ class Api:
                   f"their attitude and mood, HOW they talk (word choice, slang, sentence length, verbal tics, stutters or "
                   f"burps if they have them), 3-5 of their real catchphrases or typical expressions in quotes, what they care "
                   f"about, and how they treat the user (as a friend they chat with). If {who} isn't a known character, invent "
-                  f"a fitting personality from the name. End with exactly: \"Keep replies under 40 words and speak only in "
-                  f"dialogue, never actions.\" Reply with the prompt text only: no title, no quotes around it, no lists.")
+                  f"a fitting personality from the name. Keep their personality exactly; then add 2 sentences on how to write "
+                  f"so a text-to-speech voice says it naturally: {SPOKEN_WRITING} End with exactly: "
+                  f"\"Keep replies under 40 words and speak only in dialogue, never actions.\" Reply with the prompt "
+                  f"text only: no title, no quotes around it, no lists.")
         try:
             text = llm.ask(prompt, model="smart", temperature=0.8)
         except Exception as e:
@@ -1564,16 +1742,77 @@ class Api:
         return sorted(f for f in os.listdir(MODELS_DIR) if f.lower().endswith(MODEL_TYPES))
 
     def import_model(self):
-        """Open a file picker and copy a .glb / .gltf / .vrm into ui/models."""
-        paths = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False,
-                                               file_types=("3D models (*.glb;*.gltf;*.vrm)",))
+        """Open a file picker and copy a .glb / .gltf / .vrm (plus its texture pictures) into ui/models."""
+        paths = self._window.create_file_dialog(
+            _OPEN_DIALOG, allow_multiple=True,
+            file_types=("3D models and their textures (*.glb;*.gltf;*.vrm;*.bin;*.png;*.jpg;*.jpeg;*.webp)",))
         if not paths:
             return None
-        src = paths[0] if isinstance(paths, (list, tuple)) else paths
-        name = os.path.basename(src)
+        res = copy_model_files(paths if isinstance(paths, (list, tuple)) else [paths], MODELS_DIR)
+        if res.get("error"):
+            self.emit({"type": "toast", "text": res["error"]})
+            return None
+        return res["name"]
+
+    def save_rigged_model(self, name, data_b64):
+        """The rigger (ui/rigger.js) sends the rigged .glb as base64; it's saved next to the original."""
+        import base64
+        name = re.sub(r'[\\/:*?"<>|]+', "_", os.path.basename(name or "")).strip() or "model-rigged.glb"
+        if not name.lower().endswith(".glb"):
+            name += ".glb"
+        try:
+            data = base64.b64decode(data_b64)
+        except (ValueError, TypeError):
+            return {"error": "The rigged model came through broken."}
+        if data[:4] != b"glTF":
+            return {"error": "That isn't a .glb file."}
         os.makedirs(MODELS_DIR, exist_ok=True)
-        shutil.copy2(src, os.path.join(MODELS_DIR, name))
-        return name
+        with open(os.path.join(MODELS_DIR, name), "wb") as f:
+            f.write(data)
+        return {"name": name}
+
+    def unimate_status(self):
+        import animate
+        return animate.status()
+
+    def unimate_setup(self):
+        """the Animate box's button when UniMate isn't ready: get what it misses now, in the background"""
+        import animate
+        import autosetup
+        st = animate.status()
+        if st["ready"]:
+            return {"ready": True}
+        if st["commands"]:                               # only its libraries are left: pip is yours to run
+            return {"hint": st["hint"], "commands": st["commands"]}
+        started = autosetup.retry("unimate", self.emit)
+        return {"started": started, "hint": "Getting UniMate ready in the background (Miniconda, its code, its own Python "
+                "and the checkpoint, about 3 GB). The bar at the bottom shows how far it is; open this box again when it's done."
+                if started else st["hint"] or "UniMate's setup is already running."}
+
+    def unimate_animate(self, name, motions):
+        """Runs UniMate in the background; progress comes as {"type": "animate_progress"} events."""
+        import animate
+        st = animate.status()
+        if not st["ready"]:
+            return {"error": st["hint"]}
+        path = os.path.join(MODELS_DIR, os.path.basename(name or ""))
+        if not os.path.exists(path):
+            return {"error": f"Can't find {name}."}
+
+        def work():
+            def progress(pct, text):
+                self.emit({"type": "animate_progress", "pct": pct, "text": text})
+            try:
+                out = animate.animate(path, list(motions or ["idle"]), progress)
+                rel = lambda p: os.path.relpath(p, UI_DIR).replace(os.sep, "/")
+                self.emit({"type": "animate_progress", "done": True,
+                           "outputs": [{"clip": o["clip"], "url": rel(o["path"])} for o in out]})
+            except Exception as err:  # noqa: BLE001 - shown to the user
+                log = os.path.join(animate.WORK_DIR, os.path.splitext(os.path.basename(path))[0], "unimate.log")
+                self.emit({"type": "animate_progress", "error": str(err),
+                           "log": os.path.relpath(log, BASE_DIR) if os.path.exists(log) else ""})
+        threading.Thread(target=work, daemon=True).start()
+        return {"started": True}
 
     # ---------- voices ----------
     def list_voices(self):
@@ -1597,7 +1836,7 @@ class Api:
     def rvc_import(self):
         """Pick an RVC .pth (its .index next to it is found by itself) and copy it into data\\rvc_voices."""
         import rvc
-        paths = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True,
+        paths = self._window.create_file_dialog(_OPEN_DIALOG, allow_multiple=True,
                                                file_types=("RVC voice (*.pth;*.index)", "All files (*.*)"))
         if not paths:
             return None
@@ -1606,9 +1845,13 @@ class Api:
         index = next((p for p in paths if p.lower().endswith(".index")), None)
         if not pth:
             return {"error": "Pick the voice's .pth file (you can pick its .index too).", **self.rvc_list()}
+        def progress(pct, text):                      # the loading bar under "Import a voice"
+            self.emit({"type": "rvc_progress", "pct": round(pct, 3), "text": text})
+        progress(0.01, "Getting the voice ready…")
         try:
-            info = rvc.import_voice(pth, index)
+            info = rvc.import_voice(pth, index, progress=progress)
         except Exception as e:
+            self.emit({"type": "rvc_progress", "error": str(e)})
             return {"error": str(e), **self.rvc_list()}
         return {"imported": info, **self.rvc_list()}
 
@@ -1850,7 +2093,7 @@ class Api:
 
     def gym_import(self):
         import gym
-        paths = self._window.create_file_dialog(webview.OPEN_DIALOG, file_types=("Excel files (*.xlsx)",))
+        paths = self._window.create_file_dialog(_OPEN_DIALOG, file_types=("Excel files (*.xlsx)",))
         if not paths:
             return {"error": "No file chosen."}
         try:
@@ -1897,6 +2140,23 @@ class Api:
     def gym_add_stats(self, values):
         import gym
         return gym.add_stats(values or {})
+
+    def gym_body(self, profile=None):
+        """BMI / calories. With a profile it's saved first; without, the saved one is used."""
+        import gym
+        if profile:
+            return gym.save_profile(profile)
+        p = gym.get_profile()
+        res = gym.calories(p.get("height"), p.get("weight"), p.get("age"), p.get("gender"), p.get("activity", "moderate")) if p else {}
+        return {"profile": p, "activity": gym.ACTIVITY, **({} if res.get("error") else res)}
+
+    def gym_monthly(self):
+        import gym
+        return gym.monthly_progress()
+
+    def gym_meals(self, goal="recomp", meals=4, dishes=None):
+        import gym
+        return gym.meal_plan(goal, meals=meals, dishes=dishes)
 
     def gym_alternatives(self, query):
         import gym
@@ -1958,7 +2218,10 @@ class Api:
 
     # ---------- Generator: pictures, presentations, narrated videos from a topic or PDFs ----------
     def gen_start(self, kind, opts=None):
-        import generator
+        try:
+            import generator
+        except ModuleNotFoundError:
+            return {"error": "Generator isn't installed - install it in Settings → Plugins first."}
         generator.on_event = self.emit
         o = dict(opts or {})
         allowed = {"pictures": ("prompt", "count", "size", "style"), "presentation": ("topic", "pdfs", "slides", "theme", "pictures_on"),
@@ -1966,11 +2229,14 @@ class Api:
         return generator.start(kind, **{k: v for k, v in o.items() if k in allowed})
 
     def gen_pick_pdfs(self):
-        paths = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True, file_types=("PDF files (*.pdf)",))
+        paths = self._window.create_file_dialog(_OPEN_DIALOG, allow_multiple=True, file_types=("PDF files (*.pdf)",))
         return list(paths or [])
 
     def gen_recent(self):
-        import generator
+        try:
+            import generator
+        except ModuleNotFoundError:
+            return {"files": [], "folder": ""}
         return {"files": generator.recent(), "folder": generator.OUT_DIR}
 
     def _gen_path(self, path):
@@ -2006,37 +2272,6 @@ class Api:
             return {"data": "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()}
         except Exception as e:
             return {"error": str(e)}
-
-    # ---------- PS1 Anime Avatar Creator (skills/avatar_creator.py) ----------
-    def avatar_analyze(self, image_data, aesthetic="y2k_cyber_fairy"):
-        import avatar_creator
-        return avatar_creator.process_reference_image(image_data, aesthetic)
-
-    def avatar_presets(self):
-        import avatar_creator
-        return avatar_creator.list_presets()
-
-    def avatar_save_preset(self, name, config):
-        import avatar_creator
-        return avatar_creator.save_preset(name, config)
-
-    def avatar_delete_preset(self, name):
-        import avatar_creator
-        return avatar_creator.delete_preset(name)
-
-    def avatar_export(self, name, data, ext="png"):
-        import avatar_creator
-        return avatar_creator.save_export_file(name, data, ext)
-
-    def avatar_apply_as_character(self, name, glb_data_b64, prompt="", voice=""):
-        import avatar_creator
-        res = avatar_creator.apply_as_character(name, glb_data_b64, prompt, voice)
-        if res.get("ok"):
-            self._characters = _read_json(CHARACTERS_FILE, DEFAULT_CHARACTERS)
-            self._apply_character()
-            res["state"] = self.get_state()
-            self.emit({"type": "character"})
-        return res
 
     # ---------- Games hub (ui/games/): Retro Games from RetroGames.cc ----------
     def retro_games(self, platform="", page=1, query=""):
@@ -2089,6 +2324,47 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
+    # ---------- Games hub: your own games (the ⇅ button), e.g. the Unity game - see skills/mygames.py ----------
+    def _game_progress(self):
+        last = [0.0]
+        def progress(pct, text):                      # the hub's loading bar; at most ~7 updates a second
+            now = time.time()
+            if pct >= 1 or now - last[0] > 0.15:
+                last[0] = now
+                self.emit({"type": "game_progress", "pct": round(pct, 3), "text": text})
+        return progress
+
+    def _game_done(self, res):
+        if res.get("error"):
+            self.emit({"type": "game_progress", "error": res["error"]})
+        return {**res, **self.games_list()}
+
+    def games_list(self):
+        import mygames
+        return mygames.list_games()
+
+    def games_add_file(self, path=None):
+        """add a game: its .exe (the folder is copied into Vermeil) or a .zip. No path = pick one."""
+        import mygames
+        if not path:
+            paths = self._window.create_file_dialog(_OPEN_DIALOG, file_types=("Games (*.exe;*.zip)", "All files (*.*)"))
+            if not paths:
+                return None
+            path = paths[0] if isinstance(paths, (list, tuple)) else paths
+        return self._game_done(mygames.add_path(path, self._game_progress()))
+
+    def games_add_url(self, url):
+        import mygames
+        return self._game_done(mygames.add_url(url, self._game_progress()))
+
+    def games_launch(self, gid):
+        import mygames
+        return mygames.launch(gid)
+
+    def games_remove(self, gid):
+        import mygames
+        return {**mygames.remove(gid), **self.games_list()}
+
     # ---------- 3D Build Lab (ui/builder/): prompt -> robot / device in 3D, assembled and simulated ----------
     def build_design(self, prompt):
         import builder
@@ -2122,6 +2398,7 @@ class Api:
     def plugins_status(self):
         import plugins
         plugins.on_event = self.emit
+        plugins.warm_folder()                     # which features are in the Vermeil Google Drive folder
         return plugins.status()
 
     def plugin_install(self, pid):
@@ -2139,6 +2416,30 @@ class Api:
         import plugins
         plugins.on_event = self.emit
         return plugins.uninstall(pid, bool(force), bool(remove_pack))
+
+    def plugin_set_link(self, pid, url):
+        """the Google Drive link of a feature's pack (Settings -> Plugins)"""
+        import plugins
+        return plugins.set_link(pid, url)
+
+    def plugins_import_links(self):
+        """pick the links.txt from the Vermeil Google Drive folder: every feature's link in one go"""
+        import plugins
+        paths = self._window.create_file_dialog(_OPEN_DIALOG, file_types=("links.txt (*.txt)",))
+        if not paths:
+            return None
+        path = paths[0] if isinstance(paths, (list, tuple)) else paths
+        try:
+            with open(path, encoding="utf-8-sig") as f:
+                text = f.read(200_000)
+        except OSError as e:
+            return {"error": str(e)}
+        return {"count": plugins.import_links(text)}
+
+    def plugins_use_folder(self, url):
+        """the Vermeil Google Drive folder link: finds every feature's .zip in it (Settings -> Plugins)"""
+        import plugins
+        return plugins.use_folder(url)
 
     def plugins_first_run_done(self):
         import plugins
@@ -2327,6 +2628,9 @@ class Api:
             if not rest:
                 return f"{called['name']} here! What's up?" if switched else "Yes? I'm listening."
             return self._quick_command(rest)               # "vermi, skip this song" still works instantly
+        said = self._voice_command(t)                      # "open the gym", "camera off", "what can I say?"
+        if said:
+            return said
         import intent
         t = intent.normalize(t) or t                      # "can you put on a song right now" -> "play music"
         if re.fullmatch(r"stop speaking|stop", t):
@@ -2355,15 +2659,15 @@ class Api:
         for pattern, em in emotes.items():
             if re.fullmatch(pattern, t):
                 self.emote(em)
-                return {"wave": "Hi!", "dance": "Let's dance!", "jump": "Hop!", "spin": "Wheee~", "nod": "Mm-hm.",
+                return {"wave": "Hi!", "dance": "Let's dance!", "jump": "Hop!", "spin": "Wheee!", "nod": "Mm-hm.",
                         "bow": "At your service.", "shake": "Nope.", "celebrate": "Yay!", "clap": "Yay, clap clap!",
-                        "laugh": "Hehe~", "shrug": "Who knows?", "stretch": "Mmm, that feels good.", "yawn": "*yawn*... sorry!",
+                        "laugh": "Haha!", "shrug": "Who knows?", "stretch": "That feels good.", "yawn": "*yawn*... sorry!",
                         "shy": "Um... hi.", "point": "Look over there!"}.get(em, "Okay!")
         m = re.fullmatch(r"(?:look|be|make a|show me a|show me your)\s+(happy|sad|surprised|angry|sleepy|thinking|thoughtful)(?: face)?", t)
         if m:
             ex = {"thoughtful": "thinking"}.get(m.group(1), m.group(1))
             self.emit({"type": "expression", "name": ex, "seconds": 4})
-            return {"happy": "Hehe~", "sad": "Aww…", "surprised": "Oh!", "angry": "Hmph!", "sleepy": "So sleepy…", "thinking": "Hmm…"}[ex]
+            return {"happy": "This is my happy face!", "sad": "Aww.", "surprised": "Oh!", "angry": "I'm angry now!", "sleepy": "So sleepy.", "thinking": "Let me think."}[ex]
         styles = {r"(whisper|whispering)( mode)?|talk (in a )?whisper|whisper to me": "whisper",
                   r"(storyteller|story|dramatic)( mode| voice)?|tell it dramatically": "storyteller",
                   r"(energetic|hype|excited)( mode| voice)?": "energetic", r"(calm|soothing|relaxing)( mode| voice)": "calm",
@@ -2399,6 +2703,40 @@ class Api:
                 if re.search(words, t):
                     return self._gym_command(action)
         return None
+
+    def _voice_command(self, t):
+        """the instant commands of brain/voice_commands.py: open any sidebar feature, mic / camera, the Help list"""
+        import plugins
+        import voice_commands as vc
+        hit = vc.parse(t)
+        if not hit:
+            return None
+        what, f = hit
+        if what == "help":
+            self.emit({"type": "open_panel", "panel": "settings", "tab": "help"})
+            return "Here's everything you can say to me - it's in Settings, under Help."
+        if what == "mic_off":
+            self.set_listening(False)                       # (it tells the sidebar itself)
+            return "Okay, I'll stop listening. Press Voice in the sidebar when you want me back."
+        if what in ("camera_on", "camera_off"):
+            on = what == "camera_on"
+            if on and not self.set_camera(True):
+                return "I can't turn the camera on while privacy mode is on."
+            if not on:
+                self.set_camera(False)
+                self.emit({"type": "camera", "status": "off"})
+            return "Camera on - I can see you now!" if on else "Camera off."
+        if f["plugin"] and not plugins.is_installed(f["plugin"]):
+            self.emit({"type": "open_panel", "panel": "settings", "tab": "plugins"})
+            return f"{f['name']} isn't installed yet - you can add it in Settings, under Plugins."
+        self.emit({"type": "open_panel", "panel": f["id"]})
+        return f"Opening {f['name']}."
+
+    def voice_commands(self):
+        """Settings -> Help: what you can say, per sidebar feature"""
+        import plugins
+        import voice_commands as vc
+        return {"features": vc.catalogue(plugins.is_installed)}
 
     def music(self, action):
         if action in ("skip", "stop", "pause", "resume", "replay", "favorite"):
@@ -2680,7 +3018,8 @@ def _game_companion(self):
     return {"id": c["id"], "name": c.get("name") or "Vermeil", "persona": c.get("prompt") or "", "model": model, "body": body,
             "size": size, "gender": "female" if c["id"] in ("vermeil", "pip") else None, "voice": voice,
             "voice_online": c.get("voice_online") or "", "rate": c.get("rate") or "+0%", "pitch": c.get("pitch") or "+0Hz",
-            "outfit": c.get("outfit", "mech"), "hair": c.get("hair", "original")}
+            "outfit": c.get("outfit", "mech"), "hair": c.get("hair", "original"),
+            "rvc": c.get("rvc") if (c.get("rvc") or {}).get("model") else None}
 
 
 def _make_game_method(name):

@@ -198,7 +198,7 @@ export class View3D {
     const look = { buzzer: ["cyl", "#1b1b1b", 1.8, 1.4], battery9v: ["box", "#222", 5, 8, 2.5], aa4: ["box", "#2a2a2a", 6, 7, 3], coincell: ["cyl", "#cfd3d8", 2, 0.4],
       hcsr04: ["box", "#1f6fbf", 9, 0.4, 4], tmp36: ["box", "#222", 2.4, 1.6, 1.2], npn: ["box", "#222", 2.4, 1.6, 1.2], nmos: ["box", "#222", 3.2, 3.4, 1.2],
       diode: ["box", "#1b1b1b", 2, 0.8, 0.8], capacitor: ["cyl", +part.props.farads >= 1e-6 ? "#1d3f8f" : "#e09a2c", 1.1, 2.2], ldr: ["cyl", "#e8a33d", 1, 0.4],
-      switch: ["box", "#2b2d31", 3.2, 1.3, 1.2], l293d: ["box", "#1b1b1b", 8, 1.2, 2.2], multimeter: ["box", "#f2c230", 6, 1.5, 8] }[t] || ["box", "#555", 2, 1, 1];
+      switch: ["box", "#2b2d31", 3.2, 1.3, 1.2], slide_switch: ["box", "#44444a", 2.8, 1.4, 1.4], relay: ["box", "#0044aa", 3.2, 2.8, 2.8], seg7: ["box", "#1b1c20", 4.6, 1.8, 4.0], l293d: ["box", "#1b1b1b", 8, 1.2, 2.2], multimeter: ["box", "#f2c230", 6, 1.5, 8] }[t] || ["box", "#555", 2, 1, 1];
     const y = base + 1;
     if (look[0] === "cyl") cyl(look[2], look[3], look[1], cx, y, 0);
     else if (t === "l293d") box(look[2], look[3], look[4], look[1], 3.5, base + 0.4, 1.5);

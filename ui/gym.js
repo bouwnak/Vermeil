@@ -126,7 +126,7 @@ export function initGym(api) {
   const view = el("div");
   root.replaceChildren(timerBox, tabs, view);
   function drawTabs() {
-    tabs.replaceChildren(...[["workout", "Workout"], ["alts", "Alternatives"], ["history", "History"], ["stats", "Body stats"]].map(([k, l]) =>
+    tabs.replaceChildren(...[["workout", "Workout"], ["alts", "Alternatives"], ["history", "History"], ["progress", "Progress"], ["stats", "Body stats"], ["calories", "Calories"]].map(([k, l]) =>
       el("button", { role: "tab", "aria-selected": String(k === tab), onclick: () => { tab = k; load(); } }, l)));
   }
 
@@ -136,6 +136,8 @@ export function initGym(api) {
     if (tab === "alts") return drawAlternatives();
     if (tab === "history") return drawHistory();
     if (tab === "stats") return drawStats();
+    if (tab === "calories") return drawCalories();
+    if (tab === "progress") return drawProgress();
     state = await api.gym_state(day || state?.day || null);
     drawWorkout();
   }
@@ -405,6 +407,144 @@ export function initGym(api) {
       el("thead", {}, el("tr", {}, el("th", {}, "Date"), fields.map((f) => el("th", {}, STAT_LABELS[f].split(" (")[0])))),
       el("tbody", {}, stats.slice().reverse().map((s) => el("tr", {}, el("td", {}, s.date), fields.map((f) => el("td", {}, s[f] ?? "–"))))));
     view.replaceChildren(el("div", { class: "table-wrap" }, table), el("h3", {}, "Add measurements"), form);
+  }
+
+  // ---------------- calories: BMI, maintenance, deficit / bulk and how fast the weight changes ----------------
+  async function drawCalories() {
+    const saved = await api.gym_body();
+    const p = saved.profile || {};
+    const field = (name, label, attrs) => el("label", {}, label, el("input", { name, value: p[name] ?? "", inputmode: "decimal", ...attrs }));
+    const gender = el("select", { name: "gender" }, ["male", "female"].map((g) => el("option", { value: g, selected: p.gender === g }, g[0].toUpperCase() + g.slice(1))));
+    const act = el("select", { name: "activity" }, (saved.activity || []).map(([k, label]) => el("option", { value: k, selected: (p.activity || "moderate") === k }, label)));
+    const form = el("form", { class: "jform cal-form" },
+      field("height", "Height (cm)", { type: "number", step: "0.5", min: 80, max: 250, required: true }),
+      field("weight", "Weight (kg)", { type: "number", step: "0.1", min: 25, max: 300, required: true }),
+      field("age", "Age", { type: "number", step: "1", min: 10, max: 100, required: true }),
+      el("label", {}, "Gender", gender),
+      el("label", { class: "wide" }, "How much you train each week", act),
+      el("button", { class: "primary", type: "submit" }, "Work it out"));
+    const out = el("div", { class: "cal-out" });
+    const show = (r) => {
+      if (r.error) return out.replaceChildren(el("p", { class: "note" }, r.error));
+      const pos = Math.max(0, Math.min(100, ((r.bmi - 15) / 20) * 100));
+      const sign = (v) => (v > 0 ? "+" : "") + v;
+      out.replaceChildren(
+        el("div", { class: "cal-top" },
+          el("div", { class: "cal-big" }, el("small", {}, "BMI"), el("b", {}, String(r.bmi)), el("span", {}, r.category)),
+          el("div", { class: "cal-big" }, el("small", {}, "Maintenance"), el("b", {}, String(r.maintenance)), el("span", {}, "kcal a day")),
+          el("div", { class: "cal-big" }, el("small", {}, "Resting (BMR)"), el("b", {}, String(r.bmr)), el("span", {}, "kcal a day"))),
+        el("div", { class: "bmi-bar", title: "BMI 15 to 35" }, el("i", { style: `left:${pos}%` })),
+        el("p", { class: "note" }, `Healthy weight for your height: ${r.healthy_weight[0]}–${r.healthy_weight[1]} kg. Protein: ${r.protein_g[0]}–${r.protein_g[1]} g a day.`),
+        el("div", { class: "cal-plans" }, r.plans.map((x, i) => el("div", { class: `cal-plan ${x.key}`, style: `animation-delay:${i * 60}ms` },
+          el("strong", {}, x.label),
+          el("b", {}, `${x.kcal} kcal`),
+          el("span", {}, x.kg_week === 0 ? "weight stays the same" : `${sign(x.kg_week)} kg a week · ${sign(x.kg_month)} kg a month`),
+          el("small", {}, `in 3 months: about ${x.weight_in_3_months} kg`)))),
+        el("p", { class: "note" }, "Estimates (Mifflin-St Jeor). Real change varies: weigh yourself weekly and adjust by 100–200 kcal if it's off."));
+    };
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const r = await api.gym_body(Object.fromEntries(new FormData(form)));
+      show(r);
+      if (!r.error) { toast("Saved. Your weight went into Body stats too."); drawMeals(); }
+    });
+    view.replaceChildren(form, out, mealBox);
+    if (saved.bmi) show(saved);
+    drawMeals();
+  }
+
+  // ---------------- meal planner: a day of meals for bulk / cut / recomp from the numbers above ----------------
+  let mealGoal = "recomp", mealCount = 4, mealDishes = [];
+  try { mealCount = +localStorage.getItem("mealCount") || 4; } catch {}
+  const mealBox = el("div", { class: "meal-box" });
+  async function drawMeals() {
+    const r = await api.gym_meals(mealGoal, mealCount, mealDishes);
+    if (r.error) return mealBox.replaceChildren(el("h3", {}, "🍽 Meal planner"), el("p", { class: "note" }, r.error));
+    mealDishes = r.meals.map((m) => m.pick);
+    const goals = el("div", { class: "seg" }, r.goals.map(([k, l]) => el("button", { type: "button", class: k === mealGoal ? "on" : "",
+      onclick: () => { mealGoal = k; drawMeals(); } }, l)));
+    const count = el("div", { class: "seg meal-count", title: "How many meals a day" }, el("span", {}, "Meals a day"),
+      (r.meal_options || [2, 3, 4, 5, 6]).map((n) => el("button", { type: "button", class: n === r.meal_count ? "on" : "",
+        onclick: () => { mealCount = n; mealDishes = []; try { localStorage.setItem("mealCount", n); } catch {} drawMeals(); } }, String(n))));
+    const macro = (label, v, unit, cls) => el("div", { class: `cal-big ${cls}` }, el("small", {}, label), el("b", {}, String(v)), el("span", {}, unit));
+    mealBox.replaceChildren(
+      el("h3", {}, "🍽 Meal planner"), goals, count,
+      el("p", { class: "note" }, r.note),
+      el("div", { class: "cal-top macros" }, macro("Calories", r.kcal, "kcal a day", ""), macro("Protein", r.protein, "g a day", "p"),
+        macro("Fats", r.fat, "g a day", "f"), macro("Carbs", r.carbs, "g a day", "c")),
+      el("div", { class: "meal-grid" }, r.meals.map((m, i) => el("div", { class: "meal", style: `animation-delay:${i * 70}ms` },
+        el("div", { class: "lift-head" }, el("strong", {}, m.name), el("span", {}, `${m.kcal} kcal`)),
+        el("div", { class: "dish" }, el("b", {}, m.dish),
+          el("button", { type: "button", class: "dish-swap", title: "Show another dish for this meal",
+            onclick: () => { mealDishes[i] = (m.pick + 1) % m.choices; drawMeals(); } }, "🔀 Other dish")),
+        el("p", { class: "how" }, m.how),
+        el("ul", {}, m.items.map((x) => el("li", {}, el("span", {}, x.food), el("b", {}, `${x.grams} g`)))),
+        el("small", {}, `Protein ${m.protein} g · Fats ${m.fat} g · Carbs ${m.carbs} g`)))),
+      el("p", { class: "note" }, `Whole day: ${r.totals.kcal} kcal · protein ${r.totals.protein} g · fats ${r.totals.fat} g · carbs ${r.totals.carbs} g. `
+        + "Estimates from typical food values (cooked weights). Swap foods for ones with similar numbers."));
+  }
+
+  // ---------------- progress: weight and reps per lift (monthly), then your Body stats ----------------
+  function niceLabel(r) {
+    const m = r.month || r.label || "";
+    if (/^\d{4}-\d\d-\d\d/.test(m)) return new Date(`${m.slice(0, 10)}T00:00`).toLocaleString(undefined, { month: "short", day: "numeric" });
+    if (/^\d{4}-\d\d$/.test(m)) return new Date(`${m}-01T00:00`).toLocaleString(undefined, { month: "short" }) + (m.endsWith("-01") ? ` ${m.slice(2, 4)}` : "");
+    return m;                                                 // "Week 1" and other labels from your Excel stay as they are
+  }
+  function lineChart(rows, key, unit = "") {
+    rows = rows.filter((r) => r[key] != null && r[key] !== "");
+    if (!rows.length) return "";
+    const W = 320, H = 130, P = 26;
+    const vals = rows.map((r) => Number(r[key]) || 0);
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const span = hi - lo || Math.max(1, hi * 0.1);
+    const x = (i) => P + (rows.length === 1 ? (W - 2 * P) / 2 : (i * (W - 2 * P)) / (rows.length - 1));
+    const y = (v) => H - P + 6 - ((v - lo + span * 0.1) / (span * 1.2)) * (H - P - 10);
+    const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const area = `${x(0)},${H - P + 6} ${pts} ${x(vals.length - 1)},${H - P + 6}`;
+    return `<svg viewBox="0 0 ${W} ${H}" class="lift-chart" role="img" aria-label="${key}">
+      <polygon points="${area}" class="area"/><polyline points="${pts}" class="line" pathLength="1"/>
+      ${vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="3.5" class="dot" style="animation-delay:${300 + i * 60}ms"><title>${niceLabel(rows[i])}: ${v}${unit}</title></circle>
+        <text x="${x(i)}" y="${y(v) - 8}" class="val">${v}</text>
+        <text x="${x(i)}" y="${H - 4}" class="mon">${niceLabel(rows[i])}</text>`).join("")}
+    </svg>`;
+  }
+  function change(rows, key) {
+    rows = rows.filter((r) => r[key]);
+    if (rows.length < 2) return null;
+    const d = Math.round((rows.at(-1)[key] - rows[0][key]) * 10) / 10;
+    return el("span", { class: d >= 0 ? "up" : "down" }, `${d >= 0 ? "▲ +" : "▼ "}${d}`);
+  }
+  function chartCard(title, rows, key, unit, i, cls = "") {
+    const c = el("div", { class: `lift-card ${cls}`, style: `animation-delay:${Math.min(i, 10) * 50}ms` },
+      el("div", { class: "lift-head" }, el("strong", {}, title), change(rows, key)));
+    c.insertAdjacentHTML("beforeend", lineChart(rows, key, unit));
+    return c;
+  }
+  async function drawProgress() {
+    const { exercises, stats = [], stat_fields = [] } = await api.gym_monthly();
+    const names = Object.keys(exercises);
+    const cards = names.map((n, i) => {
+      const rows = exercises[n];
+      const c = el("div", { class: "lift-card two", style: `animation-delay:${Math.min(i, 10) * 50}ms` },
+        el("div", { class: "lift-head" }, el("strong", {}, n)));
+      const part = (label, key, unit) => {
+        const box = el("div", { class: "mini" }, el("small", {}, label, " ", change(rows, key)));
+        box.insertAdjacentHTML("beforeend", lineChart(rows, key, unit));
+        return box;
+      };
+      c.append(part("Weight (kg)", "best", " kg"), part("Reps", "reps", " reps"));
+      return c;
+    });
+    const statCards = stat_fields.filter((f) => stats.some((s) => s[f] != null))
+      .map((f, i) => chartCard(STAT_LABELS[f] || f, stats, f, f === "weight" ? " kg" : " cm", i, "body"));
+    view.replaceChildren(
+      el("h3", {}, "🏋️ Lifts: weight and reps"),
+      names.length ? el("div", { class: "lift-grid" }, cards)
+        : el("p", { class: "none" }, "No lifts logged yet. Tick sets in the Workout tab and your monthly graphs show up here."),
+      el("h3", { class: "stats-head" }, "📏 My stats"),
+      statCards.length ? el("div", { class: "lift-grid" }, statCards)
+        : el("p", { class: "none" }, "No body stats yet. Add them in the Body stats tab."));
   }
 
   function command(action, seconds) {

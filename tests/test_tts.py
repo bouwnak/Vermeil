@@ -65,7 +65,7 @@ class SpeakTests(unittest.TestCase):
             return f
         with mock.patch.dict(sys.modules, {"sounddevice": sd}), mock.patch.object(pm, "tts_ready", True), \
                 mock.patch.object(pm.tts._pool, "submit", side_effect=submit), \
-                mock.patch.object(pm, "ui_emit", events.append):
+                mock.patch.object(pm, "ui_emit", events.append), mock.patch.object(pm, "WHOLE_REPLY", False):
             pm.speak("One sentence that is long enough. Two sentences that are long enough. Three is the last one here.",
                      voice="ja-JP-NanamiNeural")
         self.assertEqual([p[0] for p in played], [0.0, 1.0, 2.0])

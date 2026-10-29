@@ -66,3 +66,27 @@ class BakingTests(unittest.TestCase):
         self.assertEqual(baking.list_recipes("cooking")[0]["image"], "")          # old wrong picture is hidden...
         with mock.patch.object(baking, "video_thumb", return_value="https://p16.tiktokcdn.com/food.jpg"):
             self.assertEqual(baking.find_image(r["id"], "cooking")["image"], "https://p16.tiktokcdn.com/food.jpg")   # ...and replaced
+
+    def test_clumped_video_instructions_split_into_steps(self):
+        clumped = (
+            "1. Preheat oven to 375 degrees F. 2. In a medium bowl, whisk flour, baking soda, and salt. "
+            "3. Beat the butter and sugars until fluffy. 4. Add the eggs and vanilla. "
+            "5. Stir in chocolate chips and bake for 10-12 minutes."
+        )
+        steps = baking._flatten_steps(clumped)
+        self.assertGreaterEqual(len(steps), 5)
+        self.assertIn("Preheat oven to 375 degrees F.", steps[0])
+
+    def test_sync_baking_and_cooking(self):
+        recipe = {
+            "title": "Universal Pancakes",
+            "ingredients": ["1 cup flour", "1 cup milk", "1 egg"],
+            "steps": ["Mix ingredients.", "Cook on griddle."],
+        }
+        saved = baking.save_recipe(recipe, kind="baking")
+        rid = saved["id"]
+        self.assertEqual(baking.get_recipe(rid, "baking")["title"], "Universal Pancakes")
+        self.assertEqual(baking.get_recipe(rid, "cooking")["title"], "Universal Pancakes")
+        baking.delete_recipe(rid, "baking")
+        self.assertIsNone(baking.get_recipe(rid, "baking"))
+        self.assertIsNone(baking.get_recipe(rid, "cooking"))

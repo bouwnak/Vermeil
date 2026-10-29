@@ -45,9 +45,27 @@ _SURPRISE_WORDS = re.compile(r"\b(wow|whoa|woah|oh my|no way|really\?|what\?!|se
 _SCARED_WORDS = re.compile(r"\b(scary|scared|afraid|terrif|creepy|eek)", re.I)
 
 
+_SAD_WORDS = re.compile(r"\b(so sad|that'?s sad|really sad|oh no|i'?m (so |really |very )?sorry|lonely|heartbroken|"
+                        r"miss (you|him|her|them)|i wish i could)\b", re.I)
+
+
 def detect(raw, analyzer=None):
-    """(emotion, strength 0..1) for one sentence as the AI wrote it (with its *actions* and emoji still in)."""
+    """(emotion, strength 0..1) for a sentence or a whole reply as the AI wrote it (with its *actions* and emoji still
+    in). A whole reply is read sentence by sentence and the strongest feeling wins, so a sad line with a kind word in
+    it ("I'm so sorry... I wish I could give you a hug") doesn't average out to neutral."""
     raw = raw or ""
+    parts = [x for x in re.split(r"(?<=[.!?~…])\s+", raw.strip()) if x.strip()]
+    if len(parts) > 1:
+        found = [_detect_one(x, analyzer) for x in parts]
+        best = max(found, key=lambda f: f[1])
+        sad = [f for f in found if f[0] == "sad"]
+        if sad and best[0] == "happy" and best[1] < 1.0:         # a kind word inside a sad reply stays sad
+            return max(sad, key=lambda f: f[1])
+        return best
+    return _detect_one(raw, analyzer)
+
+
+def _detect_one(raw, analyzer=None):
     actions = " ".join(re.findall(r"\*([^*]{1,60})\*", raw)).lower()
     if actions:
         for emo, pattern in _ACTION:
@@ -73,6 +91,8 @@ def detect(raw, analyzer=None):
         if bangs:
             return "angry", min(1.0, -compound + 0.1)
         return "sad", min(1.0, -compound + 0.2)
+    if _SAD_WORDS.search(text) and compound < 0.3:
+        return "sad", 0.6
     if bangs >= 2:
         return "excited", 0.6
     if re.search(r"(\.\.\.|…)\s*$", text.strip()) and compound < 0:

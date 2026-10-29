@@ -1,0 +1,18 @@
+# Vermeil - the heavy AI voice parts (about 3 GB). Install AFTER requirements.txt:
+#
+#   python -m pip install -r requirements-ai.txt
+#
+# What it gives you:
+#   - RVC voice models (.pth): fixes "No module named 'torch'" when you import an RVC voice
+#   - Emotional voice (Chatterbox): needs the same torch 2.6.0, so it lives here too
+#
+# NVIDIA graphics card (recommended): the line below gets PyTorch built for CUDA 12.4.
+# No NVIDIA card? Delete the --extra-index-url line: you get the CPU version (works, but slower).
+--extra-index-url https://download.pytorch.org/whl/cu124
+
+torch==2.6.0             # RVC voice clones run on the graphics card with the CUDA build (RVC_DEVICE=cpu to stay on the CPU)
+torchaudio==2.6.0
+scipy
+librosa                  # reads and trims voice samples (RVC)
+faiss-cpu                # RVC: makes cloned voices sound closer to the original
+chatterbox-tts==0.1.7    # Emotional voice plugin (pins torch 2.6.0 / torchaudio 2.6.0, matching the lines above)

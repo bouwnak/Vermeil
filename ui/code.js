@@ -1,5 +1,5 @@
 // code.js - the coding helper panel.
-import { $, el, setMd, busy, toast } from "./util.js";
+import { $, el, setMd, busy, toast, setupDropZone, loadingCard } from "./util.js";
 
 export function initCode(api) {
   const root = $("codeBody");
@@ -23,6 +23,14 @@ export function initCode(api) {
     el("div", { class: "chips" }, IDEAS.map((x) => el("button", { class: "chip", onclick: () => { input.value = x; input.focus(); } }, x))),
     log,
     el("form", { class: "code-input", onsubmit: (e) => { e.preventDefault(); ask(); } }, input, send));
+
+  setupDropZone(root, async (files) => {
+    if (!files.length) return;
+    const f = files[0];
+    const path = f.pywebviewFullPath || f.path || f.name;
+    toast(`Opening project folder: ${f.name}…`);
+    render(await api.code_set_folder(path));
+  });
 
   input.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ask(); } });
 
@@ -54,9 +62,16 @@ export function initCode(api) {
     input.value = "";
     bubble("user", text);
     busy(send, true, "Working…");
+    const loader = el("div", { class: "msg assistant" }, loadingCard("Writing code and reasoning…"));
+    log.append(loader);
+    loader.scrollIntoView({ block: "end" });
     try {
       const r = await api.code_ask(text);
+      loader.remove();
       bubble("assistant", r.error ? `Something went wrong: ${r.error}` : r.reply);
+    } catch (err) {
+      loader.remove();
+      bubble("assistant", `Error: ${err}`);
     } finally { busy(send, false); }
   }
 

@@ -1,26 +1,29 @@
 // app.js - connects the window to Python (app.py) and drives the room.
 import { Room } from "./room.js";
-import { CATALOG, CozyRoom, THEMES, TIME_PRESETS } from "./cozyroom.js";
-import { initPlanner } from "./planner.js";
-import { initMind } from "./mind.js";
+import { CATALOG, CozyRoom, THEMES, TIME_PRESETS, WALLPAPERS } from "./cozyroom.js";
 import { initGym } from "./gym.js";
-import { initBaking } from "./baking.js";
-import { initFocus } from "./focus.js";
 import { initStudy } from "./study.js";
-import { initCode } from "./code.js";
 
 import { el, busy } from "./util.js";
 import * as fx from "./fx.js";
+import { openRigger, rigEvent } from "./rigger.js";
+import { initDropdowns } from "./dropdown.js";
 import * as psp from "./psp.js";
 import { initLife } from "./life.js";
 import { initChat } from "./chat.js";
-import { initMissions } from "./missions.js";
-import { initSpotify } from "./spotify.js";
 import { initPlugins } from "./plugins.js";
-import { initElectronics } from "./electronics.js";
-import { initGenerator } from "./generator.js";
 import { initMyMusic } from "./mymusic.js";
-import { initAvatar } from "./avatar.js";
+// features whose code can be uninstalled (Settings -> Plugins deletes their files; Install gets them from Drive):
+// a missing file gives a do-nothing panel instead of breaking the whole app
+const notInstalled = new Proxy({}, { get: (_, k) => k === "then" ? undefined : k === "status" ? () => null : () => Promise.resolve() });
+async function optional(file, name) {
+  try { return (await import(file))[name]; }
+  catch (e) { console.warn(`${file} isn't installed`, e); return () => notInstalled; }
+}
+const [initMind, initBaking, initFocus, initCode, initMissions, initSpotify, initElectronics, initPlanner, initGenerator] = await Promise.all([
+  optional("./mind.js", "initMind"), optional("./baking.js", "initBaking"), optional("./focus.js", "initFocus"),
+  optional("./code.js", "initCode"), optional("./missions.js", "initMissions"), optional("./spotify.js", "initSpotify"),
+  optional("./electronics.js", "initElectronics"), optional("./planner.js", "initPlanner"), optional("./generator.js", "initGenerator")]);
 const $ = (id) => document.getElementById(id);
 const room = new Room($("scene"));
 let api = null;
@@ -32,7 +35,7 @@ let voices = [];
 let viewTimer = null;
 
 // ---------------- planner, study, code (their own files) ----------------
-let musicPanel = null, elecPanel = null, genPanel = null, avatarPanel = null, planner = null, study = null, codePanel = null, mind = null, gym = null, baking = null, cooking = null, focusPanel = null, chat = null, missionsPanel = null, spotifyPanel = null;
+let musicPanel = null, elecPanel = null, genPanel = null, planner = null, study = null, codePanel = null, mind = null, gym = null, baking = null, cooking = null, focusPanel = null, chat = null, missionsPanel = null, spotifyPanel = null;
 const renderPlanner = () => planner?.render();
 
 function showHistory(history) {
@@ -182,14 +185,29 @@ async function loadRvc(cfg) {
 }
 for (const id of ["rvcPitch", "rvcIndex"]) $(id).addEventListener("input", showRvcOutputs);
 $("rvcSelect").addEventListener("change", () => { $("rvcDelete").hidden = !$("rvcSelect").value; });
+// the loading bar while a voice clone is copied in (events from app.rvc_import)
+function rvcBar(e) {
+  const bar = $("rvcBar");
+  clearTimeout(bar._hide);
+  bar.hidden = false;
+  bar.classList.toggle("bad", !!e.error);
+  const pct = e.error ? 1 : Math.max(0, Math.min(1, e.pct || 0));
+  bar.querySelector("i").style.width = `${Math.round(pct * 100)}%`;
+  bar.querySelector("span").textContent = e.error ? "Couldn't import it" : e.text || "";
+  bar.querySelector("b").textContent = e.error ? "" : `${Math.round(pct * 100)}%`;
+  bar.setAttribute("aria-valuenow", Math.round(pct * 100));
+  if (e.error || pct >= 1) bar._hide = setTimeout(() => { bar.hidden = true; }, e.error ? 4000 : 1500);
+}
 $("rvcImport").addEventListener("click", async () => {
   toast("Pick the voice's .pth file (and its .index file too, if it has one).", 4000);
-  const res = await api.rvc_import();
+  const btn = $("rvcImport");
+  btn.disabled = true;
+  const res = await api.rvc_import().finally(() => { btn.disabled = false; });
   if (!res) return;
   if (res.error) { toast(res.error, 5000); return; }
   rvcState = res;
-  await loadRvc({ ...rvcValue(), model: res.imported });
-  toast(`Imported ${res.imported}. Press Save character to use it.`, 4000);
+  await loadRvc({ ...rvcValue(), model: res.imported.name });
+  toast(`Imported ${res.imported.name}. Press Save character to use it.`, 4000);
 });
 $("rvcDelete").addEventListener("click", async () => {
   const name = $("rvcSelect").value;
@@ -240,9 +258,32 @@ function addLog(who, text) {
   log.querySelector(".empty")?.remove();
   const li = document.createElement("li");
   li.className = who;
-  li.textContent = text;
+  li.append(el("span", { class: "who" }, who === "you" ? "You" : activeChar()?.name || "Her"), el("span", { class: "msg-text" }, text));
   log.append(li);
-  li.scrollIntoView({ block: "end" });
+  li.scrollIntoView({ block: "end", behavior: "smooth" });
+  if (who === "her") refreshGuide(text);
+}
+
+// ---------------- talk guide: little "try saying…" chips above the message box ----------------
+const GUIDE = {
+  start: ["How was your day?", "What can you do?", "Play some music", "Remind me at 8 to drink water", "What's on my schedule?"],
+  music: ["Skip this song", "Turn it down a bit", "Play something calm"],
+  study: ["Quiz me on my lecture", "Explain it simpler", "Make me flashcards"],
+  gym: ["Log my workout", "What should I train today?", "Calculate my BMI"],
+  sad: ["I just need to vent", "Tell me something nice", "Let's breathe together"],
+  question: ["Yes", "No", "Tell me more"],
+};
+function refreshGuide(lastReply = "") {
+  const box = $("talkGuide");
+  if (!box) return;
+  const t = (lastReply || "").toLowerCase();
+  const kind = /\?\s*$/.test(lastReply) ? "question" : /song|music|playing/.test(t) ? "music" : /study|lecture|quiz|exam/.test(t) ? "study"
+    : /gym|workout|lift|reps|bmi/.test(t) ? "gym" : /sorry|sad|tough|hard day|rough/.test(t) ? "sad" : "start";
+  const picks = [...GUIDE[kind]].sort(() => Math.random() - 0.5).slice(0, 3);
+  box.replaceChildren(el("span", { class: "guide-label" }, "Try saying"), ...picks.map((p, i) => el("button", {
+    type: "button", class: "guide-chip", style: `animation-delay:${i * 70}ms`,
+    onclick: () => { $("talkInput").value = p; $("talkForm").requestSubmit(); } }, p)));
+  box.hidden = false;
 }
 
 function placeBubble() {
@@ -382,8 +423,8 @@ function openPanel(name) {
     renderCharacters();
     if (!voices.length) loadVoices().then(() => openEditor(state.active)); else openEditor(state.active);
   }
-  api.set_preview(name === "settings" && open && state.camera);
-  if (name === "settings" && open) { renderGcal(); renderWake(); renderPeople(); renderOutfit(); renderPrefs(); renderAi(); renderPc(); renderProd(); }
+  api?.set_preview(name === "settings" && open && state?.camera);
+  if (name === "settings" && open) { renderDevices(); renderGcal(); renderWake(); renderPeople(); renderOutfit(); renderPrefs(); renderAi(); renderPc(); renderProd(); }
   if (name === "planner" && open) renderPlanner();
   if (name === "study" && open) study.load(state.ui?.study_tab);
   if (name === "code" && open) codePanel.load();
@@ -391,10 +432,8 @@ function openPanel(name) {
   if (name === "gym" && open) gym.load();
   if (name === "electronics" && open) elecPanel.load();
   if (name === "generator" && open) genPanel.load();
-  if (name === "avatar" && open) avatarPanel?.load();
   if (name === "music" && open) musicPanel.load();
-  if (name === "baking" && open) baking.load();
-  if (name === "cooking" && open) cooking.load();
+  if (name === "kitchen" && open) kitchenTab(state.ui?.kitchen_tab);
   if (name === "focus" && open) focusPanel.load();
   if (name === "chat" && open) chat.load();
   if (name === "missions" && open) missionsPanel.load();
@@ -470,6 +509,9 @@ window.onPyEvent = async (e) => {
     }
     case "error": toast(e.text, 5000); break;
     case "toast": toast(e.text); break;
+    case "animate_progress": rigEvent(e); break;
+    case "rvc_progress": rvcBar(e); break;
+    case "setup_progress": setupEvent(e); break;
     case "tool": renderPlanner(); if (e.name?.startsWith("gym_log")) gym?.load(); break;
     case "ai_switch":
       aiNow = e.now; toast(e.text, 6000); renderHud();
@@ -494,8 +536,13 @@ window.onPyEvent = async (e) => {
       toast(`Switched to ${activeChar().name}.`);
       break;
     case "code_step": case "code_approve": case "code_workspace": case "code_user": case "code_reply": codePanel?.onEvent(e); break;
-    case "open_panel": setCollapsed(false); if ($(`panel-${e.panel}`)?.hidden) openPanel(e.panel); break;
-    case "alert": toast(`⏰ ${e.text}`, 10000); renderPlanner(); break;
+    case "open_panel":                                       // a voice command ("open the gym", "what can I say?")
+      if (e.panel === "adventure") { $("adventureBtn")?.click(); break; }
+      setCollapsed(false);
+      if ($(`panel-${e.panel}`)?.hidden) openPanel(e.panel);
+      if (e.tab) window.showSettingsTab?.(e.tab);
+      break;
+    case "alert": fx.play("notify"); toast(`⏰ ${e.text}`, 10000); renderPlanner(); break;
     case "group_line": say(`${e.speaker}: ${e.text}`); addLog("her", `${e.speaker}: ${e.text}`); break;
     case "mission": missionsPanel?.update(e.mission); renderHud(); break;
     case "approval": showApproval(e); break;
@@ -894,31 +941,30 @@ for (const box of document.querySelectorAll("input[data-setting]")) {
 }
 
 $("newChar").addEventListener("click", () => openEditor(null));
-$("openAvatarStudio")?.addEventListener("click", () => openPanel("avatar"));
 $("importModel").addEventListener("click", async () => {
   const name = await api.import_model();
   if (!name) return;
   if (!state.models.includes(name)) state.models.push(name);
   fillModelSelect(name);
   toast(`Imported ${name}. Save the character to use it.`);
+  if (/\.(glb|gltf)$/i.test(name)) rig(name, true);      // asks about the rig (keep it / look / rig it yourself)
 });
-
-window.onAvatarCharacterSaved = async (res) => {
-  if (res?.state) {
-    state = res.state;
-  } else {
-    state = await api.get_state();
-  }
-  if (res?.model && !state.models.includes(res.model)) {
-    state.models.push(res.model);
-  }
-  renderCharacters();
-  if (res?.id) {
-    openEditor(res.id);
-  }
-  await loadCharacter();
-  say(`Hi! I'm ${activeChar().name}.`);
-};
+function rig(name, fromImport = false) {
+  openRigger(name, {
+    api, toast, fromImport,
+    onSaved: (saved, animated) => {
+      if (!state.models.includes(saved)) state.models.push(saved);
+      fillModelSelect(saved);
+      if (animated && !$("editor").hidden) $("editor").requestSubmit();   // UniMate's animations: use them right away
+    },
+  });
+}
+$("rigModel").addEventListener("click", () => {
+  const name = $("modelSelect").value;
+  if (!name || name.startsWith("builtin:")) return toast("Pick an imported model first.");
+  if (/\.vrm$/i.test(name)) return toast("VRM models already come with a rig.");
+  rig(name);
+});
 // "copy a character": type a name (Rick Sanchez, Jake the Dog…), press ✓ (or Enter) -> the AI writes how they talk
 async function makePersonality() {
   const who = $("personaFrom").value.trim();
@@ -989,7 +1035,6 @@ room.onHover = (label, x, y) => {
   tip.hidden = false;
 };
 room.onInteract = (thing, result) => api.interact(thing, result);
-
 // ---------------- room customising ----------------
 const WALL_COLOURS = { "Warm white": "#e9e1d4", "Oat": "#d8c8b0", "Sage": "#b7c2a8", "Night plum": "#2c2034", "Midnight": "#1d2338", "Forest": "#22332b", "Cocoa": "#3a2a24",
                        "Blush": "#6e4a5a", "Cream": "#c9bba8", "Sky": "#5d7896", "Charcoal": "#26252b" };
@@ -1021,52 +1066,115 @@ function syncRoomControls() {
   $("brightOut").textContent = `${$("brightness").value}%`;
 }
 
+// ---------- Edit room (like "Make Room"): the menu hides, a scrollable bar of categories sits on top ----------
 function setEditing(on) {
   room.setEditMode(on);
-  $("editToggle").checked = on;
+  document.body.classList.toggle("editing", on);
+  $("editBar").hidden = !on;
+  $("editBtn").hidden = on;
   $("editBtn").setAttribute("aria-pressed", on);
-  $("editBtn").textContent = on ? "Done editing" : "Edit room";
+  if (on) { for (const p of document.querySelectorAll(".panel")) p.hidden = true; renderCatalog(); syncRoomControls(); }
+  else saveLayoutSoon();
 }
 
 // ---------- furniture catalog, sorted into categories ----------
 const CATEGORIES = [
-  ["seating", "Chairs & sofas", /chair|sofa|couch|bean|stool|ottoman|armchair/i],
-  ["beds", "Beds", /bed/i],
-  ["tables", "Tables & desks", /table|desk/i],
-  ["shelves", "Shelves", /shelf|shelves|bookcase|bookshelf|cubby|cube|dresser|cabinet|storage/i],
-  ["plants", "Plants", /plant|cact|tree|vine|leaf|flower/i],
-  ["lights", "Lights", /lamp|light|candle|neon|hex|lantern|fan/i],
-  ["tech", "Tech", /tv|monitor|radio|speaker|record|laptop|computer|console/i],
-  ["walls", "Walls & windows", /window|panel|stripe|board|poster|clock|frame|sign|beam/i],
-  ["gym", "Gym equipment", /^gym/],
-  ["decor", "Decor", /./],
+  ["tables", "🪑 Tables & desks", /table|desk/i],
+  ["seating", "🛋️ Chairs & sofas", /chair|sofa|couch|bean|stool|ottoman|armchair/i],
+  ["beds", "🛏️ Beds", /bed/i],
+  ["lights", "💡 Lights", /lamp|light|candle|neon|hex|lantern|fan/i],
+  ["shelves", "📚 Shelves", /shelf|shelves|bookcase|bookshelf|cubby|cube|dresser|cabinet|storage/i],
+  ["plants", "🪴 Plants", /plant|cact|tree|vine|leaf|flower/i],
+  ["tech", "🖥️ Tech", /tv|monitor|radio|speaker|record|laptop|computer|console/i],
+  ["kitchen", "🍳 Kitchen", /kitchen|fridge|oven|stove|sink/i],
+  ["bathroom", "🛁 Bathroom", /bath|shower|toilet|mirror|washing/i],
+  ["walls", "🖼️ Wall decor", /window|panel|stripe|board|poster|clock|frame|sign|beam/i],
+  ["gym", "🏋️ Gym", /^gym/],
+  ["decor", "✨ Decor", /./],
+  ["pets", "🐾 Pets", null],
 ];
+const ROOM_PANES = [["house", "🏠 Rooms"], ["style", "🎨 Room style"], ["wallcolour", "🧱 Wall colour"], ["floor", "🟫 Floor"], ["time", "🌙 Time of day"], ["reset", "↺ Reset"]];
 function categoryOf(type, def) {
   if (def.category) return def.category;
   const text = `${type} ${def.label}`;
-  return CATEGORIES.find(([, , re]) => re.test(text))[0];
+  return CATEGORIES.find(([, , re]) => re?.test(text))[0];
 }
-let catalogTab = "seating";
+let catalogTab = "tables";
 try { catalogTab = localStorage.getItem("catalogTab") || catalogTab; } catch { /* ignore */ }
 function renderCatalog() {
   const items = Object.entries(CATALOG).map(([type, def]) => ({ type, def, cat: categoryOf(type, def) }));
-  const used = CATEGORIES.filter(([k]) => items.some((i) => i.cat === k));
+  const used = [...CATEGORIES.filter(([k]) => items.some((i) => i.cat === k)), ...ROOM_PANES];
   if (!used.some(([k]) => k === catalogTab)) catalogTab = used[0]?.[0];
   $("catalogTabs").replaceChildren(...used.map(([k, label]) => {
     const b = document.createElement("button");
     b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(k === catalogTab));
-    b.textContent = `${label} (${items.filter((i) => i.cat === k).length})`;
-    b.addEventListener("click", () => { catalogTab = k; try { localStorage.setItem("catalogTab", k); } catch { /* ignore */ } renderCatalog(); });
+    b.textContent = label;
+    b.addEventListener("click", () => {
+      catalogTab = k;
+      try { localStorage.setItem("catalogTab", k); } catch { /* ignore */ }
+      renderCatalog();
+      $("catalogTabs").querySelector('[aria-selected="true"]')?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    });
     return b;
   }));
-  $("catalog").replaceChildren(...items.filter((i) => i.cat === catalogTab).sort((a, b) => a.def.label.localeCompare(b.def.label)).map(({ type, def }) => {
+  const pane = ROOM_PANES.some(([k]) => k === catalogTab) ? (catalogTab === "wallcolour" ? "walls" : catalogTab) : null;
+  for (const p of document.querySelectorAll(".edit-pane")) p.hidden = p.dataset.pane !== pane;
+  $("catalog").hidden = !!pane;
+  if (pane === "house") renderHousePane();
+  if (pane) return;
+  const wallpapers = catalogTab === "walls" ? [Object.assign(document.createElement("p"), { className: "edit-sub", textContent: "Wallpaper (the wall colour tints it)" }),
+    ...Object.entries(WALLPAPERS).map(([k, label]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "edit-card wallpaper"; b.textContent = label;
+      b.setAttribute("aria-pressed", String((room.cozy.wallpaper || "none") === k));
+      b.addEventListener("click", () => { room.setWallpaper(k); renderCatalog(); toast(k === "none" ? "Plain painted walls." : `Wallpaper: ${label}`); });
+      return b;
+    }), Object.assign(document.createElement("p"), { className: "edit-sub", textContent: "Things for the walls" })] : [];
+  $("catalog").replaceChildren(...wallpapers, ...items.filter((i) => i.cat === catalogTab).sort((a, b) => a.def.label.localeCompare(b.def.label)).map(({ type, def }, n) => {
     const b = document.createElement("button");
-    b.textContent = def.label;
-    b.addEventListener("click", () => { room.addItem(type); setEditing(true); toast(`Added: ${def.label}. Drag it where you like.`); });
+    b.type = "button"; b.className = "edit-card"; b.textContent = def.label;
+    b.style.animationDelay = `${Math.min(n, 14) * 22}ms`;
+    b.addEventListener("click", () => {
+      room.addItem(type);
+      b.classList.remove("added"); void b.offsetWidth; b.classList.add("added");
+      toast(def.pet ? `${def.label} joined the room!` : `Added: ${def.label}. Drag it where you like.`);
+    });
     return b;
   }));
 }
-renderCatalog();
+// ---------- Rooms: extra rooms on the left and right of the main room ----------
+function renderHousePane() {
+  const H = JSON.parse(JSON.stringify(room.cozy.house.cfg));
+  const el = (tag, props = {}, kids = []) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+  const apply = (redraw = false) => { room.setHouse(H); if (redraw) renderHousePane(); };
+  const slider = (label, value, min, max, step, unit, set) => {
+    const out = el("output", { textContent: `${value}${unit}` });
+    const input = el("input", { type: "range", min, max, step, value });
+    input.setAttribute("aria-label", label);
+    input.addEventListener("input", () => { set(Number(input.value)); out.textContent = `${input.value}${unit}`; apply(); });
+    return el("label", { className: "house-row" }, [label, input, out]);
+  };
+  const btn = (text, click, extra = {}) => { const b = el("button", { type: "button", textContent: text, ...extra }); b.addEventListener("click", click); return b; };
+
+  // the add buttons come first so they're always in view; the rooms are cards side by side (left ones first)
+  const full = H.rooms.length >= 4;
+  const add = (side) => btn(`+ Room on the ${side}`, () => { H.rooms.push({ side, w: 5, d: 6 }); apply(true); },
+    { className: "primary", disabled: full, title: full ? "Up to 4 extra rooms" : "" });
+  const head = el("div", { className: "house-box" }, [el("h4", { textContent: "🚪 Rooms" }),
+    el("div", { className: "house-btns" }, [add("left"), add("right")]),
+    el("p", { className: "note", textContent: `The main room is 10 × 8.5 m. Up to 4 extra rooms, on either side, join it through a doorway${full ? " (that's 4 now)" : ""}. When she walks into a room the camera follows her there. The big window is furniture: click it to move or delete it.` })]);
+  const order = H.rooms.map((r, i) => i).sort((a, b) => (H.rooms[a].side === "left" ? 0 : 1) - (H.rooms[b].side === "left" ? 0 : 1));
+  const cards = order.map((i) => {
+    const r = H.rooms[i], n = H.rooms.slice(0, i + 1).filter((o) => o.side === r.side).length;
+    return el("div", { className: "house-box house-room" }, [
+      el("div", { className: "house-row" }, [el("strong", { textContent: `${r.side === "left" ? "⬅ Left" : "Right ➡"} room ${n}` }),
+        btn("✕ Remove", () => { H.rooms.splice(i, 1); apply(true); }, { className: "danger" })]),
+      slider("Width", r.w, 3, 8, 0.1, " m", (v) => { r.w = v; }),
+      slider("Depth", r.d, 3, 8.5, 0.1, " m", (v) => { r.d = v; })]);
+  });
+  $("housePane").replaceChildren(head, ...cards);
+}
+
 $("wallSwatches").replaceChildren(...Object.entries(WALL_COLOURS).map(([name, hex]) => {
   const b = document.createElement("button");
   b.style.background = hex; b.title = name; b.dataset.colour = hex; b.setAttribute("aria-label", name);
@@ -1079,7 +1187,9 @@ $("themes").replaceChildren(...Object.entries(THEMES).map(([key, t]) => {
   b.textContent = t.label;
   b.addEventListener("click", () => {
     if (!confirm(`Switch to "${t.label}"? Your current furniture layout will be replaced.`)) return;
-    room.loadLayout(JSON.parse(JSON.stringify(t.layout)));
+    const L = JSON.parse(JSON.stringify(t.layout));
+    L.shell = { ...(L.shell || {}), house: room.cozy.house.cfg };     // a theme changes the furniture, not your rooms
+    room.loadLayout(L);
     saveLayoutSoon(); syncRoomControls();
     toast(`Room style: ${t.label}`);
   });
@@ -1128,25 +1238,20 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-$("editToggle").addEventListener("change", (e) => setEditing(e.target.checked));
 $("editBtn").addEventListener("click", () => setEditing(!room.editMode));
-$("turnLeft").addEventListener("click", () => room.rotateSelected(Math.PI / 8));
-$("turnRight").addEventListener("click", () => room.rotateSelected(-Math.PI / 8));
-$("raise").addEventListener("click", () => room.raiseSelected(0.1));
-$("lower").addEventListener("click", () => room.raiseSelected(-0.1));
-$("removeItem").addEventListener("click", () => room.removeSelected());
+$("editDone").addEventListener("click", () => setEditing(false));
+$("editUndo").addEventListener("click", () => { if (room.undo()) { syncRoomControls(); toast("Undone."); } });
+room.onUndoChange = (n) => { $("editUndo").disabled = !n; };
+document.addEventListener("keydown", (e) => {
+  if (!room.editMode || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return;
+  if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) { e.preventDefault(); if (room.undo()) syncRoomControls(); }
+  else if (e.key === "Escape") { if (room.selectedId != null) room.select(null); else setEditing(false); }
+});
 $("resetRoom").addEventListener("click", () => {
   if (!confirm("Put every piece of furniture back where it started?")) return;
-  room.loadLayout(null); saveLayoutSoon(); syncRoomControls(); toast("Room reset.");
+  room.loadLayout(null); saveLayoutSoon(); syncRoomControls(); toast("Room reset. (Undo brings it back.)");
 });
-room.onSelect = (item) => {
-  $("selectedBox").hidden = !item;
-  $("editHint").hidden = !!item;
-  if (item) {
-    $("selectedName").textContent = item.label;
-    $("turnLeft").hidden = $("turnRight").hidden = item.mount === "wall";
-  }
-};
+room.onSelect = (item) => { $("toolRotate").hidden = item?.mount === "wall"; };
 document.addEventListener("keydown", (e) => {
   if (!room.editMode || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return;
   if (e.key === "Delete" || e.key === "Backspace") room.removeSelected();
@@ -1154,7 +1259,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "e" || e.key === "E") room.rotateSelected(-Math.PI / 8);
 });
 
-room.onPoke = () => say(["Hey! That tickles~", "Mm? Yes?", "Careful~"][Math.floor(Math.random() * 3)]);
+room.onPoke = () => say(["Hey! That tickles!", "Yes?", "Careful!"][Math.floor(Math.random() * 3)]);
 
 // ---------------- start ----------------
 (async () => {
@@ -1171,7 +1276,8 @@ room.onPoke = () => say(["Hey! That tickles~", "Mm? Yes?", "Careful~"][Math.floo
   syncBgmControls(); updateBgm(); setInterval(updateBgm, 1000);
   loadPronunciations();
   applySidebar(); renderSidebarToggles(); applyTheme(state.ui?.theme); renderThemes();
-  pluginsUI = initPlugins(api, { onChange: async () => { state = await api.get_state(); applySidebar(); } });
+  initDropdowns();
+  pluginsUI = initPlugins(api, { onChange: syncPlugins });
   if (state.plugins?.fresh) { openPanel("settings"); pluginsUI.show("plugins"); }      // first start after installing: pick your features
   fx.setAlarmVolume(state.ui?.alarm_volume ?? 0.9);
   $("alarmVol").value = Math.round((state.ui?.alarm_volume ?? 0.9) * 100); $("alarmVolOut").textContent = `${$("alarmVol").value}%`;
@@ -1206,12 +1312,16 @@ room.onPoke = () => say(["Hey! That tickles~", "Mm? Yes?", "Careful~"][Math.floo
   gym = initGym(api);
   elecPanel = initElectronics(api);
   genPanel = initGenerator(api);
-  avatarPanel = initAvatar(api);
   musicPanel = initMyMusic(api);
   baking = initBaking(api, "baking");
   cooking = initBaking(api, "cooking");
+  $("kitchenTabs").addEventListener("click", (e) => {
+    const kind = e.target.closest("[data-kind]")?.dataset.kind;
+    if (kind) { kitchenTab(kind); api.save_ui({ kitchen_tab: kind }).then((u) => { if (u) state.ui = u; }); }
+  });
   focusPanel = initFocus(api);
-  chat = initChat(api);
+  chat = initChat(api, () => activeChar()?.name);
+  refreshGuide();
   missionsPanel = initMissions(api);
   chat.renderMessages(state.history);
   missionsPanel.load().then(renderHud).catch(() => {});
@@ -1245,6 +1355,7 @@ window.addEventListener("gym-session", (e) => {
     ["ai", "AI & online", ["AI", "Internet & calendar", "This PC", "Macros"]],
     ["test", "Test", ["Animation test"]],
     ["plugins", "Plugins", ["Plugins"]],
+    ["help", "Help", ["Voice commands"]],
   ];
   const tabOf = (title) => (TABS.find(([, , list]) => list.includes(title)) || TABS[0])[0];
   const panes = Object.fromEntries(TABS.map(([k]) => [k, Object.assign(document.createElement("div"), { className: "settings-pane" })]));
@@ -1265,6 +1376,7 @@ window.addEventListener("gym-session", (e) => {
     for (const [key, pane] of Object.entries(panes)) pane.hidden = key !== k;
     if (k === "test") renderAnimTest();
     if (k === "plugins") window.dispatchEvent(new Event("plugins-tab"));
+    if (k === "help") renderVoiceHelp();
   };
   window.showSettingsTab = show;
   nav.append(...TABS.map(([k, label]) => {
@@ -1276,6 +1388,25 @@ window.addEventListener("gym-session", (e) => {
   header.after(nav, ...Object.values(panes));
   show(panes[tab] ? tab : "general");
 })();
+
+// ---------------- Settings > Help: what you can say, one card per sidebar feature (brain/voice_commands.py) ----------------
+async function renderVoiceHelp() {
+  const box = $("voiceHelp");
+  if (!box || !api?.voice_commands) return;
+  const { features = [] } = await api.voice_commands();
+  const q = ($("voiceHelpFind")?.value || "").trim().toLowerCase();
+  const el = (tag, props = {}, kids = []) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+  const cards = features.map((f) => {
+    const rows = f.say.filter((c) => !q || f.name.toLowerCase().includes(q) || `${c.say} ${c.does}`.toLowerCase().includes(q));
+    if (!rows.length) return null;
+    return el("article", { className: `help-card${f.installed ? "" : " off"}` }, [
+      el("h4", {}, [el("span", { className: "help-icon", textContent: f.icon, ariaHidden: "true" }), f.name,
+        f.installed ? "" : el("span", { className: "pill off", textContent: "Not installed" })]),
+      el("ul", {}, rows.map((c) => el("li", {}, [el("q", { textContent: c.say }), el("span", { className: "note", textContent: ` ${c.does}` })])))]);
+  }).filter(Boolean);
+  box.replaceChildren(...(cards.length ? cards : [el("p", { className: "note", textContent: "Nothing matches that." })]));
+}
+$("voiceHelpFind")?.addEventListener("input", renderVoiceHelp);
 
 // ---------------- Settings > Test: a button for every animation ----------------
 const ANIM_LABELS = { idle: "Idle", walk: "Walk", wave: "Wave", talk: "Talk", happy: "Happy", sad: "Sad", surprised: "Surprised",
@@ -1358,12 +1489,14 @@ const PAINTS = ["#d9843f", "#b0602c", "#f4e3c2", "#a7b03c", "#5f8a3e", "#7e9cc6"
 
 // ---------------- Settings > General > Sidebar: show / hide features in the menu ----------------
 let pluginsUI = null;
-const OPTIONAL_PANELS = ["adventure", "electronics", "music", "planner", "study", "baking", "cooking", "gym", "spotify", "missions", "focus", "mind", "code"];
+const OPTIONAL_PANELS = ["adventure", "electronics", "music", "planner", "study", "kitchen", "gym", "missions", "focus", "mind", "code", "generator"];
 const menuBtn = (k) => k === "voice" ? $("voiceBtn") : k === "camera" ? $("cameraBtn") : k === "adventure" ? $("adventureBtn") : document.querySelector(`.menu [data-panel="${k}"]`);
 // the Games hub (Adventure + Retro Games) is its own page; your chat and room are safe while you play (they're saved by the app)
 $("adventureBtn")?.addEventListener("click", () => {
   try { localStorage.setItem("vermeil_theme", JSON.stringify(state?.ui?.theme || null)); } catch { /* ignore */ }   // the hub wears your colours
   fx.play("start"); bgm.on = false; psp.musicStop(0.3);       // the hub has its own tune (bgm.on comes back on the next start)
+  if (music.playing && !music.paused) { music.paused = true; api.music("pause"); }      // your song waits while you play
+  if (spotifyPanel?.status()?.playing) spotifyPanel.cmd("pause");
   const ov = document.createElement("div");
   ov.style.cssText = "position:fixed;inset:0;z-index:9999;display:grid;place-content:center;justify-items:center;gap:14px;" +
     "background:var(--black);color:var(--ink);font:800 20px Nunito,system-ui,sans-serif;opacity:0;transition:opacity .25s";
@@ -1373,6 +1506,14 @@ $("adventureBtn")?.addEventListener("click", () => {
   requestAnimationFrame(() => (ov.style.opacity = "1"));
   setTimeout(() => { location.href = "games/index.html"; }, 250);
 });
+// Cooking & Baking share one panel: a tab picks which recipe book you see (and is remembered)
+function kitchenTab(kind) {
+  kind = kind === "baking" ? "baking" : "cooking";
+  for (const b of $("kitchenTabs").querySelectorAll("[data-kind]")) b.setAttribute("aria-selected", String(b.dataset.kind === kind));
+  $("cookingBody").hidden = kind !== "cooking";
+  $("bakingBody").hidden = kind !== "baking";
+  (kind === "baking" ? baking : cooking).load();
+}
 function applySidebar() {
   const hidden = new Set([...(state?.ui?.hidden_panels || []), ...(state?.plugins?.hidden_panels || [])]);   // + features not installed (Plugins)
   $("voiceBtn").hidden = true; $("cameraBtn").hidden = true;       // these live in Settings > General now
@@ -1384,11 +1525,26 @@ function applySidebar() {
     if (hidden.has(k) && panel && !panel.hidden) openPanel(k);    // close it if it was open
   }
 }
+// Plugins and the "Show X in the menu" ticks stay in step: uninstalling a feature unticks it, installing it
+// puts it back in the menu, and ticking a feature that isn't installed offers to install it.
+async function syncPlugins() {
+  const before = new Set(state?.plugins?.hidden_panels || []);
+  state = await api.get_state();
+  const nowHidden = new Set(state.plugins?.hidden_panels || []);
+  const back = [...before].filter((k) => !nowHidden.has(k));          // just installed
+  if (back.length && (state.ui?.hidden_panels || []).some((k) => back.includes(k)))
+    state.ui = await api.save_ui({ hidden_panels: state.ui.hidden_panels.filter((k) => !back.includes(k)) });
+  applySidebar(); renderSidebarToggles();
+  for (const k of back) menuBtn(k)?.classList.add("menu-new");
+  setTimeout(() => document.querySelectorAll(".menu-new").forEach((b) => b.classList.remove("menu-new")), 2600);
+}
 function renderSidebarToggles() {
   const box = $("sidebarToggles");
   if (!box) return;
   const hidden = new Set(state?.ui?.hidden_panels || []);
-  box.replaceChildren(...OPTIONAL_PANELS.map((k) => {
+  const owner = state?.plugins?.owner || {};
+  // features that aren't installed aren't listed at all (install them in Settings → Plugins)
+  box.replaceChildren(...OPTIONAL_PANELS.filter((k) => !owner[k]).map((k) => {
     const btn = menuBtn(k);
     const name = btn?.querySelector(".item-title")?.textContent || k;
     const label = document.createElement("label"); label.className = "check";
@@ -1408,6 +1564,38 @@ function renderSidebarToggles() {
 // Voice & camera switches in Settings (they do the same as the menu buttons)
 $("setVoiceBtn").addEventListener("click", () => $("voiceBtn").click());
 $("setCameraBtn").addEventListener("click", () => $("cameraBtn").click());
+
+// ---------------- which camera / microphone (only working ones are listed) ----------------
+let devicesLoaded = false;
+async function renderDevices(fresh = false) {
+  if (devicesLoaded && !fresh) return;
+  const cam = $("camSelect"), mic = $("micSelect"), note = $("devNote"), box = $("devicePick");
+  box.classList.add("scanning");
+  note.textContent = fresh ? "Checking every camera and microphone…" : "Looking for cameras and microphones…";
+  try {
+    const d = await api.list_devices(fresh);
+    const fill = (sel, items, auto, chosen, label) => {
+      sel.replaceChildren(el("option", { value: -1 }, auto), ...items.map((x) => el("option", { value: x.index }, label(x))));
+      sel.value = String(items.some((x) => x.index === chosen) ? chosen : -1);
+    };
+    fill(cam, d.cameras || [], "Automatic", d.camera, (c) => c.name);
+    fill(mic, d.mics || [], "Automatic (Windows default)", d.mic, (m) => m.name + (m.default ? " — default" : ""));
+    note.textContent = `${(d.cameras || []).length} working camera${(d.cameras || []).length === 1 ? "" : "s"} · ${(d.mics || []).length} microphone${(d.mics || []).length === 1 ? "" : "s"} found.`
+      + ((d.cameras || []).length ? "" : " No camera gave a picture: check it's plugged in and not used by another app.");
+    devicesLoaded = true;
+  } catch (e) {
+    note.textContent = `Couldn't list devices: ${e}`;
+  } finally { box.classList.remove("scanning"); }
+}
+$("findDevices").addEventListener("click", () => renderDevices(true));
+$("camSelect").addEventListener("change", async (e) => {
+  await api.set_devices(+e.target.value, null);
+  toast(+e.target.value < 0 ? "Camera: automatic." : `Camera: ${e.target.selectedOptions[0].textContent}.`, 2500);
+});
+$("micSelect").addEventListener("change", async (e) => {
+  await api.set_devices(null, +e.target.value);
+  toast(+e.target.value < 0 ? "Microphone: Windows default." : `Microphone: ${e.target.selectedOptions[0].textContent}.`, 2500);
+});
 (function syncVC() {
   const on = (id) => $(id).getAttribute("aria-pressed") === "true";
   $("setVoiceBtn").textContent = `Voice: ${on("voiceBtn") ? "on" : "off"}`;
@@ -1462,4 +1650,23 @@ async function saveTheme(t) {
 for (const id of ["themeAccent", "themeBg", "themePanel"]) {
   $(id).addEventListener("input", () => applyTheme({ accent: $("themeAccent").value, bg: $("themeBg").value, panel: $("themePanel").value }));
   $(id).addEventListener("change", () => saveTheme({ accent: $("themeAccent").value, bg: $("themeBg").value, panel: $("themePanel").value }));
+}
+
+// UniMate sets itself up in the background the first time (skills/autosetup.py)
+const SETUP_NAMES = { unimate: "UniMate (Rig & animate)", builtins: "Vermeil's voices, camera and AI" };
+// one themed progress bar (bottom right) instead of a toast per step
+function setupEvent(e) {
+  const name = SETUP_NAMES[e.part] || e.part;
+  let box = $("setupBar");
+  if (e.error || e.done) {
+    box?.remove();
+    return toast(e.error ? `${name}: automatic setup failed - ${e.error}` : e.text || `${name} is ready.`, 6000);
+  }
+  if (!box) {
+    box = el("div", { id: "setupBar", class: "setup-float", role: "status" }, el("strong", {}, `Setting up ${name}`),
+      el("div", { class: "load-bar" }, el("i"), el("span")));
+    document.body.append(box);
+  }
+  box.querySelector("i").style.width = `${Math.max(2, e.pct || 0)}%`;
+  box.querySelector("span").textContent = `${e.pct || 0}% · ${e.text}`;
 }

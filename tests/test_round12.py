@@ -57,7 +57,7 @@ class WordingTests(unittest.TestCase):
 
 class EmojiTests(unittest.TestCase):
     def test_emojis_go_other_languages_stay(self):
-        self.assertEqual(pm.clean_text("Hehe~ Noot! 🎶 Enjoy! 🚀"), "Hehe~ Noot! Enjoy!")
+        self.assertEqual(pm.clean_text("Hehe~ Noot! 🎶 Enjoy! 🚀"), "Noot! Enjoy!")
         self.assertEqual(pm.clean_text("こんにちは！😊 안녕하세요 ✅"), "こんにちは！ 안녕하세요")
         self.assertEqual(pm.clean_text("Day 1 → Day 2"), "Day 1 → Day 2")
 

@@ -1,4 +1,4 @@
-﻿// lab.js - the Circuit Lab page: parts palette, 2D editor / 3D view, properties, Arduino code, serial monitor,
+// lab.js - the Circuit Lab page: parts palette, 2D editor / 3D view, properties, Arduino code, serial monitor,
 // saving (data/electronics/ through Vermeil, or this browser when opened on its own), examples, and "Check my circuit"
 // (Vermeil reads the parts, connections, code and simulator readings and explains what's wrong).
 import { PARTS, BOARDS, CATEGORIES, LED_COLORS, pinsOf, resolvePin, fmtOhm, fmtF } from "./parts.js";
@@ -322,7 +322,15 @@ function drawPalette() {
     const items = Object.entries(PARTS).filter(([k, d]) => d.cat === cat && (!q || d.name.toLowerCase().includes(q) || k.includes(q)));
     if (!items.length) continue;
     list.append(h("h4", {}, cat));
-    for (const [k, d] of items) list.append(h("button", { class: `pitem${lab.placing === k ? " on" : ""}`, title: `Add ${d.name}`,
+    for (const [k, d] of items) list.append(h("button", {
+      class: `pitem${lab.placing === k ? " on" : ""}`,
+      draggable: "true",
+      title: `Add ${d.name} (click to place or drag onto canvas)`,
+      ondragstart: (e) => {
+        if (lab.simulating) { e.preventDefault(); return toast("Stop the simulation to change the circuit."); }
+        e.dataTransfer.setData("text/plain", k);
+        e.dataTransfer.setData("part-type", k);
+      },
       onclick: () => { if (lab.simulating) return toast("Stop the simulation to change the circuit."); lab.placing = lab.placing === k ? null : k; drawPalette(); if (lab.placing) toast(`Click on the canvas to place the ${d.name}.`); } }, icon(k), d.name));
   }
 }
