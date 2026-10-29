@@ -133,6 +133,19 @@ export class Room {
 
   setScreenName(name) { this.cozy.setScreenName(name); }
 
+  // low-end PC mode (Settings → This computer): no shadows or glow, fewer pixels - the room stays smooth
+  setLowPower(on) {
+    const r = this.renderer;
+    if (this._fullPr === undefined) this._fullPr = this._prMax;
+    this._prMax = on ? 1 : this._fullPr;
+    r.setPixelRatio(Math.min(r.getPixelRatio(), this._prMax));
+    r.shadowMap.enabled = !on;
+    r.shadowMap.needsUpdate = true;
+    if (this.bloom) this.bloom.enabled = !on;
+    this.scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => { m.needsUpdate = true; }); });
+    this._resize();
+  }
+
   /** Camera angle you left the room at (saved between sessions). */
   setView(view) {
     if (!view?.pos || !view?.target) return;

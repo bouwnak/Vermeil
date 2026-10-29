@@ -1556,3 +1556,17 @@ select.dd-open { border-color: var(--blue); }
 .setup-float strong { font-size: 13px; color: var(--strong); }
 .plugin-progress { margin-top: 6px; }
 .plugin-error { color: var(--danger); font-size: 12.5px; margin: 6px 0 0; }
+
+/* Settings > Phone: the QR code to connect your phone */
+.phone-box { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.phone-qr { width: 180px; flex: none; background: #fff; border-radius: 10px; padding: 6px; }
+.phone-qr:empty { display: none; }
+.phone-qr svg { display: block; width: 100%; height: auto; }
+.phone-box > div:last-child { flex: 1; min-width: 200px; }
+.phone-box ol { margin: 4px 0 8px; padding-left: 20px; }
+
+/* Study > Language: live practice partner */
+.partner-live { border: 1px solid var(--line, #3a3147); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.partner-live .turn { margin: 0; }
+.partner-live .turn.you { text-align: right; opacity: .85; }
+.partner-live .turn.fix { background: rgba(240, 176, 63, .12); border-radius: 8px; padding: 4px 8px; font-size: .92em; }

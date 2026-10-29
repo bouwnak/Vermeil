@@ -11,6 +11,7 @@ import re
 import time
 import queue
 import shutil
+import sys
 import threading
 import uuid
 
@@ -21,6 +22,7 @@ import webview
 _FD = getattr(webview, "FileDialog", None)
 _OPEN_DIALOG = _FD.OPEN if _FD else webview.OPEN_DIALOG
 _FOLDER_DIALOG = _FD.FOLDER if _FD else webview.FOLDER_DIALOG
+_SAVE_DIALOG = _FD.SAVE if _FD else webview.SAVE_DIALOG
 
 import f1
 import pinakamain as pm
@@ -34,7 +36,7 @@ CodingAgent = optional.load("coder").CodingAgent
 from Vprompt import VERMEIL_PROMPT
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-from paths import data_file  # saved files live in the data/ folder
+from paths import data_file, open_path  # saved files live in the data/ folder
 UI_DIR = os.path.join(BASE_DIR, "ui")
 MODELS_DIR = os.path.join(UI_DIR, "models")
 CHARACTERS_FILE = data_file("characters.json")
@@ -119,7 +121,8 @@ DEFAULT_SETTINGS = {"always_look": False, "speak_replies": True, "greet_on_sight
                     "voice_style": "normal", "barge_in": False,
                     "privacy_mode": False, "gesture_mode": False, "scene_transitions": True, "gym_room": True, "idle_activities": True,
                     "keep_screens": True, "stream_speech": True, "noise_filter": True, "wake_sensitivity": 2,
-                    "watch_objects": True, "code_auto_write": True, "music_source": "youtube", "duck_audio": True}
+                    "watch_objects": True, "code_auto_write": True, "music_source": "youtube", "duck_audio": True,
+                    "performance": "auto", "phone_access": False}
 
 
 def _read_json(path, default):
@@ -291,6 +294,7 @@ class Api:
             "ui": self._ui,
             "history": self._history(),
             "plugins": self._plugins_brief(),
+            "performance": self.performance_status(),
         }
 
     def _plugins_brief(self):
@@ -650,7 +654,7 @@ class Api:
     def study_open_file(self, file_id):
         path = academic.file_path(file_id)
         if path and os.path.exists(path):
-            os.startfile(path) if hasattr(os, "startfile") else None
+            open_path(path)
         return bool(path)
 
     def study_generate(self, file_ids, review_type, count=10, difficulty="medium", focus="", time_limit=0):
@@ -726,6 +730,16 @@ class Api:
         say = sensei.speakable(text, language)
         if not say:
             return {"error": f"There's no {sensei.LANGS.get(language, language)} text there to read."}
+        voice, error = self._language_voice(language)
+        if error:
+            return {"error": error}
+        threading.Thread(target=self._say_in_language, args=(say, voice, language), daemon=True).start()
+        return {"ok": True, "said": say}
+
+    def _language_voice(self, language):
+        """(voice, error) to speak `language`: an installed offline voice, else an online one; voice None = download
+        an offline one first (_say_in_language does that)."""
+        import sensei
         lang = {"tl": "fil"}.get(language, language)
         have = [k for k in tts.installed_voices() if k.split("_")[0] == language]
         voice = f"piper:{have[0]}" if have else None
@@ -735,23 +749,213 @@ class Api:
             voice = online
         if not voice and not options:
             if online:
-                return {"error": "This language needs the online voice: run  pip install edge-tts  and restart Vermeil."}
-            return {"error": f"There's no voice for {sensei.LANGS.get(language, language)} yet."}
+                return None, "This language needs the online voice: run  python -m pip install edge-tts  and restart Vermeil."
+            return None, f"There's no voice for {sensei.LANGS.get(language, language)} yet."
+        return voice, None
 
-        def run():
-            v = voice
-            if not v:
-                self.emit({"type": "toast", "text": f"Downloading a {sensei.LANGS.get(language, language)} voice (first time only)…"})
-                tts.download_voice(options[0], lambda *_: None)
-                v = f"piper:{options[0]}"
-            old = pm.VOICE_STYLE
-            pm.VOICE_STYLE = "normal"
+    def _say_in_language(self, say, voice, language):
+        """speak `say` in `language` (a little slower, easier to follow); downloads a voice the first time"""
+        import sensei
+        v = voice
+        if not v:
+            options = sorted((k for k in tts.catalog() if k.split("_")[0] == language), key=lambda k: (not k.endswith("-medium"), k))
+            if not options:
+                return
+            self.emit({"type": "toast", "text": f"Downloading a {sensei.LANGS.get(language, language)} voice (first time only)…"})
+            tts.download_voice(options[0], lambda *_: None)
+            v = f"piper:{options[0]}"
+        old = pm.VOICE_STYLE
+        pm.VOICE_STYLE = "normal"
+        try:
+            pm.speak(say, v, "-10%")
+        finally:
+            pm.VOICE_STYLE = old
+
+    # ---------- language practice partner: a spoken conversation in the language you learn (brain/partner.py) ----------
+    def _partner_obj(self):
+        if not getattr(self, "_partner", None):
+            import partner
+            self._partner = partner.Partner(self.emit, lambda: pm.listen_for_input(timeout=8, phrase_time_limit=25),
+                                            pm.speak, self._partner_speak)
+        return self._partner
+
+    def _partner_speak(self, text, language):
+        import sensei
+        say = sensei.speakable(text, language) or text
+        voice, error = self._language_voice(language)
+        if error:
+            pm.speak(say)
+            return
+        self._say_in_language(say, voice, language)
+
+    def partner_start(self, language=None, level=None, topic="", by_voice=True):
+        if by_voice:
+            pm.conversation_active = False                  # the partner takes the microphone from the normal chat
+        try:
+            return self._partner_obj().start(language, level, topic, by_voice)
+        except Exception as e:
+            return {"error": str(e)}
+
+    def partner_reply(self, text, speak=True):
+        try:
+            return self._partner_obj().respond(text, speak=speak)
+        except Exception as e:
+            return {"error": str(e)}
+
+    def partner_stop(self):
+        return self._partner_obj().stop()
+
+    def partner_status(self):
+        return self._partner_obj().status()
+
+    # ---------- phone app: Vermeil on your phone, at home and on mobile data (brain/phone.py, ui/phone/) ----------
+    def phone_set(self, on=True, method=None):
+        """Turn phone access on/off. Returns at once; the tunnel's address arrives a few seconds later as a
+        {"type": "phone"} event (and in phone_status())."""
+        import phone
+        on = bool(on)
+        if method in ("quick", "tailscale", "local"):
+            st = phone.state()
+            st["method"] = method
+            phone.save(st)
+        self._settings["phone_access"] = on
+        self._save_settings()
+        self._phone_stop()
+        if not on:
+            self.emit({"type": "phone", **self.phone_status()})
+            return self.phone_status()
+        try:
+            self._phone_server = phone.PhoneServer(self._phone_handlers())
+            port = self._phone_server.start()
+        except OSError as e:
+            self._phone_server = None
+            self._phone_error = f"Couldn't start the phone server (is port {phone.PORT} in use?): {e}"
+            return self.phone_status()
+        self._phone_error = None
+        self._phone_progress = "Starting…"
+        self._phone_tunnel = phone.Tunnel(phone.state().get("method", "quick"), port)
+
+        def connect(tunnel=self._phone_tunnel):
+            def progress(text):
+                self._phone_progress = text
+                self.emit({"type": "phone", **self.phone_status()})
+            tunnel.start(progress=progress)
+            if tunnel is self._phone_tunnel:
+                self._phone_error, self._phone_progress = tunnel.error, None
+                self.emit({"type": "phone", **self.phone_status()})
+        threading.Thread(target=connect, daemon=True).start()
+        return self.phone_status()
+
+    def _phone_stop(self):
+        for attr in ("_phone_tunnel", "_phone_server"):
+            obj = getattr(self, attr, None)
+            setattr(self, attr, None)
+            if obj:
+                try:
+                    obj.stop()
+                except Exception as e:
+                    print(f"[phone] {e}")
+
+    def phone_status(self):
+        import phone
+        st = phone.state()
+        server, tunnel = getattr(self, "_phone_server", None), getattr(self, "_phone_tunnel", None)
+        url = tunnel.url if tunnel else None
+        return {"on": bool(self._settings.get("phone_access")), "running": bool(server and server.running),
+                "method": st.get("method", "quick"), "url": url, "pair": f"{url}/#key={st['key']}" if url else None,
+                "progress": getattr(self, "_phone_progress", None) if server else None,
+                "error": getattr(self, "_phone_error", None), "has_cloudflared": bool(phone.cloudflared_path()),
+                "has_tailscale": bool(phone.tailscale_path())}
+
+    def phone_new_key(self):
+        """every connected phone has to scan the QR code again"""
+        import phone
+        phone.new_key()
+        return self.phone_status()
+
+    def _phone_handlers(self):
+        return {"hello": self._phone_hello, "chat": self._phone_chat, "shortcut": self._phone_shortcut,
+                "speak": self._phone_speak, "speak_lang": self._phone_speak_lang, "switch": self._phone_switch,
+                "hear": self._phone_hear, "partner_start": self._phone_partner_start,
+                "partner_reply": self._phone_partner_reply, "partner_stop": lambda p: self.partner_stop()}
+
+    def _phone_hello(self, p=None):
+        import sensei
+        c = self._active()
+        return {"name": c["name"], "active": c["id"], "app": "Vermeil",
+                "characters": [{"id": x["id"], "name": x["name"]} for x in self._characters["characters"]],
+                "languages": sensei.LANGS, "language": sensei._state().get("language", "ja"),
+                "level": sensei._state().get("level", 2), "partner": self.partner_status(),
+                "performance": getattr(self, "_perf_mode", "normal")}
+
+    def _phone_chat(self, p):
+        text = str(p.get("text") or "").strip()[:2000]
+        if not text:
+            return {"error": "Say something first."}
+        with self._busy:
+            pm._ctx.source = "phone"
             try:
-                pm.speak(say, v, "-10%")                    # a little slower, easier to follow
+                reply = pm.handle_input(text, self._memory, self._command_map)
             finally:
-                pm.VOICE_STYLE = old
-        threading.Thread(target=run, daemon=True).start()
-        return {"ok": True, "said": say}
+                pm._ctx.source = None
+        reply = reply or "Done."
+        self.emit({"type": "phone_chat", "you": text, "reply": reply})
+        return {"reply": reply, "name": self._active()["name"]}
+
+    def _phone_shortcut(self, p):
+        """"Hey Siri, Vermeil" (an iPhone Shortcut) / an Android shortcut: text in, her reply as plain text out"""
+        out = self._phone_chat(p)
+        return out.get("reply") or out.get("error") or "Done."
+
+    @staticmethod
+    def _phone_clean(text):
+        text = re.sub(r"```.*?```", " ", str(text or ""), flags=re.S)
+        text = re.sub(r"[*_`#>|]+|\[([^\]]*)\]\([^)]*\)", lambda m: m.group(1) or " ", text)
+        return re.sub(r"\s+", " ", text).strip()[:800]
+
+    def _phone_speak(self, p):
+        """her reply as a .wav in the character's own voice (it plays on the phone, not on the PC)"""
+        import phone
+        text = self._phone_clean(p.get("text"))
+        if not text or not pm.tts_ready:
+            return {"error": "The voice isn't ready yet."}
+        samples, sr = pm.synth_voice(text, pm.active_voice(), pm.VOICE_RATE, pm.VOICE_PITCH, pm.VOICE, pm.VOICE_RVC)
+        return phone.wav_bytes(samples, sr), "audio/wav"
+
+    def _phone_speak_lang(self, p):
+        """a line in the language you're learning, in a voice for that language"""
+        import phone, sensei
+        language = p.get("language") or sensei._state().get("language", "ja")
+        say = sensei.speakable(self._phone_clean(p.get("text")), language)
+        if not say:
+            return {"error": "Nothing to read in that language."}
+        voice, error = self._language_voice(language)
+        if error:
+            return {"error": error}
+        if not voice:
+            options = sorted((k for k in tts.catalog() if k.split("_")[0] == language), key=lambda k: (not k.endswith("-medium"), k))
+            tts.download_voice(options[0], lambda *_: None)
+            voice = f"piper:{options[0]}"
+        samples, sr = tts.synth(say, voice, "-10%", "+0Hz", pm.VOICE)
+        return phone.wav_bytes(samples, sr), "audio/wav"
+
+    def _phone_switch(self, p):
+        self.set_active(str(p.get("id") or ""))
+        self.emit({"type": "characters_changed"})
+        return self._phone_hello()
+
+    def _phone_hear(self, p):
+        """a recording from the phone's mic (webm / mp4 / wav) -> text, with Whisper on this PC"""
+        import stt
+        from faster_whisper import decode_audio
+        audio = decode_audio(io.BytesIO(p["audio"]), sampling_rate=16000)
+        return {"text": (stt.transcribe(audio) or "").strip()}
+
+    def _phone_partner_start(self, p):
+        return self.partner_start(p.get("language"), p.get("level"), p.get("topic") or "", by_voice=False)
+
+    def _phone_partner_reply(self, p):
+        return self.partner_reply(p.get("text"), speak=False)
 
     # ---------- focus sessions & progress ----------
     def focus_start(self, task, work=25, brk=5, rounds=4):
@@ -1030,6 +1234,9 @@ class Api:
         if self._settings["hotkeys"]:
             self._register_hotkeys()
         threading.Thread(target=self._alert_loop, daemon=True).start()
+        threading.Thread(target=self._battery_loop, daemon=True).start()
+        if self._settings["phone_access"]:
+            threading.Thread(target=self.phone_set, args=(True,), daemon=True).start()
         if self._settings["camera_on_start"]:
             self.set_camera(True, remember=False)
         if self._settings["listen_on_start"]:
@@ -1144,6 +1351,9 @@ class Api:
     def _voice_loop(self):
         while self._listening:
             try:
+                if getattr(self, "_partner", None) and self._partner.active and self._partner.by_voice:
+                    time.sleep(0.5)                         # the practice partner has the microphone right now
+                    continue
                 if pm.listen_for_wake_word():
                     pm.listen_for_command(self._memory, self._command_map)
             except Exception as e:
@@ -1736,6 +1946,45 @@ class Api:
         _write_json(CHARACTERS_FILE, self._characters)
         return {"state": self.get_state()}
 
+    # ---------- share characters: one .vermeil file with the personality, voice and 3D model (brain/charshare.py) ----------
+    def character_export(self, char_id=None, include_voice=True, path=None):
+        import charshare
+        char = next((c for c in self._characters["characters"] if c["id"] == (char_id or self._characters["active"])), None)
+        if not char:
+            return {"error": "That character wasn't found."}
+        if not path:
+            picked = self._window.create_file_dialog(_SAVE_DIALOG, save_filename=charshare.file_name(char),
+                                                     file_types=("Vermeil character (*.vermeil)",))
+            if not picked:
+                return None
+            path = picked[0] if isinstance(picked, (list, tuple)) else picked
+        if not path.lower().endswith(charshare.EXT):
+            path += charshare.EXT
+        try:
+            res = charshare.export_character(char, path, MODELS_DIR, include_voice)
+        except Exception as e:
+            return {"error": f"Couldn't save it: {e}"}
+        extra = " + ".join(x for x, on in (("3D model", res["has_model"]), ("voice clone", res["has_voice"])) if on)
+        res["message"] = (f"Saved {char['name']} ({round(res['size'] / 1048576, 1)} MB{', with ' + extra if extra else ''}). "
+                          f"Send the file to a friend: they open Characters → Import a character.")
+        return res
+
+    def character_import(self, path=None):
+        import charshare
+        if not path:
+            picked = self._window.create_file_dialog(_OPEN_DIALOG, file_types=("Vermeil character (*.vermeil)",))
+            if not picked:
+                return None
+            path = picked[0] if isinstance(picked, (list, tuple)) else picked
+        try:
+            char = charshare.import_character(path, MODELS_DIR)
+        except Exception as e:
+            return {"error": str(e)}
+        notes = char.pop("notes", [])
+        res = self.save_character(char)
+        res["message"] = f"Added {char['name']}{' with their ' + ' and '.join(notes) if notes else ''}."
+        return res
+
     # ---------- 3D models ----------
     def list_models(self):
         os.makedirs(MODELS_DIR, exist_ok=True)  # (Pip the penguin is built in: model "builtin:penguin")
@@ -1970,6 +2219,12 @@ class Api:
                 elif k == "voice_style":
                     if data[k] in pm.VOICE_STYLES:
                         self._settings[k] = data[k]
+                elif k == "performance":
+                    import machine
+                    if data[k] in machine.MODES:
+                        self._settings[k] = data[k]
+                elif k == "phone_access":
+                    self.phone_set(bool(data[k]))
                 else:
                     self._settings[k] = bool(data[k])
         self._apply_settings()
@@ -2002,6 +2257,57 @@ class Api:
         ducking.enabled = self._settings["duck_audio"]
         if not ducking.enabled:
             ducking.release_all()
+        self._apply_performance(announce=True)
+
+    # ---------- performance mode: low-end PC mode, picked by scanning this computer (brain/machine.py) ----------
+    def _apply_performance(self, announce=False):
+        import machine
+        if not getattr(self, "_machine", None):
+            self._machine = machine.scan()
+        mode = machine.choose(self._settings["performance"], self._machine)
+        was = getattr(self, "_perf_mode", None)
+        self._perf_mode = mode
+        pm.LOW_POWER = mode == "low"
+        if pm.LOW_POWER and not os.environ.get("WHISPER_MODEL"):
+            import stt
+            if stt._settings()[0] in ("small", "medium", "large-v3"):   # the small model hears you much faster
+                os.environ["WHISPER_MODEL"] = "base"
+                self._whisper_lowered = True
+        elif not pm.LOW_POWER and getattr(self, "_whisper_lowered", False):
+            os.environ.pop("WHISPER_MODEL", None)
+            self._whisper_lowered = False
+        if announce and was and was != mode:
+            self.emit({"type": "performance", **self.performance_status()})
+            self.emit({"type": "toast", "text": "🐢 Low-end PC mode is on: lighter voice and 3D so she stays fast." if pm.LOW_POWER
+                       else f"⚡ Back to {mode} mode: full voices and 3D."})
+
+    def performance_status(self):
+        import machine
+        info = getattr(self, "_machine", None) or {}
+        return {"setting": self._settings["performance"], "mode": getattr(self, "_perf_mode", "normal"),
+                "why": machine.why(self._settings["performance"], info) if info else "", "machine": machine.summary(info)}
+
+    def performance_rescan(self):
+        import machine
+        self._machine = machine.scan()
+        self._apply_performance(announce=True)
+        return self.performance_status()
+
+    def _battery_loop(self):
+        """Auto mode: a laptop that runs low on battery switches to low-end mode, and back when it's plugged in."""
+        while True:
+            time.sleep(60)
+            try:
+                import psutil
+                b = psutil.sensors_battery()
+                if b is None:
+                    return                                   # a desktop: nothing to watch
+                self._machine["battery"], self._machine["plugged"] = int(b.percent), bool(b.power_plugged)
+                if self._settings["performance"] == "auto":
+                    self._apply_performance(announce=True)
+            except Exception as e:
+                print(f"[performance] {e}")
+                return
 
     # ---------- baking & cooking (same tools, two recipe books: kind = "baking" or "cooking") ----------
     def baking_list(self, kind="baking"):
@@ -2249,7 +2555,7 @@ class Api:
     def gen_open(self, path=None):
         import generator
         try:
-            os.startfile(self._gen_path(path) if path else generator.OUT_DIR)
+            open_path(self._gen_path(path) if path else generator.OUT_DIR)
             return {"ok": True}
         except (OSError, ValueError) as e:
             return {"error": str(e)}
@@ -2712,6 +3018,38 @@ class Api:
         if not hit:
             return None
         what, f = hit
+        if what == "partner_start":
+            res = self.partner_start(vc.language_in(t), by_voice=pm.voice_mode)
+            if res.get("error"):
+                return f"I couldn't start the practice: {res['error']}"
+            self.emit({"type": "open_panel", "panel": "study", "tab": "Language"})
+            return f"Okay! Let's practice {res['name']}." + ("" if pm.voice_mode else " Answer her in Study, under Sensei.")
+        if what == "partner_stop":
+            return self.partner_stop()["message"]
+        if what in ("power_low", "power_full", "power_auto", "scan"):
+            if what == "scan":
+                st = self.performance_rescan()
+            else:
+                self.save_settings({"performance": {"power_low": "low", "power_full": "normal", "power_auto": "auto"}[what]})
+                st = self.performance_status()
+            return {"low": "Low-end PC mode is on: lighter voice and 3D so everything stays quick.",
+                    "normal": "Full power mode.", "high": "Full power mode."}[st["mode"]] + " " + st["why"]
+        if what in ("phone_on", "phone_off", "phone_link"):
+            st = self.phone_set(what != "phone_off") if what != "phone_link" else self.phone_status()
+            self.emit({"type": "open_panel", "panel": "settings", "tab": "phone"})
+            if what == "phone_off":
+                return "Phone access is off."
+            if st.get("error"):
+                return st["error"]
+            return "Phone access is on. Scan the QR code in Settings, under Phone, with your phone's camera." if st.get("url")                 else "Phone access is starting - the link shows in Settings, under Phone, in a few seconds."
+        if what == "share_character":
+            res = self.character_export()
+            return (res or {}).get("message") or (res or {}).get("error") or "Okay, not saved."
+        if what == "import_character":
+            res = self.character_import()
+            if res and res.get("state"):
+                self.emit({"type": "characters_changed"})
+            return (res or {}).get("message") or (res or {}).get("error") or "Okay, nothing imported."
         if what == "help":
             self.emit({"type": "open_panel", "panel": "settings", "tab": "help"})
             return "Here's everything you can say to me - it's in Settings, under Help."
@@ -2785,9 +3123,11 @@ class Api:
             return f"I couldn't look at the screen: {e}"
 
     def _register_hotkeys(self):
+        if sys.platform == "darwin":                        # macOS only allows global shortcuts for apps run as admin
+            return
         try:
             import keyboard
-        except ImportError:
+        except Exception:                                   # Linux: needs root - just skip the shortcuts
             return
         keys = {
             "ctrl+alt+v": lambda: self.set_listening(not self._listening),

@@ -1,4 +1,7 @@
-# Vermeil - everything the app and its features need (Python 3.11 - 3.13, Windows 10/11)
+# Vermeil - everything the app and its features need (Python 3.11 - 3.13, Windows 10/11; Mac and Linux too)
+# On a Mac / Linux use INSTALL Mac.command / INSTALL Linux.sh: keyboard, winotify, pycaw and comtypes are Windows-only and skipped there.
+# The phone app, low power mode, character sharing and the live language partner (30 Oct 2026) need nothing new from pip
+# (the phone link downloads cloudflared by itself into tools/cloudflared).
 #
 #   python -m pip install -r requirements.txt
 #

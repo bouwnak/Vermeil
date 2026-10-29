@@ -30,6 +30,8 @@ FEATURES = [
      "say": [("open study", "shows Study"),
              ("what should I review today?", "the cards that are due"),
              ("give me a Spanish lesson · quiz me in Japanese", "a short language lesson or quiz"),
+             ("let's practice Japanese · talk to me in Korean", "a spoken conversation partner: she corrects you as you go"),
+             ("stop practice", "ends it and gives you your score"),
              ("research black holes and compare sources", "looks it up on the web"),
              ("solve 2x + 5 = 13", "solves the maths step by step"),
              ("read the text in this picture", "reads text from an image")]},
@@ -91,7 +93,17 @@ FEATURES = [
              ("look at my screen", "she explains what's on your screen")]},
     {"id": "characters", "name": "Characters", "icon": "🎭", "plugin": None, "words": ["characters", "character", "characters page"],
      "say": [("open characters", "shows Characters"),
-             ("switch to Omniman", "changes who you talk to")]},
+             ("switch to Omniman", "changes who you talk to"),
+             ("share this character", "saves her as one file to send to a friend"),
+             ("import a character", "adds a character a friend sent you")]},
+    {"id": "phone", "name": "Phone", "icon": "📱", "plugin": None, "words": ["phone", "phone app", "mobile"],
+     "say": [("turn on phone access · connect my phone", "use her from your phone, at home or on mobile data"),
+             ("show my phone link", "the link and QR code to open on your phone"),
+             ("turn off phone access", "your phone can't reach her any more")]},
+    {"id": "performance", "name": "This computer", "icon": "🐢", "plugin": None, "words": ["performance", "speed"],
+     "say": [("low power mode on", "lighter voice and 3D for an old or slow laptop"),
+             ("full power mode · automatic power mode", "back to full, or let her decide from the scan"),
+             ("scan my computer", "checks this computer again and picks the best mode")]},
     {"id": "settings", "name": "Settings", "icon": "⚙", "plugin": None, "words": ["settings", "options", "preferences", "plugins"],
      "say": [("open settings", "shows Settings"),
              ("what can I say? · voice commands · help", "opens this list"),
@@ -110,6 +122,19 @@ _OPEN = re.compile(r"^(?:open|show me|show|go to|take me to|bring up|pull up|let
 _HELP = re.compile(r"^(?:help|voice commands|commands|what can i (?:say|ask)|what can you do|"
                    r"(?:show|open|list)(?: me)?(?: the| my)? (?:voice )?(?:commands|help))$")
 _MIC_OFF = re.compile(r"^(?:stop listening|turn off (?:the )?(?:mic|microphone|voice)|(?:mic|microphone|voice) off|mute (?:the )?mic)$")
+_PARTNER_STOP = re.compile(r"^(?:stop|end|finish|quit) (?:the )?(?:language )?(?:practi[cs]e|practi[cs]ing|lesson|conversation partner)$")
+_PARTNER = re.compile(r"^(?:let'?s |let us |can we |i want to |i'?d like to )?(?:start )?(?:practi[cs]e|talk|speak|chat|have a conversation)"
+                      r"(?: (?:in|my))? ([a-z ()]+?)(?: with me| together| now| please)?$")
+_PARTNER_PLAIN = re.compile(r"^(?:start |begin )?(?:a |the )?(?:language )?(?:practi[cs]e partner|conversation practi[cs]e|speaking practi[cs]e|language practi[cs]e)$")
+_LOW = re.compile(r"^(?:turn on |switch to |use |go to )?(?:low|low power|low-power|low end|low-end|power saving|battery saver|eco) mode(?: on)?$|^save power$")
+_FULL = re.compile(r"^(?:turn off (?:low|low power|low end|power saving) mode|(?:low|low power) mode off|(?:switch to |use )?(?:full power|full|normal|high) mode|(?:switch to |use |go )?full power)$")
+_AUTO = re.compile(r"^(?:switch to |use |set )?(?:automatic|auto) (?:power |performance )?mode$")
+_SCAN = re.compile(r"^(?:scan|check) (?:my |this )?(?:computer|pc|laptop|machine)(?: again)?$")
+_PHONE_ON = re.compile(r"^(?:turn on|enable|start|open up) (?:the )?phone(?: access| app| link)?$|^phone (?:access )?on$|^connect (?:to )?my phone$")
+_PHONE_OFF = re.compile(r"^(?:turn off|disable|stop) (?:the )?phone(?: access| app| link)?$|^phone (?:access )?off$|^disconnect my phone$")
+_PHONE_LINK = re.compile(r"^(?:show|what'?s|what is|give me|open) (?:me )?(?:my |the )?phone (?:link|address|qr(?: code)?)$")
+_SHARE = re.compile(r"^(?:share|export|save) (?:this|my|the current|her|him) character(?: as a file)?$|^share (?:her|him)$")
+_IMPORT = re.compile(r"^(?:import|add|load) (?:a |the )?(?:shared |friend'?s )?character(?: file)?$")
 _CAM = re.compile(r"^(?:(?:turn|switch) (on|off) (?:the )?(?:camera|webcam)|(?:camera|webcam) (on|off)|(?:open|start) (?:the )?(camera|webcam))$")
 
 
@@ -123,9 +148,35 @@ def find(name):
     return None
 
 
+LANGUAGE_WORDS = {"japanese": "ja", "nihongo": "ja", "chinese": "zh", "mandarin": "zh", "korean": "ko", "spanish": "es",
+                  "french": "fr", "german": "de", "italian": "it", "portuguese": "pt", "english": "en", "filipino": "tl",
+                  "tagalog": "tl", "russian": "ru", "vietnamese": "vi", "thai": "th", "indonesian": "id", "bahasa": "id"}
+
+
+def language_in(text):
+    """the language code a sentence names ("let's practice Japanese" -> "ja"), or None"""
+    for word in re.findall(r"[a-z]+", (text or "").lower()):
+        if word in LANGUAGE_WORDS:
+            return LANGUAGE_WORDS[word]
+    return None
+
+
 def parse(text):
-    """("help" | "mic_off" | "camera_on" | "camera_off" | "open", feature or None) for an instant command, else None"""
+    """(action, feature) for an instant command, else None. action: "help" | "mic_off" | "camera_on" | "camera_off" |
+    "open" | "partner_start" | "partner_stop" | "power_low" | "power_full" | "power_auto" | "scan" | "phone_on" |
+    "phone_off" | "phone_link" | "share_character" | "import_character" """
     t = (text or "").lower().strip(" .!?")
+    if _PARTNER_STOP.match(t):
+        return "partner_stop", BY_ID["study"]
+    m = _PARTNER.match(t)
+    if (m and language_in(m.group(1))) or _PARTNER_PLAIN.match(t):
+        return "partner_start", BY_ID["study"]
+    for rx, what, fid in ((_LOW, "power_low", "performance"), (_FULL, "power_full", "performance"),
+                          (_AUTO, "power_auto", "performance"), (_SCAN, "scan", "performance"),
+                          (_PHONE_ON, "phone_on", "phone"), (_PHONE_OFF, "phone_off", "phone"), (_PHONE_LINK, "phone_link", "phone"),
+                          (_SHARE, "share_character", "characters"), (_IMPORT, "import_character", "characters")):
+        if rx.match(t):
+            return what, BY_ID[fid]
     if _HELP.match(t):
         return "help", BY_ID["settings"]
     if _MIC_OFF.match(t):
@@ -136,7 +187,7 @@ def parse(text):
     m = _OPEN.match(t)
     if m:
         f = find(m.group(1))
-        if f and f["id"] not in ("pc",):
+        if f and f["id"] not in ("pc", "performance", "phone"):
             if f["id"] == "camera":
                 return "camera_on", f
             return "open", f

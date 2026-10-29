@@ -15,6 +15,7 @@ import ctypes
 import io
 import json
 import os
+from paths import open_path as _system_open
 import re
 import shutil
 import subprocess
@@ -88,12 +89,12 @@ def open_app(name):
             target = shortcuts[match[0]] if match else None
     try:
         if target:
-            os.startfile(target)
+            _system_open(target)
             return f"Opened {os.path.splitext(os.path.basename(target))[0]}."
         cmd = KNOWN_APPS.get(key)
         if cmd:
             if cmd.endswith(":"):
-                os.startfile(cmd)
+                _system_open(cmd)
             else:
                 subprocess.Popen(["cmd", "/c", "start", "", cmd], shell=False,
                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -413,8 +414,7 @@ def open_path(path):
     path = _safe_path(path)
     if not os.path.exists(path):
         return f"{path} doesn't exist."
-    if IS_WIN:
-        os.startfile(path)
+    _system_open(path)
     return f"Opened {os.path.basename(path)}."
 
 

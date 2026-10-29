@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#16131c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vermeil">
+<title>Vermeil</title>
+<link rel="manifest" href="/phone/manifest.webmanifest">
+<link rel="icon" href="/phone/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/phone/icon.png">
+<link rel="stylesheet" href="/phone/phone.css">
+</head>
+<body>
+
+<!-- not connected yet -->
+<section id="connect" class="screen" hidden>
+  <div class="connect-box">
+    <img src="/phone/icon.svg" alt="" class="logo">
+    <h1>Connect to Vermeil</h1>
+    <ol>
+      <li>On your computer, open Vermeil → <b>Settings → 📱 Phone</b>.</li>
+      <li>Turn on <b>Phone access</b>.</li>
+      <li>Point this phone's camera at the QR code and open the link.</li>
+    </ol>
+    <p class="muted" id="connectWhy"></p>
+  </div>
+</section>
+
+<!-- the app -->
+<main id="app" hidden>
+  <header class="top">
+    <div class="who"><span class="dot" id="statusDot"></span><span id="charName">Vermeil</span></div>
+    <button class="chip" id="handsFreeChip" aria-pressed="false">👂 Hands-free off</button>
+  </header>
+
+  <!-- Chat -->
+  <section class="tab" id="tab-chat">
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <form class="composer" id="chatForm" autocomplete="off">
+      <button type="button" class="round" id="chatMic" aria-label="Speak">🎙</button>
+      <input id="chatInput" placeholder="Message…" enterkeyhint="send">
+      <button type="submit" class="round primary" aria-label="Send">➤</button>
+    </form>
+  </section>
+
+  <!-- Talk: big mic + hands-free wake word -->
+  <section class="tab" id="tab-talk" hidden>
+    <div class="talk">
+      <p class="talk-state" id="talkState">Tap the circle and talk</p>
+      <button class="orb" id="orb" aria-label="Talk"><span>🎙</span></button>
+      <p class="talk-heard" id="talkHeard"></p>
+      <p class="talk-reply" id="talkReply"></p>
+      <div class="row center">
+        <button class="btn" id="handsFreeBtn">👂 Start hands-free</button>
+      </div>
+      <p class="muted small center" id="wakeHint">Hands-free: say “<b class="wakeWord">Vermeil</b>” and then what you want, like
+        “Vermeil, what's the weather?” Keep this screen open.</p>
+    </div>
+  </section>
+
+  <!-- Practice: language partner -->
+  <section class="tab" id="tab-practice" hidden>
+    <div class="practice-setup" id="practiceSetup">
+      <h2>Language practice partner</h2>
+      <p class="muted">A real conversation in the language you're learning. She fixes your mistakes as you go.</p>
+      <label>Language <select id="pLang"></select></label>
+      <label>Level <select id="pLevel">
+        <option value="1">1 · Beginner</option><option value="2">2 · Basic</option><option value="3">3 · Intermediate</option>
+        <option value="4">4 · Advanced</option><option value="5">5 · Fluent</option></select></label>
+      <label>Topic (optional) <input id="pTopic" placeholder="ordering food, my weekend, a job interview…"></label>
+      <button class="btn primary big" id="pStart">▶ Start talking</button>
+    </div>
+    <div class="practice-live" id="practiceLive" hidden>
+      <div class="msgs" id="pMsgs" aria-live="polite"></div>
+      <div class="practice-bar">
+        <button class="btn" id="pStop">■ Finish</button>
+        <button class="orb small" id="pMic" aria-label="Answer by voice"><span>🎙</span></button>
+        <button class="btn" id="pType">⌨ Type</button>
+      </div>
+      <form class="composer" id="pForm" hidden autocomplete="off">
+        <input id="pInput" placeholder="Answer…" enterkeyhint="send">
+        <button type="submit" class="round primary" aria-label="Send">➤</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Characters -->
+  <section class="tab" id="tab-chars" hidden>
+    <h2>Characters</h2>
+    <p class="muted">Tap one to talk to them.</p>
+    <div class="list" id="charList"></div>
+  </section>
+
+  <!-- Settings -->
+  <section class="tab" id="tab-settings" hidden>
+    <h2>Settings</h2>
+    <div class="card">
+      <label>Wake word <input id="wakeWord" placeholder="Vermeil"></label>
+      <p class="muted small">Say it before a command in hands-free mode. Her name works too.</p>
+      <label class="switch"><input type="checkbox" id="speakReplies" checked> Say her replies out loud</label>
+      <label class="switch"><input type="checkbox" id="pcVoice" checked> Use her real voice (from your computer)</label>
+      <p class="muted small">Off = your phone's own voice: faster on slow mobile data.</p>
+    </div>
+
+    <details class="card">
+      <summary>📲 Put Vermeil on your home screen</summary>
+      <p><b>iPhone (Safari):</b> tap Share <span aria-hidden="true">⬆</span> → <b>Add to Home Screen</b>.</p>
+      <p><b>Android (Chrome):</b> tap ⋮ → <b>Add to Home screen</b> (or <b>Install app</b>).</p>
+      <p class="muted small">It then opens like an app, full screen.</p>
+    </details>
+
+    <details class="card">
+      <summary>🗣 “Hey Siri, Vermeil” (iPhone)</summary>
+      <p>Apple doesn't let any app replace Siri or listen in the background, but Siri can hand your words to Vermeil:</p>
+      <ol>
+        <li>Open the <b>Shortcuts</b> app → <b>+</b>.</li>
+        <li>Add <b>Dictate Text</b>.</li>
+        <li>Add <b>Get Contents of URL</b>: URL <code id="shortcutUrl">…</code>, Method <b>POST</b>,
+          Headers: <code>X-Vermeil-Key</code> = <button class="link" id="copyKey">copy your key</button>,
+          Request Body <b>File</b> → <i>Dictated Text</i>.</li>
+        <li>Add <b>Speak Text</b> (Contents of URL).</li>
+        <li>Name the shortcut <b>Vermeil</b>. Now say “Hey Siri, Vermeil”.</li>
+      </ol>
+      <p class="muted small">Use the <b>Tailscale</b> connection on your computer for this - its address never changes.
+        The free quick link changes each time the computer restarts.</p>
+    </details>
+
+    <details class="card">
+      <summary>🤖 Android: “Hey Google” and the assistant button</summary>
+      <p>Android doesn't let a web app become the phone's assistant or keep the mic on in the background. What works today:</p>
+      <ul>
+        <li>Install Vermeil to the home screen (above), open it, and turn on <b>hands-free</b>. Keep the screen on.</li>
+        <li>Or make a shortcut with an automation app (e.g. <b>HTTP Shortcuts</b>): POST your words to the same address as the
+          iPhone shortcut with the <code>X-Vermeil-Key</code> header, and read the reply aloud.</li>
+      </ul>
+    </details>
+
+    <div class="card">
+      <p class="small">Connected to <b id="hostName"></b></p>
+      <button class="btn danger" id="forget">Disconnect this phone</button>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="chat" aria-selected="true"><span>💬</span>Chat</button>
+    <button role="tab" data-tab="talk"><span>🎙</span>Talk</button>
+    <button role="tab" data-tab="practice"><span>🗣</span>Practice</button>
+    <button role="tab" data-tab="chars"><span>👥</span>Characters</button>
+    <button role="tab" data-tab="settings"><span>⚙️</span>Settings</button>
+  </nav>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+<script src="/phone/phone.js"></script>
+</body>
+</html>

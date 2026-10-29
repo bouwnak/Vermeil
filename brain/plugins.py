@@ -45,8 +45,10 @@ KOKORO = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-fi
 RVC_HF = "https://huggingface.co/"
 
 # packages every install has (never uninstalled)
-CORE_PIP = ["requests", "pywebview", "numpy", "rapidfuzz", "vaderSentiment", "keyboard", "psutil", "pillow", "winotify",
-            "sounddevice", "soundfile", "piper-tts", "pycaw", "comtypes"]
+WINDOWS_ONLY = {"keyboard", "winotify", "pycaw", "comtypes"}      # shortcuts, notifications, volume mixer: Windows only
+CORE_PIP = [x for x in ["requests", "pywebview", "numpy", "rapidfuzz", "vaderSentiment", "keyboard", "psutil", "pillow",
+                        "winotify", "sounddevice", "soundfile", "piper-tts", "pycaw", "comtypes"]
+            if sys.platform == "win32" or x not in WINDOWS_ONLY]
 
 # pip name -> import name (to check if it's installed)
 IMPORT_NAME = {"faster-whisper": "faster_whisper", "SpeechRecognition": "speech_recognition", "PyAudio": "pyaudio",

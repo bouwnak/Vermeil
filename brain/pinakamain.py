@@ -79,6 +79,7 @@ VOICE_RVC = None               # RVC voice clone {"model", "pitch", "index_rate"
 VOICE_EMOTION = 1.0            # how much her feelings change her voice (0 = flat, 1 = normal, 1.5 = dramatic), voice_emotion.py
 VOICE_NATURAL = True           # breaths, real pauses and a speech melody (senses/expressive.py)
 VOICE_CHATTER = False          # "Emotional voice": Chatterbox makes the English base voice (senses/chatter.py)
+LOW_POWER = False              # low-end PC mode (brain/machine.py): light offline voice only - no Kokoro, clone or Chatterbox
 WHOLE_REPLY = True             # True = voice the whole reply in one go (the default); False = sentence by sentence
 barge_in = False               # stop talking when the user starts talking (Settings; best with headphones)
 voice_mood = None              # (mood, time) from voicemood.py
@@ -161,8 +162,8 @@ def online_voice_default():
 
 def active_voice():
     """The voice to speak with now. Online (Groq) -> always Kokoro (if it's still loading, wait for it instead of
-    switching to the offline voice). Offline -> the offline (Piper) voice."""
-    if online_now():
+    switching to the offline voice). Offline -> the offline (Piper) voice. Low-end PC mode -> always Piper."""
+    if online_now() and not LOW_POWER:
         try:
             import kokoro
             if kokoro.ready() or (kokoro.installed() and kokoro.start(wait=True, max_wait=45)):
@@ -176,7 +177,7 @@ def start_tts():
     """Get the voice ready (Piper, offline). Loads the voice now so the first reply isn't slow.
     Kokoro (the online voice) is started in the background at the same time - nothing waits for it."""
     global tts_ready
-    if True:                                      # Kokoro is the default online voice for everyone: always get it ready
+    if not LOW_POWER:                             # Kokoro is the online voice (skipped on a low-end PC: it's heavy)
         try:
             import kokoro
             threading.Thread(target=kokoro.start, daemon=True).start()
@@ -886,7 +887,7 @@ def speak(text, voice=None, rate=None, pitch=None, rvc=None):
 
 def _use_chatter(text):
     """The Emotional voice (Chatterbox) is on and this is English (it can't speak other languages)."""
-    if not VOICE_CHATTER or (persona.get("language") or "auto") not in ("auto", "en"):
+    if LOW_POWER or not VOICE_CHATTER or (persona.get("language") or "auto") not in ("auto", "en"):
         return False
     if heard_language and time.time() - heard_language[1] < 90 and heard_language[0] != "en":
         return False
@@ -946,7 +947,7 @@ def synth_voice(text, voice, rate, pitch, fallback, rvc_cfg=None, style=None):
     style (expressive.plan) adds the melody, pauses and breaths; the melody goes in before RVC.
     With the Emotional voice (Chatterbox) on, Chatterbox says it instead of the normal voice - it acts the line
     out itself, so the melody isn't added (breaths, pauses and the RVC clone still are)."""
-    clone = rvc_cfg if (rvc_cfg and rvc_cfg.get("model")) else None
+    clone = rvc_cfg if (rvc_cfg and rvc_cfg.get("model") and not LOW_POWER) else None
     if _use_chatter(text):
         try:
             import chatter
@@ -1114,6 +1115,8 @@ def ask(prompt):
     """Ask a follow-up question by voice or text, depending on the current mode."""
     if ask_hook and getattr(_ctx, "source", None) == "text":   # typed in the app window
         return ask_hook(prompt)
+    if getattr(_ctx, "source", None) == "phone":               # from the phone app: it can't answer a follow-up here
+        return None
     if voice_mode:
         speak(prompt)
         return listen_for_input(prompt)

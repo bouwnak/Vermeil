@@ -30,7 +30,7 @@ from urllib.parse import urlencode, urlparse, parse_qs
 
 import requests
 
-from paths import BASE_DIR, data_file
+from paths import BASE_DIR, data_file, open_path
 
 TOKEN_FILE = data_file("spotify_token.json")
 API = "https://api.spotify.com/v1"
@@ -269,7 +269,7 @@ def _wake_device():
     devs = devices()
     if not devs and os.name == "nt":
         try:
-            os.startfile("spotify:")
+            open_path("spotify:")
         except OSError:
             pass
         for _ in range(16):                                    # up to ~8 s for the app to start

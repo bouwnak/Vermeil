@@ -21,6 +21,9 @@ const st = {
   models: ["Robot.glb"], owner: null, camera: false, listening: false, tts: true,
 };
 const ev = (e) => window.onPyEvent(e);
+const mockPerf = { setting: "auto", mode: "high", why: "6 cores, 15.7 GB memory, NVIDIA GeForce RTX 3050: high fits this computer.",
+  machine: { system: "Windows", cores: 6, ram_gb: 15.7, gpu: "NVIDIA GeForce RTX 3050 Laptop GPU", vram_gb: 4, battery: 100, plugged: true, tier: "high" } };
+const mockPhone = { on: false, running: false, method: "quick", url: null, pair: null, progress: null, error: null };
 const journal = [
   { id: "a1", kind: "decision", title: "Take the thesis topic on solar dryers", text: "Lab access is easier.", created: "2026-09-01T10:00:00", status: "open", outcome: "", steps: [], review_on: "2026-10-01" },
   { id: "a2", kind: "goal", title: "Finish thesis chapter 2", text: "", created: "2026-10-01T10:00:00", status: "open", outcome: "", steps: [{ text: "Outline", done: true }, { text: "Draft", done: false }] },
@@ -174,7 +177,17 @@ export const mockApi = {
   think: async (m, q) => new Promise((r) => setTimeout(() => r({ answer: `## ${m}\n- Thought about **${q}**\n- Next step: start small.`,
     parts: m === "council" ? [{ role: "Researcher", text: "Facts..." }, { role: "Critic", text: "Risks..." }] : [] }), 600)),
   recall: async (q) => [{ source: "chat", date: "", text: `user: something about ${q} / assistant: yes` }],
-  get_state: async () => structuredClone(st),
+  get_state: async () => structuredClone({ ...st, performance: mockPerf }),
+  performance_status: async () => structuredClone(mockPerf),
+  performance_rescan: async () => structuredClone(mockPerf),
+  phone_status: async () => structuredClone(mockPhone),
+  phone_set: async (on, method) => { Object.assign(mockPhone, { on, method: method || mockPhone.method, url: on ? "https://example-words.trycloudflare.com" : null });
+    mockPhone.pair = on ? mockPhone.url + "/#key=mock-key-not-real" : null; return structuredClone(mockPhone); },
+  phone_new_key: async () => structuredClone(mockPhone),
+  partner_start: async (language) => { setTimeout(() => ev({ type: "partner", event: "start", language, name: "Japanese", session: { messages: [{ content: "こんにちは！今日はどうでしたか？" }] } }), 200); return { ok: true }; },
+  partner_stop: async () => { ev({ type: "partner", event: "stop", score: "8/10" }); return { ok: true, message: "Practice finished." }; },
+  character_export: async () => ({ message: "Saved Vermeil (12.3 MB, with 3D model). Send the file to a friend." }),
+  character_import: async () => null,
   list_devices: async (fresh) => { await new Promise((r) => setTimeout(r, fresh ? 900 : 300)); return { cameras: [{ index: 0, name: "Integrated Webcam", ok: true }, { index: 1, name: "OBS Virtual Camera", ok: true }],
     mics: [{ index: 1, name: "Microphone Array (Realtek)", default: true }, { index: 3, name: "Headset Microphone (USB)", default: false }], camera: st.camIdx ?? -1, mic: st.micIdx ?? -1 }; },
   set_devices: async (c, m) => { if (c != null) st.camIdx = c; if (m != null) st.micIdx = m; return mockApi.list_devices(); },

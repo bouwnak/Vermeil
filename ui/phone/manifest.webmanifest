@@ -1,0 +1,14 @@
+{
+  "name": "Vermeil",
+  "short_name": "Vermeil",
+  "description": "Your Vermeil companion, on your phone.",
+  "start_url": "/phone/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#16131c",
+  "theme_color": "#16131c",
+  "icons": [
+    {"src": "/phone/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+    {"src": "/phone/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

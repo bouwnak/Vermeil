@@ -10,6 +10,7 @@ In projects it created itself, it may write files without asking (Settings can t
 running commands always asks.
 """
 import os
+from paths import open_path
 import re
 import json
 import difflib
@@ -204,7 +205,7 @@ class CodingAgent:
                 subprocess.Popen([code, self.workspace], shell=os.name == "nt")
                 return "Opened it in VS Code."
             if os.name == "nt":
-                os.startfile(self.workspace)
+                open_path(self.workspace)
                 return "Opened the folder (VS Code isn't installed)."
         except OSError as e:
             return f"Couldn't open it: {e}"

@@ -14,7 +14,7 @@ Run it from the project folder:
     python scripts/package_app.py --drive --with-wheels  -> also each feature's Python packages inside its zip
                                                       (big: Voice clones' PyTorch is ~3 GB; same Python version only)
 
-On the other PC: unzip it anywhere (e.g. Documents/Vermeil) and double-click INSTALL.bat.
+On the other PC: unzip it anywhere (e.g. Documents/Vermeil) and double-click INSTALL.bat (Mac: INSTALL Mac.command, Linux: bash "INSTALL Linux.sh").
 The installer sets up Python packages, makes a desktop shortcut and opens Vermeil on Settings -> Plugins,
 where you tick the features you want.
 
@@ -243,8 +243,11 @@ def write_app_zip(out, a, packs=()):
     """the app itself (Vermeil/...) + INSTALL.bat / UNINSTALL.bat; stops if a secret file got in"""
     files = [f for f in walk() if wanted(rel(f), a)]
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
+        unix = ("INSTALL Mac.command", "INSTALL Linux.sh", "scripts/install.sh")     # need "run me" permission
         for i, f in enumerate(files, 1):
             r = rel(f)
+            if r.replace("\\", "/") in unix:
+                continue
             store = r.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".glb", ".onnx", ".bin", ".zip", ".exe"))
             z.write(f, "Vermeil/" + r, compress_type=zipfile.ZIP_STORED if store else zipfile.ZIP_DEFLATED)
             if i % 500 == 0:
@@ -253,6 +256,13 @@ def write_app_zip(out, a, packs=()):
             z.write(zp, "Vermeil/plugin_packs/" + os.path.basename(zp), compress_type=zipfile.ZIP_STORED)
         z.writestr("Vermeil/INSTALL.bat", INSTALL_BAT.replace("\n", "\r\n"))
         z.writestr("Vermeil/UNINSTALL.bat", UNINSTALL_BAT.replace("\n", "\r\n"))
+        for r in unix:                                          # Mac / Linux installers, marked as runnable
+            if os.path.isfile(os.path.join(ROOT, r)):
+                info = zipfile.ZipInfo("Vermeil/" + r, date_time=datetime.datetime.now().timetuple()[:6])
+                info.create_system, info.external_attr = 3, 0o100755 << 16
+                info.compress_type = zipfile.ZIP_DEFLATED
+                with open(os.path.join(ROOT, r), "rb") as fh:
+                    z.writestr(info, fh.read().replace(b"\r\n", b"\n"))
         z.writestr("Vermeil/data/plugins.json", '{"fresh": true, "installed": {}}\n')
         if "Vermeil/env.example" not in z.namelist():           # the project's own env.example wins
             z.writestr("Vermeil/env.example", "# Copy this file to 'env' (no extension) and put your keys after the = signs.\n"

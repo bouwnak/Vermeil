@@ -13,6 +13,7 @@ import email
 import imaplib
 import json
 import os
+from paths import open_path
 import re
 import shutil
 import threading
@@ -510,7 +511,7 @@ def create_document(title, content, kind="docx", open_it=True):
         doc.save(path)
     if open_it and os.name == "nt":
         try:
-            os.startfile(path)
+            open_path(path)
         except OSError:
             pass
     return f"Created {path}" + (" and opened it." if open_it else ".")

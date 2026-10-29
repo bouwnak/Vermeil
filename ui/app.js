@@ -540,7 +540,16 @@ window.onPyEvent = async (e) => {
       if (e.panel === "adventure") { $("adventureBtn")?.click(); break; }
       setCollapsed(false);
       if ($(`panel-${e.panel}`)?.hidden) openPanel(e.panel);
-      if (e.tab) window.showSettingsTab?.(e.tab);
+      if (e.tab && e.panel === "settings") window.showSettingsTab?.(e.tab);
+      if (e.tab && e.panel === "study") window.showStudyTab?.(e.tab);
+      break;
+    case "performance": renderPerformance(e); break;
+    case "phone": renderPhone(e); break;
+    case "phone_chat": addLog("you", `📱 ${e.you}`); addLog("her", e.reply); break;
+    case "partner": window.dispatchEvent(new CustomEvent("partner", { detail: e })); break;
+    case "characters_changed":
+      state = await api.get_state();
+      renderCharacters(); renderStatus(); await loadCharacter();
       break;
     case "alert": fx.play("notify"); toast(`⏰ ${e.text}`, 10000); renderPlanner(); break;
     case "group_line": say(`${e.speaker}: ${e.text}`); addLog("her", `${e.speaker}: ${e.text}`); break;
@@ -1027,6 +1036,76 @@ $("deleteChar").addEventListener("click", async () => {
   if (changedActive) loadCharacter();
 });
 
+// ---------------- share characters: one .vermeil file with the personality, 3D model and voice clone ----------------
+$("shareChar").addEventListener("click", async (e) => {
+  if (!editingId) return;
+  busy(e.target, true, "Saving…");
+  try {
+    const r = await api.character_export(editingId, $("shareVoice").checked);
+    if (r) toast(r.error || r.message, 8000);
+  } finally { busy(e.target, false); }
+});
+$("importChar").addEventListener("click", async (e) => {
+  busy(e.target, true, "Importing…");
+  try {
+    const r = await api.character_import();
+    if (!r) return;
+    if (r.error) return toast(r.error, 7000);
+    state = r.state; renderCharacters(); openEditor(r.id); toast(r.message, 6000);
+  } finally { busy(e.target, false); }
+});
+
+// ---------------- Settings > This computer: low-end PC mode ----------------
+function renderPerformance(p = state.performance) {
+  if (!p) return;
+  state.performance = p;
+  $("perfMode").value = p.setting;
+  const m = p.machine || {};
+  const bits = [m.system, m.cores && `${m.cores} cores`, m.ram_gb && `${m.ram_gb} GB memory`, m.gpu || "no separate graphics card",
+    m.battery != null && `battery ${m.battery}%${m.plugged ? " (charging)" : ""}`].filter(Boolean);
+  $("perfWhy").textContent = `Now: ${p.mode === "low" ? "🐢 Low-end PC" : p.mode === "high" ? "⚡ High" : "Normal"}. ${p.why || ""} (${bits.join(" · ")})`;
+  room.setLowPower?.(p.mode === "low");
+}
+$("perfMode").addEventListener("change", async () => {
+  await api.save_settings({ performance: $("perfMode").value });
+  renderPerformance(await api.performance_status());
+});
+$("perfScan").addEventListener("click", async (e) => {
+  busy(e.target, true, "Scanning…");
+  try { renderPerformance(await api.performance_rescan()); } finally { busy(e.target, false); }
+});
+
+// ---------------- Settings > Phone: QR code to use Vermeil on your phone (also on mobile data) ----------------
+function renderPhone(p) {
+  if (!p) return;
+  $("phoneOn").checked = p.on;
+  $("phoneMethod").value = p.method;
+  $("phoneBox").hidden = !p.on;
+  const qr = $("phoneQr");
+  qr.replaceChildren();
+  if (p.pair && window.qrcode) {
+    const q = window.qrcode(0, "M"); q.addData(p.pair); q.make();
+    qr.innerHTML = q.createSvgTag({ cellSize: 5, margin: 2, scalable: true });
+  }
+  $("phoneState").textContent = p.error ? `⚠ ${p.error}` : p.url ? `Ready: ${p.url}` : p.on ? (p.progress || "Starting…") : "";
+  $("phoneCopy").dataset.link = p.pair || "";
+}
+$("phoneOn").addEventListener("change", async () => renderPhone(await api.phone_set($("phoneOn").checked, $("phoneMethod").value)));
+$("phoneMethod").addEventListener("change", async () => {
+  if ($("phoneOn").checked) renderPhone(await api.phone_set(true, $("phoneMethod").value));
+});
+$("phoneCopy").addEventListener("click", async () => {
+  const link = $("phoneCopy").dataset.link;
+  if (!link) return toast("The link isn't ready yet.");
+  try { await navigator.clipboard.writeText(link); toast("Link copied. Open it on your phone - keep it private, it's your key."); }
+  catch { prompt("Your phone link (keep it private):", link); }
+});
+$("phoneNewKey").addEventListener("click", async () => {
+  if (!confirm("Make a new key? Every connected phone has to scan the new QR code.")) return;
+  renderPhone(await api.phone_new_key()); toast("New key made. Scan the new code with your phone.");
+});
+window.addEventListener("settings-phone", async () => renderPhone(await api.phone_status()));
+
 room.onHover = (label, x, y) => {
   const tip = $("tip");
   if (!label) { tip.hidden = true; return; }
@@ -1284,6 +1363,7 @@ room.onPoke = () => say(["Hey! That tickles!", "Yes?", "Careful!"][Math.floor(Ma
   room.setView?.(state.ui?.view);
   room.onViewChange = (view) => { clearTimeout(viewTimer); viewTimer = setTimeout(() => api.save_ui({ view }), 800); };
   showHistory(state.history);
+  renderPerformance();
   try {
     const saved = await api.load_room();
     if (saved) room.loadLayout(saved);
@@ -1352,7 +1432,8 @@ window.addEventListener("gym-session", (e) => {
     ["general", "General", ["Behaviour", "Theme colours", "Voice & camera", "Sounds & effects", "Sidebar"]],
     ["her", "Her", ["Her little life", "My wake word"]],
     ["you", "You", ["Your face", "People she knows", "What she remembers about you"]],
-    ["ai", "AI & online", ["AI", "Internet & calendar", "This PC", "Macros"]],
+    ["ai", "AI & online", ["AI", "Internet & calendar", "This computer", "This PC", "Macros"]],
+    ["phone", "📱 Phone", ["Phone"]],
     ["test", "Test", ["Animation test"]],
     ["plugins", "Plugins", ["Plugins"]],
     ["help", "Help", ["Voice commands"]],
@@ -1377,6 +1458,7 @@ window.addEventListener("gym-session", (e) => {
     if (k === "test") renderAnimTest();
     if (k === "plugins") window.dispatchEvent(new Event("plugins-tab"));
     if (k === "help") renderVoiceHelp();
+    if (k === "phone") window.dispatchEvent(new Event("settings-phone"));
   };
   window.showSettingsTab = show;
   nav.append(...TABS.map(([k, label]) => {

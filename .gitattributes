@@ -1,0 +1,3 @@
+# Mac / Linux installers must keep Unix line endings or bash refuses them
+*.sh text eol=lf
+*.command text eol=lf

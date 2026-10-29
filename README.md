@@ -1,5 +1,25 @@
 # Vermeil
 
+## New (30 Oct 2026): use her on your phone anywhere, Mac/Linux, low-end PCs, share characters, talk-live practice
+- **Phone app (Android and iPhone), also on mobile data:** in the app open **Settings → 📱 Phone**, turn it on, keep
+  "Anywhere (Cloudflare)" and scan the QR code with your phone's camera. It opens Vermeil in the phone's browser; tap
+  **Share → Add to Home Screen** (iPhone) or **⋮ → Install app** (Android). The PC must stay on with Vermeil open.
+  The phone app has big tabs at the bottom: **Chat, Talk, Practice, Characters, Settings**.
+  - **Hands-free + wake word:** Talk tab → **Hands-free**, then say "Vermeil, what's the weather?" (or her name / your own wake word).
+  - **"Hey Siri" instead of replacing Siri:** Apple doesn't let any app replace Siri. Phone → Settings → *Siri Shortcut*
+    shows the 5 steps to make "Hey Siri, Vermeil" ask her. On Android you can pick the browser app as the assistant.
+  - **Honest limit:** a phone web app can't listen while the phone is locked or the app is closed (that needs a native app).
+  - The link holds a secret key; "New key" in Settings disconnects every phone. Prefer a fixed address? Install
+    Tailscale on the PC and phone and pick "Tailscale".
+- **Mac and Linux:** Mac: double-click **INSTALL Mac.command**. Linux: in a terminal in the folder run `bash "INSTALL Linux.sh"`.
+  It makes its own Python folder, installs the core, her voice and a "Start Vermeil" launcher. (Not tested on a real Mac yet.)
+- **Low-end PCs:** Settings → AI → **This computer**: Auto (scans RAM, graphics card and battery and switches by itself),
+  Low power or Full power. Low power turns off the heavy voices and uses lighter graphics. Say "low power mode" / "full power".
+- **Share characters:** Characters → ✏ → **Share** saves a `.vermeil` file (tick "include voice" to add it);
+  your friend clicks **📥 Import a character**.
+- **Talk live in another language:** Study → Language → **🎙 Talk live** (or say "let's practice Japanese"):
+  she talks with you in that language, corrects you, and gives a score when you say "stop".
+
 ## First-time setup (runs fully on your PC)
 1. Install **Ollama** (free, runs the AI on your PC): https://ollama.com/download
 2. In the VS Code terminal, inside this folder:
@@ -9,12 +29,14 @@
    - `python scripts/setup_local.py` — picks AI models that fit your PC and downloads everything once (a few GB)
 3. Start: `python app.py`
 
+On a **Mac or Linux** laptop use `INSTALL Mac.command` / `INSTALL Linux.sh` instead (see below).
+
 The main AI is **Groq** (online, fast — put `GROQ_API_KEY=...` in your `.env` file). When Groq's free tokens run out,
 she switches **by herself** to Ollama on your PC, and back again later. Voice, listening, faces and the room are always local.
 Internet is used for: Groq, music, paper search, weather, web search, news, prices, email, calendar sync, and new voices.
 Check what's installed: `python scripts/setup_local.py --check`. Use smaller/bigger models: `python scripts/setup_local.py --size small` (tiny / small / medium / large).
 
-See **FEATURES.md** for every feature (all 137 done, with honest notes on limits).
+See **FEATURES.md** for every feature (all 143 done, with honest notes on limits).
 
 ### Quick things to try
 - "dance", "take a bow", "look surprised" — she acts it out

@@ -8,6 +8,8 @@ Files from older versions that are still in the project folder are moved into da
 """
 import os
 import shutil
+import subprocess
+import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the project folder (paths.py is in brain/)
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -22,6 +24,16 @@ SAVED_FILES = [
 
 def data_file(name):
     return os.path.join(DATA_DIR, name)
+
+
+def open_path(target):
+    """Open a file, folder or link with the computer's default app (Windows, macOS and Linux)."""
+    target = str(target)
+    if sys.platform == "win32":
+        os.startfile(target)
+    else:
+        subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", target],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def migrate_old_files():

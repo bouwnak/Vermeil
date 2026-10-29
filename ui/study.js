@@ -20,6 +20,7 @@ export function initStudy(api) {
     if (t === "Review") renderReviewPane();
     if (t === "Language") renderLanguage();
   }
+  window.showStudyTab = (t) => tabs.includes(t) && show(t);
 
   // ---------- Library ----------
   const kindSel = el("select", { "aria-label": "File type" }, Object.entries(KIND_LABEL).map(([v, l]) => el("option", { value: v }, l)));
@@ -312,6 +313,35 @@ export function initStudy(api) {
   const saveLang = async () => { const s = await api.sensei_set(langSel.value, Number(levelSel.value)); streakEl.textContent = s.streak ? `🔥 ${s.streak}-day streak` : ""; };
   langSel.addEventListener("change", saveLang); levelSel.addEventListener("change", saveLang);
   const quizKind = el("select", { "aria-label": "Quiz type" }, [["flashcards", "Flashcards"], ["mcq", "Multiple choice"], ["fill_blanks", "Fill in the blanks"]].map(([v, l]) => el("option", { value: v }, l)));
+  // live practice partner (brain/partner.py): she talks, you answer out loud, she fixes your mistakes as you go
+  const partnerBox = el("div", { class: "partner-live", hidden: true });
+  let partnerOn = false;
+  const partnerBtn = el("button", { class: "primary", title: "A spoken conversation in the language: answer out loud with your mic",
+    onclick: async (e) => {
+      if (partnerOn) { const r = await api.partner_stop(); toast(r.message || "Stopped."); return; }
+      busy(e.target, true, "Starting…");
+      try {
+        const r = await api.partner_start(langSel.value, Number(levelSel.value), topicIn.value, true);
+        if (r.error) toast(r.error, 7000);
+      } finally { busy(e.target, false); }
+    } }, "🎙 Talk live");
+  const partnerLine = (cls, text) => { partnerBox.append(el("p", { class: `turn ${cls}` }, text)); partnerBox.scrollIntoView({ block: "nearest" }); };
+  window.addEventListener("partner", ({ detail: e }) => {
+    if (e.event === "start") {
+      partnerOn = true; partnerBtn.textContent = "■ Stop talking";
+      partnerBox.hidden = false;
+      partnerBox.replaceChildren(el("b", {}, `Talking in ${e.name}. Answer out loud — say “stop practice” to finish.`));
+      const first = e.session?.messages?.slice(-1)[0];
+      if (first) partnerLine("her", first.content);
+    } else if (e.event === "turn") {
+      partnerLine("you", e.you);
+      partnerLine("her", e.reply);
+    } else if (e.event === "stop") {
+      partnerOn = false; partnerBtn.textContent = "🎙 Talk live";
+      partnerLine("sys", e.error ? `Stopped: ${e.error}` : `Finished.${e.score ? " Score: " + e.score : ""}`);
+      if (langLoaded) renderLanguage();
+    }
+  });
   panes.Language.append(
     el("p", { class: "note" }, "Your language teacher. Lessons, quizzes that come back with spaced repetition, conversation practice with corrections, and pronunciation checks with your mic."),
     el("div", { class: "row" }, langSel, levelSel, streakEl),
@@ -335,6 +365,7 @@ export function initStudy(api) {
         try { const r = await api.sensei_talk_start(topicIn.value || "everyday small talk", langSel.value, Number(levelSel.value)); if (r.error) return toast(r.error); openTalk(r); }
         finally { busy(e.target, false); }
       } }, "Conversation practice"),
+      partnerBtn,
       el("button", { class: "ghost", title: "A lesson built from the mistakes she corrected in your conversations", onclick: async (e) => {
         busy(e.target, true, "Looking at your mistakes…");
         try { const r = await api.sensei_mistakes_lesson(langSel.value); if (r.error) return toast(r.error, 7000); setMd(langOut, r.lesson, api); addListen(langOut, langSel.value); }
@@ -354,6 +385,7 @@ export function initStudy(api) {
             r.tip ? el("p", { class: "note" }, r.tip) : null));
         } finally { busy(e.target, false); }
       } }, "🎙 Say it")),
+    partnerBox,
     langOut,
     el("h3", {}, "Earlier conversations"),
     talkList);

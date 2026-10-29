@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
   <link rel="stylesheet" href="style.css">
   <script src="vendor/katex/katex.min.js"></script>
+  <script src="vendor/qrcode.js"></script>
   <script type="importmap">
   {
     "imports": {
@@ -235,7 +236,10 @@
     <section class="panel" id="panel-characters" hidden aria-label="Characters">
       <header><h2>Characters</h2><button class="close" aria-label="Close">×</button></header>
       <ul class="chars" id="charList"></ul>
-      <button class="ghost" id="newChar">Add a character</button>
+      <div class="row">
+        <button class="ghost" id="newChar">Add a character</button>
+        <button class="ghost" id="importChar" title="Open a .vermeil file a friend sent you">📥 Import a character</button>
+      </div>
 
       <form class="editor" id="editor" hidden>
         <label>Name <input name="name" required maxlength="40"></label>
@@ -340,6 +344,10 @@
           <button type="submit" class="primary">Save character</button>
           <button type="button" class="ghost" id="useChar">Talk to this character</button>
         </div>
+        <div class="row">
+          <button type="button" class="ghost" id="shareChar" title="Save this character as one .vermeil file to send to a friend">📤 Share this character</button>
+          <label class="check"><input type="checkbox" id="shareVoice" checked> with the voice clone</label>
+        </div>
         <button type="button" class="danger" id="deleteChar">Delete character</button>
       </form>
     </section>
@@ -438,6 +446,49 @@
       </details>
       <div class="row"><button class="ghost small" id="gcalFile">Choose the downloaded file</button><button class="small" id="gcalConnect">Connect</button><button class="ghost small" id="gcalOff" hidden>Disconnect</button></div>
       <p class="note" id="gcalStatus"></p>
+
+      <h3>This computer</h3>
+      <p class="note">Vermeil looks at this computer and picks how hard to work. <b>Low</b> = for older or small laptops: a lighter
+        voice, no voice clone, the small speech model and a simpler 3D room, so she stays quick. On <b>Auto</b> a laptop on a low
+        battery switches to Low by itself and back when you plug in. Say “low power mode”, “full power” or “scan my PC”.</p>
+      <label>Performance
+        <select id="perfMode">
+          <option value="auto">Auto (recommended)</option><option value="low">Low-end PC</option>
+          <option value="normal">Normal</option><option value="high">High</option>
+        </select>
+      </label>
+      <p class="note" id="perfWhy"></p>
+      <div class="row"><button class="ghost small" id="perfScan">Scan again</button></div>
+
+      <h3>Phone</h3>
+      <p class="note">Use Vermeil on your phone — at home <b>and outside on mobile data</b>. Her brain stays on this computer;
+        the phone app talks to it through a private, encrypted link. This computer must stay on with Vermeil open.</p>
+      <label class="check"><input type="checkbox" id="phoneOn"> 📱 Phone access</label>
+      <label>Connection
+        <select id="phoneMethod">
+          <option value="quick">Quick link (free, no account — the address changes when Vermeil restarts)</option>
+          <option value="tailscale">Tailscale (free account — the address never changes, best for “Hey Siri”)</option>
+          <option value="local">Only this computer (testing)</option>
+        </select>
+      </label>
+      <div id="phoneBox" class="phone-box" hidden>
+        <div id="phoneQr" class="phone-qr" aria-label="QR code to connect your phone"></div>
+        <div>
+          <p id="phoneState" class="note"></p>
+          <ol class="note">
+            <li>Open your phone's <b>camera</b> and point it at the code.</li>
+            <li>Tap the link that pops up.</li>
+            <li>Add it to your home screen: iPhone Share ⬆ → <b>Add to Home Screen</b>; Android ⋮ → <b>Install app</b>.</li>
+          </ol>
+          <div class="row">
+            <button class="ghost small" id="phoneCopy">Copy link</button>
+            <button class="ghost small" id="phoneNewKey" title="Disconnects every phone; they scan the new code">New key</button>
+          </div>
+        </div>
+      </div>
+      <p class="note">Hands-free on the phone: open the Talk tab, tap <b>Start hands-free</b> and say “Vermeil, …”. iPhones and Android
+        don't let any app replace Siri / Google Assistant or listen while the screen is off — the phone app's Settings shows how to
+        make <b>“Hey Siri, Vermeil”</b> work with a Shortcut.</p>
 
       <h3>This PC</h3>
       <div id="pcBox" class="note">Open this panel to see your PC's status.</div>
