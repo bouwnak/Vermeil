@@ -42,6 +42,7 @@ FOLDER_CACHE_S = 600                             # re-read the folder at most ev
 PACKS = os.path.join(BASE, "plugin_packs")
 OPENCV_ZOO = "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/"
 KOKORO = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/"
+RVC_HF = "https://huggingface.co/"
 
 # packages every install has (never uninstalled)
 CORE_PIP = ["requests", "pywebview", "numpy", "rapidfuzz", "vaderSentiment", "keyboard", "psutil", "pillow", "winotify",
@@ -70,7 +71,11 @@ PLUGINS = [
      "pip": ["chatterbox-tts"], "shared": ["pytorch"], "panels": [], "size": "~3.5 GB (with the model)"},
     {"id": "voice_clone", "builtin": True, "name": "Voice clones (RVC)", "icon": "🧬", "group": "Voice",
      "desc": "Makes her sound like a character from an RVC voice model (.pth). Its helper models are in tools/rvc.",
-     "pip": ["torch", "torchaudio", "scipy", "librosa", "faiss-cpu"], "shared": ["pytorch"], "folders": ["tools/rvc"], "pack": "rvc_models",
+     "pip": ["torch", "torchaudio", "scipy", "librosa", "faiss-cpu"], "shared": ["pytorch"], "pack": "rvc_models",
+     # the helper models themselves (a copy from GitHub has the tools/rvc folder but not these) + the characters' voices
+     "files": [{"path": "tools/rvc/vec-768-layer-12.onnx", "url": RVC_HF + "NaruseMioShirakana/MoeSS-SUBModel/resolve/main/vec-768-layer-12.onnx"},
+               {"path": "tools/rvc/rmvpe.pt", "url": RVC_HF + "lj1995/VoiceConversionWebUI/resolve/main/rmvpe.pt"}],
+     "folders": ["data/rvc_voices"],
      "panels": [], "size": "~3 GB (PyTorch) + 530 MB"},
     {"id": "unimate", "builtin": True, "name": "UniMate animations", "icon": "🎬", "group": "Fun",
      "desc": "Rig & animate: makes walk / wave / dance animations from words. After installing, double-click "
@@ -735,6 +740,8 @@ def _install_now(p):
                                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
                 if r.returncode != 0:
                     raise RuntimeError(f"ollama pull {m} failed: {(r.stderr or '').strip()[-200:]}")
+        for d in p.get("folders", []):                   # (no zip had it: an empty one, so it isn't retried on every start)
+            os.makedirs(_abs(d), exist_ok=True)
         _set(pid, True)
         _jobs[pid]["state"] = "done"
         _log(pid, f"✅ {p['name']} installed." + (" Restart Vermeil to use it." if need or p.get("code") else ""), 100, "Installed")

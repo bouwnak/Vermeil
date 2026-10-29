@@ -82,11 +82,23 @@ def start(emit=lambda e: None):
     threading.Thread(target=_work, args=(emit,), daemon=True).start()
 
 
-def _work(emit):
+def retry(part, emit=lambda e: None):
+    """Settings / the Animate box: try one part again now (also right after a failure, without the day's wait).
+    False when the setup is already running."""
+    if _lock.locked():
+        return False
+    state.pop(part, None)
+    threading.Thread(target=_work, args=(emit, part), daemon=True).start()
+    return True
+
+
+def _work(emit, only=None):
     if not _lock.acquire(blocking=False):
         return
     try:
         for part, fn in (("builtins", _builtins), ("unimate", _unimate)):
+            if only and part != only:
+                continue
             old = state.get(part, {})
             if old.get("status") == "failed" and time.time() - old.get("time", 0) < RETRY_AFTER:
                 continue

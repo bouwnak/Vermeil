@@ -788,12 +788,18 @@ class Rigger {
       ${st.commands?.length ? `<p class="note">Then close and open this box again.</p>` : ""}
       <div class="rig-motions">${MOTIONS.map(([k, label], i) => `<label class="rig-check"><input type="checkbox" value="${k}" ${i < 3 ? "checked" : ""}> ${label}</label>`).join("")}</div>
       <p class="note">Ears and fingers are moved by the app itself, so you don't need animations for those.</p>
-      <button type="button" class="primary rig-make" ${st.ready ? "" : "disabled"}>Make the animations</button>`;
+      <button type="button" class="primary rig-make">${st.ready ? "Make the animations" : "Set up UniMate"}</button>`;
     side.querySelector(".rig-talk").addEventListener("click", () => this.autoTalk(name));
     side.querySelectorAll(".rig-cmd").forEach((pre) => pre.addEventListener("click", () => {
       navigator.clipboard?.writeText(pre.textContent).then(() => this.toast("Copied - paste it into a Command Prompt."), () => {});
     }));
     side.querySelector(".rig-make").addEventListener("click", async () => {
+      if (!(await this.api.unimate_status()).ready) {          // not ready yet: say what's missing and get it now
+        const r = await this.api.unimate_setup();
+        if (r.ready) return this.animatePanel(name);
+        if (r.commands?.length) return this.toast("Almost there: run the two commands shown above in a Command Prompt, then open this box again.");
+        return this.toast(r.hint || "Getting UniMate ready…", 9000);
+      }
       const picked = [...side.querySelectorAll("input:checked")].map((x) => x.value);
       if (!picked.length) return this.toast("Tick at least one.");
       side.hidden = true;
@@ -829,7 +835,13 @@ class Rigger {
   /** events from Python while UniMate works */
   async onEvent(e) {
     if (e.type !== "animate_progress" || this.mode !== "animate") return;
-    if (e.error) { this.busy(null); this.toast(`UniMate: ${e.error}`); this.$(".rig-side").hidden = false; return; }
+    if (e.error) {
+      this.busy(null);
+      this.toast(`UniMate didn't finish: ${e.error}${e.log ? `
+(The whole story is in ${e.log})` : ""}`, 12000);
+      this.$(".rig-side").hidden = false;
+      return;
+    }
     if (!e.done) return this.busy(e.text, e.pct);
     this.busy("Putting the animations into the model…", 0.97);
     try {

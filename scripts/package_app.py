@@ -43,7 +43,7 @@ ALWAYS_SKIP_FILES = ["env", ".env", "*.pyc", "*.blend1", "*.tmp", "*.part", "*.l
                      "data/plugins.json"] + SECRET_FILES          # (the installer writes a fresh plugins.json)
 # made as their own zips in plugin_packs/ (Settings -> Plugins installs them)
 PACKS = {"game_assets": ["ui/game/assets"], "ffmpeg": ["Packages/ffmpeg-8.0-full_build/bin/ffplay.exe"],
-         "rvc_models": ["tools/rvc"], "unimate": ["tools/unimate"]}
+         "rvc_models": ["tools/rvc", "data/rvc_voices"], "unimate": ["tools/unimate"]}
 # your personal saved things (only with --with-my-data)
 MY_DATA = ["data/*.json", "data/*.txt", "data/game/**", "data/library/**", "data/meetings/**"]
 NOT_MY_DATA = ["data/piper_catalog.json", "data/voices_cache.json"]     # downloadable caches: always fine to pack

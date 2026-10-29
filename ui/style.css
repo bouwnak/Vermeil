@@ -509,6 +509,17 @@ pre.diff .add { color: #8fe3a8; } pre.diff .del { color: #ff9aa8; }
 .plugin-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .plugin-group h4 { margin: 14px 0 4px; color: var(--muted); text-transform: uppercase; font-size: 12px; letter-spacing: .06em; }
 .plugin { border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 8px 0; background: var(--raised); }
+/* Settings > Help: the voice commands, one card per sidebar feature */
+#voiceHelpFind { width: 100%; margin: 6px 0 4px; }
+.help-list { display: grid; gap: 8px; }
+.help-card { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; background: var(--raised); }
+.help-card.off { opacity: .6; }
+.help-card h4 { display: flex; align-items: center; gap: 6px; margin: 2px 0 4px; }
+.help-card h4 .pill { margin-left: auto; }
+.help-card ul { margin: 0; padding-left: 18px; }
+.help-card li { margin: 3px 0; }
+.help-card q { font-weight: 700; }
+.help-card q::before { content: "“"; } .help-card q::after { content: "”"; }
 .plugin.on { border-color: rgba(var(--accent-rgb), .5); }
 .plugin-head { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .plugin-head strong { flex: 1; }

@@ -289,6 +289,11 @@ export const mockApi = {
   save_rigged_model: async (name) => ({ name }),            // the dev page can't write files; pretend it saved
   unimate_status: async () => ({ ready: false, hint: "UniMate isn't set up yet. Double-click scripts\\setup_unimate.bat (mock)." }),
   unimate_animate: async () => ({ error: "UniMate isn't set up (mock)." }),
+  unimate_setup: async () => ({ started: true, hint: "Getting UniMate ready in the background (mock)." }),
+  voice_commands: async () => ({ features: [
+    { id: "chat", name: "Chat", icon: "💬", installed: true, say: [{ say: "open chat", does: "shows your conversation" }, { say: "wave · dance · jump", does: "she does it in her room" }] },
+    { id: "gym", name: "Gym", icon: "🏋", installed: true, say: [{ say: "open the gym", does: "shows the Gym" }, { say: "start a 90 second timer", does: "the rest timer" }] },
+    { id: "generator", name: "Generator", icon: "🎨", installed: false, say: [{ say: "open the generator", does: "shows the Generator" }] }] }),
   planner_month: async () => { const t = new Date(); const k = (d) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     return { [k(t.getDate())]: { event: 1, task: 1, reminder: 1 }, [k(Math.min(28, t.getDate() + 2))]: { birthday: 1 }, [k(Math.min(28, t.getDate() + 5))]: { weekly: 1, event: 2 } }; },
   planner_day: async () => [

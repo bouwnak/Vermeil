@@ -1775,6 +1775,20 @@ class Api:
         import animate
         return animate.status()
 
+    def unimate_setup(self):
+        """the Animate box's button when UniMate isn't ready: get what it misses now, in the background"""
+        import animate
+        import autosetup
+        st = animate.status()
+        if st["ready"]:
+            return {"ready": True}
+        if st["commands"]:                               # only its libraries are left: pip is yours to run
+            return {"hint": st["hint"], "commands": st["commands"]}
+        started = autosetup.retry("unimate", self.emit)
+        return {"started": started, "hint": "Getting UniMate ready in the background (Miniconda, its code, its own Python "
+                "and the checkpoint, about 3 GB). The bar at the bottom shows how far it is; open this box again when it's done."
+                if started else st["hint"] or "UniMate's setup is already running."}
+
     def unimate_animate(self, name, motions):
         """Runs UniMate in the background; progress comes as {"type": "animate_progress"} events."""
         import animate
@@ -1794,7 +1808,9 @@ class Api:
                 self.emit({"type": "animate_progress", "done": True,
                            "outputs": [{"clip": o["clip"], "url": rel(o["path"])} for o in out]})
             except Exception as err:  # noqa: BLE001 - shown to the user
-                self.emit({"type": "animate_progress", "error": str(err)})
+                log = os.path.join(animate.WORK_DIR, os.path.splitext(os.path.basename(path))[0], "unimate.log")
+                self.emit({"type": "animate_progress", "error": str(err),
+                           "log": os.path.relpath(log, BASE_DIR) if os.path.exists(log) else ""})
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}
 
@@ -2612,6 +2628,9 @@ class Api:
             if not rest:
                 return f"{called['name']} here! What's up?" if switched else "Yes? I'm listening."
             return self._quick_command(rest)               # "vermi, skip this song" still works instantly
+        said = self._voice_command(t)                      # "open the gym", "camera off", "what can I say?"
+        if said:
+            return said
         import intent
         t = intent.normalize(t) or t                      # "can you put on a song right now" -> "play music"
         if re.fullmatch(r"stop speaking|stop", t):
@@ -2684,6 +2703,40 @@ class Api:
                 if re.search(words, t):
                     return self._gym_command(action)
         return None
+
+    def _voice_command(self, t):
+        """the instant commands of brain/voice_commands.py: open any sidebar feature, mic / camera, the Help list"""
+        import plugins
+        import voice_commands as vc
+        hit = vc.parse(t)
+        if not hit:
+            return None
+        what, f = hit
+        if what == "help":
+            self.emit({"type": "open_panel", "panel": "settings", "tab": "help"})
+            return "Here's everything you can say to me - it's in Settings, under Help."
+        if what == "mic_off":
+            self.set_listening(False)                       # (it tells the sidebar itself)
+            return "Okay, I'll stop listening. Press Voice in the sidebar when you want me back."
+        if what in ("camera_on", "camera_off"):
+            on = what == "camera_on"
+            if on and not self.set_camera(True):
+                return "I can't turn the camera on while privacy mode is on."
+            if not on:
+                self.set_camera(False)
+                self.emit({"type": "camera", "status": "off"})
+            return "Camera on - I can see you now!" if on else "Camera off."
+        if f["plugin"] and not plugins.is_installed(f["plugin"]):
+            self.emit({"type": "open_panel", "panel": "settings", "tab": "plugins"})
+            return f"{f['name']} isn't installed yet - you can add it in Settings, under Plugins."
+        self.emit({"type": "open_panel", "panel": f["id"]})
+        return f"Opening {f['name']}."
+
+    def voice_commands(self):
+        """Settings -> Help: what you can say, per sidebar feature"""
+        import plugins
+        import voice_commands as vc
+        return {"features": vc.catalogue(plugins.is_installed)}
 
     def music(self, action):
         if action in ("skip", "stop", "pause", "resume", "replay", "favorite"):

@@ -229,6 +229,8 @@ export class Room {
         p.x = q.x; p.z = q.z; this.walkTarget = null; this._path = [];
       }
     }
+    if (this._dio) this._fitDiorama();                              // the camera fits the new size too
+    else if (this._roomIdx > 0 && !this.editMode) this._aimAtRoom(this._roomIdx);   // she's in a room that changed
     if (this._dioBase) {                                             // the grass and slab fit the house
       const shown = !!this._dioBase.parent;
       this.scene.remove(this._dioBase);
@@ -257,10 +259,9 @@ export class Room {
       this.scene.add(this._dioBase);
       this.scene.background = new THREE.Color(0x5b8a4c);
       this.scene.fog = new THREE.Fog(0x5b8a4c, 34, 80);
-      const b = cozy.house.bounds(), cx = (b.minX + b.maxX) / 2, k = Math.max(1, (b.maxX - b.minX) / 10), y = 0;
-      Object.assign(ctl, { minDistance: 9, maxDistance: 34 * k + 6, minPolarAngle: 0.45, maxPolarAngle: 1.25, minAzimuthAngle: -Infinity, maxAzimuthAngle: Infinity });
+      Object.assign(ctl, { minDistance: 9, minPolarAngle: 0.45, maxPolarAngle: 1.25, minAzimuthAngle: -Infinity, maxAzimuthAngle: Infinity });
       this._cutaway(true);
-      this._tweenCamera(new THREE.Vector3(cx + 12.5 * k, 11.5 * k + y, 15.5 * k), new THREE.Vector3(cx, 0.5 + y, 0.3), 30);
+      this._fitDiorama(new THREE.Vector3(12.5, 11.5, 15.5).normalize());
     } else {
       const d = this._dio; this._dio = null;
       this.scene.remove(this._dioBase);
@@ -269,6 +270,18 @@ export class Room {
       Object.assign(ctl, d.limits);
       this._tweenCamera(d.pos, d.target, d.fov);
     }
+  }
+
+  /** Edit mode: the whole house in view, seen from `dir` (from the middle towards the camera; default: the
+   *  direction it's looked from now, so adding a room or dragging its size zooms out/in without turning). */
+  _fitDiorama(dir) {
+    const b = this.cozy.house.bounds(), cx = (b.minX + b.maxX) / 2;
+    const k = Math.max(1, (b.maxX - b.minX) / 10, (b.maxZ - b.minZ) / 8.5);    // 1 = just the main room (10 x 8.5 m)
+    const target = new THREE.Vector3(cx, 0.5, 0.3);
+    const T = this._camTween, from = T ? T.p1 : this.camera.position, at = T ? T.t1 : this.controls.target;
+    dir = dir || from.clone().sub(at).normalize();
+    this.controls.maxDistance = 34 * k + 6;
+    this._tweenCamera(target.clone().addScaledVector(dir, 23 * k), target, 30);
   }
 
   /** Hide what would block the diorama view (the near walls, the ceilings and things hanging there). */
@@ -322,8 +335,15 @@ export class Room {
       this._mainView = { pos: (T ? T.p1 : this.camera.position).clone(), target: (T ? T.t1 : this.controls.target).clone(), fov: T ? T.f1 : this.camera.fov };
     }
     if (i === 0) { const v = this._mainView; if (v) this._tweenCamera(v.pos, v.target, v.fov); return; }
-    const r = this.cozy.house.rects()[i], cx = (r.minX + r.maxX) / 2, d = r.maxZ - r.minZ;
-    this._tweenCamera(new THREE.Vector3(cx + 0.2, 1.85, r.maxZ + 1.8), new THREE.Vector3(cx - 0.1, 1.15, r.minZ + d * 0.4), this.camera.fov);
+    this._aimAtRoom(i);
+  }
+
+  /** the view of extra room i from its open front (wider rooms: a step further back so it all fits) */
+  _aimAtRoom(i) {
+    const r = this.cozy.house.rects()[i];
+    if (!r) { this._roomIdx = 0; const v = this._mainView; if (v) this._tweenCamera(v.pos, v.target, v.fov); return; }
+    const cx = (r.minX + r.maxX) / 2, d = r.maxZ - r.minZ, back = 1.8 + Math.max(0, (r.maxX - r.minX) - 5) * 0.6;
+    this._tweenCamera(new THREE.Vector3(cx + 0.2, 1.85, r.maxZ + back), new THREE.Vector3(cx - 0.1, 1.15, r.minZ + d * 0.4), this.camera.fov);
   }
 
   _tweenCamera(pos, target, fov) {

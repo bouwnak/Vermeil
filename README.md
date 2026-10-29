@@ -227,6 +227,16 @@ To start History fresh: History tab → **🗑 Clear history** (you can Undo rig
 **Progress** tab: monthly graphs for each lift and your body weight.
 You can also say: “what's my workout today?”, “log incline bench set 2, 22.5 kg, 10 reps”, “start a 2 minute timer”.
 
+## New (29 Oct 2026, latest): voice commands, Help tab, room camera, fixes for a fresh copy
+- **Voice commands for every sidebar feature:** say "open the gym", "show me my journal", "go to settings", "open games"…
+  and it opens right away. Say **"what can I say?"** (or open **Settings → Help**) to see every command, with a search box.
+  Features that aren't installed are marked, and asking for one opens Settings → Plugins.
+- **Room camera:** in **Edit room**, adding a room or dragging its Width/Depth zooms the camera so the whole house fits.
+- **RVC voices on a new PC:** the voice-clone helper files and the character voices now download with the voice-clone
+  setup (from the Drive pack, or Hugging Face), instead of "RVC isn't set up yet".
+- **UniMate button:** if UniMate isn't ready, the button says **Set up UniMate** and starts the setup again right away
+  (or shows the pip commands you need to run). If it fails, the message says what went wrong and where the log is.
+
 ## New (29 Oct 2026, newest): every feature installs from your one Google Drive folder
 **Plugins = only the features in the sidebar (29 Oct 2026).** Voices (Kokoro, online voices, other languages),
 Chatterbox, RVC voice clones, voice commands, UniMate, the camera, offline AI (Ollama) and online AI are **built in**:

@@ -536,7 +536,12 @@ window.onPyEvent = async (e) => {
       toast(`Switched to ${activeChar().name}.`);
       break;
     case "code_step": case "code_approve": case "code_workspace": case "code_user": case "code_reply": codePanel?.onEvent(e); break;
-    case "open_panel": setCollapsed(false); if ($(`panel-${e.panel}`)?.hidden) openPanel(e.panel); break;
+    case "open_panel":                                       // a voice command ("open the gym", "what can I say?")
+      if (e.panel === "adventure") { $("adventureBtn")?.click(); break; }
+      setCollapsed(false);
+      if ($(`panel-${e.panel}`)?.hidden) openPanel(e.panel);
+      if (e.tab) window.showSettingsTab?.(e.tab);
+      break;
     case "alert": fx.play("notify"); toast(`⏰ ${e.text}`, 10000); renderPlanner(); break;
     case "group_line": say(`${e.speaker}: ${e.text}`); addLog("her", `${e.speaker}: ${e.text}`); break;
     case "mission": missionsPanel?.update(e.mission); renderHud(); break;
@@ -1350,6 +1355,7 @@ window.addEventListener("gym-session", (e) => {
     ["ai", "AI & online", ["AI", "Internet & calendar", "This PC", "Macros"]],
     ["test", "Test", ["Animation test"]],
     ["plugins", "Plugins", ["Plugins"]],
+    ["help", "Help", ["Voice commands"]],
   ];
   const tabOf = (title) => (TABS.find(([, , list]) => list.includes(title)) || TABS[0])[0];
   const panes = Object.fromEntries(TABS.map(([k]) => [k, Object.assign(document.createElement("div"), { className: "settings-pane" })]));
@@ -1370,6 +1376,7 @@ window.addEventListener("gym-session", (e) => {
     for (const [key, pane] of Object.entries(panes)) pane.hidden = key !== k;
     if (k === "test") renderAnimTest();
     if (k === "plugins") window.dispatchEvent(new Event("plugins-tab"));
+    if (k === "help") renderVoiceHelp();
   };
   window.showSettingsTab = show;
   nav.append(...TABS.map(([k, label]) => {
@@ -1381,6 +1388,25 @@ window.addEventListener("gym-session", (e) => {
   header.after(nav, ...Object.values(panes));
   show(panes[tab] ? tab : "general");
 })();
+
+// ---------------- Settings > Help: what you can say, one card per sidebar feature (brain/voice_commands.py) ----------------
+async function renderVoiceHelp() {
+  const box = $("voiceHelp");
+  if (!box || !api?.voice_commands) return;
+  const { features = [] } = await api.voice_commands();
+  const q = ($("voiceHelpFind")?.value || "").trim().toLowerCase();
+  const el = (tag, props = {}, kids = []) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+  const cards = features.map((f) => {
+    const rows = f.say.filter((c) => !q || f.name.toLowerCase().includes(q) || `${c.say} ${c.does}`.toLowerCase().includes(q));
+    if (!rows.length) return null;
+    return el("article", { className: `help-card${f.installed ? "" : " off"}` }, [
+      el("h4", {}, [el("span", { className: "help-icon", textContent: f.icon, ariaHidden: "true" }), f.name,
+        f.installed ? "" : el("span", { className: "pill off", textContent: "Not installed" })]),
+      el("ul", {}, rows.map((c) => el("li", {}, [el("q", { textContent: c.say }), el("span", { className: "note", textContent: ` ${c.does}` })])))]);
+  }).filter(Boolean);
+  box.replaceChildren(...(cards.length ? cards : [el("p", { className: "note", textContent: "Nothing matches that." })]));
+}
+$("voiceHelpFind")?.addEventListener("input", renderVoiceHelp);
 
 // ---------------- Settings > Test: a button for every animation ----------------
 const ANIM_LABELS = { idle: "Idle", walk: "Walk", wave: "Wave", talk: "Talk", happy: "Happy", sad: "Sad", surprised: "Surprised",
