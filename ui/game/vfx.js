@@ -261,24 +261,26 @@ export class VFX {
   // ---------------- the portal (cyan-white swirl around a dark centre) ----------------
   makePortal(radius = 2.2) {
     const group = new THREE.Group();
-    const u = { uTime: this.engine.uniforms.uTime, uPower: { value: 0 } };
+    const u = { uTime: this.engine.uniforms.uTime, uPower: { value: 0 }, uHole: { value: 0 } };
     const disc = new THREE.Mesh(new THREE.CircleGeometry(radius * 1.25, 96), new THREE.ShaderMaterial({
       uniforms: u, transparent: true, depthWrite: false, side: THREE.DoubleSide,
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
-      fragmentShader: `uniform float uTime; uniform float uPower; varying vec2 vUv;
+      fragmentShader: `uniform float uTime; uniform float uPower; uniform float uHole; varying vec2 vUv;
         float n(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
         float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); return mix(mix(n(i),n(i+vec2(1,0)),f.x), mix(n(i+vec2(0,1)),n(i+vec2(1,1)),f.x), f.y); }
         void main(){ vec2 c = vUv - .5; float r = length(c) * 2.0; float a = atan(c.y, c.x);
-          float sw = a + r * 6.0 - uTime * 2.4;
+          float sw = a + r * (6.0 + uHole * 6.0) - uTime * (2.4 + uHole * 5.0);
           float bands = noise(vec2(sw * 2.0, r * 8.0 - uTime)) * 0.6 + noise(vec2(sw * 5.0, r * 20.0 + uTime*1.5)) * 0.4;
           float ring = smoothstep(0.35, 0.62, r) * (1.0 - smoothstep(0.78, 1.0, r));
           float streak = pow(max(0., sin(sw * 3.0 + bands * 4.0)), 6.0);
           vec3 col = mix(vec3(0.25, 0.75, 1.0), vec3(0.95, 1.0, 1.0), bands + streak * 0.8);
-          float core = 1.0 - smoothstep(0.0, 0.45, r);
+          col = mix(col, mix(vec3(0.35, 0.06, 0.85), vec3(1.0, 0.42, 0.08), bands + streak * 0.6), uHole);   // black hole: a burning purple-orange rim
+          float core = 1.0 - smoothstep(0.0, 0.45 + uHole * 0.3, r);          // the black hole's dark middle grows to swallow most of the disc
           float alpha = (ring * (0.55 + 0.45 * bands) + streak * ring) * uPower;
-          vec3 outc = col * (1.0 + streak * 1.5);
+          vec3 outc = col * (1.0 + streak * 1.5) * mix(1.0, 0.35, uHole);      // a dimmer, angrier rim so the middle reads as black
           outc = mix(outc, vec3(0.02, 0.03, 0.06), core * uPower);
-          alpha = max(alpha, core * uPower * 0.95);
+          outc = mix(outc, vec3(0.0), core * uHole);
+          alpha = max(alpha, core * uPower * mix(0.95, 1.0, uHole));
           gl_FragColor = vec4(outc, alpha); }`,
     }));
     group.add(disc);
@@ -290,18 +292,24 @@ export class VFX {
     }
     const light = new THREE.PointLight(0x7aeaff, 0, 16, 1.6);
     group.add(light);
-    const P = { group, u, rings, light, power: 0, want: 0, radius };
+    // the black hole's heart: a ball of pure black that swells as the portal turns into a black hole (P.hole 0..1)
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.68, 32, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    ball.scale.setScalar(0.001); ball.visible = false; group.add(ball);
+    const P = { group, u, rings, light, power: 0, want: 0, radius, hole: 0, wantHole: 0, ball };
     const stop = this.engine.onUpdate((dt, t) => {
       P.power += (P.want - P.power) * Math.min(1, dt * 1.5);
-      u.uPower.value = P.power;
+      P.hole += (P.wantHole - P.hole) * Math.min(1, dt * 2.5);
+      u.uPower.value = P.power; u.uHole.value = P.hole;
+      ball.visible = P.hole > 0.02; ball.scale.setScalar(Math.max(0.001, P.hole));
+      if (P.hole > 0.02) { light.color.setHex(0xa050ff); rings.forEach((r, i) => { r.material.color.setHex(i === 1 ? 0xffa040 : 0x9a40ff); r.material.opacity = 1 - P.hole * 0.5; }); }
       rings.forEach((r, i) => { r.rotation.z += dt * (1.2 + i * 0.7) * (i % 2 ? -1 : 1); r.material.opacity = P.power * (0.5 + 0.5 * Math.sin(t * 3 + i)); r.scale.setScalar(1 + Math.sin(t * 2 + i) * 0.03 * P.power); });
       light.intensity = P.power * 14;
       // particles spiralling inward
-      if (P.power > 0.05) for (let i = 0; i < 3 * P.power; i++) {
-        const a = Math.random() * Math.PI * 2, r = radius * rnd(1.1, 1.6);
+      if (P.power > 0.05) for (let i = 0; i < 3 * P.power * (1 + P.hole * 4); i++) {
+        const a = Math.random() * Math.PI * 2, r = radius * rnd(1.1, 1.6 + P.hole * 3);
         const pos = new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0).applyMatrix4(group.matrixWorld);
         const to = group.getWorldPosition(new THREE.Vector3()).sub(pos).multiplyScalar(rnd(0.8, 1.4));
-        this.p.spawn(pos, to, new THREE.Color(Math.random() < 0.5 ? 0x7aeaff : 0xffffff), rnd(0.15, 0.35), 1.0, 0, 0);
+        this.p.spawn(pos, to, new THREE.Color(P.hole > 0.3 ? (Math.random() < 0.5 ? 0xa050ff : 0xffa040) : Math.random() < 0.5 ? 0x7aeaff : 0xffffff), rnd(0.15, 0.35), 1.0, 0, 0);
       }
     });
     P.dispose = () => { stop(); group.parent?.remove(group); };

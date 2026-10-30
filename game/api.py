@@ -50,6 +50,14 @@ class GameAPI:
             voices.COMPANION_CLONE = (prof or {}).get("rvc") or None
         except Exception:
             voices.COMPANION_CLONE = None
+        model = (voices.COMPANION_CLONE or {}).get("model")
+        if model and model != getattr(self, "_warmed", None):    # load the clone now, so her first line isn't slow
+            self._warmed = model
+            try:
+                import rvc
+                rvc.warm(model)
+            except Exception:
+                pass
 
     def _g(self):
         if not self.game: raise GameError("No adventure is running - start or load one.")
@@ -76,12 +84,14 @@ class GameAPI:
                              settings={k: v for k, v in (opts.get("settings") or {}).items()}, vermeil_voice=self.vermeil_voice,
                              companion_profile=self.companion() if callable(self.companion) else None)
         self.game.save("auto")
+        self._sync_clone()
         g = self.game
         return {"intro": g.camp["intro"], "state": g.state()}
 
     @_safe
     def load(self, slot):
         self.game = Game.load(str(slot))
+        self._sync_clone()
         return {"state": self.game.state()}
 
     @_safe

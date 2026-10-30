@@ -241,6 +241,7 @@ button.send:active { transform: translateY(2px); box-shadow: none; }
 .lbl.npc .n { color: #d6ffcf; }
 .lbl.target .n { color: var(--gold); }
 .float { position: absolute; transform: translate(-50%, -50%); font-weight: 900; font-size: 22px; pointer-events: none; text-shadow: 0 2px 4px #000, 0 0 3px #000; animation: up 1.2s ease-out forwards; }
+.float.xp { color: #9fd8ff; font-size: 20px; } .float.gold { color: #ffd34a; font-size: 20px; }
 .float.heal { color: #8ff07a; } .float.dmg { color: #fff; } .float.crit { color: var(--gold); font-size: 30px; } .float.miss { color: #c8d3d6; font-size: 18px; }
 .float.weak { color: #ffb347; }
 @keyframes up { to { transform: translate(-50%, -160%); opacity: 0; } }

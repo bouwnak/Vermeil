@@ -14,7 +14,20 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (30 Oct 2026, latest): Battle Pass, study games, language trainers, gym coach, phone Study tab, backups
+## New (30 Oct 2026, latest): Adventure camp, black-hole portal, roomier battles
+- **Pick your hero by the fire:** on the new-campaign screen every class's hero sits on the long log beside Vermeil.
+  Click a class and that hero gets up, walks round the fire and greets you; pick another and the first one goes back and sits down.
+  Other species (elf, orc…) step into the firelight instead.
+- **The portal turns into a black hole:** after **Open the portal** it goes black with a purple-orange rim and pulls in the logs,
+  the tent, the campfire, every hero, Vermeil and you (the trees stay). Then the camera falls in after them.
+- **Battles have room:** summons (like the Summoner's Spirit Sprite) stand in line beside you, not in front of you, and groups of
+  enemies are spread out evenly.
+- **+XP and +gold:** each enemy shows "+N XP" with a sparkle sound as it falls, and "+N gold" with a coin sound after the battle.
+- **Her cloned voice in the game:** the companion's voice clone (RVC) is warmed up when the adventure starts or loads, so her first
+  line already uses it.
+- The warrior and ranger have no painted eyes (this can't come back by accident any more).
+
+## New (30 Oct 2026): Battle Pass, study games, language trainers, gym coach, phone Study tab, backups
 Everything you do now gives **XP**. Open **Battle Pass** in the menu to see your level, streak, 3 daily quests, badges and
 the rewards you unlock (room decorations, wallpapers and titles; locked ones show a 🔒 in the room's Add furniture list).
 - **Study → Play:**

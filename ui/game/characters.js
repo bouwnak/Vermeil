@@ -7,7 +7,7 @@ import * as A from "./assets.js";
 import { Animator, styleFor } from "./anim.js";
 
 const HEIGHT = { humanoid: 1.75, quadruped: 1.25, flyer: 1.3, blob: 1.0, serpent: 0.9 };
-const PAINT_FACE = /^$/;      // no model gets painted eyes any more (the warrior and ranger look better without them)
+const PAINT_FACE = null;      // no model gets painted eyes any more (the warrior and ranger look better without them)
 
 // what each class carries when nothing else is equipped (and what non-human species show in the creation preview)
 export const CLASS_KIT = {
@@ -175,7 +175,7 @@ export class Actor {
     this.anim.height = h;
     this.body = body;
     this.findFace();
-    if (PAINT_FACE.test(i.model || "")) this.paintFace();
+    if (PAINT_FACE?.test(i.model || "")) this.paintFace();
     // RPG / modular characters already hold their weapon in the model; everyone else (elves, orcs, demonkin...) gets
     // their equipped weapon - or their class's usual kit - in hand: rogue daggers, ranger bow, paladin sword + shield...
     // (a normal human with a class gets NO extra item - it would float next to the one in the model)

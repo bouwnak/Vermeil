@@ -282,6 +282,16 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## ➕ Extra features you asked for in chat
 ✅ 3D cozy room (themes, furniture editor, day/night by your clock, brightness) · ✅ characters (Vermeil, Pip, Robo, your own GLB/VRM) · ✅ planner (calendar, tasks, reminders, birthdays, shopping, notes) · ✅ study (library, review sets, research, assignment help) · ✅ coding helper · ✅ gym mode (your routine, timer, editor, history, best reps, +2.5 kg upgrade, sessions) · ✅ journal & think · ✅ voice commands · ✅ top-left status pills · ✅ night theme with sounds and effects · ✅ Groq → Ollama automatic switch · ✅ saved preferences · ✅ package cleanup script · ✅ smaller AI requests: only the tools that fit each message are sent (~1–2k tokens instead of ~9k), so Groq lasts longer and the local AI isn't overloaded
 
+## 🆕 30 Oct 2026: Adventure camp and black-hole portal
+| Feature | Status | Where |
+|---|---|---|
+| Every class's hero sits on the log beside Vermeil; the one you pick stands up, walks round and greets you | ✅ | Adventure → Start new campaign |
+| The portal turns into a black hole and pulls in the camp, the heroes, Vermeil and you (not the trees) | ✅ | Adventure → Open the portal |
+| Summons stand beside you; groups of enemies are spread evenly | ✅ | Adventure battles |
+| "+N XP" over each fallen enemy, "+N gold" after the battle, with sounds | ✅ | Adventure battles |
+| Companion voice clone warmed up when the adventure starts or loads | ✅ | Adventure voice |
+| No painted eyes on any hero model | ✅ | Adventure |
+
 ## 🆕 30 Oct 2026: Battle Pass round (study games, language trainers, gym coach, phone, backups)
 | Feature | Status | Where |
 |---|---|---|

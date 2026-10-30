@@ -86,21 +86,24 @@ export class WorldScene {
     this.makeWater(L);
     onProgress(0.15);
     // ---- models, grouped by asset so each kind is one instanced draw
+    // (a "solo" object gets a group of its own, standing at its spot, so it can be moved later - the title camp's props)
     const byAsset = new Map();
-    for (const o of L.objects) {
-      if (!byAsset.has(o.a)) byAsset.set(o.a, []);
-      byAsset.get(o.a).push(o);
-    }
+    this.solos = [];
+    L.objects.forEach((o, i) => {
+      const key = o.solo ? `${o.a}#${i}` : o.a;
+      if (!byAsset.has(key)) byAsset.set(key, []);
+      byAsset.get(key).push(o);
+    });
     const ids = [...byAsset.keys()];
     let done = 0;
-    await Promise.all(ids.map(async (id) => {
-      const list = byAsset.get(id);
+    await Promise.all(ids.map(async (key) => {
+      const list = byAsset.get(key), id = list[0].a, solo = list[0].solo;
       try {
         const g = await A.load(id);
         const toMat = (o) => {
           const m = new THREE.Matrix4();
           const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), o.r);
-          m.compose(new THREE.Vector3(o.x, this.ground(o.x, o.z) + (o.y || 0), o.z), q, new THREE.Vector3(o.s, o.s, o.s));
+          m.compose(solo ? new THREE.Vector3() : new THREE.Vector3(o.x, this.ground(o.x, o.z) + (o.y || 0), o.z), q, new THREE.Vector3(o.s, o.s, o.s));
           return m;
         };
         const plant = A.isPlant(id) && !/dead|stump|log/i.test(id);
@@ -125,6 +128,7 @@ export class WorldScene {
           grp.add(cg);
         }
         if (!live()) return;
+        if (solo) { grp.position.set(list[0].x, this.ground(list[0].x, list[0].z) + (list[0].y || 0), list[0].z); this.solos.push({ obj: grp, o: list[0], lights: [] }); }
         if (list[0].tint) grp.traverse((x) => { if (x.isMesh) { x.material = [].concat(x.material).map((mm) => { const c = mm.clone(); c.color?.lerp(new THREE.Color(list[0].tint), 0.5); return c; }); if (x.material.length === 1) x.material = x.material[0]; } });
         grp.userData.asset = id;
         // glowing things: brighten emissive parts, and give lamps a real light at night
@@ -145,6 +149,7 @@ export class WorldScene {
             const h = (A.catalog[id]?.size?.[1] || 3) * o.s;
             pl.position.set(o.x, h * 0.8, o.z);
             this.scene.add(pl); this.lights.push(pl);
+            if (solo) this.solos.at(-1)?.lights.push(pl);
           }
         }
         this.root.add(grp);

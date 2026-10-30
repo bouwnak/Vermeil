@@ -170,6 +170,23 @@ class CombatTests(unittest.TestCase):
             finish(g.camp, "victory", g.dice, [])                       # a replayed victory pays nothing new
             self.assertEqual(g.camp["stats"]["xp_earned"], xp)
 
+    def test_each_fallen_enemy_reports_its_xp_and_gold(self):
+        # the game pops "+N XP" over each enemy as it falls and "+N gold" where it fell after the battle
+        for seed in range(12, 40):
+            g = new(seed=seed)
+            ev = list(self.fight(g))
+            while g.in_combat():
+                ev += g.combat_act(g.camp["combat"]["waiting_for"], {"type": "ability", "ability": "basic_attack"})
+            end = next((e for e in ev if e["type"] == "combat_end"), None)
+            if end and end["result"] == "victory": break
+        deaths = [e for e in ev if e["type"] == "death" and str(e["uid"]).startswith("e")]
+        self.assertTrue(deaths)
+        for d in deaths: self.assertGreater(d["xp"], 0)
+        each = end["rewards"]["each"]
+        self.assertTrue(each)
+        self.assertEqual(sum(x["xp"] for x in each), end["rewards"]["xp"])
+        self.assertEqual(sum(x["gold"] for x in each), end["rewards"]["gold"])
+
     def test_boss_can_be_defeated_and_campaign_finishes(self):
         r = simulate.autoplay(3, "paladin")
         self.assertEqual(r["status"], "complete")

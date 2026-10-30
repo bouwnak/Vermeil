@@ -534,7 +534,10 @@ def deal(camp, tg, dmg, events, src=None, element=None, crit=False, note="", exp
 def die(camp, tg, src, events):
     tg["alive"] = False
     tg["statuses"] = []
-    events.append({"type": "death", "uid": tg["uid"], "name": tg["name"], "by": src})
+    ev = {"type": "death", "uid": tg["uid"], "name": tg["name"], "by": src}
+    if tg["team"] == "enemy":
+        ev["xp"] = tg.get("xp_value", 10)                 # the game shows "+N XP" over each enemy as it falls
+    events.append(ev)
     cb = camp["combat"]
     if tg["team"] == "enemy" and tg["uid"] not in cb["defeated"]:
         cb["defeated"].append(tg["uid"])
@@ -793,7 +796,7 @@ def finish(camp, result, dice, events):
     cb["phase"] = "ended"
     cb["result"] = result
     st = camp.setdefault("stats", {})
-    rewards = {"xp": 0, "items": [], "gold": 0}
+    rewards = {"xp": 0, "items": [], "gold": 0, "each": []}      # each: [{uid, xp, gold}] per defeated enemy
     if result == "victory" and not cb.get("rewards_paid"):
         cb["rewards_paid"] = True
         player = next((p for p in camp["party"] if p.get("kind") == "player"), camp["party"][0])
@@ -806,6 +809,8 @@ def finish(camp, result, dice, events):
             key = f"{camp['id']}:{uid}"
             if award_xp(camp, key, e.get("xp_value", 10), dice, events, src_level=e.get("level")):
                 rewards["xp"] += e.get("xp_value", 10)
+                one = {"uid": uid, "xp": e.get("xp_value", 10), "gold": 0}
+                rewards["each"].append(one)
                 st["monsters_defeated"] = st.get("monsters_defeated", 0) + 1
                 st.setdefault("kills_by_type", {})
                 st["kills_by_type"][e["name"]] = st["kills_by_type"].get(e["name"], 0) + 1
@@ -817,7 +822,7 @@ def finish(camp, result, dice, events):
                     camp["awarded"].append(lk)
                     for it in roll_loot(camp, e, dice, bonus, extra):
                         stored = add(camp, it)
-                        if it["base"] == "gold": rewards["gold"] += it["qty"]
+                        if it["base"] == "gold": rewards["gold"] += it["qty"]; one["gold"] += it["qty"]
                         else:
                             rewards["items"].append({"name": it["name"], "rarity": it["rarity"], "model": it.get("model"), "qty": it["qty"]})
                             if it["rarity"] in ("rare", "epic", "legendary") or it["slot"] in ("weapon", "armor", "offhand", "accessory"):

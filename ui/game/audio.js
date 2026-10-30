@@ -746,6 +746,8 @@ export class Audio {
       }
       case "nat1": [311, 293, 277, 262].forEach((f, i) => T({ f, f2: i === 3 ? 220 : null, type: "sawtooth", dur: i === 3 ? 0.9 : 0.32, vol: 0.06, delay: i * 0.3, curve: "lin" })); break;
       case "coin": case "loot": [1319, 1760, 2093].forEach((f, i) => T({ f, type: "square", dur: 0.12, vol: 0.06, delay: i * 0.06 })); break;
+      case "xp": [784, 988, 1319, 1568].forEach((f, i) => T({ f, type: "sine", dur: 0.28, vol: 0.07, delay: i * 0.05, verb: true })); T({ f: 2637, type: "triangle", dur: 0.4, vol: 0.03, delay: 0.2, verb: true }); break;
+      case "gold": [2093, 2637, 3136].forEach((f, i) => { T({ f, type: "square", dur: 0.08, vol: 0.045, delay: i * 0.07 }); T({ f: f * 1.5, type: "sine", dur: 0.25, vol: 0.03, delay: i * 0.07 + 0.01 }); }); N({ dur: 0.12, f: 6000, q: 4, vol: 0.05, delay: 0.02 }); break;
       case "levelup": [523, 659, 784, 1047, 1319].forEach((f, i) => T({ f, type: "triangle", dur: 0.5, vol: 0.12, delay: i * 0.09, verb: true })); break;
       case "click": T({ f: 900, type: "triangle", dur: 0.05, vol: 0.08 }); break;
       case "hover": T({ f: 1400, type: "sine", dur: 0.04, vol: 0.025 }); break;
@@ -762,6 +764,9 @@ export class Audio {
       // the portal
       case "portal": T({ f: 55, f2: 220, type: "sawtooth", dur: 4, vol: 0.12, attack: 2, verb: true }); N({ dur: 4, f: 300, f2: 3000, q: 1, vol: 0.2, verb: true }); break;
       case "portal_hum": this.portalHum(true); break;
+      case "blackhole":             // the portal caves in: a deep falling rumble and a long sucking roar
+        T({ f: 90, f2: 28, type: "sawtooth", dur: 5, vol: 0.18, attack: 0.4, verb: true }); T({ f: 45, f2: 22, type: "sine", dur: 6, vol: 0.25, attack: 0.8 });
+        N({ dur: 6, filter: "lowpass", f: 1800, f2: 120, vol: 0.4, attack: 1.2, verb: true }); break;
       case "portal_enter": {          // stepping through: a rising shimmer, a deep woosh and a bright chime
         N({ dur: 1.4, f: 300, f2: 5000, q: 1.2, vol: 0.35, verb: true, attack: 0.3 });
         T({ f: 110, f2: 880, type: "sawtooth", dur: 1.2, vol: 0.08, verb: true, attack: 0.2 });
