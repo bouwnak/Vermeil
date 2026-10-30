@@ -1170,9 +1170,21 @@ function setEditing(on) {
   $("editBar").hidden = !on;
   $("editBtn").hidden = on;
   $("editBtn").setAttribute("aria-pressed", on);
-  if (on) { for (const p of document.querySelectorAll(".panel")) p.hidden = true; renderCatalog(); syncRoomControls(); }
+  if (on) { for (const p of document.querySelectorAll(".panel")) p.hidden = true; renderCatalog(); syncRoomControls(); syncGymSwitch(); }
   else saveLayoutSoon();
 }
+
+// the switch in the edit bar: go between your room and the gym room (and keep editing in the new one)
+function syncGymSwitch() {
+  const b = $("editGym");
+  b.textContent = room.gym ? "🏠 My room" : "🏋 Gym room";
+  b.setAttribute("aria-pressed", !!room.gym);
+}
+$("editGym").addEventListener("click", () => {
+  if (!room.gym) saveLayoutSoon();                                  // your room is saved before it's swapped out
+  room.setGymRoom(!room.gym, null, state?.ui?.gym_layout);        // (this leaves edit mode...)
+  setEditing(true);                                                 // ...so edit the room you switched to
+});
 
 // ---------- furniture catalog, sorted into categories ----------
 const CATEGORIES = [
@@ -1368,8 +1380,24 @@ document.addEventListener("keydown", (e) => {
 room.onPoke = () => say(["Hey! That tickles!", "Yes?", "Careful!"][Math.floor(Math.random() * 3)]);
 
 // ---------------- start ----------------
+/** the startup loading screen: a step of text and how far along the bar is (0-1); done fades it away */
+function bootStep(text, frac) {
+  $("bootStep").textContent = text;
+  $("boot").querySelector(".boot-bar i").style.width = `${Math.round(frac * 100)}%`;
+}
+function bootDone() {
+  const b = $("boot");
+  if (b.classList.contains("done")) return;
+  bootStep("Ready", 1);
+  b.classList.add("done");
+  setTimeout(() => b.remove(), 700);
+}
+setTimeout(bootDone, 60000);   // never stay stuck on the loading screen
+
 (async () => {
+  bootStep("Connecting…", 0.1);
   api = await getApi();
+  bootStep("Reading your settings…", 0.25);
   state = await api.get_state();
   renderStatus();
   // restore remembered preferences
@@ -1391,6 +1419,7 @@ room.onPoke = () => say(["Hey! That tickles!", "Yes?", "Careful!"][Math.floor(Ma
   room.onViewChange = (view) => { clearTimeout(viewTimer); viewTimer = setTimeout(() => api.save_ui({ view }), 800); };
   showHistory(state.history);
   renderPerformance();
+  bootStep("Building your room…", 0.4);
   try {
     const saved = await api.load_room();
     if (saved) room.loadLayout(saved);
@@ -1412,6 +1441,7 @@ room.onPoke = () => say(["Hey! That tickles!", "Yes?", "Careful!"][Math.floor(Ma
     }
   } catch (e) { console.warn("room layout", e); }
   syncRoomControls();
+  bootStep("Opening your apps…", 0.55);
   planner = initPlanner(api);
   study = initStudy(api);
   initQuest(api);
@@ -1440,10 +1470,12 @@ room.onPoke = () => say(["Hey! That tickles!", "Yes?", "Careful!"][Math.floor(Ma
   spotifyPanel.load().catch(() => {});
   startLife();
   renderPlanner();
+  bootStep(`Waking up ${activeChar()?.name || "Vermeil"}…`, 0.75);
   await loadCharacter();
+  bootDone();
   api.boot();
   loadVoices();
-})();
+})().catch((e) => { console.error(e); bootDone(); });
 
 // ---------- gym room: shows while a gym session (workout) is running ----------
 window.addEventListener("gym-session", (e) => {

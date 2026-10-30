@@ -53,8 +53,8 @@ const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 // the title camp: where the fire burns, the log Vermeil sits on, and the camera that frames them with the portal behind
 const TITLE_FIRE = { x: 3.4, z: 2.9 }, TITLE_SEAT = { x: 2.3, z: 1.9 };
 const TITLE_SHOT = [V3(2.7, 1.9, 6.8), V3(1.5, 1.25, -0.4)];
-// the other log: the hero you pick in character creation walks out of the dark and sits on it, across the fire from Vermeil
-const HERO_LOG = { x: 4.8, z: 1.8 }, HERO_SEAT = 0.46, HERO_FROM = { x: 7.6, z: -0.4 };
+// the other log: the hero you pick in character creation sits on it, across the fire from Vermeil
+const HERO_LOG = { x: 4.8, z: 1.8 }, HERO_SEAT = 0.46;
 const CREATE_SHOT = [V3(2.0, 2.0, 7.0), V3(3.5, 0.9, 1.1)];
 
 class Game {
@@ -233,32 +233,12 @@ class Game {
     this.engine.shot(...TITLE_SHOT);
   }
 
-  /** the hero you picked walks in from the dark, says hello, shows their weapon and sits down on the other log */
-  async walkToLog(a) {
-    a.pos.set(HERO_FROM.x, 0, HERO_FROM.z);
-    a.path = [[HERO_LOG.x, HERO_LOG.z]]; a.maxSpeed = 2.2;
-    await this.waitUntil(() => !a.path.length || this.previewActor !== a, 6000);
-    if (this.previewActor !== a) return;
+  /** the hero you picked is already sitting on the other log, facing the fire (no walking, so two heroes never overlap) */
+  seatOnLog(a) {
     a.pos.set(HERO_LOG.x, 0, HERO_LOG.z); a.path = [];
-    a.face(CREATE_SHOT[0].x, CREATE_SHOT[0].z);
-    await this.gsleep(250);
-    if (this.previewActor !== a) return;
-    a.anim.play("greet");                                     // every species greets in its own way
-    this.audio.creature(a.soundProfile(), "victory", { vol: 0.7 });
-    await this.gsleep(1500);
-    if (this.previewActor !== a) return;
-    if (a.weaponKind && a.weaponKind !== "fists") { a.anim.play(WEAPON_ATTACK[a.weaponKind] || "attack"); await this.gsleep(1300); }   // show off the weapon
-    if (this.previewActor !== a) return;
-    a.face(TITLE_FIRE.x, TITLE_FIRE.z);
-    a.anim.sit(HERO_SEAT);                                    // ...and sits down by the fire (the pose eases in)
-  }
-
-  /** the hero you didn't keep gets up and walks off into the dark */
-  async walkAway(a) {
-    a.anim.sit(null);
-    a.path = [[HERO_FROM.x, HERO_FROM.z]]; a.maxSpeed = 2.6;
-    await this.waitUntil(() => !a.path.length, 4000);
-    a.dispose();
+    a.face(TITLE_FIRE.x, TITLE_FIRE.z); a.heading = a.wantHeading;
+    a.anim.seat = { h: HERO_SEAT, w: 1 };                     // sat down from the first frame, no easing in
+    this.audio.creature(a.soundProfile(), "victory", { vol: 0.5 });
   }
 
   // ======================================================== character creation
@@ -314,15 +294,14 @@ class Game {
       this.letGo();
       this.previewActor = a;
       a.label.style.display = "none";
-      this.walkToLog(a);
+      this.seatOnLog(a);
     } catch (e) { console.warn(e); }
   }
 
-  /** the hero on the log leaves (you picked someone else, or went back to the title) */
+  /** the hero on the log goes away at once (you picked someone else, or went back to the title) */
   letGo() {
-    const a = this.previewActor;
+    this.previewActor?.dispose();
     this.previewActor = null;
-    if (a) this.walkAway(a);
   }
 
   async startNew() {

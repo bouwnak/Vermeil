@@ -14,10 +14,19 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (30 Oct 2026, latest): Adventure camp, black-hole portal, roomier battles
+## New (31 Oct 2026, latest): Loading screen, gym room switch, 200 ideas
+- **Loading screen:** while Vermeil starts, a full-screen loading screen shows what she's doing ("Building your room…",
+  "Waking up Vermeil…") with a progress bar, then fades away when she's ready.
+- **Edit room → 🏋 Gym room:** while editing, press **🏋 Gym room** to switch to the gym and edit it; press **🏠 My room** to go
+  back. Your own room is kept exactly as it was.
+- **Adventure camp:** only one hero sits on the second log now, and they are already sitting (no more two heroes overlapping
+  when you switch quickly).
+- **[FEATURE_IDEAS.md](FEATURE_IDEAS.md):** 200 suggested new features and upgrades, numbered so you can pick by number.
+
+## New (30 Oct 2026): Adventure camp, black-hole portal, roomier battles
 - **Pick your hero by the fire:** the camp has just two logs: Vermeil sits on hers, the other one waits for you.
-  On the new-campaign screen, the hero you pick walks out of the dark, greets you and sits on the second log; pick another
-  class or species and the first one walks away and the new one takes the seat.
+  On the new-campaign screen, the hero you pick is already sitting on the second log; pick another class or species and
+  they swap at once.
 - **The portal turns into a black hole:** after **Open the portal** it goes black with a purple-orange rim and pulls in both logs,
   the tent, the campfire, Vermeil and your hero (the trees stay). Then the camera falls in after them.
 - **Battles have room:** summons (like the Summoner's Spirit Sprite) stand in line beside you, not in front of you, and groups of

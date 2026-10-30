@@ -22,6 +22,14 @@
   </script>
 </head>
 <body>
+  <div class="boot" id="boot" role="status" aria-live="polite">
+    <div class="boot-card">
+      <img class="boot-logo" src="vermeil.ico" alt="">
+      <div class="boot-name">Vermeil</div>
+      <div class="boot-bar"><i></i></div>
+      <div class="boot-step" id="bootStep">Starting up…</div>
+    </div>
+  </div>
   <aside class="sidebar" aria-label="Menu">
     <div class="side-bg" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
     <div class="who">
@@ -122,6 +130,7 @@
       <div class="edit-top">
         <button type="button" class="edit-done" id="editDone">✓ Done editing</button>
         <button type="button" class="edit-undo" id="editUndo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶ Undo</button>
+        <button type="button" class="edit-undo" id="editGym" title="Switch between your room and the gym room">🏋 Gym room</button>
         <div class="edit-cats" id="catalogTabs" role="tablist" aria-label="What to change"></div>
       </div>
       <div class="edit-drawer" id="editDrawer">

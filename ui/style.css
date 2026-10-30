@@ -106,6 +106,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
   color: var(--on-plum);
   font-size: 13px; font-weight: 700;
 }
+/* the startup loading screen: covers everything until the room and her model are ready */
+.boot { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #0d1626 0%, var(--black) 70%); transition: opacity .6s ease; }
+.boot.done { opacity: 0; pointer-events: none; }
+.boot-card { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.boot-logo { width: 72px; height: 72px; filter: drop-shadow(0 0 18px var(--blue-glow)); animation: bootPulse 1.8s ease-in-out infinite; }
+.boot-name { font-size: 34px; font-weight: 800; color: var(--blue); letter-spacing: .5px; }
+.boot-bar { width: 220px; height: 4px; border-radius: 4px; background: rgba(var(--accent-rgb), .15); overflow: hidden; }
+.boot-bar i { display: block; height: 100%; width: 0; background: var(--blue); box-shadow: 0 0 10px var(--blue-glow); transition: width .5s ease; }
+.boot-step { font-size: 14px; color: var(--muted); min-height: 1.2em; }
+@keyframes bootPulse { 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .boot-logo { animation: none; } }
 .loading { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-weight: 700; color: var(--on-plum); }
 
 .talk {
