@@ -54,6 +54,7 @@ button { font: inherit; }
 .btn.danger { color: var(--accent2); }
 .btn.big { min-height: 56px; font-size: 1.1rem; width: 100%; }
 .btn:disabled { opacity: .5; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .round { width: 48px; height: 48px; flex: none; border-radius: 50%; border: 1px solid var(--line); background: var(--panel2);
   color: var(--text); font-size: 1.2rem; cursor: pointer; }
 .round.primary { background: var(--accent); border-color: var(--accent); color: #fff; }

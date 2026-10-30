@@ -350,6 +350,11 @@ $("copyKey").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(KEY); toast("Key copied. Paste it as the header's value."); }
   catch { prompt("Copy your key:", KEY); }
 });
+$("openNative").addEventListener("click", (e) => {   // hands the address + key to the iPhone app (phone-ios/)
+  e.preventDefault();
+  location.href = `vermeil://pair?u=${encodeURIComponent(location.origin)}&k=${encodeURIComponent(KEY)}`;
+});
+$("nativeCard").hidden = !/iPhone|iPad|iPod/.test(navigator.userAgent);
 $("forget").addEventListener("click", () => {
   if (!confirm("Disconnect this phone? You'll need to scan the QR code again.")) return;
   store.del("key"); store.del("chat"); KEY = ""; showConnect("Disconnected.");

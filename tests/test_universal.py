@@ -244,6 +244,46 @@ class CrossPlatformTests(unittest.TestCase):
         for win_only in ("pycaw", "winotify", "comtypes"):
             self.assertNotIn(win_only, sh)
 
+class IPhoneAppTests(unittest.TestCase):
+    """phone-ios/ can only be built on a Mac (GitHub builds it: .github/workflows/ios.yml) - here the parts that must match"""
+    IOS = os.path.join(ROOT, "phone-ios")
+
+    def read(self, *parts, base=None):
+        with open(os.path.join(base or self.IOS, *parts), encoding="utf-8") as f:
+            return f.read()
+
+    def test_background_mic_and_pair_link(self):
+        project = self.read("project.yml")
+        self.assertIn("UIBackgroundModes: [audio]", project)          # keeps listening with the phone locked
+        self.assertIn("CFBundleURLSchemes: [vermeil]", project)       # vermeil://pair?u=...&k=...
+        for usage in ("NSMicrophoneUsageDescription", "NSSpeechRecognitionUsageDescription"):
+            self.assertIn(usage, project)
+        js = self.read("ui", "phone", "phone.js", base=ROOT)
+        self.assertIn("vermeil://pair?u=${encodeURIComponent(location.origin)}&k=${encodeURIComponent(KEY)}", js)
+        pairing = self.read("Vermeil", "Pairing.swift")
+        self.assertIn('$0.name == "u"', pairing)
+        self.assertIn('$0.name == "k"', pairing)
+
+    def test_same_api_and_wake_words_as_the_web_app(self):
+        api = self.read("Vermeil", "VermeilAPI.swift")
+        self.assertIn('"X-Vermeil-Key"', api)
+        self.assertIn('"X-Vermeil-Key"', self.read("brain", "phone.py", base=ROOT))
+        app_py = self.read("app.py", base=ROOT)
+        for name in ("hello", "chat", "speak"):
+            self.assertIn(f'"{name}": self._phone_', app_py)
+            self.assertIn(f'"{name}"', self.read("Vermeil", "AppModel.swift"))
+        js = self.read("ui", "phone", "phone.js", base=ROOT)
+        swift = self.read("Vermeil", "WakeWord.swift")
+        js_list = js.split("vermeil: [", 1)[1].split("]", 1)[0]
+        swift_list = swift.split('"vermeil": [', 1)[1].split("]", 1)[0]
+        self.assertEqual(js_list, swift_list)
+
+    def test_every_swift_file_is_in_the_app(self):
+        files = os.listdir(os.path.join(self.IOS, "Vermeil"))
+        for needed in ("VermeilApp.swift", "Listener.swift", "SiriIntents.swift", "AppModel.swift", "Views.swift"):
+            self.assertIn(needed, files)
+        self.assertTrue(os.path.exists(os.path.join(self.IOS, "Vermeil", "Assets.xcassets", "AppIcon.appiconset", "icon-1024.png")))
+
 
 if __name__ == "__main__":
     unittest.main()

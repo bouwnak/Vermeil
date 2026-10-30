@@ -1,0 +1,27 @@
+# Builds the iPhone app (phone-ios/) on GitHub's Mac, so it's checked even without a Mac at home.
+# No signing here - installing on your iPhone is done from a Mac with Xcode (phone-ios/README.md).
+name: iPhone app
+on:
+  push:
+    paths: ["phone-ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wake word and pairing checks
+        working-directory: phone-ios
+        run: swiftc Vermeil/WakeWord.swift Vermeil/Pairing.swift Checks/main.swift -o "$RUNNER_TEMP/checks" && "$RUNNER_TEMP/checks"
+      - name: Make the Xcode project
+        working-directory: phone-ios
+        run: brew install xcodegen && xcodegen generate
+      - name: Build for the iPhone simulator
+        working-directory: phone-ios
+        run: |
+          xcodebuild -project Vermeil.xcodeproj -scheme Vermeil -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || true
+          grep -E "(error|warning): " build.log | sort -u | head -60 | while IFS= read -r line; do
+            case "$line" in *error:*) echo "::error::$line";; *) echo "::warning::$line";; esac
+          done
+          grep -q "BUILD SUCCEEDED" build.log || { tail -40 build.log; exit 1; }
