@@ -1570,3 +1570,4 @@ select.dd-open { border-color: var(--blue); }
 .partner-live .turn { margin: 0; }
 .partner-live .turn.you { text-align: right; opacity: .85; }
 .partner-live .turn.fix { background: rgba(240, 176, 63, .12); border-radius: 8px; padding: 4px 8px; font-size: .92em; }
+.partner-stop { color: var(--danger); border-color: var(--danger); }

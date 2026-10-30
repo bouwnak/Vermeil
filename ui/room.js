@@ -281,7 +281,8 @@ export class Room {
       this.scene.background = d.bg; this.scene.fog = d.fog;
       this._cutaway(false);
       Object.assign(ctl, d.limits);
-      this._tweenCamera(d.pos, d.target, d.fov);
+      if (this._roomIdx > 0) this._aimAtRoom(this._roomIdx);    // after editing: her room's view with its new size
+      else this._tweenCamera(d.pos, d.target, d.fov);
     }
   }
 
@@ -351,12 +352,21 @@ export class Room {
     this._aimAtRoom(i);
   }
 
-  /** the view of extra room i from its open front (wider rooms: a step further back so it all fits) */
+  /** The view of extra room i, framed exactly like the main room's view (the one you keep): the same angle,
+   *  with the aim point and the distance scaled to the room's size, so a smaller room isn't seen from its middle. */
   _aimAtRoom(i) {
-    const r = this.cozy.house.rects()[i];
-    if (!r) { this._roomIdx = 0; const v = this._mainView; if (v) this._tweenCamera(v.pos, v.target, v.fov); return; }
-    const cx = (r.minX + r.maxX) / 2, d = r.maxZ - r.minZ, back = 1.8 + Math.max(0, (r.maxX - r.minX) - 5) * 0.6;
-    this._tweenCamera(new THREE.Vector3(cx + 0.2, 1.85, r.maxZ + back), new THREE.Vector3(cx - 0.1, 1.15, r.minZ + d * 0.4), this.camera.fov);
+    const R = this.cozy.house.rects(), r = R[i], M = R[0];
+    const v = this._mainView || { pos: new THREE.Vector3(0.2, 1.85, 6.3), target: new THREE.Vector3(-0.1, 1.15, -0.6), fov: this.camera.fov };
+    if (!r) { this._roomIdx = 0; this._tweenCamera(v.pos, v.target, v.fov); return; }
+    const mw = M.maxX - M.minX, md = M.maxZ - M.minZ, w = r.maxX - r.minX, d = r.maxZ - r.minZ;
+    const s = Math.min(1, Math.max(w / mw, d / md));               // how big the room is next to the main room
+    const target = new THREE.Vector3(
+      (r.minX + r.maxX) / 2 + (v.target.x - (M.minX + M.maxX) / 2) * (w / mw),
+      v.target.y,
+      r.minZ + (v.target.z - M.minZ) * (d / md));
+    const off = v.pos.clone().sub(v.target);
+    const pos = target.clone().add(new THREE.Vector3(off.x * s, off.y, off.z * s));
+    this._tweenCamera(pos, target, v.fov);
   }
 
   _tweenCamera(pos, target, fov) {

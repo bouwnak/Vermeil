@@ -318,17 +318,24 @@ export function initStudy(api) {
   let partnerOn = false;
   const partnerBtn = el("button", { class: "primary", title: "A spoken conversation in the language: answer out loud with your mic",
     onclick: async (e) => {
-      if (partnerOn) { const r = await api.partner_stop(); toast(r.message || "Stopped."); return; }
+      if (partnerOn) return;
       busy(e.target, true, "Starting…");
       try {
         const r = await api.partner_start(langSel.value, Number(levelSel.value), topicIn.value, true);
         if (r.error) toast(r.error, 7000);
       } finally { busy(e.target, false); }
     } }, "🎙 Talk live");
+  const partnerStop = el("button", { class: "ghost partner-stop", hidden: true, title: "End the live conversation and get your score",
+    onclick: async (e) => {
+      busy(e.target, true, "Stopping…");
+      try { const r = await api.partner_stop(); toast(r.message || "Stopped."); }
+      finally { busy(e.target, false); }
+    } }, "■ Stop");
+  const partnerShow = (on) => { partnerOn = on; partnerBtn.disabled = on; partnerStop.hidden = !on; };
   const partnerLine = (cls, text) => { partnerBox.append(el("p", { class: `turn ${cls}` }, text)); partnerBox.scrollIntoView({ block: "nearest" }); };
   window.addEventListener("partner", ({ detail: e }) => {
     if (e.event === "start") {
-      partnerOn = true; partnerBtn.textContent = "■ Stop talking";
+      partnerShow(true);
       partnerBox.hidden = false;
       partnerBox.replaceChildren(el("b", {}, `Talking in ${e.name}. Answer out loud — say “stop practice” to finish.`));
       const first = e.session?.messages?.slice(-1)[0];
@@ -337,7 +344,7 @@ export function initStudy(api) {
       partnerLine("you", e.you);
       partnerLine("her", e.reply);
     } else if (e.event === "stop") {
-      partnerOn = false; partnerBtn.textContent = "🎙 Talk live";
+      partnerShow(false);
       partnerLine("sys", e.error ? `Stopped: ${e.error}` : `Finished.${e.score ? " Score: " + e.score : ""}`);
       if (langLoaded) renderLanguage();
     }
@@ -366,6 +373,7 @@ export function initStudy(api) {
         finally { busy(e.target, false); }
       } }, "Conversation practice"),
       partnerBtn,
+      partnerStop,
       el("button", { class: "ghost", title: "A lesson built from the mistakes she corrected in your conversations", onclick: async (e) => {
         busy(e.target, true, "Looking at your mistakes…");
         try { const r = await api.sensei_mistakes_lesson(langSel.value); if (r.error) return toast(r.error, 7000); setMd(langOut, r.lesson, api); addListen(langOut, langSel.value); }

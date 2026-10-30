@@ -26,6 +26,7 @@ const [initMind, initBaking, initFocus, initCode, initMissions, initSpotify, ini
   optional("./electronics.js", "initElectronics"), optional("./planner.js", "initPlanner"), optional("./generator.js", "initGenerator")]);
 const $ = (id) => document.getElementById(id);
 const room = new Room($("scene"));
+if (new URLSearchParams(location.search).has("mock")) window.__room = room;   // browser preview only: lets checks drive the 3D room
 let api = null;
 let state = null;
 let editingId = null;
