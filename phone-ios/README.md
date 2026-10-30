@@ -39,7 +39,7 @@ Vermeil open and Settings → 📱 Phone turned on**.
    Tailscale on the computer and the iPhone, same account): its address never changes. **Anywhere (Cloudflare)**
    works too, but its address changes every time Vermeil starts, so you scan again then.
 2. Scan the QR code with the iPhone **Camera** app and open the page.
-3. On that page tap **Settings → 📲 Open in the Vermeil iPhone app**. Done.
+3. On that page tap **Settings → 📲 Open in the Vermeil phone app**. Done.
    (Or copy the link with **Copy link** on the computer and paste it into the app.)
 4. Allow the **Microphone** and **Speech Recognition** when it asks.
 

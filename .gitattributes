@@ -1,3 +1,5 @@
 # Mac / Linux installers must keep Unix line endings or bash refuses them
 *.sh text eol=lf
 *.command text eol=lf
+# Windows installers keep Windows line endings (also in GitHub's Download ZIP)
+*.bat text eol=crlf

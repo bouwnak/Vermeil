@@ -1,0 +1,39 @@
+# Builds the Android app (android/) on GitHub and puts the APK on the "Android app" release page,
+# so you can install it on your phone without Android Studio: see android/README.md.
+name: Android app
+on:
+  push:
+    paths: ["android/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+      - name: Wake word and pairing checks
+        working-directory: android
+        run: gradle --no-daemon testDebugUnitTest
+      - name: Build the APK
+        working-directory: android
+        run: gradle --no-daemon assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/Vermeil.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vermeil-android
+          path: ${{ runner.temp }}/Vermeil.apk
+      - name: Put it on the release page
+        if: github.ref_type == 'branch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view android-app >/dev/null 2>&1 || gh release create android-app --prerelease --title "Android app" \
+            --notes "The Vermeil Android app. On your phone: download Vermeil.apk, open it and allow installing. Step by step: android/README.md" --target "$GITHUB_SHA"
+          gh release upload android-app "$RUNNER_TEMP/Vermeil.apk" --clobber

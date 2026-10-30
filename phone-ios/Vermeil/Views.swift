@@ -26,7 +26,7 @@ struct PairView: View {
                 Section {
                     Text("1. On your computer open Vermeil → **Settings → 📱 Phone**, turn it on and pick **Tailscale** (its address never changes) or **Anywhere (Cloudflare)**.")
                     Text("2. Scan the QR code with the iPhone **Camera** app and open the page.")
-                    Text("3. On that page tap **Settings → 📲 Open in the Vermeil iPhone app**.")
+                    Text("3. On that page tap **Settings → 📲 Open in the Vermeil phone app**.")
                 } header: { Text("Connect to your computer") }
                 Section {
                     TextField("https://…/#key=…", text: $link, axis: .vertical)

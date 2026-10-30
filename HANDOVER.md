@@ -86,7 +86,17 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **Windows one-click install from GitHub with UniMate, extra-room camera, Stop button (30 Oct 2026, newest)**
+- **Android app `android/` (30 Oct 2026, newest)**: the Android counterpart of `phone-ios/` (owner asked for Android next).
+  - Kotlin, **no libraries** (plain `android.app.Activity`, `HttpURLConnection`, `org.json`), AGP 8.7.3, Kotlin 2.0.21, minSdk 26, target 35. Screens built in code (`MainActivity.kt`: Pair, Talk, Practice & more `WebView`, Settings).
+  - `ListenService.kt`: foreground service (type microphone, notification with Stop) running `SpeechRecognizer` in a loop (on-device on Android 13+), wake word → command, 8 s to say it after the wake word alone; pauses while she thinks/speaks and while the web tab is open.
+  - `Hub.kt`: shared state, pairing in app-private SharedPreferences, `/api/hello|chat|speak` (`VermeilApi.kt`, `X-Vermeil-Key`), her PC voice (WAV via `MediaPlayer`) or the phone's `TextToSpeech`.
+  - Assistant button: `ACTION_ASSIST` / `VOICE_COMMAND` intent filters → listens for a command at once. Pair links: `vermeil://pair`. The phone web page's native card now shows on Android too, linking to the APK.
+  - Build: `.github/workflows/android.yml` (ubuntu, Java 17, Gradle 8.10.2) runs `RulesTest.kt` and `assembleDebug`, uploads the APK and puts it on the **`android-app`** prerelease (`gh release upload --clobber`). Debug-signed, so a new build may need uninstalling the old one first (README says so).
+  - Also: `.gitattributes` keeps `*.bat` CRLF; the iPhone app's texts say "Vermeil phone app".
+  - Files: `android/**`, `.github/workflows/android.yml`, `.gitattributes`, `ui/phone/{index.html,phone.js}`, `phone-ios/{README.md,Vermeil/Views.swift}`, `tests/test_universal.py` (+3: 28), README, FEATURES (146), HANDOVER.
+  - Tests: test_universal 28 OK (one earlier run had a one-off failure in `PhoneServerTests.test_needs_the_key`, passed on reruns). No Android SDK on this PC: the build is checked by GitHub only; not tried on a real phone yet.
+
+- **Windows one-click install from GitHub with UniMate, extra-room camera, Stop button (30 Oct 2026)**
   - **Install first:** `INSTALL Windows.bat` (repo root, CRLF) runs `scripts/install.ps1`, now 7 steps: step 6 runs the new `scripts/setup_unimate.py` (calls `autosetup._unimate` with console progress: Miniconda, portable Git, code, Python 3.10, checkpoint, libraries; marks `_started`/ready in `data/auto_setup.json`; Windows only, a failure only warns). `package_app.py` leaves `INSTALL Windows.bat` out of the zip (the zip has `INSTALL.bat`). README starts with "Install first, then open the app".
   - **UniMate libraries install themselves:** the owner didn't want to paste pip commands (another PC got stuck on "Almost there"). `app.unimate_setup()` always calls `autosetup.retry("unimate")`; `animate.status()` only shows `pip_commands()` when the last automatic try failed (`auto["status"] == "failed"`). `ui/rigger.js` toast about the commands removed.
   - **Extra-room camera:** `ui/room.js` `_aimAtRoom(i)` frames room i like the main room's view (target and offset scaled by the room's size against the main room); `_diorama(off)` re-aims at her room after editing instead of the main view. `?mock` exposes `window.__room` (preview checks only).

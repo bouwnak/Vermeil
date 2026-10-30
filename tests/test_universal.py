@@ -287,3 +287,43 @@ class IPhoneAppTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class AndroidAppTests(unittest.TestCase):
+    """android/ is built by GitHub (.github/workflows/android.yml) - here the parts that must match the web app"""
+    APP = os.path.join(ROOT, "android", "app", "src")
+
+    def read(self, *parts, base=None):
+        with open(os.path.join(base or self.APP, *parts), encoding="utf-8") as f:
+            return f.read()
+
+    def kt(self, name):
+        return self.read("main", "java", "com", "vermeil", "phone", name)
+
+    def test_listens_in_the_background_and_opens_pair_links(self):
+        manifest = self.read("main", "AndroidManifest.xml")
+        for needed in ('android:foregroundServiceType="microphone"', "FOREGROUND_SERVICE_MICROPHONE", "RECORD_AUDIO",
+                       'android:scheme="vermeil" android:host="pair"', "android.intent.action.ASSIST",
+                       "android.speech.RecognitionService"):
+            self.assertIn(needed, manifest)
+        pairing = self.kt("Pairing.kt")
+        self.assertIn('query["u"]', pairing)
+        self.assertIn('query["k"]', pairing)
+        self.assertIn("Android", self.read("ui", "phone", "phone.js", base=ROOT).split('$("nativeCard").hidden', 1)[1][:80])
+
+    def test_same_api_and_wake_words_as_the_web_app(self):
+        self.assertIn('"X-Vermeil-Key"', self.kt("VermeilApi.kt"))
+        hub = self.kt("Hub.kt")
+        for name in ("hello", "chat", "speak"):
+            self.assertIn(f'"{name}"', hub)
+        js = self.read("ui", "phone", "phone.js", base=ROOT)
+        js_list = js.split("vermeil: [", 1)[1].split("]", 1)[0]
+        kt_list = self.kt("WakeWord.kt").split('"vermeil" to listOf(', 1)[1].split(")", 1)[0]
+        self.assertEqual(js_list, kt_list)
+
+    def test_built_and_published_by_github(self):
+        ci = self.read(".github", "workflows", "android.yml", base=ROOT)
+        self.assertIn("assembleDebug", ci)
+        self.assertIn("testDebugUnitTest", ci)
+        self.assertIn("releases/tag/android-app", self.read("android", "README.md", base=ROOT))
+        for d in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"):
+            self.assertTrue(os.path.exists(os.path.join(self.APP, "main", "res", f"mipmap-{d}", "ic_launcher.png")))

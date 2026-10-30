@@ -350,11 +350,15 @@ $("copyKey").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(KEY); toast("Key copied. Paste it as the header's value."); }
   catch { prompt("Copy your key:", KEY); }
 });
-$("openNative").addEventListener("click", (e) => {   // hands the address + key to the iPhone app (phone-ios/)
+$("openNative").addEventListener("click", (e) => {   // hands the address + key to the phone app (phone-ios/, android/)
   e.preventDefault();
   location.href = `vermeil://pair?u=${encodeURIComponent(location.origin)}&k=${encodeURIComponent(KEY)}`;
 });
-$("nativeCard").hidden = !/iPhone|iPad|iPod/.test(navigator.userAgent);
+$("nativeCard").hidden = !/iPhone|iPad|iPod|Android/.test(navigator.userAgent);   // iPhone: phone-ios/, Android: android/
+if (/Android/.test(navigator.userAgent)) {
+  $("nativeExtra").textContent = ", and can be your phone's assistant button";
+  $("nativeHow").innerHTML = 'Install it first: <a href="https://github.com/bouwnak/Vermeil/releases/tag/android-app" target="_blank" rel="noopener">download Vermeil.apk</a> on this phone.';
+}
 $("forget").addEventListener("click", () => {
   if (!confirm("Disconnect this phone? You'll need to scan the QR code again.")) return;
   store.del("key"); store.del("chat"); KEY = ""; showConnect("Disconnected.");
