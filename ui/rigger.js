@@ -789,12 +789,21 @@ class Rigger {
       <div class="rig-motions">${MOTIONS.map(([k, label], i) => `<label class="rig-check"><input type="checkbox" value="${k}" ${i < 3 ? "checked" : ""}> ${label}</label>`).join("")}</div>
       <p class="note">Ears and fingers are moved by the app itself, so you don't need animations for those.</p>
       <button type="button" class="primary rig-make">Make the animations</button>`;
-    side.querySelector(".rig-talk").addEventListener("click", () => this.autoTalk(name));
+    // one press is enough: the button greys out at once and a second press while it works does nothing
+    const once = (btn, fn) => btn.addEventListener("click", async () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      try { await fn(); } finally { btn.disabled = false; }
+    });
+    once(side.querySelector(".rig-talk"), () => this.autoTalk(name));
     side.querySelectorAll(".rig-cmd").forEach((pre) => pre.addEventListener("click", () => {
       navigator.clipboard?.writeText(pre.textContent).then(() => this.toast("Copied - paste it into a Command Prompt."), () => {});
     }));
-    side.querySelector(".rig-make").addEventListener("click", async () => {
-      if (!(await this.api.unimate_status()).ready) {          // not ready yet: say what's missing and get it now
+    once(side.querySelector(".rig-make"), async () => {
+      this.busy("Checking UniMate…", 0);
+      const ready = (await this.api.unimate_status()).ready;
+      this.busy(null);
+      if (!ready) {          // not ready yet: say what's missing and get it now
         const r = await this.api.unimate_setup();
         if (r.ready) return this.animatePanel(name);
         return this.toast(r.hint || "Getting UniMate ready…", 9000);

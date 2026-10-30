@@ -177,9 +177,11 @@ def conversation_prompt(language, level):
              "speak like a friendly anime character but still correctly.") if language == "ja" else \
         (" Explain formal vs informal speech when it comes up.") if language == "ko" else ""
     return (f"You are a patient native {name} speaker and teacher having a conversation with a {LEVELS[int(level)]} "
-            f"student. Speak mostly {name} at their level, keep it under 60 words.{roman} Add the English meaning in "
-            f"(brackets). If the student made mistakes, start with '✏️ Corrections:' showing the corrected sentence "
-            f"and a 1-line why, then continue the conversation with a question.{extra}")
+            f"student. Speak mostly {name} at their level. Keep each reply short: one or two short sentences (under 30 "
+            f"words), and don't repeat the student's line back.{roman} Add the English meaning in (brackets). If the "
+            f"student made mistakes, START the message with '✏️ Corrections:' on its own line with the corrected "
+            f"sentence and a 1-line why, then a blank line, then your reply ending with a question. If there were no "
+            f"mistakes, don't write any Corrections at all.{extra}")
 
 
 def save_mistakes(language, feedback):

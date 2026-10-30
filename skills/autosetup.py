@@ -309,5 +309,6 @@ def _unimate(step):
         _run([py, "-m", "pip", "install", "setuptools<81"])
         _run([py, "-m", "pip", "install", "-r", os.path.join(code, "requirements.txt"), "--no-build-isolation"],
              cwd=code, path_first=os.path.dirname(git), pid_file=PIP_PID_FILE)
+        animate.libraries_fixed()
         did = "UniMate is ready - press Animate it on a rigged character."
     return did

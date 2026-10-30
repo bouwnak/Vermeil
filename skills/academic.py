@@ -24,7 +24,11 @@ REVIEWS_DIR = os.path.join(LIB_DIR, "reviews")
 INDEX_FILE = os.path.join(LIB_DIR, "index.json")
 
 KINDS = ("lecture", "problems", "solutions", "other")
-SUPPORTED = (".pdf", ".docx", ".pptx", ".txt", ".md", ".png", ".jpg", ".jpeg", ".webp", ".bmp")
+DOCUMENTS = (".pdf", ".docx", ".pptx", ".txt", ".md", ".png", ".jpg", ".jpeg", ".webp", ".bmp")
+# video / audio lectures: what's said in them is written down (Whisper on this PC) and used like any other file
+MEDIA = (".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v", ".wmv", ".mp3", ".m4a", ".wav", ".ogg", ".flac")
+SUPPORTED = DOCUMENTS + MEDIA
+MEDIA_PART_SECONDS = 300                       # a video lecture becomes one "page" per 5 minutes, with times
 STUDY_MODEL = "smart"          # local model role (llm.py)       # bigger model for studying & research
 MAX_SOURCE_CHARS = 60000                                                  # how much of your files goes to the AI at once
 
@@ -141,14 +145,54 @@ def list_files():
     return _read_json(INDEX_FILE, {"files": []})["files"]
 
 
-def add_file(src_path, kind="lecture", subject=""):
-    """Copy a file into the library and read its text."""
+def _clock(seconds):
+    s = int(seconds)
+    return f"{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}" if s >= 3600 else f"{s // 60}:{s % 60:02d}"
+
+
+def transcribe_media(path, progress=lambda pct, text: None):
+    """a video / audio lecture -> pages of what was said, one per 5 minutes, each line starting with its time"""
+    import stt
+    from faster_whisper import decode_audio
+    progress(0.02, "Reading the sound from the video…")
+    audio = decode_audio(path, sampling_rate=16000)
+    total = max(1.0, len(audio) / 16000)
+    segments, _ = stt.load().transcribe(audio, beam_size=1, vad_filter=True, condition_on_previous_text=False)
+    parts = {}                                          # 5-minute part number -> its lines
+    for seg in segments:
+        text = seg.text.strip()
+        if text:
+            parts.setdefault(int(seg.start // MEDIA_PART_SECONDS), []).append(f"[{_clock(seg.start)}] {text}")
+        progress(min(0.98, seg.end / total), f"Writing down what's said… {_clock(seg.end)} of {_clock(total)}")
+    return ["\n".join(parts[k]) for k in sorted(parts)]
+
+
+def is_media(name):
+    return os.path.splitext(name)[1].lower() in MEDIA
+
+
+def add_file(src_path, kind="lecture", subject="", progress=lambda pct, text: None):
+    """Copy a file into the library and read its text. Video / audio lectures aren't copied (they're big): what's
+    said in them is written down and the library remembers where the video is."""
     _dirs()
     name = os.path.basename(src_path)
     ext = os.path.splitext(name)[1].lower()
     if ext not in SUPPORTED:
-        raise ValueError(f"{name}: only PDF, Word (.docx), PowerPoint (.pptx), text files and photos/screenshots can be added.")
+        raise ValueError(f"{name}: only PDF, Word (.docx), PowerPoint (.pptx), text files, photos/screenshots and "
+                         "video or audio lectures can be added.")
     file_id = uuid.uuid4().hex[:10]
+    if ext in MEDIA:
+        pages = transcribe_media(src_path, progress)
+        if not any(p.strip() for p in pages):
+            raise ValueError(f"{name}: no speech was heard in it.")
+        _write_json(os.path.join(TEXT_DIR, f"{file_id}.json"), pages)
+        entry = {"id": file_id, "name": name, "kind": kind if kind in KINDS else "other", "subject": (subject or "").strip(),
+                 "pages": len(pages), "chars": sum(len(p) for p in pages), "added": time.strftime("%Y-%m-%d %H:%M"),
+                 "scanned": False, "video": True, "source": os.path.abspath(src_path)}
+        index = _read_json(INDEX_FILE, {"files": []})
+        index["files"].append(entry)
+        _write_json(INDEX_FILE, index)
+        return entry
     dest = os.path.join(FILES_DIR, f"{file_id}{ext}")
     shutil.copy2(src_path, dest)
     pages = extract_pages(dest)
@@ -196,7 +240,96 @@ def file_path(file_id):
     entry = next((f for f in list_files() if f["id"] == file_id), None)
     if not entry:
         return None
+    if entry.get("source"):                     # a video lecture: where it was added from
+        return entry["source"]
     return os.path.join(FILES_DIR, f"{file_id}{os.path.splitext(entry['name'])[1].lower()}")
+
+
+# ====================================================================
+# USB drives: find the study materials on them
+# ====================================================================
+def removable_drives():
+    """[{"path", "label"}] - USB sticks / SD cards / phones as drives (Windows), /Volumes (Mac), /media (Linux)"""
+    import sys
+    found = []
+    if sys.platform == "win32":
+        import ctypes
+        import string
+        k = ctypes.windll.kernel32
+        mask = k.GetLogicalDrives()
+        system = os.environ.get("SystemDrive", "C:").upper()
+        for i, letter in enumerate(string.ascii_uppercase):
+            if not mask >> i & 1:
+                continue
+            root = f"{letter}:\\"
+            kind = k.GetDriveTypeW(ctypes.c_wchar_p(root))
+            if kind != 2 and not (kind == 3 and _is_usb(letter) and f"{letter}:" != system):   # 2 = removable
+                continue
+            buf = ctypes.create_unicode_buffer(261)
+            ok = k.GetVolumeInformationW(ctypes.c_wchar_p(root), buf, 261, None, None, None, None, 0)
+            if ok:                                              # an empty card reader slot isn't ready
+                found.append({"path": root, "label": f"{buf.value or 'USB drive'} ({letter}:)"})
+    else:
+        import getpass
+        bases = ["/Volumes"] if sys.platform == "darwin" else [f"/media/{getpass.getuser()}", f"/run/media/{getpass.getuser()}", "/media"]
+        for base in bases:
+            try:
+                names = sorted(os.listdir(base))
+            except OSError:
+                continue
+            for n in names:
+                p = os.path.join(base, n)
+                if os.path.isdir(p) and not os.path.islink(p) and n not in ("Macintosh HD", "Recovery") and p not in [d["path"] for d in found]:
+                    found.append({"path": p, "label": n})
+    return found
+
+
+_USB_BUS = {}                                       # drive letter -> on USB? (asking Windows takes a second)
+
+
+def _is_usb(letter):
+    """an external USB hard drive shows as a fixed disk: ask Windows what bus it's on"""
+    if letter not in _USB_BUS:
+        _USB_BUS[letter] = _ask_bus(letter)
+    return _USB_BUS[letter]
+
+
+def _ask_bus(letter):
+    import subprocess
+    try:
+        out = subprocess.run(["powershell", "-NoProfile", "-Command",
+                              f"(Get-Partition -DriveLetter {letter} | Get-Disk).BusType"],
+                             capture_output=True, text=True, timeout=8,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+        return "usb" in out.lower()
+    except Exception:
+        return False
+
+
+def scan_folder(root, limit=2000, max_depth=6):
+    """every study file (documents, video and audio lectures) under a folder or drive, newest first"""
+    out, root = [], os.path.abspath(root)
+    skip = {"$recycle.bin", "system volume information", "windows", "program files", "program files (x86)", ".trash",
+            ".trashes", ".spotlight-v100", ".fseventsd", "node_modules", "__pycache__"}
+    for dirpath, dirs, files in os.walk(root):
+        depth = dirpath[len(root):].count(os.sep)
+        dirs[:] = [d for d in dirs if d.lower() not in skip and not d.startswith(".") and depth < max_depth]
+        for n in files:
+            ext = os.path.splitext(n)[1].lower()
+            if ext not in SUPPORTED or n.startswith("~$") or n.startswith("._"):
+                continue
+            p = os.path.join(dirpath, n)
+            try:
+                st = os.stat(p)
+            except OSError:
+                continue
+            if ext in IMAGE_EXT and st.st_size < 30_000:          # tiny pictures are icons, not notes
+                continue
+            out.append({"path": p, "name": n, "folder": os.path.relpath(dirpath, root), "size": st.st_size,
+                        "video": ext in MEDIA, "modified": st.st_mtime})
+            if len(out) >= limit:
+                return sorted(out, key=lambda f: -f["modified"])
+    return sorted(out, key=lambda f: -f["modified"])
 
 
 def _label(entry, page_no):

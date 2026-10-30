@@ -302,6 +302,18 @@ export const mockApi = {
   save_rigged_model: async (name) => ({ name }),            // the dev page can't write files; pretend it saved
   unimate_status: async () => ({ ready: false, hint: "UniMate isn't set up yet. Double-click scripts\\setup_unimate.bat (mock)." }),
   unimate_animate: async () => ({ error: "UniMate isn't set up (mock)." }),
+  app_update: async () => {
+    let pct = 0;
+    const tick = setInterval(() => {
+      pct += 0.2;
+      window.onPyEvent?.(pct >= 1 ? { type: "app_update", done: true, ok: true, changed: 12, message: "Updated to the newest version (12 files changed) (mock). Restart Vermeil to use it." }
+        : { type: "app_update", pct, text: `Downloading the new version… ${Math.round(pct * 60)} of 60 MB` });
+      if (pct >= 1) clearInterval(tick);
+    }, 400);
+    return { started: true };
+  },
+  app_update_check: async () => ({ branch: "main", new: true }),
+  app_restart: async () => ({ ok: true }),
   unimate_setup: async () => ({ started: true, hint: "Getting UniMate ready in the background (mock)." }),
   voice_commands: async () => ({ features: [
     { id: "chat", name: "Chat", icon: "💬", installed: true, say: [{ say: "open chat", does: "shows your conversation" }, { say: "wave · dance · jump", does: "she does it in her room" }] },
@@ -315,6 +327,24 @@ export const mockApi = {
     { kind: "event", title: "Dentist", time: "15:00", detail: "bring card", key: "Dentist" }],
   planner_add: async (i) => ({ message: `Added ${i.title}.` }),
   planner_toggle_task: async () => "ok",
+  study_drives: async () => ({ drives: [{ path: "E:\\", label: "KINGSTON (E:)" }] }),
+  study_scan: async (path) => ({ path: path || "E:\\", files: [
+    { path: "E:\\Lectures\\Week 1 - Beams.mp4", name: "Week 1 - Beams.mp4", folder: "Lectures", size: 412e6, video: true },
+    { path: "E:\\Slides\\Shear and moment.pdf", name: "Shear and moment.pdf", folder: "Slides", size: 2.4e6, video: false },
+    { path: "E:\\Problem set 2.docx", name: "Problem set 2.docx", folder: ".", size: 0.3e6, video: false }] }),
+  study_add_paths: async (paths) => {
+    const vids = paths.filter((p) => /\.mp4$/i.test(p));
+    let pct = 0;
+    if (vids.length) {
+      const t = setInterval(() => {
+        pct += 0.25;
+        window.onPyEvent?.(pct >= 1 ? { type: "study_media", name: "Week 1 - Beams.mp4", done: true, entry: { id: "mockvid" } }
+          : { type: "study_media", name: "Week 1 - Beams.mp4", pct, text: `Writing down what's said… ${Math.round(pct * 50)}:00 of 50:00` });
+        if (pct >= 1) clearInterval(t);
+      }, 500);
+    }
+    return { added: [], errors: [], videos: vids, files: [], reviews: [], review_types: {}, kinds: [] };
+  },
   study_files: async () => ({ files: [
       { id: "a1", name: "Lecture 5 - Beams.pdf", kind: "lecture", subject: "Structural Analysis", pages: 34, added: "2026-10-20 18:00" },
       { id: "a2", name: "Problem Set 3.pdf", kind: "problems", subject: "Structural Analysis", pages: 6, added: "2026-10-20 18:01" },

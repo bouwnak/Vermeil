@@ -14,6 +14,21 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
+## New (30 Oct 2026, latest): Update button, video lectures, USB drives, Talk live game
+- **Update button:** Settings → General → **Update** → **⬇ Update Vermeil**. It downloads the newest files from GitHub
+  (github.com/bouwnak/Vermeil) with a loading bar, then shows **Restart Vermeil**. Your `env` keys, your settings and
+  saved data (`data/`) and the `dnd` folder are never replaced. If `requirements.txt` changed, the new libraries install too.
+- **Video lectures in Study:** Study → Library → **Add files…** (or drag one in) and pick an `.mp4`, `.mkv`, `.mov`,
+  `.webm`, `.mp3`, `.m4a`, `.wav`… What's said is written down with times (`[12:30] …`) in the background with a loading
+  bar, then you can tick it for reviews like a PDF. Needs the **Voice** plugin (faster-whisper). A 1-hour lecture takes a few minutes.
+- **USB drive in Study:** plug it in and Library shows "🔌 … is plugged in → **Show its study files**" (or press
+  **🔌 USB drive** / **📁 Folder…**). Tick the PDFs, slides, docs and videos you want → **Add to my library**.
+- **Talk live is a game now:** points for every sentence you say right (✓ Perfect!), combo up to ×5, best combo, and a
+  short fix when it's not (✗ Almost). Only her next line shows, not the long text; the full feedback stays under Earlier conversations.
+- **Animate fixes:** "Make the animations" and "Talking animations" can't be pressed twice anymore. If UniMate says
+  `No module named 'Quaternions'` (a half-finished install), just press **Make the animations** again: the missing
+  libraries install first.
+
 ## New (30 Oct 2026): use her on your phone anywhere, Mac/Linux, low-end PCs, share characters, talk-live practice
 - **Phone app (Android and iPhone), also on mobile data:** in the app open **Settings → 📱 Phone**, turn it on, keep
   "Anywhere (Cloudflare)" and scan the QR code with your phone's camera. It opens Vermeil in the phone's browser; tap

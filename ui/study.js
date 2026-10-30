@@ -23,19 +23,24 @@ export function initStudy(api) {
   window.showStudyTab = (t) => tabs.includes(t) && show(t);
 
   // ---------- Library ----------
+  // USB drives: a banner when one is plugged in, then pick what to add (skills/academic.py removable_drives/scan_folder)
+  const usbBanner = el("div", { class: "usb-banner", hidden: true });
+  const usbBox = el("div", { class: "usb-box", hidden: true });
+  const mediaBox = el("div", { class: "media-box", hidden: true }, el("p", { class: "note" }), el("div", { class: "clone-bar" }, el("i"), el("span")));
+  const mb = (n) => (n / 1e6 >= 1000 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.max(1, Math.round(n / 1e6))} MB`);
   const kindSel = el("select", { "aria-label": "File type" }, Object.entries(KIND_LABEL).map(([v, l]) => el("option", { value: v }, l)));
   const subjectIn = el("input", { placeholder: "Subject (e.g. Structural Analysis)", "aria-label": "Subject" });
   const fileList = el("div", { class: "files" });
   const dropChips = el("div", { class: "drop-chips" });
   const dropCard = el("div", { class: "study-drop-zone" },
     el("div", { class: "drop-icon" }, "📂"),
-    el("b", {}, "Drag & drop lecture slides or documents here"),
-    el("small", { class: "muted" }, "PDFs, Word docs, PowerPoint slides, or text files are read and added to your library"),
+    el("b", {}, "Drag & drop lecture slides, documents or video lectures here"),
+    el("small", { class: "muted" }, "PDFs, Word, PowerPoint, text, photos of notes, and video or audio lectures (what's said is written down)"),
     dropChips);
   let freshIds = new Set();
 
   panes.Library.append(
-    el("p", { class: "note" }, "Add your lecture slides, problem sets and solutions (PDF, Word, PowerPoint or text). Tick files to use them for reviews and assignments."),
+    el("p", { class: "note" }, "Add your lecture slides, problem sets, solutions and video lectures (PDF, Word, PowerPoint, text or video). Tick files to use them for reviews and assignments."),
     el("div", { class: "row" }, kindSel, subjectIn,
       el("button", { class: "primary", onclick: async (e) => {
         busy(e.target, true, "Reading files…");
@@ -47,7 +52,12 @@ export function initStudy(api) {
           r.added.forEach((f) => selectedFiles.add(f.id));
           renderFiles();
         } finally { busy(e.target, false); }
-      } }, "Add files…")),
+      } }, "Add files…"),
+      el("button", { class: "ghost", title: "Show the lectures, PDFs and videos on a USB drive", onclick: () => openUsb(true) }, "🔌 USB drive"),
+      el("button", { class: "ghost", title: "Show the study files in a folder", onclick: () => openUsb(false, "") }, "📁 Folder…")),
+    usbBanner,
+    usbBox,
+    mediaBox,
     dropCard,
     fileList);
 
@@ -64,6 +74,11 @@ export function initStudy(api) {
     for (const [i, f] of files.entries()) {
       const chip = chips[i];
       chip.classList.add("working");
+      if (f.size > 300e6) {                                       // too big to send through the window: pick it instead
+        chip.className = "drop-chip bad";
+        toast(`${f.name} is big (${mb(f.size)}): add it with Add files… or 🔌 USB drive instead of dragging.`, 8000);
+        continue;
+      }
       try {
         const b64 = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -108,7 +123,7 @@ export function initStudy(api) {
           Object.entries(KIND_LABEL).map(([v, l]) => el("option", { value: v, selected: v === f.kind }, l)));
         return el("li", { class: freshIds.has(f.id) ? "fresh" : "" }, box,
           el("span", { class: "what" }, el("a", { href: "#", onclick: (e) => { e.preventDefault(); api.study_open_file(f.id); } }, f.name),
-            el("small", {}, `${f.pages} page${f.pages === 1 ? "" : "s"} · added ${f.added}`),
+            el("small", {}, f.video ? `🎬 video lecture · about ${f.pages * 5} min written down · added ${f.added}` : `${f.pages} page${f.pages === 1 ? "" : "s"} · added ${f.added}`),
             f.scanned ? el("small", { class: "warn" }, "Little readable text: this may be a scan. Reviews from it will be weak.") : null),
           kind,
           el("button", { class: "x", "aria-label": `Remove ${f.name}`, onclick: async () => {
@@ -117,6 +132,106 @@ export function initStudy(api) {
           } }, "×"));
       })))));
   }
+
+  let knownDrives = null;
+  async function watchDrives() {
+    if (panes.Library.hidden || root.offsetParent === null) return;
+    const { drives = [] } = (await api.study_drives?.()) || {};
+    const paths = drives.map((d) => d.path);
+    const fresh = knownDrives ? drives.filter((d) => !knownDrives.includes(d.path)) : [];
+    knownDrives = paths;
+    if (fresh.length) {
+      const d = fresh[0];
+      usbBanner.hidden = false;
+      usbBanner.replaceChildren(el("span", {}, `🔌 ${d.label} is plugged in.`),
+        el("button", { class: "primary small", onclick: () => { usbBanner.hidden = true; openUsb(false, d.path, d.label); } }, "Show its study files"),
+        el("button", { class: "x", "aria-label": "Hide", onclick: () => { usbBanner.hidden = true; } }, "×"));
+    } else if (!paths.length) usbBanner.hidden = true;
+  }
+  setInterval(() => watchDrives().catch(() => {}), 4000);
+
+  async function openUsb(pickDrive, path, label) {
+    usbBox.hidden = false;
+    if (pickDrive) {
+      const { drives = [] } = await api.study_drives();
+      if (!drives.length) {
+        usbBox.replaceChildren(el("p", { class: "note" }, "No USB drive found. Plug one in (wait a few seconds for it to show in File Explorer), then press 🔌 USB drive again. For an external hard drive that isn't found, use 📁 Folder… and pick the drive."),
+          el("button", { class: "ghost small", onclick: () => { usbBox.hidden = true; } }, "Close"));
+        return;
+      }
+      if (drives.length > 1) {
+        usbBox.replaceChildren(el("p", {}, el("b", {}, "Which drive?")),
+          el("div", { class: "row" }, drives.map((d) => el("button", { class: "ghost", onclick: () => openUsb(false, d.path, d.label) }, `🔌 ${d.label}`))));
+        return;
+      }
+      path = drives[0].path; label = drives[0].label;
+    }
+    usbBox.replaceChildren(el("p", { class: "note" }, "Looking for lectures, PDFs and videos…"));
+    const r = await api.study_scan(path || "");
+    if (r.error) { usbBox.replaceChildren(el("p", { class: "warn" }, r.error)); return; }
+    if (!r.path) { usbBox.hidden = true; return; }
+    const where = label || r.path;
+    if (!r.files.length) {
+      usbBox.replaceChildren(el("p", {}, `No study files on ${where} (PDF, Word, PowerPoint, text, photos or videos).`),
+        el("button", { class: "ghost small", onclick: () => { usbBox.hidden = true; } }, "Close"));
+      return;
+    }
+    const have = new Set(data.files.map((f) => f.name));
+    const boxes = r.files.map((f) => ({ f, box: el("input", { type: "checkbox", checked: !have.has(f.name), "aria-label": `Add ${f.name}` }) }));
+    const count = el("span", { class: "note" });
+    const recount = () => {
+      const on = boxes.filter((b) => b.box.checked);
+      const vids = on.filter((b) => b.f.video).length;
+      count.textContent = `${on.length} ticked${vids ? ` · ${vids} video${vids > 1 ? "s" : ""} (written down in the background; a 1-hour lecture takes a few minutes)` : ""}`;
+    };
+    boxes.forEach((b) => b.box.addEventListener("change", recount));
+    const all = el("input", { type: "checkbox", "aria-label": "Tick all", onchange: () => { boxes.forEach((b) => { b.box.checked = all.checked; }); recount(); } });
+    usbBox.replaceChildren(
+      el("div", { class: "review-head" }, el("h3", {}, `📂 ${where}: ${r.files.length} study file${r.files.length > 1 ? "s" : ""}`),
+        el("button", { class: "x", "aria-label": "Close", onclick: () => { usbBox.hidden = true; } }, "×")),
+      el("label", { class: "check" }, all, "Tick all"),
+      el("ul", { class: "day-list usb-list" }, boxes.map(({ f, box }) => el("li", {}, box,
+        el("span", { class: "what" }, el("span", {}, `${f.video ? "🎬" : "📄"} ${f.name}`),
+          el("small", {}, `${f.folder === "." ? "" : f.folder + " · "}${mb(f.size)}${have.has(f.name) ? " · already in your library" : ""}`))))),
+      el("div", { class: "row" }, count, el("button", { class: "primary", onclick: async (e) => {
+        const paths = boxes.filter((b) => b.box.checked).map((b) => b.f.path);
+        if (!paths.length) return toast("Tick at least one file.");
+        busy(e.target, true, "Reading files…");
+        try {
+          const res = await api.study_add_paths(paths, kindSel.value, subjectIn.value);
+          data = res;
+          res.added.forEach((x) => selectedFiles.add(x.id));
+          res.errors.forEach((er) => toast(er, 7000));
+          toast([res.added.length ? `Added ${res.added.length} file${res.added.length > 1 ? "s" : ""}.` : "",
+            res.videos?.length ? `Writing down ${res.videos.length} video${res.videos.length > 1 ? "s" : ""} in the background.` : ""].join(" ").trim() || "Nothing added.");
+          usbBox.hidden = true;
+          renderFiles();
+        } finally { busy(e.target, false); }
+      } }, "Add to my library")));
+    recount();
+  }
+
+  // a video lecture being written down (app.py _study_media_queue)
+  window.addEventListener("study-media", async ({ detail: e }) => {
+    mediaBox.hidden = false;
+    const [note, bar] = mediaBox.children;
+    if (e.done) {
+      bar.querySelector("i").style.width = "100%";
+      bar.querySelector("span").textContent = e.error ? "Didn't work" : "100%  Done";
+      bar.classList.toggle("bad", !!e.error);
+      note.textContent = e.error || `🎬 ${e.name} is in your library ✓`;
+      toast(e.error || `${e.name} was written down and added to your library.`, 7000);
+      if (e.entry) selectedFiles.add(e.entry.id);
+      data = await api.study_files(); renderFiles();
+      setTimeout(() => { if (bar.querySelector("i").style.width === "100%") mediaBox.hidden = true; }, 6000);
+      return;
+    }
+    bar.classList.remove("bad");
+    const pct = Math.round((e.pct || 0) * 100);
+    note.textContent = `🎬 ${e.name}`;
+    bar.querySelector("i").style.width = `${pct}%`;
+    bar.querySelector("span").textContent = `${pct}%  ${e.text || ""}`;
+  });
 
   // ---------- Review ----------
   const typeSel = el("select", { "aria-label": "Review type" });
@@ -332,20 +447,48 @@ export function initStudy(api) {
       finally { busy(e.target, false); }
     } }, "■ Stop");
   const partnerShow = (on) => { partnerOn = on; partnerBtn.disabled = on; partnerStop.hidden = !on; };
-  const partnerLine = (cls, text) => { partnerBox.append(el("p", { class: `turn ${cls}` }, text)); partnerBox.scrollIntoView({ block: "nearest" }); };
+  // the live practice as a small game: her next line only (no growing transcript), a ✓ when you said it right, points and a combo
+  const game = { points: 0, combo: 0, best: 0, right: 0, turns: 0 };
+  const short = (t, n = 140) => { t = String(t || "").replace(/[*_#|`]+/g, " ").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+  const herTalk = (reply) => {                                   // brain/partner.py split_reply: drop the "Corrections:" part
+    const m = String(reply || "").match(/^\W{0,3}\s*\**corrections?\**\s*:?\**\s*/i);
+    if (!m) return reply;
+    const rest = reply.slice(m[0].length).split(/\n\s*\n/);
+    return rest.length > 1 ? rest.slice(1).join("\n\n") : "";
+  };
+  const partnerDraw = (her, you) => {
+    const pct = game.turns ? Math.round(100 * game.right / game.turns) : 0;
+    partnerBox.replaceChildren(
+      el("div", { class: "pg-score" }, el("span", {}, `⭐ ${game.points}`), el("span", {}, `🔥 combo ${game.combo}`),
+        el("span", {}, `✓ ${game.right} / ${game.turns}${game.turns ? ` (${pct}%)` : ""}`)),
+      you || null,
+      her ? el("p", { class: "pg-her" }, short(her, 220)) : null);
+  };
   window.addEventListener("partner", ({ detail: e }) => {
     if (e.event === "start") {
+      Object.assign(game, { points: 0, combo: 0, best: 0, right: 0, turns: 0 });
       partnerShow(true);
       partnerBox.hidden = false;
-      partnerBox.replaceChildren(el("b", {}, `Talking in ${e.name}. Answer out loud — say “stop practice” to finish.`));
       const first = e.session?.messages?.slice(-1)[0];
-      if (first) partnerLine("her", first.content);
+      partnerDraw(first ? first.content : `Talking in ${e.name}…`,
+        el("p", { class: "note" }, `${e.name}: answer out loud. Say it right for points; say “stop practice” to finish.`));
     } else if (e.event === "turn") {
-      partnerLine("you", e.you);
-      partnerLine("her", e.reply);
+      const ok = !String(e.correction || "").trim();
+      game.turns += 1;
+      if (ok) { game.right += 1; game.combo += 1; game.best = Math.max(game.best, game.combo); game.points += 10 * Math.min(game.combo, 5); }
+      else game.combo = 0;
+      const you = el("div", { class: `pg-you ${ok ? "good" : "miss"}` },
+        el("b", {}, ok ? (game.combo > 1 ? `✓ Perfect! Combo ×${Math.min(game.combo, 5)}` : "✓ Perfect!") : "✗ Almost"),
+        el("p", {}, `You: ${short(e.you, 120)}`),
+        ok ? null : el("p", { class: "pg-fix" }, short(e.correction, 160)));
+      partnerDraw(e.talk ?? herTalk(e.reply), you);
+      partnerBox.classList.remove("pop"); void partnerBox.offsetWidth; partnerBox.classList.add("pop");
     } else if (e.event === "stop") {
       partnerShow(false);
-      partnerLine("sys", e.error ? `Stopped: ${e.error}` : `Finished.${e.score ? " Score: " + e.score : ""}`);
+      const pct = game.turns ? Math.round(100 * game.right / game.turns) : 0;
+      partnerDraw(null, el("div", { class: "pg-you" }, el("b", {}, e.error ? `Stopped: ${short(e.error)}` :
+        `🏁 Finished! ⭐ ${game.points} points · ${game.right} of ${game.turns} said right (${pct}%) · best combo ${game.best}`),
+        el("p", { class: "note" }, "Her full feedback and your mistakes are under Earlier conversations.")));
       if (langLoaded) renderLanguage();
     }
   });

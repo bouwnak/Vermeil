@@ -604,24 +604,66 @@ class Api:
                 "review_types": academic.REVIEW_TYPES, "kinds": list(academic.KINDS)}
 
     def study_add_files(self, kind="lecture", subject=""):
+        kinds = ";".join("*" + e for e in academic.SUPPORTED)
         paths = self._window.create_file_dialog(_OPEN_DIALOG, allow_multiple=True,
-                                                file_types=("Study files (*.pdf;*.docx;*.pptx;*.txt;*.md;*.png;*.jpg;*.jpeg;*.webp;*.bmp)",))
-        added, errors = [], []
-        for p in paths or []:
-            try:
-                added.append(academic.add_file(p, kind, subject))
-            except Exception as e:
-                errors.append(f"{os.path.basename(p)}: {e}")
-        return {"added": added, "errors": errors, **self.study_files()}
+                                                file_types=(f"Study files and video lectures ({kinds})",))
+        return self.study_add_paths(list(paths or []), kind, subject)
 
     def study_add_file_path(self, path, kind="lecture", subject=""):
-        added, errors = [], []
-        if path and os.path.exists(path):
-            try:
-                added.append(academic.add_file(path, kind, subject))
-            except Exception as e:
-                errors.append(f"{os.path.basename(path)}: {e}")
-        return {"added": added, "errors": errors, **self.study_files()}
+        return self.study_add_paths([path] if path and os.path.exists(path) else [], kind, subject)
+
+    def study_add_paths(self, paths, kind="lecture", subject=""):
+        """documents are read now; video / audio lectures are written down in the background ({"type": "study_media"})"""
+        added, errors, queued = [], [], []
+        for p in paths or []:
+            if not os.path.isfile(p):
+                errors.append(f"{os.path.basename(p)}: not found (was the USB drive taken out?)")
+            elif academic.is_media(p):
+                queued.append(p)
+            else:
+                try:
+                    added.append(academic.add_file(p, kind, subject))
+                except Exception as e:
+                    errors.append(f"{os.path.basename(p)}: {e}")
+        if queued:
+            self._study_media_queue(queued, kind, subject)
+        return {"added": added, "errors": errors, "videos": [os.path.basename(p) for p in queued], **self.study_files()}
+
+    def _study_media_queue(self, paths, kind, subject):
+        if not hasattr(self, "_media_jobs"):
+            import queue
+            self._media_jobs = queue.Queue()
+
+            def worker():
+                while True:
+                    path, k, subj = self._media_jobs.get()
+                    name = os.path.basename(path)
+                    left = self._media_jobs.qsize()
+                    more = f" ({left} more after this)" if left else ""
+                    try:
+                        entry = academic.add_file(path, k, subj, lambda pct, text: self.emit(
+                            {"type": "study_media", "name": name, "pct": pct, "text": text + more}))
+                        self.emit({"type": "study_media", "name": name, "done": True, "entry": entry})
+                    except Exception as e:  # noqa: BLE001 - shown to the user
+                        self.emit({"type": "study_media", "name": name, "done": True, "error": f"{name}: {e}"})
+            threading.Thread(target=worker, daemon=True).start()
+        for p in paths:
+            self._media_jobs.put((p, kind, subject))
+
+    def study_drives(self):
+        """USB drives plugged in right now (Study -> Library -> USB drive)"""
+        return {"drives": academic.removable_drives()}
+
+    def study_scan(self, path=""):
+        """the study files on a drive or folder; no path = pick a folder"""
+        if not path:
+            picked = self._window.create_file_dialog(_FOLDER_DIALOG)
+            path = (picked[0] if isinstance(picked, (list, tuple)) else picked) if picked else ""
+            if not path:
+                return {"files": [], "path": ""}
+        if not os.path.isdir(path):
+            return {"error": "That drive isn't there any more.", "files": [], "path": path}
+        return {"files": academic.scan_folder(path), "path": path}
 
     def study_import_file_data(self, filename, base64_data, kind="lecture", subject=""):
         import base64
@@ -638,6 +680,8 @@ class Api:
             target_path = os.path.join(upload_dir, safe_name)
             with open(target_path, "wb") as f:
                 f.write(raw)
+            if academic.is_media(target_path):          # a dropped video: written down in the background
+                return self.study_add_paths([target_path], kind, subject)
             added.append(academic.add_file(target_path, kind, subject))
         except Exception as e:
             errors.append(f"{filename}: {e}")
@@ -2060,6 +2104,35 @@ class Api:
                            "log": os.path.relpath(log, BASE_DIR) if os.path.exists(log) else ""})
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}
+
+    # ---------- Settings > General > Update (skills/updater.py) ----------
+    def app_update_check(self):
+        import updater
+        return updater.check()
+
+    def app_update(self):
+        """downloads the newest Vermeil from GitHub in the background; the bar follows {"type": "app_update"} events"""
+        import updater
+        if getattr(self, "_updating", False):
+            return {"started": False, "error": "An update is already running."}
+        self._updating = True
+
+        def work():
+            try:
+                res = updater.update(lambda pct, text: self.emit({"type": "app_update", "pct": pct, "text": text}))
+            except Exception as err:  # noqa: BLE001 - shown to the user
+                res = {"error": str(err)}
+            finally:
+                self._updating = False
+            self.emit({"type": "app_update", "done": True, **res})
+        threading.Thread(target=work, daemon=True).start()
+        return {"started": True}
+
+    def app_restart(self):
+        import updater
+        updater.restart()
+        threading.Timer(0.5, lambda: self._window and self._window.destroy()).start()
+        return {"ok": True}
 
     # ---------- voices ----------
     def list_voices(self):

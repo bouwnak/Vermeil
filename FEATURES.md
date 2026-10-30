@@ -282,6 +282,15 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## ➕ Extra features you asked for in chat
 ✅ 3D cozy room (themes, furniture editor, day/night by your clock, brightness) · ✅ characters (Vermeil, Pip, Robo, your own GLB/VRM) · ✅ planner (calendar, tasks, reminders, birthdays, shopping, notes) · ✅ study (library, review sets, research, assignment help) · ✅ coding helper · ✅ gym mode (your routine, timer, editor, history, best reps, +2.5 kg upgrade, sessions) · ✅ journal & think · ✅ voice commands · ✅ top-left status pills · ✅ night theme with sounds and effects · ✅ Groq → Ollama automatic switch · ✅ saved preferences · ✅ package cleanup script · ✅ smaller AI requests: only the tools that fit each message are sent (~1–2k tokens instead of ~9k), so Groq lasts longer and the local AI isn't overloaded
 
+## 🆕 30 Oct 2026: Update, video lectures, USB, Talk live game
+| Feature | Status | Where |
+|---|---|---|
+| Update Vermeil from GitHub with a loading bar, keeps your keys, settings, data and `dnd` | ✅ | Settings → General → Update |
+| Video/audio lectures written down with times and used as reviewers | ✅ | Study → Library → Add files… / drag in (needs the Voice plugin) |
+| USB drive / folder: lists all PDFs, slides, docs, photos and videos to add | ✅ | Study → Library → 🔌 USB drive · 📁 Folder… (banner when plugged in) |
+| Talk live game: points, combo, best, short fixes, only her next line | ✅ | Study → Language → 🎙 Talk live |
+| Animate: buttons work once per press; a missing UniMate library reinstalls by itself | ✅ | Characters → Rig → Animate |
+
 ## 🆕 Batch 11 (22 Oct 2026)
 | Feature | Status | Where |
 |---|---|---|

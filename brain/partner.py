@@ -24,7 +24,12 @@ def split_reply(reply):
     text = (reply or "").strip()
     m = re.match(r"^\W{0,3}\s*\**corrections?\**\s*:?\**\s*", text, re.I)
     if not m:
-        return "", text
+        mid = re.search(r"\W{0,3}\s*\**corrections?\**\s*:\**\s*", text, re.I)   # put in the middle: that paragraph
+        if not mid:
+            return "", text
+        end = re.search(r"\n\s*\n", text[mid.end():])
+        stop = mid.end() + end.start() if end else len(text)
+        return text[mid.end():stop].strip(), re.sub(r"\n{3,}", "\n\n", text[:mid.start()] + "\n\n" + text[stop:]).strip()
     body = text[m.end():]
     parts = re.split(r"\n\s*\n", body, maxsplit=1)
     if len(parts) == 2:
@@ -100,7 +105,7 @@ class Partner:
         self.session = p
         reply = p["messages"][-1]["content"]
         correction, talk = split_reply(reply)
-        self.emit({"type": "partner", "event": "turn", "you": text, "reply": reply, "correction": correction})
+        self.emit({"type": "partner", "event": "turn", "you": text, "reply": reply, "correction": correction, "talk": talk})
         if speak:
             self.say(reply)
         return {"reply": reply, "correction": correction, "talk": talk, "language": self.language}

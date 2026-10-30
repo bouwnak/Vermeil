@@ -16,6 +16,7 @@ The UniMate checkpoints are CC BY-NC: fine for personal use, not for selling.
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 
@@ -81,9 +82,26 @@ def env_python():
     return exe if os.path.exists(exe) else None
 
 
+# a few of UniMate's libraries that must be there (Quaternions.py comes from its git-only "Motion" library, the one a
+# half-finished install misses). A run that hits "No module named ..." leaves LIBS_MISSING so the next press reinstalls.
+KEY_LIBS = ("torch", "bpy", "loguru", "Quaternions.py", "Animation.py")
+LIBS_MISSING = os.path.join(WORK_DIR, "libraries_missing.txt")
+
+
 def libraries_installed():
     py = env_python()
-    return bool(py) and os.path.isdir(os.path.join(os.path.dirname(py), "Lib", "site-packages", "torch"))
+    if not py or os.path.exists(LIBS_MISSING):
+        return False
+    site = os.path.join(os.path.dirname(py), "Lib", "site-packages")
+    return all(os.path.exists(os.path.join(site, n)) for n in KEY_LIBS)
+
+
+def libraries_fixed():
+    """after the pip install: forget the missing-library note"""
+    try:
+        os.remove(LIBS_MISSING)
+    except OSError:
+        pass
 
 
 def pip_commands():
@@ -162,7 +180,14 @@ def _run(args, log, cwd=UNIMATE_DIR, env=None):
     with open(log, "a", encoding="utf-8") as f:
         f.write("$ " + " ".join(args) + "\n" + out + "\n")
     if p.returncode != 0:
-        tail = "\n".join(out.strip().splitlines()[-6:])
+        lost = re.search(r"No module named '([^']+)'", out)
+        if lost:                                           # a half-finished library install: the next press redoes it
+            os.makedirs(WORK_DIR, exist_ok=True)
+            with open(LIBS_MISSING, "w", encoding="utf-8") as f:
+                f.write(lost.group(1))
+            raise RuntimeError(f"one of UniMate's libraries ({lost.group(1)}) is missing. Press Make the animations "
+                               "again: Vermeil installs the missing ones in the background first.")
+        tail ="\n".join(out.strip().splitlines()[-6:])
         raise RuntimeError(tail or f"{args[0]} failed (exit {p.returncode})")
     return out
 

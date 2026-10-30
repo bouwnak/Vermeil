@@ -548,6 +548,8 @@ window.onPyEvent = async (e) => {
     case "phone": renderPhone(e); break;
     case "phone_chat": addLog("you", `📱 ${e.you}`); addLog("her", e.reply); break;
     case "partner": window.dispatchEvent(new CustomEvent("partner", { detail: e })); break;
+    case "app_update": showAppUpdate(e); break;
+    case "study_media": window.dispatchEvent(new CustomEvent("study-media", { detail: e })); break;
     case "characters_changed":
       state = await api.get_state();
       renderCharacters(); renderStatus(); await loadCharacter();
@@ -1569,6 +1571,36 @@ const PAINTS = ["#d9843f", "#b0602c", "#f4e3c2", "#a7b03c", "#5f8a3e", "#7e9cc6"
     if (e.key === "r" || e.key === "R") room.rotateSelected(-Math.PI / 4);
   });
 })();
+
+// ---------------- Settings > General > Update: newest version from GitHub (skills/updater.py) ----------------
+function showAppUpdate(e) {
+  const bar = $("appUpdateBar"), note = $("appUpdateNote"), btn = $("appUpdate");
+  if (!bar) return;
+  bar.hidden = false;
+  bar.classList.toggle("bad", !!e.error);
+  if (e.done) {
+    btn.disabled = false;
+    bar.querySelector("i").style.width = "100%";
+    bar.querySelector("span").textContent = e.error ? "Didn't update" : "100%";
+    note.textContent = e.error || e.message || "Updated.";
+    $("appRestart").hidden = !!e.error || e.changed === 0;
+    toast(e.error || e.message, 9000);
+    return;
+  }
+  const pct = Math.round((e.pct || 0) * 100);
+  bar.querySelector("i").style.width = `${pct}%`;
+  bar.querySelector("span").textContent = `${pct}%  ${e.text || ""}`;
+}
+$("appUpdate")?.addEventListener("click", async (ev) => {
+  const btn = ev.currentTarget;
+  btn.disabled = true;
+  $("appRestart").hidden = true;
+  $("appUpdateNote").textContent = "";
+  showAppUpdate({ pct: 0, text: "Starting…" });
+  const r = await api.app_update();
+  if (!r?.started) showAppUpdate({ done: true, error: r?.error || "Couldn't start the update." });
+});
+$("appRestart")?.addEventListener("click", () => { toast("Restarting Vermeil…"); api.app_restart(); });
 
 // ---------------- Settings > General > Sidebar: show / hide features in the menu ----------------
 let pluginsUI = null;
