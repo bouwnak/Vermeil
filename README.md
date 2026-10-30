@@ -8,9 +8,12 @@
   - **Hands-free + wake word:** Talk tab → **Hands-free**, then say "Vermeil, what's the weather?" (or her name / your own wake word).
   - **"Hey Siri" instead of replacing Siri:** Apple doesn't let any app replace Siri. Phone → Settings → *Siri Shortcut*
     shows the 5 steps to make "Hey Siri, Vermeil" ask her. On Android you can pick the browser app as the assistant.
-  - **Honest limit:** a phone web app can't listen while the phone is locked or the app is closed (that needs a native app).
+  - **Honest limit:** the phone *web* app can't listen while the phone is locked - the iPhone app below can.
   - The link holds a secret key; "New key" in Settings disconnects every phone. Prefer a fixed address? Install
     Tailscale on the PC and phone and pick "Tailscale".
+- **iPhone app (listens with the phone locked):** `phone-ios/` is a real iPhone app: say "Vermeil, …" any time, even
+  with the screen off, and "Hey Siri, ask Vermeil" works from the lock screen. It's installed from a **Mac with Xcode**
+  (free Apple ID = install again every 7 days) - step by step in **phone-ios/README.md**. Not on the App Store.
 - **Mac and Linux:** Mac: double-click **INSTALL Mac.command**. Linux: in a terminal in the folder run `bash "INSTALL Linux.sh"`.
   It makes its own Python folder, installs the core, her voice and a "Start Vermeil" launcher. (Not tested on a real Mac yet.)
 - **Low-end PCs:** Settings → AI → **This computer**: Auto (scans RAM, graphics card and battery and switches by itself),
@@ -36,7 +39,7 @@ she switches **by herself** to Ollama on your PC, and back again later. Voice, l
 Internet is used for: Groq, music, paper search, weather, web search, news, prices, email, calendar sync, and new voices.
 Check what's installed: `python scripts/setup_local.py --check`. Use smaller/bigger models: `python scripts/setup_local.py --size small` (tiny / small / medium / large).
 
-See **FEATURES.md** for every feature (all 143 done, with honest notes on limits).
+See **FEATURES.md** for every feature (all 144 done, with honest notes on limits).
 
 ### Quick things to try
 - "dance", "take a bow", "look surprised" — she acts it out

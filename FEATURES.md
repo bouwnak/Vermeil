@@ -3,7 +3,7 @@
 Checked against every feature screenshot you sent (updated 21 Oct 2026, after batches 1–9).
 ✅ done · 🟡 partly done · ❌ not built yet
 
-**Totals: 143 ✅ done · 0 🟡 partly · 0 ❌ not yet (143 features)**
+**Totals: 144 ✅ done · 0 🟡 partly · 0 ❌ not yet (144 features)**
 
 ## Where things run
 | Part | Where it runs |
@@ -298,13 +298,14 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 
 | Phone app (Android + iPhone) that works on mobile data too: chat, hands-free wake word, her PC voice, practice, switch characters | ✅ | Settings → 📱 Phone → scan the QR · Cloudflare tunnel (or Tailscale), secret key, lockout after wrong keys |
 | "Hey Siri, Vermeil" (Siri Shortcut) and Android assistant setup | ✅ | Phone app → Settings · Siri itself can't be replaced |
+| iPhone app: wake word with the phone locked, her PC voice, "Hey Siri, ask Vermeil", Practice inside | ✅ | `phone-ios/` · install from a Mac (phone-ios/README.md) · not tried on a real iPhone yet |
 | One-click install on Mac and Linux | ✅ | INSTALL Mac.command / INSTALL Linux.sh · not yet tried on a real Mac |
 | Low-end PC mode with automatic switching after scanning the machine (RAM, graphics card, battery) | ✅ | Settings → AI → This computer · voice: "low power mode", "full power", "scan my computer" |
 | Share characters as a file (with or without the voice) and import a friend's | ✅ | Characters → ✏ → Share · 📥 Import a character · voice: "share this character" |
 | Live language practice partner (spoken conversation, corrections, score) | ✅ | Study → Language → 🎙 Talk live · phone Practice tab · voice: "let's practice Japanese" |
 
 ## Limits worth knowing (honest)
-- Phone: a web app can't listen while the phone is locked or the app is closed (needs a native app), and the PC must be on with Vermeil open. Siri can't be replaced - the Shortcut asks Vermeil for you.
+- Phone: the web app can't listen while the phone is locked (the iPhone app can; an Android app isn't built yet), and the PC must be on with Vermeil open. Siri can't be replaced - the Shortcut asks Vermeil for you.
 - Circuit Lab runs a **subset** of Arduino C++ (no real compiler; integer division isn't truncated; only the Servo library). Its electrical model is simplified (good for learning, not for exact analog design).
 - Exercise "Used by" lists come from those coaches' public videos/programs as I know them - not a complete or official list. Unknown exercises are answered by the AI and marked "AI suggestion".
 - Gestures and "look at me" use the vision AI, so they're slower than face/object spotting and use Groq tokens.
