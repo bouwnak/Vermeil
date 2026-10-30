@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNIMATE_DIR = os.path.join(ROOT, "tools", "unimate")
@@ -170,13 +171,47 @@ def _blender_shim():
     return SHIM_DIR
 
 
+_proc = None                     # the UniMate step that's running now (Cancel stops it)
+_cancel = threading.Event()
+
+
+class Cancelled(RuntimeError):
+    pass
+
+
+def cancel():
+    """Characters -> Make the animations -> Cancel: stop the running step and everything it started"""
+    _cancel.set()
+    p = _proc
+    if p and p.poll() is None:
+        try:
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", str(p.pid), "/T", "/F"], capture_output=True,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            else:
+                p.kill()
+        except OSError:
+            pass
+    return True
+
+
 def _run(args, log, cwd=UNIMATE_DIR, env=None):
     """run a command inside the unimate conda environment; raises with the last lines of output if it fails"""
     cmd = [_conda(), "run", "--no-capture-output", "-n", ENV] + args
-    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       env={**os.environ, **(env or {}), "PYTHONIOENCODING": "utf-8"},
-                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    out = (p.stdout or "") + (p.stderr or "")
+    global _proc
+    if _cancel.is_set():
+        raise Cancelled("Stopped.")
+    p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+                         errors="replace", env={**os.environ, **(env or {}), "PYTHONIOENCODING": "utf-8"},
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    _proc = p
+    try:
+        out, _ = p.communicate()
+    finally:
+        _proc = None
+    out = out or ""
+    if _cancel.is_set():
+        raise Cancelled("Stopped.")
     with open(log, "a", encoding="utf-8") as f:
         f.write("$ " + " ".join(args) + "\n" + out + "\n")
     if p.returncode != 0:
@@ -198,6 +233,7 @@ def animate(model_path, motions, progress=lambda pct, text: None):
     st = status()
     if not st["ready"]:
         raise RuntimeError(st["hint"])
+    _cancel.clear()
     name = os.path.splitext(os.path.basename(model_path))[0]
     work = os.path.join(WORK_DIR, name)
     shutil.rmtree(work, ignore_errors=True)

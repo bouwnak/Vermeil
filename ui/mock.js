@@ -39,6 +39,8 @@ let routine = { name: "HYBRID", days: [{ day: 1, title: "PUSH", exercises: gymPl
 const practices = {};
 let prodSet = { home_city: "Manila", ical_url: "", ical_synced: "", news_topics: ["Philippines", "AI"] };
 let focusCur = null;
+let mockMeals = { meals: [{ id: "m1", name: "Oats + eggs", kcal: 520, protein: 32, carbs: 55, fat: 18, photo: false }], total: { kcal: 520, protein: 32, carbs: 55, fat: 18 } };
+let mockSmart = [{ event: "take out the trash", on: "home", match: "", minutes: 30 }, { event: "print my notes", on: "before", match: "2 pm class", minutes: 30 }];
 export const mockApi = {
   study_progress: async () => ({ due: [{ id: "r1", title: "Fill in the blanks: Lecture 5 - Beams.pdf", best: 67 }],
     topics: [], weak: [{ topic: "Structural Analysis · shear diagrams", right: 1, total: 4, pct: 25 }, { topic: "Structural Analysis · moment of inertia", right: 3, total: 5, pct: 60 }] }),
@@ -51,7 +53,7 @@ export const mockApi = {
   sensei_quiz: async () => ({ error: "Demo only." }),
   sensei_talk_start: async (t) => ({ id: "s1", kind: "sensei", topic: t, created: "2026-10-21", score: "", messages: [{ role: "assistant", content: "こんにちは！(konnichiwa) お名前は？ (What's your name?)" }] }),
   sensei_talks: async () => [],
-  sensei_pronounce: async (x) => ({ expected: x, heard: "はじめまして", score: 92, verdict: "Excellent!", tip: "" }),
+  sensei_pronounce: async (x) => ({ expected: x, heard: "はじめまして", score: 92, verdict: "Excellent!", tip: "", words: [...x].map((c, i) => ({ text: c, ok: i !== 1 })) }),
   sensei_say: async (t) => ({ ok: true, said: t }),
   focus_state: async () => ({ current: focusCur, week: { sessions: 3, minutes: 140, distractions: 2 } }),
   focus_start: async (task, w, b, r) => (focusCur = { task, work: w, break: b, rounds: r }),
@@ -302,6 +304,7 @@ export const mockApi = {
   save_rigged_model: async (name) => ({ name }),            // the dev page can't write files; pretend it saved
   unimate_status: async () => ({ ready: false, hint: "UniMate isn't set up yet. Double-click scripts\\setup_unimate.bat (mock)." }),
   unimate_animate: async () => ({ error: "UniMate isn't set up (mock)." }),
+  unimate_cancel: async () => true,
   app_update: async () => {
     let pct = 0;
     const tick = setInterval(() => {
@@ -432,4 +435,59 @@ export const mockApi = {
     (st.rvc ||= []).push({ name: "Hiccup", has_index: true, sr: 40000, version: "v2" }); return { imported: { name: "Hiccup", has_index: true }, ...(await mockApi.rvc_list()) }; },
   rvc_delete: async (n) => { st.rvc = (st.rvc || []).filter((v) => v.name !== n); return mockApi.rvc_list(); },
   interact: async (t, r) => { console.log("interact", t, r); return true; },
+  cards_deck: async () => ({ due: 2, new: 3, total: 5, cards: [
+    { id: "r1:0", front: "What is the maximum moment of a simply supported beam with a uniform load?", back: "M = wL²/8 at midspan", source: "Week 3 - Beams.mp4, part 2", deck: "Beams flashcards", box: 1 },
+    { id: "r1:1", front: "Units of the moment of inertia I?", back: "mm⁴ (length to the 4th power)", source: "Beams.pdf, p. 4", deck: "Beams flashcards", box: 0 },
+    { id: "w:ja:駅", front: "駅  (eki)", back: "train station", source: "", deck: "Word bank (Japanese)", say: "駅", lang: "ja", box: 0 }] }),
+  cards_answer: async (id, knew, combo) => { const xp = knew ? 5 + 2 * Math.min(combo, 5) : 1; ev({ type: "quest", xp, why: knew && combo > 1 ? `Combo x${combo}` : "", rewards: [], quests_done: [] }); return { box: { box: knew ? 2 : 1 }, xp: {} }; },
+  study_moment: async () => ({ file_id: "abc123", name: "Week 3 - Beams.mp4", seconds: 754, clock: "12:34",
+    url: "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQ==" }),
+  study_ask: async (q) => ({ answer: `From your notes: the moment-area method is used for **deflections and slopes** of beams [Beams.pdf, p. 7]. (You asked: ${q})`,
+    sources: [{ label: "Beams.pdf, p. 7", file_id: "f1", page: 7 }, { label: "Week 3 - Beams.mp4, part 2", file_id: "abc123", page: 2,
+      moment: { file_id: "abc123", name: "Week 3 - Beams.mp4", seconds: 754, clock: "12:34", url: "data:video/mp4;base64,AAAA" } }] }),
+  study_formulas: async () => ({ title: "Formula sheet: Beams.pdf", count: 3, topics: [{ topic: "Bending", formulas: [
+    { name: "Max moment (UDL)", formula: "M = w*L^2/8", symbols: "w = load (kN/m), L = span (m)", source: "Beams.pdf, p. 3" },
+    { name: "Bending stress", formula: "sigma = M*c/I", symbols: "c = distance to fibre (mm), I = inertia (mm^4)", source: "Beams.pdf, p. 5" }] },
+    { topic: "Deflection", formulas: [{ name: "Max deflection (UDL)", formula: "d = 5*w*L^4/(384*E*I)", symbols: "E = modulus (MPa)", source: "Beams.pdf, p. 8" }] }] }),
+  sensei_scenes: async () => [{ id: "cafe", label: "☕ Ordering at a café" }, { id: "hotel", label: "🏨 Hotel check-in" }],
+  sensei_speed: async (v) => (v ? (st.speed = v) : st.speed || "normal"),
+  sensei_shadow: async () => ({ language: "ja", lines: [{ text: "おはようございます", roman: "ohayou gozaimasu", meaning: "Good morning" }, { text: "駅はどこですか", roman: "eki wa doko desu ka", meaning: "Where is the station?" }] }),
+  sensei_words: async () => (st.words ||= [{ lang: "ja", word: "駅", reading: "eki", meaning: "station", added: "2026-10-28" }, { lang: "ja", word: "美味しい", reading: "oishii", meaning: "delicious", added: "2026-10-29" }]),
+  sensei_word_remove: async (l, w) => (st.words = st.words.filter((x) => x.word !== w)),
+  sensei_report: async () => ({ language: "ja", name: "Japanese", from: "2026-10-24", to: "2026-10-30", words: 12, new_words: ["駅", "美味しい"], talks: 4, turns: 38, right: 29, grammar_pct: 76, best_combo: 6, days: 5, streak: 5, shadowed: 14, drawn: 22 }),
+  sensei_draw_sets: async () => ({ Hiragana: "あいうえおかきくけこ", Katakana: "アイウエオ" }),
+  gym_advice: async () => ({ rest: true, title: "Take a rest day", last_sleep: 5.5, avg_sleep: 6.4, tips: ["You've trained 4 days in a row. Take today off (or just walk and stretch): muscles grow while you rest.",
+    "Only 5.5 h of sleep last night. Keep today lighter and aim for bed 30 min earlier.", "You average 6.4 h of sleep. 7-9 h helps recovery more than any supplement."] }),
+  gym_sleep: async () => ({ ok: true }),
+  gym_meal_today: async () => structuredClone(mockMeals),
+  gym_meal_photo: async () => ({ name: "Chicken adobo with rice", kcal: 650, protein: 38, carbs: 70, fat: 22, note: "A bowl of adobo over white rice, fairly sure." }),
+  gym_meal_add: async (m) => { mockMeals.meals.push({ id: String(Date.now()), ...m, kcal: +m.kcal || 0, protein: +m.protein || 0 }); for (const k of ["kcal", "protein", "carbs", "fat"]) mockMeals.total[k] += +m[k] || 0; ev({ type: "quest", xp: 5, why: "Meal logged", rewards: [], quests_done: [] }); return structuredClone(mockMeals); },
+  gym_meal_remove: async (id) => { mockMeals.meals = mockMeals.meals.filter((m) => m.id !== id); return structuredClone(mockMeals); },
+  backup_make: async (big) => ({ files: big ? 2140 : 312, mb: big ? 1290 : 18.4, message: `Backup saved: vermeil_backup.zip (${big ? 2140 : 312} files).` }),
+  backup_restore: async () => ({ files: 312, message: "Restored 312 files. Restart Vermeil to load them." }),
+  smart_reminders: async () => structuredClone(mockSmart),
+  smart_reminder_add: async (event, on, match, minutes) => { mockSmart.push({ event, on, match, minutes }); return { message: `Okay, I'll remind you to ${event}.`, items: structuredClone(mockSmart) }; },
+  smart_reminder_remove: async (t) => { mockSmart = mockSmart.filter((r) => r.event !== t); return structuredClone(mockSmart); },
+  screen_help: async (q) => { const answer = `That's a Python error: **ModuleNotFoundError**. Run \`python -m pip install requests\` and try again. (mock${q ? `, you asked: ${q}` : ""})`; ev({ type: "reply", text: answer }); return { answer }; },
+  quest_state: async () => {
+    const q = st.quest ||= { xp: 1240 };
+    const tier = Math.min(30, Math.floor(q.xp / 300));
+    const pass = [[1, "title", "Rookie Scholar", "🎓"], [2, "item", "rwPlushie", "🧸"], [3, "wallpaper", "sakura", "🌸"], [4, "item", "rwLavaLamp", "🫧"],
+      [5, "title", "Night Owl", "🦉"], [6, "item", "rwGlobe", "🌍"], [7, "item", "rwTrophyBronze", "🥉"], [8, "wallpaper", "galaxy", "🌌"]]
+      .map(([t, kind, key, icon]) => ({ tier: t, kind, key, icon, name: key.replace(/^rw/, ""), got: t <= tier }));
+    return { xp: q.xp, level: 5, level_xp: q.xp - 1000, level_need: 500, season: "Season 1: Cozy Scholar", tier, tiers: 30, tier_xp: q.xp % 300, tier_need: 300,
+      streak: 4, best_streak: 6, title: "Rookie Scholar", today_xp: 85, pass, items: pass.filter((p) => p.got && p.kind === "item").map((p) => p.key),
+      wallpapers: pass.filter((p) => p.got && p.kind === "wallpaper").map((p) => p.key),
+      quests: [{ kind: "card", text: "Answer 20 flashcards", goal: 20, xp: 40, have: 12, done: false }, { kind: "focus_block", text: "Finish 2 focus blocks", goal: 2, xp: 50, have: 2, done: true },
+        { kind: "habit", text: "Tick 3 habits", goal: 3, xp: 30, have: 1, done: false }],
+      badges: [{ id: "streak3", name: "🔥 3-day streak", got: true }, { id: "cards100", name: "🃏 100 flashcards", got: false }] };
+  },
+  quest_award: async (kind, n = 1) => { st.quest.xp += 5 * n; const r = { xp: 5 * n, total: st.quest.xp, level: 5, level_up: false, tier: 4, rewards: [], quests_done: [], streak: 4 }; ev({ type: "quest", ...r }); return r; },
+  habits_list: async () => (st.habits ||= [{ id: "h1", name: "Water", icon: "💧", goal: 8, today: 3, streak: 5, done: false },
+    { id: "h2", name: "Sleep 8 hours", icon: "😴", goal: 1, today: 1, streak: 2, done: true }, { id: "h3", name: "Reading", icon: "📖", goal: 1, today: 0, streak: 0, done: false }])
+    .map((h) => ({ ...h, week: [6, 5, 4, 3, 2, 1, 0].map((i) => ({ day: new Date(Date.now() - i * 864e5).toISOString().slice(0, 10), count: i ? (i % 3 ? h.goal : 0) : h.today })) })),
+  habit_add: async (name, icon, goal) => { st.habits.push({ id: "h" + Date.now(), name, icon, goal: +goal, today: 0, streak: 0, done: false }); return mockApi.habits_list(); },
+  habit_remove: async (id) => { st.habits = st.habits.filter((h) => h.id !== id); return mockApi.habits_list(); },
+  habit_tick: async (id, n) => { const h = st.habits.find((x) => x.id === id); h.today = Math.max(0, h.today + n); h.done = h.today >= h.goal;
+    if (n > 0) ev({ type: "quest", xp: 2, why: `${h.icon} ${h.name}`, rewards: [], quests_done: [] }); return h; },
 };

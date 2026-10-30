@@ -74,6 +74,10 @@
         <span class="item-title">Missions</span>
         <span class="item-sub" id="missionsSub">Bigger goals, done step by step</span>
       </button>
+      <button class="item" data-panel="pass" aria-controls="panel-pass">
+        <span class="item-title">Battle Pass</span>
+        <span class="item-sub" id="passSub">XP, quests, habits, rewards</span>
+      </button>
       <button class="item" data-panel="focus" aria-controls="panel-focus">
         <span class="item-title">Focus &amp; Progress</span>
         <span class="item-sub" id="focusSub">Focus sessions, your trends</span>
@@ -157,6 +161,7 @@
     <div class="talk-guide" id="talkGuide" hidden aria-label="Things you can say"></div>
     <form class="talk" id="talkForm" autocomplete="off">
       <input id="talkInput" type="text" placeholder="Talk to Vermeil…" aria-label="Message">
+      <button type="button" id="screenHelp" class="ghost" title="She looks at the window behind Vermeil and explains it (errors: how to fix them). Type a question first to ask something specific." aria-label="What's on my screen?">🖥</button>
       <button type="submit">Send</button>
     </form>
 
@@ -223,6 +228,11 @@
     <section class="panel wide" id="panel-missions" hidden aria-label="Missions">
       <header><h2>Missions</h2><button class="close" aria-label="Close">×</button></header>
       <div id="missionsBody"></div>
+    </section>
+
+    <section class="panel" id="panel-pass" hidden aria-label="Battle Pass, quests and habits">
+      <header><h2>Battle Pass</h2><button class="close" aria-label="Close">×</button></header>
+      <div id="passBody"></div>
     </section>
 
     <section class="panel" id="panel-focus" hidden aria-label="Focus and progress">
@@ -601,12 +611,18 @@
       </label>
       <button type="button" class="ghost small" id="savePronunciations">Save pronunciations</button>
       <p class="note">Common chat words are already fixed for you (idk, btw, omg, AI…). Your own list wins.</p>
-      <h3>Update</h3>
+      <h3>Update <span class="upd-dot" id="updDotTitle" hidden title="A new version is ready"></span></h3>
       <p class="note">Gets the newest Vermeil from GitHub. Your settings, memories, keys and characters stay as they are.</p>
       <div class="row"><button type="button" class="primary" id="appUpdate">⬇ Update Vermeil</button>
         <button type="button" class="ghost" id="appRestart" hidden>↻ Restart now</button></div>
       <div class="clone-bar" id="appUpdateBar" hidden><i></i><span></span></div>
       <p class="note" id="appUpdateNote"></p>
+      <h3>Backup</h3>
+      <p class="note">Everything you saved (chats, memories, characters, room, planner, progress, settings) in one .zip. Keys and sign-ins are never included.</p>
+      <label class="check"><input type="checkbox" id="backupBig"> Also the big files: voice clones, 3D models and the Study library (can be 1 GB+)</label>
+      <div class="row"><button type="button" class="primary" id="backupMake">💾 Make a backup</button>
+        <button type="button" class="ghost" id="backupRestore">📂 Restore a backup…</button></div>
+      <p class="note" id="backupNote"></p>
       <h3>Sidebar</h3>
       <p class="note">Turn features off to hide them from the menu. Turn them back on any time.</p>
       <div id="sidebarToggles"></div>

@@ -693,6 +693,30 @@ export class Room {
   /** happy / sad / surprised / angry / thinking / sleepy / neutral, for `seconds` (0 = until changed). */
   setExpression(name, seconds = 0) {
     this.expr = { name: name || "neutral", until: seconds ? this.clock.elapsedTime + seconds : Infinity };
+    if (["happy", "sad", "angry", "sleepy", "surprised"].includes(name)) this.mood = { name, until: this.clock.elapsedTime + 600 };  // lasts 10 minutes
+  }
+
+  /** Her mood for idle moves: what she felt in the last 10 minutes, else sleepy late at night, else calm. */
+  idleMood() {
+    if (this.mood && this.mood.until > this.clock.elapsedTime) return this.mood.name === "surprised" ? "happy" : this.mood.name;
+    const h = new Date().getHours();
+    return h >= 23 || h < 6 ? "sleepy" : "calm";
+  }
+
+  /** Mood idle: now and then, while she's just standing there, a little move that fits her mood (if the model has it). */
+  _fidgetClip(a, t) {
+    const F = this._fidget;
+    if (F && t < F.until) return F.clip;
+    if (F) this._fidget = null;
+    if (t < (this._nextFidget ??= t + 10)) return null;
+    this._nextFidget = t + 14 + Math.random() * 16;
+    const MOODS = { happy: ["dance_sway", "happy", "clap", "laugh", "look_around"], sad: ["sad", "shrug", "look_around"],
+      angry: ["angry", "shake", "shrug"], sleepy: ["yawn", "stretch", "sleepy"], calm: ["look_around", "stretch", "nod", "shy"] };
+    const pick = MOODS[this.idleMood()].filter((n) => a[n]);
+    if (!pick.length) return null;
+    const clip = pick[Math.floor(Math.random() * pick.length)];
+    this._fidget = { clip, until: t + Math.min(6, a[clip].getClip().duration || 3) };
+    return clip;
   }
 
   /** wave / dance / jump / spin / nod / shake / bow / think / celebrate */
@@ -1321,7 +1345,18 @@ export class Room {
   }
 
   // ---------------- behaviour ----------------
-  setSpeaking(on) { this.speaking = !!on; }
+  setSpeaking(on) { this.speaking = !!on; if (!on) this.lip = null; }
+  /** Lip-sync: the loudness of the sentence she's saying now (0-9 every 50 ms), sent just before it plays. */
+  setLip(levels, step = 0.05) { this.lip = { levels, step, t0: performance.now() }; }
+  _lipLevel() {
+    const L = this.lip;
+    if (!L) return null;
+    const k = (performance.now() - L.t0) / 1000 / L.step;
+    const i = Math.floor(k);
+    if (i >= L.levels.length) return null;
+    const a = L.levels[i] / 9, b = (L.levels[i + 1] ?? 0) / 9;           // smooth between the steps
+    return Math.min(1, (a + (b - a) * (k - i)) * 1.15);
+  }
   setMirror(on) { this.mirror = !!on; }
 
   lookAt(x, y) {
@@ -1842,7 +1877,8 @@ export class Room {
       const L = this.look;
       L.x += (L.tx - L.x) * Math.min(1, dt * 5);
       L.y += (L.ty - L.y) * Math.min(1, dt * 5);
-      const talk = this.speaking ? (Math.sin(t * 18) * 0.5 + 0.5) * (0.6 + 0.4 * Math.sin(t * 7.3)) : 0;
+      const lip = this._lipLevel();                                          // her real voice's loudness, when we have it
+      const talk = !this.speaking ? 0 : lip != null ? lip : (Math.sin(t * 18) * 0.5 + 0.5) * (0.6 + 0.4 * Math.sin(t * 7.3));
 
       // walking
       let moving = false;
@@ -1897,7 +1933,7 @@ export class Room {
         const F = this._forced;                                    // Settings > Test: play one animation on demand
         if (F && (t > F.until || !a[F.clip])) this._forced = null;
         const want = this._forced ? this._forced.clip : seated || (moving && a.walk ? "walk" : reading ? reading : emoteClip && a[emoteClip] ? emoteClip : doing || (this.speaking && a.talk ? "talk"
-          : moodClip && a[moodClip] ? moodClip : "idle"));
+          : moodClip && a[moodClip] ? moodClip : this._userActive > performance.now() ? "idle" : this._fidgetClip(a, t) || "idle"));
         const waving = c._pose === "wave" && a.wave.time < a.wave.getClip().duration - 0.35;
         if (!waving || moving) this._setPose(c, want, seated || c.seat ? 0.7 : moving ? 0.25 : 0.45);
       }

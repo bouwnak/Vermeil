@@ -29,6 +29,7 @@ import sys
 import tarfile
 import threading
 import time
+import urllib.parse
 import urllib.request
 import wave
 
@@ -41,6 +42,7 @@ TOOLS_DIR = os.path.join(ROOT, "tools", "cloudflared")
 PORT = int(os.environ.get("PHONE_PORT", "8790"))
 MAX_JSON = 64 * 1024
 MAX_AUDIO = 8 * 1024 * 1024
+MAX_UPLOAD = 300 * 1024 * 1024        # a file sent to the Study library (lecture videos can be big)
 STATIC = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
           ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json"}
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -149,11 +151,14 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             return self._send(404, {"error": f"no api {name}"})
         n = int(self.headers.get("Content-Length") or 0)
         ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
-        audio = ctype.startswith("audio/") or ctype == "application/octet-stream"
-        if n > (MAX_AUDIO if audio else MAX_JSON):
-            return self._send(413, {"error": "too big"})
+        upload = name == "upload"
+        audio = not upload and (ctype.startswith("audio/") or ctype == "application/octet-stream")
+        if n > (MAX_UPLOAD if upload else MAX_AUDIO if audio else MAX_JSON):
+            return self._send(413, {"error": "That file is too big (300 MB at most)." if upload else "too big"})
         raw = self.rfile.read(n) if n else b""
-        if audio:
+        if upload:
+            payload = {"data": raw, "name": urllib.parse.unquote(self.headers.get("X-File-Name") or "")}
+        elif audio:
             payload = {"audio": raw, "type": ctype}
         elif ctype == "text/plain":
             payload = {"text": raw.decode("utf-8", "replace")}

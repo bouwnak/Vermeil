@@ -379,6 +379,101 @@ function applyHello() {
   document.querySelectorAll(".wakeWord").forEach((b) => (b.textContent = wakeWord()));
 }
 
+// ---------------------------------------------------------------- Study: offline flashcards, send a file, notifications
+// The cards are saved on the phone, so they work with no signal; answers wait on the phone and go to your
+// computer the next time it can be reached.
+let cards = store.get("cards", []);
+let cardAt = 0;
+function cardInfo() {
+  const waiting = store.get("cardAnswers", []).length;
+  const left = cards.length - cardAt;
+  $("cardInfo").textContent = `${left} card${left === 1 ? "" : "s"} left` +
+    (waiting ? ` · ${waiting} answer${waiting === 1 ? "" : "s"} waiting to sync` : "") + (store.get("cardsDay", "") ? ` · saved ${store.get("cardsDay", "")}` : "");
+}
+function drawCard() {
+  const box = $("cardBox");
+  box.replaceChildren();
+  cardInfo();
+  const c = cards[cardAt];
+  const p = (cls, text) => { const e = document.createElement("div"); e.className = cls; e.textContent = text; return e; };
+  if (!c) { box.append(p("front", cards.length ? "Deck done! 🎉" : "No cards saved yet."), p("muted", "Tap \"Get today's cards\" when you have signal.")); return; }
+  const back = p("back", c.back);
+  back.hidden = true;
+  const row = document.createElement("div"); row.className = "row";
+  const btn = (text, cls, fn) => { const b = document.createElement("button"); b.className = "btn " + cls; b.textContent = text; b.onclick = fn; return b; };
+  const answer = (knew) => {
+    store.set("cardAnswers", [...store.get("cardAnswers", []), { id: c.id, knew }]);
+    cardAt += 1; store.set("cardAt", cardAt); drawCard(); syncAnswers();
+  };
+  const show = btn("Show answer", "primary", () => { back.hidden = false; show.hidden = true; row.hidden = false; });
+  row.hidden = true;
+  row.append(btn("✗ Missed", "", () => answer(false)), btn("✓ Knew it", "primary", () => answer(true)));
+  box.append(p("muted", c.deck || ""), p("front", c.front), back, show, row);
+}
+async function syncAnswers() {
+  const answers = store.get("cardAnswers", []);
+  if (!answers.length || !KEY) return;
+  try { await api("card_answers", { answers }); store.set("cardAnswers", []); } catch { /* offline: try again later */ }
+  cardInfo();
+}
+$("cardSync").addEventListener("click", async () => {
+  await syncAnswers();
+  try {
+    const d = await api("cards", { limit: 60 });
+    cards = d.cards; cardAt = 0;
+    store.set("cards", cards); store.set("cardAt", 0); store.set("cardsDay", new Date().toLocaleDateString());
+    toast(cards.length ? `${cards.length} cards saved on this phone. They work offline.` : "All caught up for today!");
+    drawCard();
+  } catch (e) { toast(e.message); }
+});
+cardAt = Math.min(store.get("cardAt", 0), cards.length);
+drawCard();
+window.addEventListener("online", syncAnswers);
+
+$("upBtn").addEventListener("click", () => $("upFile").click());
+$("upFile").addEventListener("change", async () => {
+  const f = $("upFile").files[0];
+  if (!f) return;
+  if (f.size > 300 * 1024 * 1024) return toast("That file is too big (300 MB at most).");
+  $("upInfo").textContent = `Sending ${f.name} (${(f.size / 1048576).toFixed(1)} MB)…`;
+  $("upBtn").disabled = true;
+  try {
+    const r = await fetch("/api/upload", { method: "POST", body: f, headers: { "X-Vermeil-Key": KEY, "Content-Type": "application/octet-stream",
+      "X-File-Name": encodeURIComponent(f.name) } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) throw new Error(d.error || "Couldn't send it (" + r.status + ").");
+    $("upInfo").textContent = d.message;
+  } catch (e) { $("upInfo").textContent = e.message; }
+  finally { $("upBtn").disabled = false; $("upFile").value = ""; }
+});
+
+// reminder notifications: ask the computer every minute while the app is open
+async function checkNotices() {
+  if (!KEY || !store.get("notify", false)) return;
+  try {
+    const d = await api("notices", { after: store.get("noticeAfter", 0) });
+    for (const n of d.notes) {
+      store.set("noticeAfter", n.id);
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (reg && Notification.permission === "granted") reg.showNotification(n.title, { body: n.body, icon: "/phone/icon.png", tag: "vermeil-" + n.id });
+      else toast("🔔 " + n.body, 8000);
+    }
+  } catch { /* offline */ }
+}
+function notifyLabel() { $("notifyBtn").textContent = store.get("notify", false) ? "🔕 Turn off reminder notifications" : "🔔 Turn on reminder notifications"; }
+$("notifyBtn").addEventListener("click", async () => {
+  if (store.get("notify", false)) { store.set("notify", false); return notifyLabel(); }
+  if (!("Notification" in window)) return toast("This browser can't show notifications. Add the app to your home screen first.");
+  const ok = (await Notification.requestPermission()) === "granted";
+  store.set("notify", ok);
+  notifyLabel();
+  toast(ok ? "Reminders will pop up on this phone." : "Notifications are blocked. Allow them in your browser settings.");
+  if (ok) { try { store.set("noticeAfter", Math.max(0, ...(await api("notices", { after: 0 })).notes.map((n) => n.id))); } catch { /* */ } }
+});
+notifyLabel();
+setInterval(checkNotices, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { checkNotices(); syncAnswers(); } });
+
 // ---------------------------------------------------------------- start
 async function start() {
   if (!KEY) return showConnect("");

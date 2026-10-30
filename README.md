@@ -14,7 +14,48 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (30 Oct 2026, latest): Update button, video lectures, USB drives, Talk live game
+## New (30 Oct 2026, latest): Battle Pass, study games, language trainers, gym coach, phone Study tab, backups
+Everything you do now gives **XP**. Open **Battle Pass** in the menu to see your level, streak, 3 daily quests, badges and
+the rewards you unlock (room decorations, wallpapers and titles; locked ones show a 🔒 in the room's Add furniture list).
+- **Study → Play:**
+  - **🃏 Flashcards:** your Flashcards reviews and your language word bank. They come back on a schedule (1, 2, 4, 8 and 16 days). Right answers in a row build a 🔥 combo for more XP.
+  - **🔎 Ask my library:** answers only from your files, with the file and page. For a video it gives the time, with a ▶ button.
+  - **📐 Formula sheet:** tick files in Library, then **Make my formula sheet**, then **🖨 Print**.
+  - **⏱ Study timer:** 25-minute blocks. She stays quiet while you work and cheers you on at each break.
+- **Video lectures:** a review question from a video has **▶ Watch where this was said**. The video opens at that moment.
+- **Study → Language:**
+  - **Pronunciation:** green and red words. Tap a red word to hear it.
+  - **Role-play scenes:** café, directions, interview, hotel and more.
+  - **🐢 Slow / normal speed.**
+  - **Shadowing:** repeat after her and get a score.
+  - **Word bank:** saved automatically from your talks. It's also in Flashcards.
+  - **✍ Writing trainer:** trace kana/kanji or letters. It checks the shape, so very similar characters (あ/お) can still pass.
+  - **Weekly report** and **🏆 XP & badges**.
+- **Characters:**
+  - **Make the animations** shows the time left and has a **Cancel** button.
+  - Her mouth moves with her **real voice** (how loud each moment is).
+  - When she's just standing around, she does small moves that fit her mood (yawns late at night, little dances when she's happy).
+- **Assistant:**
+  - **🖥** next to Send: she looks at the window behind Vermeil and explains it (errors: how to fix them). Type a question first to ask something specific.
+  - **Planner → Reminders for a situation:** "when I get back" or "30 min before my 2 pm class". You can also just say it.
+  - **Focus → 🚫 Block distractions:** while you work, windows with youtube, netflix… in the title get minimized.
+  - **Battle Pass → Habits:** water, sleep, reading or your own habits. She also counts them when you say "I drank water".
+  - **Morning brief:** now also has one flashcard question and the habits to keep today.
+- **Gym → Calories:**
+  - **📷 Snap or pick a meal photo:** she estimates calories and protein. You can fix the numbers, then add it.
+  - **Rest-day and sleep tips:** based on your workouts and the sleep you log.
+  - Finishing a workout gives XP.
+- **Phone → 🃏 Study tab:**
+  - **Get today's cards** saves them on the phone, so they work with no signal. Your answers sync later.
+  - **📤 Pick a file** sends a PDF, a photo of the board or a recording to your Study library (up to 300 MB).
+  - **🔔 Reminder notifications** work while the phone app is open.
+- **Settings → General:**
+  - A red dot appears on Settings when an update is ready.
+  - **💾 Make a backup** puts everything you saved into one .zip. Keys and sign-ins are never included; tick the box to also include voices, 3D models and the Study library.
+  - **📂 Restore a backup…** replaces your data with the backup's, after making a safety copy in `backups/`.
+- No new libraries: nothing to install for this update.
+
+## New (30 Oct 2026): Update button, video lectures, USB drives, Talk live game
 - **Update button:** Settings → General → **Update** → **⬇ Update Vermeil**. It downloads the newest files from GitHub
   (github.com/bouwnak/Vermeil) with a loading bar, then shows **Restart Vermeil**. Your `env` keys, your settings and
   saved data (`data/`) and the `dnd` folder are never replaced. If `requirements.txt` changed, the new libraries install too.

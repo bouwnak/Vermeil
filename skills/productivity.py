@@ -315,6 +315,18 @@ def morning_briefing(city=None):
     except Exception:
         pass
     try:
+        import studygame
+        cards = studygame.deck(1)["cards"]
+        if cards:
+            parts.append(f"One review question to wake up the brain (ask it, wait, then give the answer): "
+                         f"Q: {cards[0]['front']} A: {cards[0]['back']}")
+        import habits
+        left = [f"{h['icon']} {h['name']} ({h['streak']}-day streak)" for h in habits.habits() if h["streak"] and not h["done"]]
+        if left:
+            parts.append("Habit streaks to keep today: " + ", ".join(left[:3]))
+    except Exception:
+        pass
+    try:
         import gym
         p = gym.day_plan()
         if p:

@@ -282,6 +282,32 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## ➕ Extra features you asked for in chat
 ✅ 3D cozy room (themes, furniture editor, day/night by your clock, brightness) · ✅ characters (Vermeil, Pip, Robo, your own GLB/VRM) · ✅ planner (calendar, tasks, reminders, birthdays, shopping, notes) · ✅ study (library, review sets, research, assignment help) · ✅ coding helper · ✅ gym mode (your routine, timer, editor, history, best reps, +2.5 kg upgrade, sessions) · ✅ journal & think · ✅ voice commands · ✅ top-left status pills · ✅ night theme with sounds and effects · ✅ Groq → Ollama automatic switch · ✅ saved preferences · ✅ package cleanup script · ✅ smaller AI requests: only the tools that fit each message are sent (~1–2k tokens instead of ~9k), so Groq lasts longer and the local AI isn't overloaded
 
+## 🆕 30 Oct 2026: Battle Pass round (study games, language trainers, gym coach, phone, backups)
+| Feature | Status | Where |
+|---|---|---|
+| XP, levels, streak, 3 daily quests, badges, Battle Pass of room items / wallpapers / titles | ✅ | Battle Pass (menu) |
+| Habit tracker (−/+, 7 days, streaks, by voice: "I drank water") | ✅ | Battle Pass → Habits |
+| Spaced flashcards (Leitner boxes 1–16 days) with combos | ✅ | Study → Play → Flashcards |
+| Jump to the moment in a video lecture from a review question | ✅ | Study → Review / Play (▶ Watch where this was said) |
+| Ask my library with file/page (and video time) sources | ✅ | Study → Play → Ask my library |
+| Printable formula sheet | ✅ | Study → Play → Formula sheet |
+| 25-minute study timer, quiet work, spoken cheer at breaks, XP per block | ✅ | Study → Play → Study timer / Focus |
+| Accent score per word (tap red words to hear them) | ✅ | Study → Language → Pronunciation |
+| Role-play scenes, shadowing, slow/normal speed, word bank (auto-saved, quizzed), weekly report | ✅ | Study → Language |
+| Kana/kanji/alphabet writing trainer (shape check; very similar characters can pass) | ✅ | Study → Language → ✍ Writing trainer |
+| Make the animations: time left + Cancel | ✅ | Characters → Rig → Animate |
+| Lip-sync from her real voice (loudness every 50 ms) | ✅ | the room, while she talks |
+| Mood-based idle moves (needs clips like yawn, stretch, dance_sway on the model) | ✅ | the room |
+| Morning brief with a review question and habits | ✅ | morning brief |
+| Situation reminders ("when I get home", "before my 2 pm class") | ✅ | Planner → Reminders for a situation, or say it |
+| Screen helper | ✅ | 🖥 next to Send |
+| Focus mode minimizes distracting sites/apps | ✅ | Focus → 🚫 Block distractions |
+| Meal log from a photo (vision model estimate) | ✅ | Gym → Calories → 📷 |
+| Rest-day and sleep suggestions | ✅ | Gym → Calories |
+| Phone: offline flashcards, reminder notifications (while the app is open), send a file to the library | ✅ | phone app → 🃏 Study |
+| Update-available dot | ✅ | Settings (menu) |
+| Backup / restore in one .zip (no keys or sign-ins) | ✅ | Settings → General → Backup |
+
 ## 🆕 30 Oct 2026: Update, video lectures, USB, Talk live game
 | Feature | Status | Where |
 |---|---|---|

@@ -75,6 +75,7 @@ class Partner:
         if p.get("error"):
             return p
         self.session, self.language, self.active, self.by_voice = p, language, True, by_voice
+        self.game = {"right": 0, "turns": 0, "combo": 0, "best": 0}
         self.emit({"type": "partner", "event": "start", "language": language, "name": sensei.LANGS[language], "session": p})
         if by_voice:
             threading.Thread(target=self._loop, args=(p["messages"][-1]["content"] if p["messages"] else "",), daemon=True).start()
@@ -106,9 +107,37 @@ class Partner:
         reply = p["messages"][-1]["content"]
         correction, talk = split_reply(reply)
         self.emit({"type": "partner", "event": "turn", "you": text, "reply": reply, "correction": correction, "talk": talk})
+        self._score(not correction)
         if speak:
             self.say(reply)
         return {"reply": reply, "correction": correction, "talk": talk, "language": self.language}
+
+    def _score(self, right):
+        """the Talk live game: count the turn and give XP (skills/quest.py)"""
+        g = getattr(self, "game", None) or {"right": 0, "turns": 0, "combo": 0, "best": 0}
+        self.game = g
+        g["turns"] += 1
+        g["right"] += right
+        g["combo"] = g["combo"] + 1 if right else 0
+        g["best"] = max(g["best"], g["combo"])
+        try:
+            import quest
+            q = quest.award("talk_right" if right else "talk_miss", xp=10 * min(max(g["combo"], 1), 5) if right else 3)
+            self.emit({"type": "quest", **q, "why": "Perfect sentence" if right else "Good try"})
+        except Exception as e:  # noqa: BLE001 - XP never breaks the practice
+            print(f"[partner] xp: {e}")
+
+    def _keep_words(self, language, messages):
+        """new words from this talk go into the word bank (Study -> Language -> Word bank)"""
+        import sensei
+        try:
+            text = "\n".join(f"{m.get('role')}: {m.get('content')}" for m in messages or [])
+            n = sensei.words_from_talk(language, text)
+            if n:
+                import quest
+                self.emit({"type": "quest", **quest.award("word", n), "why": f"{n} new words in your word bank"})
+        except Exception as e:  # noqa: BLE001
+            print(f"[partner] word bank: {e}")
 
     def stop(self, quiet=False):
         import mind
@@ -116,6 +145,13 @@ class Partner:
             return {"ok": True, "message": "No practice is running."}
         self.active = False
         sid = self.session["id"] if self.session else None
+        g = getattr(self, "game", None)
+        if g and g["turns"]:
+            import sensei
+            sensei.save_game(self.language, g["right"], g["turns"], g["best"])
+            if self.session:
+                threading.Thread(target=self._keep_words, args=(self.language, list(self.session.get("messages") or [])),
+                                 daemon=True).start()
         result = {}
         if sid:
             try:

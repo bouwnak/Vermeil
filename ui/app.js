@@ -1,6 +1,7 @@
 // app.js - connects the window to Python (app.py) and drives the room.
 import { Room } from "./room.js";
-import { CATALOG, CozyRoom, THEMES, TIME_PRESETS, WALLPAPERS } from "./cozyroom.js";
+import { CATALOG, CozyRoom, THEMES, TIME_PRESETS, WALLPAPERS, REWARD_WALLPAPERS } from "./cozyroom.js";
+import { initQuest, passLock } from "./quest.js";
 import { initGym } from "./gym.js";
 import { initStudy } from "./study.js";
 
@@ -454,6 +455,7 @@ document.addEventListener("keydown", (e) => {
 window.onPyEvent = async (e) => {
   life?.onEvent(e);
   switch (e.type) {
+    case "lip": room.setLip(e.levels, e.step); break;
     case "speaking": fx.speaking(e.on); room.setSpeaking(e.on); bgm.speaking = !!e.on; updateBgm(); if (e.on && e.text) say(e.text); break;
     case "heard": addLog("you", e.text); break;
     case "partial": say(e.text); break;
@@ -549,6 +551,7 @@ window.onPyEvent = async (e) => {
     case "phone_chat": addLog("you", `📱 ${e.you}`); addLog("her", e.reply); break;
     case "partner": window.dispatchEvent(new CustomEvent("partner", { detail: e })); break;
     case "app_update": showAppUpdate(e); break;
+    case "quest": window.dispatchEvent(new CustomEvent("quest", { detail: e })); break;
     case "study_media": window.dispatchEvent(new CustomEvent("study-media", { detail: e })); break;
     case "characters_changed":
       state = await api.get_state();
@@ -775,6 +778,18 @@ function setHud(hud, chips) {
 setInterval(renderHud, 500);
 
 // ---------------- controls ----------------
+// Screen helper: she looks at what's behind the window and explains it (the text box = your question)
+$("screenHelp").addEventListener("click", async (e) => {
+  const q = $("talkInput").value.trim(), btn = e.currentTarget;
+  $("talkInput").value = "";
+  busy(btn, true, "…");
+  toast("Looking at your screen… (Vermeil hides for a moment)", 4000);
+  try {
+    const r = await api.screen_help(q);
+    if (r.error) toast(r.error, 7000);
+  } finally { busy(btn, false); }
+});
+
 $("talkForm").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const input = $("talkInput");
@@ -1161,6 +1176,7 @@ function setEditing(on) {
 
 // ---------- furniture catalog, sorted into categories ----------
 const CATEGORIES = [
+  ["rewards", "🏆 Battle Pass", null],
   ["tables", "🪑 Tables & desks", /table|desk/i],
   ["seating", "🛋️ Chairs & sofas", /chair|sofa|couch|bean|stool|ottoman|armchair/i],
   ["beds", "🛏️ Beds", /bed/i],
@@ -1208,6 +1224,8 @@ function renderCatalog() {
     ...Object.entries(WALLPAPERS).map(([k, label]) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "edit-card wallpaper"; b.textContent = label;
+      const lockW = REWARD_WALLPAPERS.has(k) && passLock(k);
+      if (lockW) { b.classList.add("locked"); b.textContent = `🔒 ${label} · tier ${lockW}`; b.addEventListener("click", () => toast(`Unlock ${label} at Battle Pass tier ${lockW}.`)); return b; }
       b.setAttribute("aria-pressed", String((room.cozy.wallpaper || "none") === k));
       b.addEventListener("click", () => { room.setWallpaper(k); renderCatalog(); toast(k === "none" ? "Plain painted walls." : `Wallpaper: ${label}`); });
       return b;
@@ -1216,6 +1234,12 @@ function renderCatalog() {
     const b = document.createElement("button");
     b.type = "button"; b.className = "edit-card"; b.textContent = def.label;
     b.style.animationDelay = `${Math.min(n, 14) * 22}ms`;
+    const lock = def.reward && passLock(type);
+    if (lock) {
+      b.classList.add("locked"); b.textContent = `🔒 ${def.label} · tier ${lock}`;
+      b.addEventListener("click", () => toast(`Unlock it at Battle Pass tier ${lock}: earn XP in Study, Language, Gym and Habits.`));
+      return b;
+    }
     b.addEventListener("click", () => {
       room.addItem(type);
       b.classList.remove("added"); void b.offsetWidth; b.classList.add("added");
@@ -1390,6 +1414,7 @@ room.onPoke = () => say(["Hey! That tickles!", "Yes?", "Careful!"][Math.floor(Ma
   syncRoomControls();
   planner = initPlanner(api);
   study = initStudy(api);
+  initQuest(api);
   codePanel = initCode(api);
   mind = initMind(api);
   gym = initGym(api);
@@ -1601,6 +1626,40 @@ $("appUpdate")?.addEventListener("click", async (ev) => {
   if (!r?.started) showAppUpdate({ done: true, error: r?.error || "Couldn't start the update." });
 });
 $("appRestart")?.addEventListener("click", () => { toast("Restarting Vermeil…"); api.app_restart(); });
+// a dot on Settings when GitHub has a newer Vermeil (checked at start and every 6 hours)
+async function checkForUpdate() {
+  try {
+    const r = await api.app_update_check();
+    const has = !!r?.new && !r.error;
+    document.querySelector('.menu [data-panel="settings"]')?.classList.toggle("has-update", has);
+    $("updDotTitle").hidden = !has;
+    if (has && !$("appUpdateNote").textContent) $("appUpdateNote").textContent = `A new version is ready${r.message ? `: ${r.message}` : ""}. Tap Update Vermeil.`;
+  } catch { /* offline */ }
+}
+setTimeout(checkForUpdate, 15000);
+setInterval(checkForUpdate, 6 * 3600 * 1000);
+
+// Settings > General > Backup
+$("backupMake")?.addEventListener("click", async (ev) => {
+  const btn = ev.currentTarget;
+  busy(btn, true, "Packing…");
+  try {
+    const r = await api.backup_make($("backupBig").checked);
+    if (r) { $("backupNote").textContent = r.error || r.message; toast(r.error || r.message, 7000); }
+  } finally { busy(btn, false); }
+});
+$("backupRestore")?.addEventListener("click", async (ev) => {
+  if (!confirm("Restore a backup? Your saved data gets replaced by the backup's (a safety copy of the current data is made first).")) return;
+  const btn = ev.currentTarget;
+  busy(btn, true, "Restoring…");
+  try {
+    const r = await api.backup_restore();
+    if (!r) return;
+    $("backupNote").textContent = r.error || r.message;
+    toast(r.error || r.message, 9000);
+    if (!r.error) $("appRestart").hidden = false;
+  } finally { busy(btn, false); }
+});
 
 // ---------------- Settings > General > Sidebar: show / hide features in the menu ----------------
 let pluginsUI = null;

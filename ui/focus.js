@@ -82,7 +82,22 @@ export function initFocus(api) {
       el("form", { class: "jform", onsubmit: (e) => { e.preventDefault(); if (!task.value.trim()) return toast("Type what you'll work on.");
         const [, w, b, r] = presets[Number(preset.value)]; begin(task.value.trim(), w, b, r); } },
         task, preset, el("button", { class: "primary", type: "submit" }, "Start focusing")),
-      el("p", { class: "note" }, `This week: ${s.week.sessions} sessions · ${s.week.minutes} focused minutes · ${s.week.distractions} distractions.`));
+      el("p", { class: "note" }, `This week: ${s.week.sessions} sessions · ${s.week.minutes} focused minutes · ${s.week.distractions} distractions.`),
+      await blockBox());
+  }
+
+  /** Focus mode: windows whose title has one of these words get minimized while you work */
+  async function blockBox() {
+    const set = await api.save_settings({});
+    const on = el("input", { type: "checkbox", id: "focusBlockOn", checked: set.focus_block !== false });
+    const words = el("textarea", { rows: 2, "aria-label": "Blocked sites and apps", value: set.focus_block_words || "" });
+    words.value = set.focus_block_words || "";
+    const save = async () => { await api.save_settings({ focus_block: on.checked, focus_block_words: words.value }); toast("Saved."); };
+    on.addEventListener("change", save);
+    words.addEventListener("change", save);
+    return el("details", { class: "focus-block" }, el("summary", {}, "🚫 Block distractions"),
+      el("label", { class: "check", for: "focusBlockOn" }, on, "While I work, minimize windows with these words in their title (sites and apps)"),
+      words, el("small", { class: "note" }, "Separate with commas, e.g. youtube, netflix, discord. Breaks are free."));
   }
 
   // ---------------- progress ----------------

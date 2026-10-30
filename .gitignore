@@ -150,3 +150,6 @@ data/plugin_links.json
 data/plugins.json
 data/playlist_analyses.json
 data/auto_setup.json
+
+# Settings -> Backup: the safety copy made before a restore
+backups/

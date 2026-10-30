@@ -88,6 +88,22 @@
     </div>
   </section>
 
+  <!-- Study: flashcards that work with no signal, send a file to the library, reminder notifications -->
+  <section class="tab" id="tab-study" hidden>
+    <h2>Study</h2>
+    <div class="card-box" id="cardBox"></div>
+    <p class="muted" id="cardInfo"></p>
+    <button class="btn" id="cardSync">🔄 Get today's cards</button>
+    <h3>Send a file to my library</h3>
+    <p class="muted">A PDF, slides, a photo of the board or a lecture recording. It goes into Study → Library on your computer.</p>
+    <input type="file" id="upFile" hidden accept=".pdf,.pptx,.docx,.txt,.md,image/*,video/*,audio/*">
+    <button class="btn primary" id="upBtn">📤 Pick a file</button>
+    <p class="muted" id="upInfo"></p>
+    <h3>Notifications</h3>
+    <button class="btn" id="notifyBtn">🔔 Turn on reminder notifications</button>
+    <p class="muted">Reminders from your computer pop up here while this app is open (or in a recent tab).</p>
+  </section>
+
   <!-- Characters -->
   <section class="tab" id="tab-chars" hidden>
     <h2>Characters</h2>
@@ -155,6 +171,7 @@
     <button role="tab" data-tab="chat" aria-selected="true"><span>💬</span>Chat</button>
     <button role="tab" data-tab="talk"><span>🎙</span>Talk</button>
     <button role="tab" data-tab="practice"><span>🗣</span>Practice</button>
+    <button role="tab" data-tab="study"><span>🃏</span>Study</button>
     <button role="tab" data-tab="chars"><span>👥</span>Characters</button>
     <button role="tab" data-tab="settings"><span>⚙️</span>Settings</button>
   </nav>

@@ -825,6 +825,7 @@ class SpeechStream:
                         started = True
                     if face:                          # her face shows the feeling while she says it
                         emit("expression", name=face, seconds=round(len(data) / samplerate + 0.8, 1))
+                    emit("lip", levels=_lip_levels(data, samplerate), step=0.05)   # her mouth follows the real voice
                     sd.play(np.asarray(data, dtype="float32") * min(1.6, max(0.1, VOICE_VOLUME * self.vol_x * gain)), samplerate)
                     end = time.time() + len(data) / samplerate + self.pause
                     while time.time() < end and not stop_flag:
@@ -841,6 +842,19 @@ class SpeechStream:
                 if started:
                     _unduck("speak")
                 emit("speaking", on=False)
+
+
+def _lip_levels(data, samplerate, step=0.05):
+    """Loudness of a sentence every 50 ms as 0-9, for the lip-sync in the room."""
+    import numpy as np
+    a = np.abs(np.asarray(data, dtype="float32").ravel())
+    n = max(1, int(samplerate * step))
+    k = len(a) // n
+    if not k:
+        return []
+    rms = np.sqrt((a[: k * n].reshape(k, n) ** 2).mean(axis=1))
+    top = float(np.percentile(rms, 95)) or 1.0
+    return [int(v) for v in np.clip(np.round(rms / top * 9), 0, 9)]
 
 
 def _duck(reason):

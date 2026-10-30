@@ -38,6 +38,16 @@ TOOLS = [
          "date_time": {"type": "string", "description": "When (first time), as 'YYYY-MM-DD HH:MM'."},
          "repeat": {"type": "string", "enum": list(f1.REPEATS), "description": "Default none."}}, ["event", "date_time"]),
     _fn("get_reminders", "List the user's reminders."),
+    _fn("add_smart_reminder", "A reminder for a situation instead of a clock time: 'when I get home / when I'm back' "
+        "(on=home) or 'before my 2 pm class' (on=before, match='2 pm class').",
+        {"event": {"type": "string", "description": "What to remind about."},
+         "on": {"type": "string", "enum": ["home", "before"]},
+         "match": {"type": "string", "description": "For on=before: the event/class name and/or its time."},
+         "minutes": {"type": "integer", "description": "For on=before: how many minutes before (default 30)."}},
+        ["event", "on"]),
+    _fn("log_habit", "Tick one of the user's habits for today ('I drank water', 'I slept 8 hours', 'I read today').",
+        {"habit": {"type": "string", "description": "What they did, in their words."},
+         "count": {"type": "integer", "description": "How many (default 1), e.g. 2 glasses."}}, ["habit"]),
     _fn("remove_reminder", "Delete one reminder by its text.", {"event": S}, ["event"]),
     _fn("clear_reminders", "Delete ALL reminders."),
     # tasks
@@ -305,6 +315,20 @@ TOOLS = [
         {"command": {"type": "string", "enum": ["shutdown", "restart", "log off"]}}, ["command"]),
 ]
 
+
+def _log_habit(habit, count=1):
+    import habits
+    hid = habits.find(habit)
+    if not hid:
+        return "There's no habit like that yet - add it in Battle Pass -> Habits."
+    view, reached = habits.tick(hid, int(count or 1))
+    try:
+        import quest
+        quest.award("habit", xp=15 if reached else 2)
+    except Exception:  # noqa: BLE001
+        pass
+    return f"{view['icon']} {view['name']}: {view['today']}/{view['goal']} today" + (", goal reached!" if reached else ".") +         (f" Streak: {view['streak']} days." if view["streak"] else "")
+
 # tool name -> (function, how to describe it when asking "are you sure?")
 _ACTIONS = {
     "add_event": (lambda title, date, time=None, end_time=None, notes="": _add_event(title, date, time, end_time, notes), None),
@@ -313,6 +337,8 @@ _ACTIONS = {
     "daily_agenda": (f1.daily_agenda, None),
     "add_reminder": (f1.add_reminder, None),
     "get_reminders": (f1.get_reminders, None),
+    "add_smart_reminder": (lambda event, on="home", match="", minutes=30: __import__("smartremind").add(event, on, match, minutes), None),
+    "log_habit": (lambda habit, count=1: _log_habit(habit, count), None),
     "remove_reminder": (f1.remove_reminder, None),
     "clear_reminders": (f1.clear_reminders, "delete all your reminders"),
     "add_task": (f1.add_task, None),
@@ -629,8 +655,8 @@ CORE = ["add_event", "list_events", "daily_agenda", "add_reminder", "get_reminde
 GROUPS = [
     (r"calendar|event|meeting|appointment|schedule|routine|class(es)?\b|tomorrow|today|tonight|week|monday|tuesday|"
      r"wednesday|thursday|friday|saturday|sunday|deadline|remind|task|to-?do|birthday|note|shopping|grocer|free time|"
-     r"agenda|busy|plan\b|google", [
-        "remove_event", "remove_reminder", "clear_reminders", "complete_task", "remove_task", "clear_tasks", "add_schedule",
+     r"agenda|busy|plan\b|google|when i get home|when i'?m back|before my|habit|water|drank|slept|i read", [
+        "add_smart_reminder", "log_habit", "remove_event", "remove_reminder", "clear_reminders", "complete_task", "remove_task", "clear_tasks", "add_schedule",
         "get_schedule", "remove_schedule", "clear_schedule", "view_notes", "remove_note", "clear_notes", "add_birthday",
         "get_birthdays", "upcoming_birthdays", "add_shopping_items", "get_shopping_list", "remove_shopping_item",
         "clear_shopping_list", "find_free_time", "schedule_in_free_time", "sync_google_calendar", "export_calendar",

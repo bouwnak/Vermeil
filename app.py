@@ -122,7 +122,9 @@ DEFAULT_SETTINGS = {"always_look": False, "speak_replies": True, "greet_on_sight
                     "privacy_mode": False, "gesture_mode": False, "scene_transitions": True, "gym_room": True, "idle_activities": True,
                     "keep_screens": True, "stream_speech": True, "noise_filter": True, "wake_sensitivity": 2,
                     "watch_objects": True, "code_auto_write": True, "music_source": "youtube", "duck_audio": True,
-                    "performance": "auto", "phone_access": False}
+                    "performance": "auto", "phone_access": False,
+                    "focus_block": True, "focus_block_words": "youtube, netflix, tiktok, facebook, instagram, twitter, x.com, "
+                                                             "reddit, twitch, steam, discord, roblox"}
 
 
 def _read_json(path, default):
@@ -525,8 +527,16 @@ class Api:
             print(f"[briefing] {e}")
 
     def check_alerts(self):
-        for alert in f1.due_alerts():
+        import smartremind
+        idle = smartremind.idle_minutes()
+        came_back = False
+        if idle >= smartremind.AWAY_MINUTES:
+            self._was_away = True
+        elif getattr(self, "_was_away", True) and idle < 1:     # opening Vermeil counts as coming home too
+            came_back, self._was_away = True, False
+        for alert in f1.due_alerts() + smartremind.due(came_back=came_back):
             self.emit({"type": "alert", "text": alert})
+            self._phone_note("Vermeil reminder", alert)
             if self._settings["desktop_notifications"]:
                 import pc
                 pc.notify("Vermeil reminder", alert)
@@ -761,7 +771,9 @@ class Api:
         import sensei
         try:
             self.emit({"type": "toast", "text": f"🎙 Say it now… ({int(seconds)} s)"})
-            return sensei.pronunciation(expected, language, seconds)
+            res = sensei.pronunciation(expected, language, seconds)
+            self._xp("pronounce", xp=int(2 + res.get("score", 0) / 15), why="Pronunciation practice")
+            return res
         except Exception as e:
             return {"error": f"Couldn't use the microphone: {e}"}
 
@@ -811,7 +823,7 @@ class Api:
         old = pm.VOICE_STYLE
         pm.VOICE_STYLE = "normal"
         try:
-            pm.speak(say, v, "-10%")
+            pm.speak(say, v, "-35%" if sensei.speed() == "slow" else "-10%")   # Study -> Language: 🐢 slow
         finally:
             pm.VOICE_STYLE = old
 
@@ -832,7 +844,11 @@ class Api:
             return
         self._say_in_language(say, voice, language)
 
-    def partner_start(self, language=None, level=None, topic="", by_voice=True):
+    def partner_start(self, language=None, level=None, topic="", by_voice=True, scene=""):
+        import sensei
+        topic = sensei.scene_topic(scene) or topic                # Study -> Language: role-play scenes
+        if scene in sensei.SCENES:
+            self._xp("roleplay", why=sensei.SCENES[scene][0])
         if by_voice:
             pm.conversation_active = False                  # the partner takes the microphone from the normal chat
         try:
@@ -921,7 +937,61 @@ class Api:
         return {"hello": self._phone_hello, "chat": self._phone_chat, "shortcut": self._phone_shortcut,
                 "speak": self._phone_speak, "speak_lang": self._phone_speak_lang, "switch": self._phone_switch,
                 "hear": self._phone_hear, "partner_start": self._phone_partner_start,
-                "partner_reply": self._phone_partner_reply, "partner_stop": lambda p: self.partner_stop()}
+                "partner_reply": self._phone_partner_reply, "partner_stop": lambda p: self.partner_stop(),
+                "cards": self._phone_cards, "card_answers": self._phone_card_answers, "notices": self._phone_notices,
+                "upload": self._phone_upload}
+
+    # ---------- phone: offline flashcards, notifications, send a file to the Study library ----------
+    def _phone_note(self, title, body):
+        """a reminder the phone shows as a notification the next time it checks (every minute while it's open)"""
+        notes = getattr(self, "_phone_notes", [])
+        nid = (notes[-1]["id"] + 1) if notes else 1
+        self._phone_notes = (notes + [{"id": nid, "title": title, "body": str(body)[:300], "at": time.time()}])[-30:]
+
+    def _phone_notices(self, p):
+        after = int((p or {}).get("after") or 0)
+        cutoff = time.time() - 6 * 3600
+        return {"notes": [n for n in getattr(self, "_phone_notes", []) if n["id"] > after and n["at"] > cutoff]}
+
+    def _phone_cards(self, p):
+        """the flashcards due today, so the phone can keep them and play them with no connection"""
+        import studygame
+        return studygame.deck(int((p or {}).get("limit") or 60))
+
+    def _phone_card_answers(self, p):
+        """answers given on the phone (maybe offline earlier): [{id, knew}] -> saved, XP given"""
+        import studygame
+        n = right = 0
+        for a in ((p or {}).get("answers") or [])[:200]:
+            if isinstance(a, dict) and a.get("id"):
+                studygame.answer(str(a["id"]), bool(a.get("knew")))
+                n += 1
+                right += bool(a.get("knew"))
+        if right:
+            self._xp("card_right", right, why="Phone flashcards")
+        if n - right:
+            self._xp("card_wrong", n - right)
+        return {"saved": n}
+
+    def _phone_upload(self, p):
+        """a file sent from the phone -> the Study library (lecture), like dropping it in the window"""
+        import academic
+        data, name = p.get("data") or b"", os.path.basename(str(p.get("name") or "")).strip()[:120]
+        if not data or not name or not re.search(r"\.(pdf|pptx|docx|txt|md|png|jpe?g|mp4|m4a|mp3|wav)$", name, re.I):
+            return {"error": "Send a PDF, PowerPoint, Word, text, photo, video or audio file."}
+        folder = data_file("phone_uploads")
+        os.makedirs(folder, exist_ok=True)
+        dest = os.path.join(folder, f"{time.strftime('%Y%m%d-%H%M%S')}-{re.sub(r'[^\w. -]', '_', name)}")
+        with open(dest, "wb") as f:
+            f.write(data)
+        def add():                                          # videos get transcribed, which can take minutes
+            try:
+                academic.add_file(dest, "lecture", "")
+                self.emit({"type": "toast", "text": f"📱 Your phone sent {name} to the Study library."})
+            except Exception as e:  # noqa: BLE001 - shown to the user
+                self.emit({"type": "toast", "text": f"Couldn't add {name} from your phone: {e}"})
+        threading.Thread(target=add, daemon=True).start()
+        return {"message": f"Sent! {name} is going into your Study library."}
 
     def _phone_hello(self, p=None):
         import sensei
@@ -1008,7 +1078,31 @@ class Api:
         self._settings["quiet_mode"] = True                 # no chatter while you focus
         cur = focus.start(task, work, brk, rounds)
         threading.Thread(target=self._focus_watch, daemon=True).start()
+        if self._settings.get("focus_block"):
+            threading.Thread(target=self._focus_block_loop, daemon=True).start()
         return cur
+
+    def _focus_block_loop(self):
+        """Settings -> Focus: while a focus session runs, a window whose title has a blocked word gets minimized"""
+        import focus, mind
+        words = [w.strip() for w in self._settings.get("focus_block_words", "").split(",") if w.strip()]
+        last = ""
+        while focus.current() and words and sys.platform == "win32":
+            title = (mind.active_window_title() or "").lower()
+            hit = next((w for w in words if w in title), None)
+            if hit and "vermeil" not in title:
+                try:
+                    import ctypes
+                    ctypes.windll.user32.ShowWindow(ctypes.windll.user32.GetForegroundWindow(), 6)   # SW_MINIMIZE
+                except Exception as e:  # noqa: BLE001
+                    print(f"[focus block] {e}")
+                if hit != last:
+                    focus.add_distraction(f"opened {hit} (blocked)", auto=True)
+                    self.emit({"type": "toast", "text": f"🚫 {hit.title()} is blocked until your focus session ends."})
+                last = hit
+            elif not hit:
+                last = ""
+            time.sleep(2)
 
     def _focus_from_voice(self, task, work=25, brk=5, rounds=4):
         self.focus_start(task, work, brk, rounds)
@@ -1056,8 +1150,18 @@ class Api:
         return focus.add_distraction(what)
 
     def focus_round(self):
+        """a work block finished: XP, and she cheers you on for the break (quiet mode only covers the work time)"""
         import focus
-        return focus.round_done()
+        cur = focus.round_done()
+        self._xp("focus_block", why="Focus block done")
+        if cur and self._settings["speak_replies"]:
+            line = pm.quick_line(f"The user just finished a {cur.get('work', 25)}-minute focus block on "
+                                 f"'{cur.get('task', 'studying')}' ({cur.get('done_rounds', 1)} of {cur.get('rounds', 4)}). "
+                                 "Cheer them on in one short, warm sentence and tell them to rest, stretch or drink water "
+                                 "for the break.") or "Nice work! Take a short break, stretch and drink some water."
+            self.emit({"type": "reply", "text": line})
+            threading.Thread(target=pm.speak, args=(line,), daemon=True).start()
+        return cur
 
     def focus_finish(self, minutes=None):
         import focus
@@ -1079,7 +1183,13 @@ class Api:
         return academic.check_blank(given, item)
 
     def study_save_score(self, review_id, score, total, results=None):
-        return academic.save_score(review_id, score, total, results)
+        res = academic.save_score(review_id, score, total, results)
+        try:
+            pct = int(score) / max(1, int(total))
+            self._xp("review", xp=int(10 + 20 * pct), why=f"Review finished: {score}/{total}")
+        except (TypeError, ValueError):
+            pass
+        return res
 
     def study_research(self, question, fact_check=False):
         try:
@@ -2091,19 +2201,29 @@ class Api:
             return {"error": f"Can't find {name}."}
 
         def work():
+            began = time.time()
+
             def progress(pct, text):
-                self.emit({"type": "animate_progress", "pct": pct, "text": text})
+                spent = time.time() - began                 # time left: from how long the steps so far took
+                left = spent * (1 - pct) / pct if pct >= 0.15 and spent > 20 else None
+                self.emit({"type": "animate_progress", "pct": pct, "text": text, "left": round(left) if left else None})
             try:
                 out = animate.animate(path, list(motions or ["idle"]), progress)
                 rel = lambda p: os.path.relpath(p, UI_DIR).replace(os.sep, "/")
                 self.emit({"type": "animate_progress", "done": True,
                            "outputs": [{"clip": o["clip"], "url": rel(o["path"])} for o in out]})
+            except animate.Cancelled:
+                self.emit({"type": "animate_progress", "cancelled": True})
             except Exception as err:  # noqa: BLE001 - shown to the user
                 log = os.path.join(animate.WORK_DIR, os.path.splitext(os.path.basename(path))[0], "unimate.log")
                 self.emit({"type": "animate_progress", "error": str(err),
                            "log": os.path.relpath(log, BASE_DIR) if os.path.exists(log) else ""})
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}
+
+    def unimate_cancel(self):
+        import animate
+        return animate.cancel()
 
     # ---------- Settings > General > Update (skills/updater.py) ----------
     def app_update_check(self):
@@ -2128,11 +2248,197 @@ class Api:
         threading.Thread(target=work, daemon=True).start()
         return {"started": True}
 
+    # ---------- Settings > General > Backup: everything you saved in one .zip ----------
+    def backup_make(self, big=False, path=None):
+        import backup
+        if not path:
+            picked = self._window.create_file_dialog(_SAVE_DIALOG, save_filename=f"vermeil_backup_{time.strftime('%Y-%m-%d')}.zip",
+                                                     file_types=("Vermeil backup (*.zip)",))
+            if not picked:
+                return None
+            path = picked[0] if isinstance(picked, (list, tuple)) else picked
+        if not path.lower().endswith(".zip"):
+            path += ".zip"
+        try:
+            r = backup.make(path, bool(big))
+        except Exception as e:  # noqa: BLE001 - shown to the user
+            return {"error": f"Couldn't make the backup: {e}"}
+        return {**r, "message": f"Backup saved: {os.path.basename(path)} ({r['files']} files, {r['mb']} MB)."}
+
+    def backup_restore(self, path=None):
+        import backup
+        if not path:
+            picked = self._window.create_file_dialog(_OPEN_DIALOG, file_types=("Vermeil backup (*.zip)",))
+            if not picked:
+                return None
+            path = picked[0] if isinstance(picked, (list, tuple)) else picked
+        try:
+            r = backup.restore(path)
+        except Exception as e:  # noqa: BLE001 - shown to the user
+            return {"error": f"Couldn't restore it: {e}"}
+        if r.get("error"):
+            return r
+        return {**r, "message": f"Restored {r['files']} files. Restart Vermeil to load them. "
+                                f"(Your data from before is saved in backups/{os.path.basename(r['safety'])}.)"}
+
     def app_restart(self):
         import updater
         updater.restart()
         threading.Timer(0.5, lambda: self._window and self._window.destroy()).start()
         return {"ok": True}
+
+    # ---------- XP, levels, daily quests, badges and the Battle Pass (skills/quest.py) ----------
+    def _xp(self, kind, n=1, xp=None, why=""):
+        """give XP for something you did; the window shows "+N XP", level-ups and new Battle Pass rewards"""
+        try:
+            import quest
+            res = quest.award(kind, n, xp)
+            self.emit({"type": "quest", **res, "why": why})
+            for r in res.get("rewards", []):
+                if self._settings["speak_replies"] and not self._settings["quiet_mode"]:
+                    threading.Thread(target=pm.speak, args=(f"You unlocked {r['name']}!",), daemon=True).start()
+                    break
+            return res
+        except Exception as e:  # noqa: BLE001 - XP never breaks the feature that gave it
+            print(f"[quest] {e}")
+            return {}
+
+    def quest_state(self):
+        import quest
+        return quest.state()
+
+    def quest_award(self, kind, n=1):
+        """only small, self-reported things can be given from the window (a drawing, a shadowed line, a card)"""
+        import quest
+        if kind not in ("card_right", "card_wrong", "shadow", "draw", "meal"):
+            return {"error": "Unknown XP kind."}
+        return self._xp(kind, max(1, min(int(n), 20)))
+
+    # ---------- habit tracker (skills/habits.py) ----------
+    def habits_list(self):
+        import habits
+        return habits.habits()
+
+    def habit_add(self, name, icon="✅", goal=1):
+        import habits
+        try:
+            return habits.add(name, icon, goal)
+        except ValueError as e:
+            return {"error": str(e)}
+
+    def habit_remove(self, hid):
+        import habits
+        return habits.remove(hid)
+
+    def habit_tick(self, hid, n=1):
+        import habits
+        try:
+            view, reached = habits.tick(hid, n)
+        except ValueError as e:
+            return {"error": str(e)}
+        if int(n) > 0:
+            self._xp("habit", xp=15 if reached else 2, why=f"{view['icon']} {view['name']}" + (" - goal reached!" if reached else ""))
+        return view
+
+    # ---------- Study -> Play: flashcards, video moments, ask the library, formula sheet ----------
+    def cards_deck(self, limit=30):
+        import studygame
+        return studygame.deck(limit)
+
+    def cards_answer(self, card_id, knew, combo=0):
+        import studygame
+        box = studygame.answer(card_id, bool(knew))
+        xp = 5 + 2 * min(int(combo or 0), 5) if knew else 1
+        return {"box": box, "xp": self._xp("card_right" if knew else "card_wrong", xp=xp,
+                                         why=f"Combo x{combo}" if knew and combo and int(combo) > 1 else "")}
+
+    def study_moment(self, source, text=""):
+        """a reviewer question's source -> the video and the second it was said ({url} plays in the window)"""
+        import studygame, mediaserve
+        m = studygame.find_moment(source, text)
+        if not m:
+            return {"error": "That part isn't from a video lecture (or the video isn't in your library anymore)."}
+        return {**m, "url": mediaserve.url(m["file_id"], m["seconds"])}
+
+    def study_video_url(self, file_id, seconds=0):
+        import mediaserve
+        return {"url": mediaserve.url(file_id, seconds)}
+
+    def study_ask(self, question, file_ids=None):
+        import studygame, mediaserve
+        try:
+            res = studygame.ask_library(question, file_ids)
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+        for s in res["sources"]:
+            if s.get("moment"):
+                s["moment"]["url"] = mediaserve.url(s["moment"]["file_id"], s["moment"]["seconds"])
+        if res["sources"]:
+            self._xp("ask_library", why="Asked your library")
+        return res
+
+    def study_formulas(self, file_ids):
+        import studygame
+        try:
+            res = studygame.formula_sheet(file_ids or [])
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+        self._xp("formula_sheet", why="Formula sheet made")
+        return res
+
+    # ---------- Study -> Language extras (skills/sensei.py) ----------
+    def sensei_scenes(self):
+        import sensei
+        return [{"id": k, "label": v[0]} for k, v in sensei.SCENES.items()]
+
+    def sensei_shadow(self, language=None, topic=""):
+        import sensei
+        try:
+            return sensei.shadow_lines(language, None, topic)
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+
+    def sensei_words(self, language=None):
+        import sensei
+        return sensei.word_bank(language)
+
+    def sensei_word_remove(self, language, word):
+        import sensei
+        return sensei.remove_word(language, word)
+
+    def sensei_report(self, language=None):
+        import sensei
+        return sensei.weekly_report(language)
+
+    def sensei_speed(self, value=None):
+        import sensei
+        return sensei.set_speed(value) if value else sensei.speed()
+
+    def sensei_draw_sets(self, language=None):
+        import sensei
+        return sensei.draw_sets(language)
+
+    # ---------- smart reminders (skills/smartremind.py) ----------
+    def smart_reminders(self):
+        import smartremind
+        return smartremind.list_all()
+
+    def smart_reminder_add(self, event, on="home", match="", minutes=30):
+        import smartremind
+        return {"message": smartremind.add(event, on, match, minutes), "items": smartremind.list_all()}
+
+    def smart_reminder_remove(self, text):
+        import smartremind
+        smartremind.remove(text)
+        return smartremind.list_all()
+
+    # ---------- screen helper ----------
+    def screen_help(self, question=""):
+        """Home -> "🖥 What's on my screen?": a screenshot behind the window, explained (errors: how to fix them)"""
+        q = (question or "").strip() or "What is this? If there's an error, what does it mean and how do I fix it?"
+        answer = self._look_at_screen(q)
+        self.emit({"type": "reply", "text": answer})
+        return {"answer": answer}
 
     # ---------- voices ----------
     def list_voices(self):
@@ -2296,6 +2602,8 @@ class Api:
                         self._settings[k] = data[k]
                 elif k == "phone_access":
                     self.phone_set(bool(data[k]))
+                elif k == "focus_block_words":
+                    self._settings[k] = ", ".join(w.strip().lower() for w in str(data[k]).split(",") if w.strip())[:600]
                 else:
                     self._settings[k] = bool(data[k])
         self._apply_settings()
@@ -2492,7 +2800,10 @@ class Api:
 
     def gym_finish(self, minutes, note=""):
         import gym
-        return gym.finish_workout(minutes, note)
+        out = gym.finish_workout(minutes, note)
+        if out.get("saved"):
+            self._xp("workout", why="Workout done")
+        return out
 
     def gym_history(self):
         import gym
@@ -2543,6 +2854,47 @@ class Api:
         """{exercise name: [muscles, most targeted first]} for the muscle maps"""
         import gym
         return {n: gym.muscles_for(n) for n in (names or [])[:60]}
+
+    # ---------- Gym -> Calories: meal log (photo estimate), rest-day + sleep tips ----------
+    def gym_meal_photo(self, base64_data, mime="image/jpeg"):
+        """a photo of your plate -> {name, kcal, protein, carbs, fat, note} (not saved until you tap Add)"""
+        import gymcoach
+        b64 = str(base64_data or "").split(",", 1)[-1]
+        if not b64 or len(b64) > 12_000_000:
+            return {"error": "Pick a photo under about 8 MB."}
+        mime = mime if re.fullmatch(r"image/(jpeg|png|webp)", str(mime or "")) else "image/jpeg"
+        try:
+            r = pm.get_client().chat.completions.create(model=pm.VISION_MODEL, messages=[{"role": "user", "content": [
+                {"type": "text", "text": gymcoach.PHOTO_PROMPT},
+                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}]}])
+        except Exception as e:  # noqa: BLE001 - shown to the user
+            return {"error": f"Couldn't look at the photo (are you online?): {e}"}
+        est = gymcoach.parse_estimate(r.choices[0].message.content)
+        return est if est["name"] else {"error": est["note"] or "I couldn't tell what's on the plate."}
+
+    def gym_meal_today(self):
+        import gymcoach
+        return gymcoach.meals()
+
+    def gym_meal_add(self, meal):
+        import gymcoach
+        out = gymcoach.add_meal(meal)
+        if not out.get("error"):
+            self._xp("meal", why="Meal logged")
+        return out
+
+    def gym_meal_remove(self, meal_id):
+        import gymcoach
+        return gymcoach.remove_meal(meal_id)
+
+    def gym_sleep(self, hours):
+        import gymcoach
+        return gymcoach.log_sleep(hours)
+
+    def gym_advice(self):
+        import gym
+        import gymcoach
+        return gymcoach.advice(gym.history(14), gym.streak())
 
     # ---------- Robotics & Electronics (panel + Circuit Lab page ui/electronics/lab.html) ----------
     def elec_formulas(self):

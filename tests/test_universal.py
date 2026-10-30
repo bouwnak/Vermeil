@@ -73,7 +73,7 @@ class PartnerTests(unittest.TestCase):
         self.assertIn(("ja", "こんにちは！"), said)
         self.assertIn(("ja", "げんきですか？"), said)
         self.assertTrue(any(w == "native" and "Small fix" in t for w, t in said))
-        self.assertEqual([e["event"] for e in emitted], ["start", "turn", "stop"])
+        self.assertEqual([e["event"] for e in emitted if e.get("type") == "partner"], ["start", "turn", "stop"])
 
 
 class ShareTests(unittest.TestCase):

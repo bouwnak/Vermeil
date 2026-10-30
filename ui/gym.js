@@ -448,9 +448,69 @@ export function initGym(api) {
       show(r);
       if (!r.error) { toast("Saved. Your weight went into Body stats too."); drawMeals(); }
     });
-    view.replaceChildren(form, out, mealBox);
+    view.replaceChildren(restBox, logBox, form, out, mealBox);
     if (saved.bmi) show(saved);
     drawMeals();
+    drawRest();
+    drawLog();
+  }
+
+  // ---------------- rest-day + sleep tips (from your history and the sleep you log) ----------------
+  const restBox = el("div", { class: "rest-box" });
+  async function drawRest() {
+    const r = await api.gym_advice();
+    const hours = el("input", { type: "number", step: "0.5", min: 0, max: 16, placeholder: "e.g. 7.5", "aria-label": "Hours slept last night", value: r.last_sleep ?? "" });
+    restBox.className = `rest-box ${r.rest ? "rest" : "go"}`;
+    restBox.replaceChildren(
+      el("h3", {}, r.rest ? "😴 " + r.title : "💪 " + r.title),
+      el("ul", {}, r.tips.map((t) => el("li", {}, t))),
+      el("form", { class: "row sleep-row", onsubmit: async (e) => { e.preventDefault(); const x = await api.gym_sleep(hours.value);
+        if (x.error) return toast(x.error); toast("Sleep saved."); drawRest(); } },
+        el("label", {}, "I slept ", hours, " hours last night"), el("button", { class: "ghost small", type: "submit" }, "Save")));
+  }
+
+  // ---------------- meal log: snap your plate -> calories and protein ----------------
+  const logBox = el("div", { class: "meal-log" });
+  async function drawLog(d) {
+    d = d || await api.gym_meal_today();
+    const pic = el("input", { type: "file", accept: "image/*", capture: "environment", hidden: true });
+    const result = el("div");
+    const addForm = (m = {}) => {
+      const f = (k, label, attrs = {}) => el("label", {}, label, el("input", { name: k, value: m[k] ?? "", ...attrs }));
+      const form = el("form", { class: "jform meal-add" },
+        f("name", "Meal", { required: true, placeholder: "e.g. chicken adobo + rice" }),
+        f("kcal", "kcal", { type: "number", min: 0 }), f("protein", "Protein g", { type: "number", min: 0 }),
+        f("carbs", "Carbs g", { type: "number", min: 0 }), f("fat", "Fat g", { type: "number", min: 0 }),
+        el("button", { class: "primary", type: "submit" }, "Add to today"));
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const x = await api.gym_meal_add({ ...Object.fromEntries(new FormData(form)), photo: !!m.photo });
+        if (x.error) return toast(x.error);
+        drawLog(x);
+      });
+      return form;
+    };
+    pic.addEventListener("change", async () => {
+      const file = pic.files[0];
+      if (!file) return;
+      result.replaceChildren(el("p", { class: "note" }, "Looking at your plate… (~5 s)"));
+      const b64 = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(file); });
+      const m = await api.gym_meal_photo(b64, file.type);
+      if (m.error) { result.replaceChildren(); return toast(m.error, 6000); }
+      result.replaceChildren(el("p", { class: "note" }, `${m.note} Fix anything that looks off, then add it.`), addForm({ ...m, photo: true }));
+    });
+    const t = d.total;
+    logBox.replaceChildren(
+      el("h3", {}, "📷 Today's meals"),
+      el("div", { class: "row" },
+        el("button", { class: "primary", onclick: () => pic.click() }, "📷 Snap or pick a meal photo"),
+        el("button", { class: "ghost", onclick: () => result.replaceChildren(addForm()) }, "Type it in"), pic),
+      result,
+      d.meals.length ? el("ul", { class: "day-list" }, d.meals.map((m) => el("li", {},
+        el("span", { class: "what" }, (m.photo ? "📷 " : "") + m.name), el("small", {}, `${m.kcal} kcal · ${m.protein} g protein`),
+        el("button", { class: "x", "aria-label": `Remove ${m.name}`, onclick: async () => drawLog(await api.gym_meal_remove(m.id)) }, "×"))))
+        : el("p", { class: "none" }, "Nothing logged today."),
+      el("p", { class: "note" }, `Today: ${t.kcal} kcal · ${t.protein} g protein · ${t.carbs} g carbs · ${t.fat} g fat. Photo numbers are estimates (±20%).`));
   }
 
   // ---------------- meal planner: a day of meals for bulk / cut / recomp from the numbers above ----------------

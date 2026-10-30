@@ -1,5 +1,7 @@
 // study.js - Study mode: library of your files, review materials, research, assignment help.
 import { $, el, toast, setMd, busy, loadingCard, setupDropZone } from "./util.js";
+import { initPlay, watchButton } from "./studyplay.js";
+import { initLangExtras, accentWords } from "./langplay.js";
 
 const KIND_LABEL = { lecture: "Lecture", problems: "Problems", solutions: "Solutions", other: "Other" };
 
@@ -9,7 +11,7 @@ export function initStudy(api) {
   const root = $("studyBody");
 
   // ---------- layout: tabs ----------
-  const tabs = ["Library", "Review", "Language", "Research", "Assignment"];
+  const tabs = ["Library", "Review", "Play", "Language", "Research", "Assignment"];
   const tabBar = el("div", { class: "tabs", role: "tablist" }, tabs.map((t) =>
     el("button", { role: "tab", id: `tab-${t}`, "aria-controls": `pane-${t}`, onclick: () => show(t) }, t)));
   const panes = Object.fromEntries(tabs.map((t) => [t, el("div", { class: "pane", id: `pane-${t}`, role: "tabpanel", hidden: true })]));
@@ -19,7 +21,9 @@ export function initStudy(api) {
     api.save_ui({ study_tab: t });
     if (t === "Review") renderReviewPane();
     if (t === "Language") renderLanguage();
+    if (t === "Play") playPane.load();
   }
+  const playPane = initPlay(api, panes.Play, () => [...selectedFiles]);
   window.showStudyTab = (t) => tabs.includes(t) && show(t);
 
   // ---------- Library ----------
@@ -301,7 +305,7 @@ export function initStudy(api) {
 
   function openReview(r) {
     if (!r) return;
-    const src = (s) => (s ? el("small", { class: "src" }, `Source: ${s}`) : null);
+    const src = (s, it) => (s ? el("small", { class: "src" }, `Source: ${s} `, watchButton(api, s, it ? Object.values(it).join(" ") : "")) : null);
     const score = el("p", { class: "score", hidden: true });
     let check = null, results = null;
     const items = r.items || [];
@@ -310,7 +314,7 @@ export function initStudy(api) {
       const inputs = items.map((it) => el("input", { class: "blank", "aria-label": "Your answer", size: Math.max(8, String(it.answer).length + 2) }));
       body = el("ol", {}, items.map((it, i) => {
         const [a, b] = it.sentence.split("____");
-        return el("li", {}, a, inputs[i], b ?? "", el("span", { class: "fb" }), src(it.source));
+        return el("li", {}, a, inputs[i], b ?? "", el("span", { class: "fb" }), src(it.source, it));
       }));
       check = async () => {
         let right = 0;
@@ -333,7 +337,7 @@ export function initStudy(api) {
         } }, c));
         const expl = el("small", { class: "expl", hidden: true }, it.explanation || "");
         it._correct = correct; it._btns = btns; it._expl = expl;
-        return el("li", {}, el("p", {}, r.type === "mcq" ? it.question : it.statement), el("div", { class: "choices" }, btns), expl, src(it.source));
+        return el("li", {}, el("p", {}, r.type === "mcq" ? it.question : it.statement), el("div", { class: "choices" }, btns), expl, src(it.source, it));
       }));
       check = async () => {
         let right = 0;
@@ -378,14 +382,14 @@ export function initStudy(api) {
         const steps = el("div", { class: "steps", hidden: true },
           it.given?.length ? el("p", {}, el("strong", {}, "Given: "), it.given.join("; ")) : null,
           el("ol", {}, (it.steps || []).map((s) => el("li", {}, s))),
-          el("p", {}, el("strong", {}, "Answer: "), it.answer), src(it.source));
+          el("p", {}, el("strong", {}, "Answer: "), it.answer), src(it.source, it));
         return el("li", {}, el("p", {}, it.problem), el("textarea", { rows: 3, placeholder: "Work it out here first…", "aria-label": "Your working" }),
           el("button", { class: "ghost small", onclick: (e) => { steps.hidden = !steps.hidden; e.target.textContent = steps.hidden ? "Show solution" : "Hide solution"; } }, "Show solution"),
           steps);
       }));
     } else if (r.type === "summary") {
       body = el("div", {}, (r.sections || []).map((s) => el("section", {}, el("h4", {}, s.heading),
-        el("ul", {}, s.points.map((p) => el("li", {}, p))), src(s.source))));
+        el("ul", {}, s.points.map((p) => el("li", {}, p))), src(s.source, s))));
     }
     const actions = check ? el("div", { class: "row" }, el("button", { class: "primary", onclick: async () => {
       const right = await check();
@@ -427,6 +431,7 @@ export function initStudy(api) {
   let langLoaded = false;
   const saveLang = async () => { const s = await api.sensei_set(langSel.value, Number(levelSel.value)); streakEl.textContent = s.streak ? `🔥 ${s.streak}-day streak` : ""; };
   langSel.addEventListener("change", saveLang); levelSel.addEventListener("change", saveLang);
+  const extras = initLangExtras(api, { langSel, levelSel, topicIn, out: langOut });
   const quizKind = el("select", { "aria-label": "Quiz type" }, [["flashcards", "Flashcards"], ["mcq", "Multiple choice"], ["fill_blanks", "Fill in the blanks"]].map(([v, l]) => el("option", { value: v }, l)));
   // live practice partner (brain/partner.py): she talks, you answer out loud, she fixes your mistakes as you go
   const partnerBox = el("div", { class: "partner-live", hidden: true });
@@ -436,7 +441,7 @@ export function initStudy(api) {
       if (partnerOn) return;
       busy(e.target, true, "Starting…");
       try {
-        const r = await api.partner_start(langSel.value, Number(levelSel.value), topicIn.value, true);
+        const r = await api.partner_start(langSel.value, Number(levelSel.value), topicIn.value, true, extras.scene());
         if (r.error) toast(r.error, 7000);
       } finally { busy(e.target, false); }
     } }, "🎙 Talk live");
@@ -522,6 +527,8 @@ export function initStudy(api) {
         try { const r = await api.sensei_mistakes_lesson(langSel.value); if (r.error) return toast(r.error, 7000); setMd(langOut, r.lesson, api); addListen(langOut, langSel.value); }
         finally { busy(e.target, false); }
       } }, "Lesson from my mistakes")),
+    el("div", { class: "row" }, extras.sceneSel, extras.speedBtn),
+    extras.row,
     el("h3", {}, "Pronunciation"),
     el("div", { class: "row" }, sayIn,
       el("button", { class: "ghost small", onclick: async () => { const r = await api.sensei_say(sayIn.value, langSel.value); if (r.error) toast(r.error, 6000); } }, "🔊 Hear it"),
@@ -532,7 +539,7 @@ export function initStudy(api) {
           const r = await api.sensei_pronounce(sayIn.value, langSel.value, 5);
           if (r.error) return toast(r.error, 7000);
           langOut.replaceChildren(el("div", { class: `pron ${r.score >= 90 ? "good" : r.score >= 70 ? "ok" : "low"}` },
-            el("b", {}, `${r.score}% — ${r.verdict}`), el("p", {}, `You said: ${r.heard}`), el("p", {}, `Target: ${r.expected}`),
+            el("b", {}, `${r.score}% — ${r.verdict}`), accentWords(api, r.words, langSel.value), el("p", {}, `You said: ${r.heard}`), el("p", {}, `Target: ${r.expected}`),
             r.tip ? el("p", { class: "note" }, r.tip) : null));
         } finally { busy(e.target, false); }
       } }, "🎙 Say it")),

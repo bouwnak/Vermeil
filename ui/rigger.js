@@ -113,7 +113,7 @@ class Rigger {
       <div class="rig-side" hidden></div>
       <div class="rig-ask" hidden><p></p><div class="rig-ask-btns"></div></div>
       <div class="rig-hint"></div>
-      <div class="rig-busy" hidden><p></p><div class="clone-bar"><i></i><span></span></div></div>`;
+      <div class="rig-busy" hidden><p></p><div class="clone-bar"><i></i><span></span></div><small class="rig-left"></small><button type="button" class="ghost small rig-cancel" hidden>Cancel</button></div>`;
     document.body.appendChild(el);
     el.querySelector(".rig-title span").textContent = this.file;
     el.querySelector(".rig-close").addEventListener("click", () => this.close());
@@ -196,9 +196,13 @@ class Rigger {
     });
   }
 
-  busy(text, pct = null) {
+  busy(text, pct = null, left = null, cancel = null) {
     const b = this.$(".rig-busy");
     b.hidden = text == null;
+    const c = b.querySelector(".rig-cancel");
+    c.hidden = !cancel;
+    c.onclick = cancel;
+    b.querySelector(".rig-left").textContent = left == null ? "" : left < 90 ? "About a minute left" : `About ${Math.round(left / 60)} minutes left`;
     if (text == null) return;
     b.querySelector("p").textContent = text;
     b.querySelector("i").style.width = pct == null ? "100%" : `${Math.round(pct * 100)}%`;
@@ -850,7 +854,13 @@ class Rigger {
       this.$(".rig-side").hidden = false;
       return;
     }
-    if (!e.done) return this.busy(e.text, e.pct);
+    if (e.cancelled) {
+      this.busy(null);
+      this.toast("Stopped. Nothing was changed.");
+      this.$(".rig-side").hidden = false;
+      return;
+    }
+    if (!e.done) return this.busy(e.text, e.pct, e.left, async () => { this.busy("Stopping…", null); await this.api.unimate_cancel(); });
     this.busy("Putting the animations into the model…", 0.97);
     try {
       const name = await this._merge(e.outputs, this._animName);

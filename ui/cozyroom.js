@@ -6,6 +6,7 @@ import { DEN_CATALOG, DEN_LAYOUT } from "./denroom.js";
 import { GYM_CATALOG } from "./gymroom.js";
 import { DND_FURNITURE_CATALOG } from "./dnd_furniture.js";
 import { PET_CATALOG } from "./pets.js";
+import { REWARD_CATALOG } from "./rewards.js";
 import { House } from "./house.js";
 
 const W = 5, BACK = -4, FRONT = 4.5, H = 3.2;     // room: x -5..5, z -4..4.5, height 3.2 m
@@ -566,7 +567,9 @@ function carpetTexture() {
 export const WALLPAPERS = {
   none: "Plain paint", stripes: "Stripes", pinstripe: "Pinstripes", dots: "Polka dots", damask: "Damask",
   floral: "Little flowers", brick: "Brick", panels: "Wood panels", checks: "Checks", stars: "Stars", hearts: "Hearts", waves: "Waves",
+  sakura: "Sakura", galaxy: "Galaxy", gold: "Gold", circuit: "Circuit", aurora: "Aurora",
 };
+export const REWARD_WALLPAPERS = new Set(["sakura", "galaxy", "gold", "circuit", "aurora"]);   // unlocked in the Battle Pass
 function wallpaperTexture(kind) {
   return canvasTexture(512, 512, (g, w, h) => {
     const r = rng(21);
@@ -621,6 +624,37 @@ function wallpaperTexture(kind) {
     } else if (kind === "waves") {
       g.strokeStyle = ink(0.18); g.lineWidth = 6;
       for (let y = 16; y < h + 32; y += 40) { g.beginPath(); for (let x = 0; x <= w; x += 8) g.lineTo(x, y + Math.sin((x / w) * Math.PI * 8) * 9); g.stroke(); }
+    // battle-pass wallpapers (skills/quest.py PASS)
+    } else if (kind === "sakura") {
+      for (let i = 0; i < 60; i++) {
+        const x = r() * w, y = r() * h, s = 0.5 + r() * 0.6;
+        g.fillStyle = `rgba(255,140,180,${0.25 + r() * 0.2})`;
+        for (let k = 0; k < 5; k++) shape(x, y, s, () => { g.rotate((k * Math.PI * 2) / 5); g.ellipse(0, -10, 6, 10, 0, 0, Math.PI * 2); });
+      }
+    } else if (kind === "galaxy") {
+      const gr = g.createLinearGradient(0, 0, w, h);
+      gr.addColorStop(0, "#1a1240"); gr.addColorStop(0.5, "#3b1f6b"); gr.addColorStop(1, "#0d1a3a");
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 220; i++) { g.fillStyle = hi(0.4 + r() * 0.6); g.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); }
+    } else if (kind === "gold") {
+      g.fillStyle = "#f2d27a"; g.fillRect(0, 0, w, h);
+      g.strokeStyle = "rgba(150,100,20,0.35)"; g.lineWidth = 3;
+      for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { g.beginPath(); g.moveTo(x * 64 + 32, y * 64); g.lineTo(x * 64 + 64, y * 64 + 32); g.lineTo(x * 64 + 32, y * 64 + 64); g.lineTo(x * 64, y * 64 + 32); g.closePath(); g.stroke(); }
+    } else if (kind === "circuit") {
+      g.fillStyle = "#0f3b2e"; g.fillRect(0, 0, w, h);
+      g.strokeStyle = "rgba(90,255,180,0.5)"; g.lineWidth = 3;
+      for (let i = 0; i < 50; i++) {
+        let x = Math.round(r() * 16) * 32, y = Math.round(r() * 16) * 32;
+        g.beginPath(); g.moveTo(x, y);
+        for (let k = 0; k < 3; k++) { if (r() > 0.5) x += 64 * (r() > 0.5 ? 1 : -1); else y += 64 * (r() > 0.5 ? 1 : -1); g.lineTo(x, y); }
+        g.stroke(); g.fillStyle = "rgba(120,255,200,0.8)"; g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill();
+      }
+    } else if (kind === "aurora") {
+      g.fillStyle = "#0b1730"; g.fillRect(0, 0, w, h);
+      for (const [c, off] of [["rgba(80,255,170,0.35)", 0], ["rgba(140,120,255,0.3)", 120], ["rgba(60,200,255,0.3)", 240]]) {
+        g.strokeStyle = c; g.lineWidth = 50;
+        g.beginPath(); for (let x = 0; x <= w; x += 8) g.lineTo(x, 150 + off * 0.8 + Math.sin((x / w) * Math.PI * 2 + off) * 60); g.stroke();
+      }
     }
   });
 }
@@ -898,7 +932,7 @@ CATALOG.bigWindow = { label: "Big window (time of day)", mount: "wall", defaultY
   } } };
 } };
 
-Object.assign(CATALOG, DEN_CATALOG, GYM_CATALOG, DND_FURNITURE_CATALOG, PET_CATALOG);
+Object.assign(CATALOG, DEN_CATALOG, GYM_CATALOG, DND_FURNITURE_CATALOG, PET_CATALOG, REWARD_CATALOG);
 
 // ======================================================================
 // The room
