@@ -123,8 +123,7 @@ DEFAULT_SETTINGS = {"always_look": False, "speak_replies": True, "greet_on_sight
                     "keep_screens": True, "stream_speech": True, "noise_filter": True, "wake_sensitivity": 2,
                     "watch_objects": True, "code_auto_write": True, "music_source": "youtube", "duck_audio": True,
                     "performance": "auto", "phone_access": False,
-                    "focus_block": True, "focus_block_words": "youtube, netflix, tiktok, facebook, instagram, twitter, x.com, "
-                                                             "reddit, twitch, steam, discord, roblox"}
+                    "focus_block": True, "focus_allow_words": ""}
 
 
 def _read_json(path, default):
@@ -1082,27 +1081,75 @@ class Api:
             threading.Thread(target=self._focus_block_loop, daemon=True).start()
         return cur
 
+    # windows that are part of Windows itself (taskbar, desktop, Start menu, tray) are never minimized
+    _FOCUS_SHELL = {"Shell_TrayWnd", "Shell_SecondaryTrayWnd", "Progman", "WorkerW", "Windows.UI.Core.CoreWindow",
+                    "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland", "XamlExplorerHostIslandWindow",
+                    "ForegroundStaging", "MultitaskingViewFrame", "TaskSwitcherWnd"}
+
+    def _focus_other_window(self, hwnd, allow):
+        """the title of a window that isn't Vermeil (or an app you allowed), or None if it may stay"""
+        import ctypes
+        u = ctypes.windll.user32
+        if not hwnd or not u.IsWindowVisible(hwnd) or u.IsIconic(hwnd):
+            return None
+        pid = ctypes.c_ulong()
+        u.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if pid.value == os.getpid():
+            return None
+        cls = ctypes.create_unicode_buffer(256)
+        u.GetClassNameW(hwnd, cls, 256)
+        if cls.value in self._FOCUS_SHELL:
+            return None
+        n = u.GetWindowTextLengthW(hwnd)
+        if not n:
+            return None
+        buf = ctypes.create_unicode_buffer(n + 1)
+        u.GetWindowTextW(hwnd, buf, n + 1)
+        title = buf.value.strip()
+        low = title.lower()
+        if not title or "vermeil" in low or any(w in low for w in allow):
+            return None
+        return title
+
     def _focus_block_loop(self):
-        """Settings -> Focus: while a focus session runs, a window whose title has a blocked word gets minimized"""
-        import focus, mind
-        words = [w.strip() for w in self._settings.get("focus_block_words", "").split(",") if w.strip()]
+        """Settings -> Focus: while a focus session runs the PC is locked to Vermeil - every other window
+        (browser, games, chat...) is minimized, and anything you open gets minimized again. Apps you allow may stay."""
+        import focus
+        if sys.platform != "win32":
+            return
+        import ctypes
+        u = ctypes.windll.user32
+        allow = [w.strip() for w in self._settings.get("focus_allow_words", "").split(",") if w.strip()]
+        try:                                                      # 1. hide everything else right away
+            found = []
+            each = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)(
+                lambda h, _: (found.append(h) if self._focus_other_window(h, allow) else None) or True)
+            u.EnumWindows(each, 0)
+            for h in found:
+                u.ShowWindow(h, 6)                                # SW_MINIMIZE
+            if found:
+                self.emit({"type": "toast", "text": f"🔒 Locked to Vermeil: {len(found)} other window{'s' if len(found) > 1 else ''} minimized until your focus session ends."})
+        except Exception as e:  # noqa: BLE001
+            print(f"[focus block] {e}")
         last = ""
-        while focus.current() and words and sys.platform == "win32":
-            title = (mind.active_window_title() or "").lower()
-            hit = next((w for w in words if w in title), None)
-            if hit and "vermeil" not in title:
-                try:
-                    import ctypes
-                    ctypes.windll.user32.ShowWindow(ctypes.windll.user32.GetForegroundWindow(), 6)   # SW_MINIMIZE
-                except Exception as e:  # noqa: BLE001
-                    print(f"[focus block] {e}")
-                if hit != last:
-                    focus.add_distraction(f"opened {hit} (blocked)", auto=True)
-                    self.emit({"type": "toast", "text": f"🚫 {hit.title()} is blocked until your focus session ends."})
-                last = hit
-            elif not hit:
-                last = ""
-            time.sleep(2)
+        while (cur := focus.current()):                           # 2. anything that comes to the front goes away again
+            try:
+                from datetime import datetime
+                mins = (datetime.now() - datetime.fromisoformat(cur["started"])).total_seconds() / 60
+                if mins % max(1, cur["work"] + cur["break"]) >= cur["work"]:    # on a break: everything is free
+                    time.sleep(5)
+                    continue
+                h = u.GetForegroundWindow()
+                title = self._focus_other_window(h, allow)
+                if title:
+                    u.ShowWindow(h, 6)
+                    if title != last:
+                        focus.add_distraction(f"opened {title[:60]} (blocked)", auto=True)
+                        self.emit({"type": "toast", "text": f"🔒 Only Vermeil until your focus session ends ({title[:40]} was minimized)."})
+                    last = title
+            except Exception as e:  # noqa: BLE001
+                print(f"[focus block] {e}")
+            time.sleep(1)
 
     def _focus_from_voice(self, task, work=25, brk=5, rounds=4):
         self.focus_start(task, work, brk, rounds)
@@ -2602,7 +2649,7 @@ class Api:
                         self._settings[k] = data[k]
                 elif k == "phone_access":
                     self.phone_set(bool(data[k]))
-                elif k == "focus_block_words":
+                elif k in ("focus_block_words", "focus_allow_words"):
                     self._settings[k] = ", ".join(w.strip().lower() for w in str(data[k]).split(",") if w.strip())[:600]
                 else:
                     self._settings[k] = bool(data[k])

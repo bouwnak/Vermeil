@@ -53,13 +53,9 @@ const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 // the title camp: where the fire burns, the log Vermeil sits on, and the camera that frames them with the portal behind
 const TITLE_FIRE = { x: 3.4, z: 2.9 }, TITLE_SEAT = { x: 2.3, z: 1.9 };
 const TITLE_SHOT = [V3(2.7, 1.9, 6.8), V3(1.5, 1.25, -0.4)];
-// the other log: every hero you can pick sits on it beside Vermeil, in an arc around the fire (angles in degrees)
-const BENCH = { r: 2.75, from: -112, step: 15, seat: 0.48 };
-const ringAt = (deg, r) => ({ x: TITLE_FIRE.x + Math.cos(deg * Math.PI / 180) * r, z: TITLE_FIRE.z + Math.sin(deg * Math.PI / 180) * r });
-const benchSeat = (k) => ringAt(BENCH.from + k * BENCH.step, BENCH.r);
-// the hero you pick gets up, walks around the outside of the circle and stands here, in front of the fire
-const STAND_DEG = 62, STAND = ringAt(STAND_DEG, 2.5);
-const CREATE_SHOT = [V3(0.4, 2.3, 9.4), V3(3.9, 1.0, 2.6)];
+// the other log: the hero you pick in character creation walks out of the dark and sits on it, across the fire from Vermeil
+const HERO_LOG = { x: 4.8, z: 1.8 }, HERO_SEAT = 0.46, HERO_FROM = { x: 7.6, z: -0.4 };
+const CREATE_SHOT = [V3(2.0, 2.0, 7.0), V3(3.5, 0.9, 1.1)];
 
 class Game {
   constructor() {
@@ -203,14 +199,12 @@ class Game {
     const camp = [
       ["made_campfire_stones", F.x, F.z, 0, 1.0], ["conv_survival_pack_bonfire_fire", F.x, F.z, 0.4, 0.42, 1],
       ["conv_ultimate_nature_pack_woodlog_moss", TITLE_SEAT.x, TITLE_SEAT.z, 2.4, 0.82],
-      ["conv_ultimate_nature_pack_treestump", 0.9, 3.9, 0.6, 0.7], ["conv_survival_pack_tent", 6.8, -2.0, -0.8, 0.18],
+      ["conv_ultimate_nature_pack_woodlog_moss", HERO_LOG.x, HERO_LOG.z, 0.5, 0.78],
+      ["conv_ultimate_nature_pack_treestump", 5.1, 3.6, 0.6, 0.7], ["conv_survival_pack_tent", 6.8, -2.0, -0.8, 0.18],
       ["conv_survival_pack_backpack", 1.5, 2.9, 0.5, 0.18], ["conv_ultimate_food_pack_cookingpot_soup", 4.3, 3.7, 0.3, 0.2],
       ["ultimate_fantasy_rts_logs", 3.6, 1.2, 1.1, 0.9], ["fantasy_props_megakit_bag", 5.5, 0.4, 0.4, 0.6],
       ["conv_survival_pack_woodentorch_fire", -2.7, -0.2, 0, 0.45, 1], ["conv_survival_pack_woodentorch_fire", 2.7, -0.6, 0, 0.45, 1],
     ];
-    // the other log: three logs end to end, bending around the fire (the heroes you can pick sit on it)
-    const mid = BENCH.from + BENCH.step * 4.5;
-    for (const d of [mid - 45, mid, mid + 45]) { const p = ringAt(d, BENCH.r - 0.05); camp.push(["conv_ultimate_nature_pack_woodlog_moss", p.x, p.z, -d * Math.PI / 180, 0.78]); }
     // each camp prop is its own object ("solo"), so the black hole can pull them in one by one (the trees stay)
     for (const [a, x, z, r, s, glow] of camp) if (A.catalog[a]) fake.layout.objects.push({ a, x, z, r, s, c: 0, k: "prop", solo: 1, ...(glow ? { glow: 1 } : {}) });
     await this.world.build(fake);
@@ -236,64 +230,35 @@ class Game {
     this.titleV.wantHeading = this.titleV.heading = Math.atan2(F.x - TITLE_SEAT.x, F.z - TITLE_SEAT.z);
     this.titleV.anim.sit(0.5);
     this.titleV.label.style.display = "none";
-    await this.seatHeroes();
     this.engine.shot(...TITLE_SHOT);
   }
 
-  /** every class's hero sits on the other log beside Vermeil, warming up by the fire */
-  async seatHeroes() {
-    for (const a of this.sitters?.values() || []) a.dispose();
-    const seats = this.sitters = new Map();
-    const list = this.info.classes.filter((c) => c.model);
-    await Promise.all(list.map(async (c, k) => {
-      try {
-        const a = await Actor.create(this.world, { uid: `sit_${c.id}`, name: "", model: c.model, body: "humanoid", team: "party", scale: null, species: "human", cls: c.id });
-        if (this.sitters !== seats) { a.dispose(); return; }     // the game already left the camp while this one was loading
-        a.label.style.display = "none";
-        a.seat = benchSeat(k);
-        this.sitDown(a, true);
-        this.sitters.set(c.id, a);
-      } catch (e) { console.warn("couldn't seat", c.id, e); }
-    }));
-  }
-
-  sitDown(a, now) {
-    a.path = [];
-    a.pos.set(a.seat.x, 0, a.seat.z);
-    a.wantHeading = Math.atan2(TITLE_FIRE.x - a.seat.x, TITLE_FIRE.z - a.seat.z);
-    if (now) a.heading = a.wantHeading;
-    a.anim.sit(BENCH.seat);
-  }
-
-  /** a walk around the outside of the circle (never through the fire or over Vermeil) from one angle to another */
-  aroundFire(fromDeg, toDeg, last) {
-    const pts = [], n = Math.max(1, Math.ceil(Math.abs(toDeg - fromDeg) / 18));
-    for (let i = 0; i <= n; i++) { const p = ringAt(fromDeg + (toDeg - fromDeg) * i / n, 3.4); pts.push([p.x, p.z]); }
-    pts.push([last.x, last.z]);
-    return pts;
-  }
-
-  /** the hero you clicked gets up off the log and comes round to the front of the fire */
-  async standUp(a) {
-    const deg = Math.atan2(a.seat.z - TITLE_FIRE.z, a.seat.x - TITLE_FIRE.x) * 180 / Math.PI;
-    a.anim.sit(null);
-    a.path = this.aroundFire(deg, STAND_DEG, STAND); a.maxSpeed = 2.4;
-    await this.waitUntil(() => !a.path.length || this.previewActor !== a, 9000);
+  /** the hero you picked walks in from the dark, says hello, shows their weapon and sits down on the other log */
+  async walkToLog(a) {
+    a.pos.set(HERO_FROM.x, 0, HERO_FROM.z);
+    a.path = [[HERO_LOG.x, HERO_LOG.z]]; a.maxSpeed = 2.2;
+    await this.waitUntil(() => !a.path.length || this.previewActor !== a, 6000);
     if (this.previewActor !== a) return;
+    a.pos.set(HERO_LOG.x, 0, HERO_LOG.z); a.path = [];
     a.face(CREATE_SHOT[0].x, CREATE_SHOT[0].z);
     await this.gsleep(250);
     if (this.previewActor !== a) return;
-    a.anim.play("greet");
+    a.anim.play("greet");                                     // every species greets in its own way
     this.audio.creature(a.soundProfile(), "victory", { vol: 0.7 });
-    if (a.weaponKind && a.weaponKind !== "fists") setTimeout(() => this.previewActor === a && a.anim.play(WEAPON_ATTACK[a.weaponKind] || "attack"), 2000);
+    await this.gsleep(1500);
+    if (this.previewActor !== a) return;
+    if (a.weaponKind && a.weaponKind !== "fists") { a.anim.play(WEAPON_ATTACK[a.weaponKind] || "attack"); await this.gsleep(1300); }   // show off the weapon
+    if (this.previewActor !== a) return;
+    a.face(TITLE_FIRE.x, TITLE_FIRE.z);
+    a.anim.sit(HERO_SEAT);                                    // ...and sits down by the fire (the pose eases in)
   }
 
-  /** ...and goes back to their place on the log and sits down again */
-  async backToSeat(a) {
-    const deg = Math.atan2(a.seat.z - TITLE_FIRE.z, a.seat.x - TITLE_FIRE.x) * 180 / Math.PI;
-    a.path = this.aroundFire(STAND_DEG, deg, a.seat); a.maxSpeed = 2.4;
-    await this.waitUntil(() => !a.path.length || this.previewActor === a, 9000);
-    if (this.previewActor !== a && a.group.parent) this.sitDown(a);
+  /** the hero you didn't keep gets up and walks off into the dark */
+  async walkAway(a) {
+    a.anim.sit(null);
+    a.path = [[HERO_FROM.x, HERO_FROM.z]]; a.maxSpeed = 2.6;
+    await this.waitUntil(() => !a.path.length, 4000);
+    a.dispose();
   }
 
   // ======================================================== character creation
@@ -343,31 +308,21 @@ class Game {
     if (this.previewKey === key) return;
     this.previewKey = key;
     this.engine.shot(...CREATE_SHOT);
-    this.letGo();
-    // a human of a class that sits on the log: that hero gets up and comes forward
-    const sitter = p.species === "human" ? this.sitters?.get(p.cls) : null;
-    if (sitter) { this.previewActor = sitter; this.standUp(sitter); return; }
-    // anyone else (an elf, an orc...) steps out of the dark into the firelight
     try {
       const a = await Actor.create(this.world, { uid: "preview", name: "", model, body: "humanoid", team: "party", scale: null, species: p.species, cls: p.cls });
-      if (a.weaponKind && a.weaponKind !== "fists") setTimeout(() => this.previewActor === a && a.anim.play(WEAPON_ATTACK[a.weaponKind] || "attack"), 2300);   // show off the weapon
       if (this.previewKey !== key) { a.dispose(); return; }
       this.letGo();
       this.previewActor = a;
-      a.pos.set(STAND.x, 0, STAND.z);
-      a.face(CREATE_SHOT[0].x, CREATE_SHOT[0].z); a.heading = a.wantHeading;
       a.label.style.display = "none";
-      setTimeout(() => a.anim.play("greet"), 350);          // every species greets in its own way
-      this.audio.creature(a.soundProfile(), "victory", { vol: 0.7 });
+      this.walkToLog(a);
     } catch (e) { console.warn(e); }
   }
 
-  /** whoever is standing by the fire goes back: a hero from the log sits down again, anyone else leaves */
+  /** the hero on the log leaves (you picked someone else, or went back to the title) */
   letGo() {
     const a = this.previewActor;
     this.previewActor = null;
-    if (!a) return;
-    if (a.seat) this.backToSeat(a); else a.dispose();
+    if (a) this.walkAway(a);
   }
 
   async startNew() {
@@ -406,8 +361,8 @@ class Game {
     const was = this.previewActor; this.previewActor = null;
     const hero = this.cineHero = await Actor.create(this.world, { ...player, team: "party" });
     hero.label.style.display = "none";
-    hero.pos.set(STAND.x, 0, STAND.z); hero.face(C.x, C.z); hero.heading = hero.wantHeading;
-    if (was) { if (was.seat) was.group.visible = false; else was.dispose(); }
+    hero.pos.set(HERO_LOG.x, 0, HERO_LOG.z); hero.face(C.x, C.z); hero.heading = hero.wantHeading;
+    was?.dispose();
     const v = this.titleV;
     v.anim.noFidget = true; hero.anim.noFidget = true;
     window.__cine = "rumble";
@@ -422,7 +377,6 @@ class Game {
     window.__cine = "hole";
     v.anim.sit(null); v.mood = "surprised"; v.face(C.x, C.z);
     v.anim.play("point"); hero.anim.play("jump");
-    for (const a of this.sitters?.values() || []) if (a.group.visible) { a.anim.sit(null); a.face(C.x, C.z); }
     this.audio.sfx("blackhole");
     this.subtitleOnly("vermeil", companionName(), "Wait - the portal... it's turning black!");
     P.wantHole = 1;
@@ -434,10 +388,8 @@ class Game {
     const things = [];
     for (const S of this.world.solos || []) if (S.o.a !== "made_portal_base") things.push({ obj: S.obj, lights: S.lights, fire: /bonfire/.test(S.o.a), base: S.obj.position.clone(), scale: S.obj.scale.x, d: S.obj.position.distanceTo(C) });
     things.sort((a, b) => a.d - b.d);
-    const people = [...(this.sitters?.values() || [])].filter((a) => a.group.visible).map((a) => ({ actor: a, d: a.pos.distanceTo(C) })).sort((a, b) => a.d - b.d);
     let when = 0;
     for (const t of things) { t.at = when; when += 0.22; }
-    for (const p of people) { p.at = when * 0.55 + 0.4; when += 0.12; things.push(p); }
     things.push({ actor: v, at: when * 0.55 + 1.6 }, { actor: hero, at: when * 0.55 + 2.0 });
     for (const t of things) if (t.actor) { t.base = t.actor.group.position.clone(); t.scale = t.actor.group.scale.x; }
     const t0 = this.engine.time;
@@ -499,8 +451,6 @@ class Game {
     this.engine.camera.fov = 50; this.engine.camera.updateProjectionMatrix();
     hero.dispose(); this.cineHero = null;
     this.titleV.dispose(); this.titleV = null;
-    for (const a of this.sitters?.values() || []) a.dispose();
-    this.sitters = null;
     P.dispose(); this.portal = null;
     this.loadScreen({ title: "Crossing over…", text: "The black hole spits you out somewhere new…", p: 0.05, count: "" });
   }
@@ -523,8 +473,6 @@ class Game {
     $("title").hidden = true;
     this.titleV?.dispose(); this.titleV = null;
     this.previewActor?.dispose(); this.previewActor = null;
-    for (const a of this.sitters?.values() || []) a.dispose();
-    this.sitters = null;
     this.portal?.dispose(); this.portal = null;
     $("hud").hidden = false;
     await this.buildLocation(this.state.location, { arriving: true });

@@ -86,18 +86,19 @@ export function initFocus(api) {
       await blockBox());
   }
 
-  /** Focus mode: windows whose title has one of these words get minimized while you work */
+  /** Focus mode: the PC is locked to Vermeil - every other window is minimized while you work */
   async function blockBox() {
     const set = await api.save_settings({});
     const on = el("input", { type: "checkbox", id: "focusBlockOn", checked: set.focus_block !== false });
-    const words = el("textarea", { rows: 2, "aria-label": "Blocked sites and apps", value: set.focus_block_words || "" });
-    words.value = set.focus_block_words || "";
-    const save = async () => { await api.save_settings({ focus_block: on.checked, focus_block_words: words.value }); toast("Saved."); };
+    const words = el("input", { type: "text", "aria-label": "Apps that may stay open", placeholder: "nothing else (e.g. word, acrobat)" });
+    words.value = set.focus_allow_words || "";
+    const save = async () => { await api.save_settings({ focus_block: on.checked, focus_allow_words: words.value }); toast("Saved."); };
     on.addEventListener("change", save);
     words.addEventListener("change", save);
-    return el("details", { class: "focus-block" }, el("summary", {}, "🚫 Block distractions"),
-      el("label", { class: "check", for: "focusBlockOn" }, on, "While I work, minimize windows with these words in their title (sites and apps)"),
-      words, el("small", { class: "note" }, "Separate with commas, e.g. youtube, netflix, discord. Breaks are free."));
+    return el("details", { class: "focus-block" }, el("summary", {}, "🔒 Lock to Vermeil"),
+      el("label", { class: "check", for: "focusBlockOn" }, on, "While I work, lock the PC to Vermeil: every other window (browser, games, chat, other apps) gets minimized"),
+      el("small", { class: "note" }, "Also allow (optional, words in the window title, separated by commas):"), words,
+      el("small", { class: "note" }, "The taskbar still works. Breaks and the end of the session unlock everything."));
   }
 
   // ---------------- progress ----------------

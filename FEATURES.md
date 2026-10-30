@@ -285,8 +285,8 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## 🆕 30 Oct 2026: Adventure camp and black-hole portal
 | Feature | Status | Where |
 |---|---|---|
-| Every class's hero sits on the log beside Vermeil; the one you pick stands up, walks round and greets you | ✅ | Adventure → Start new campaign |
-| The portal turns into a black hole and pulls in the camp, the heroes, Vermeil and you (not the trees) | ✅ | Adventure → Open the portal |
+| Two logs only: Vermeil on hers, the hero you pick walks in, greets you and sits on the other | ✅ | Adventure → Start new campaign |
+| The portal turns into a black hole and pulls in the camp, Vermeil and your hero (not the trees) | ✅ | Adventure → Open the portal |
 | Summons stand beside you; groups of enemies are spread evenly | ✅ | Adventure battles |
 | "+N XP" over each fallen enemy, "+N gold" after the battle, with sounds | ✅ | Adventure battles |
 | Companion voice clone warmed up when the adventure starts or loads | ✅ | Adventure voice |
@@ -311,7 +311,7 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 | Morning brief with a review question and habits | ✅ | morning brief |
 | Situation reminders ("when I get home", "before my 2 pm class") | ✅ | Planner → Reminders for a situation, or say it |
 | Screen helper | ✅ | 🖥 next to Send |
-| Focus mode minimizes distracting sites/apps | ✅ | Focus → 🚫 Block distractions |
+| Focus lock: while you work every window except Vermeil (and an optional allow list) gets minimized | ✅ | Focus → 🔒 Lock to Vermeil |
 | Meal log from a photo (vision model estimate) | ✅ | Gym → Calories → 📷 |
 | Rest-day and sleep suggestions | ✅ | Gym → Calories |
 | Phone: offline flashcards, reminder notifications (while the app is open), send a file to the library | ✅ | phone app → 🃏 Study |

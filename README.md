@@ -15,11 +15,11 @@ dropped), Vermeil still works - press **Make the animations** in the Animate box
 background.
 
 ## New (30 Oct 2026, latest): Adventure camp, black-hole portal, roomier battles
-- **Pick your hero by the fire:** on the new-campaign screen every class's hero sits on the long log beside Vermeil.
-  Click a class and that hero gets up, walks round the fire and greets you; pick another and the first one goes back and sits down.
-  Other species (elf, orc…) step into the firelight instead.
-- **The portal turns into a black hole:** after **Open the portal** it goes black with a purple-orange rim and pulls in the logs,
-  the tent, the campfire, every hero, Vermeil and you (the trees stay). Then the camera falls in after them.
+- **Pick your hero by the fire:** the camp has just two logs: Vermeil sits on hers, the other one waits for you.
+  On the new-campaign screen, the hero you pick walks out of the dark, greets you and sits on the second log; pick another
+  class or species and the first one walks away and the new one takes the seat.
+- **The portal turns into a black hole:** after **Open the portal** it goes black with a purple-orange rim and pulls in both logs,
+  the tent, the campfire, Vermeil and your hero (the trees stay). Then the camera falls in after them.
 - **Battles have room:** summons (like the Summoner's Spirit Sprite) stand in line beside you, not in front of you, and groups of
   enemies are spread out evenly.
 - **+XP and +gold:** each enemy shows "+N XP" with a sparkle sound as it falls, and "+N gold" with a coin sound after the battle.
@@ -51,7 +51,9 @@ the rewards you unlock (room decorations, wallpapers and titles; locked ones sho
 - **Assistant:**
   - **🖥** next to Send: she looks at the window behind Vermeil and explains it (errors: how to fix them). Type a question first to ask something specific.
   - **Planner → Reminders for a situation:** "when I get back" or "30 min before my 2 pm class". You can also just say it.
-  - **Focus → 🚫 Block distractions:** while you work, windows with youtube, netflix… in the title get minimized.
+  - **Focus → 🔒 Lock to Vermeil:** while you work, every other window (browser, games, chat, other apps) gets minimized,
+    so only Vermeil stays open. Add words to **Also allow** (e.g. `word, acrobat`) to keep those apps. The taskbar still
+    works, and breaks or the end of the session unlock everything.
   - **Battle Pass → Habits:** water, sleep, reading or your own habits. She also counts them when you say "I drank water".
   - **Morning brief:** now also has one flashcard question and the habits to keep today.
 - **Gym → Calories:**
