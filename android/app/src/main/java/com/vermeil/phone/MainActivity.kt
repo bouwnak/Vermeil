@@ -317,7 +317,8 @@ class MainActivity : Activity() {
     // ---------- keeping the Talk screen up to date ----------
     private fun refresh() {
         if (Hub.site == null && root.childCount > 0 && content.parent != null) { build(); return }
-        checkNote?.let { if (tab == 2) it.text = Hub.notice ?: "Connected to ${Hub.name}." }
+        val check = checkNote
+        if (check != null && tab == 2) check.text = Hub.notice ?: "Connected to ${Hub.name}."
         val orb = orb ?: return
         val listening = ListenService.running
         val color = when {

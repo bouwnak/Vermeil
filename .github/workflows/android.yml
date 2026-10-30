@@ -24,7 +24,7 @@ jobs:
         run: |
           # errors become annotations, so they show on the public run page
           gradle --no-daemon testDebugUnitTest assembleDebug > build.log 2>&1 || {
-            grep -E "^e: |error:|FAILED|What went wrong|expected:|Exception|> " build.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+            grep -E "^e: |^w: .*error|error:|FAILED|expected:" build.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
             tail -40 build.log; exit 1; }
           cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/Vermeil.apk"
       - uses: actions/upload-artifact@v4

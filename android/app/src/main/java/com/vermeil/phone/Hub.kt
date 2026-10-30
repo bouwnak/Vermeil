@@ -68,7 +68,7 @@ object Hub {
 
     fun watch(fn: () -> Unit) { watchers += fn }
     fun unwatch(fn: () -> Unit) { watchers -= fn }
-    fun changed() = main.post { watchers.toList().forEach { it() } }
+    fun changed() { main.post { watchers.toList().forEach { it() } } }
 
     // ---------- pairing ----------
     fun pair(text: String): Boolean {
@@ -87,9 +87,9 @@ object Hub {
     }
 
     fun hello() = work.execute {
-        val api = api ?: return@execute
+        val server = api ?: return@execute
         try {
-            setName(api.call("hello").optString("name", "Vermeil"))
+            setName(server.call("hello").optString("name", "Vermeil"))
             notice = null
         } catch (e: Exception) {
             notice = e.message
@@ -107,7 +107,10 @@ object Hub {
     /** sends what you said to the computer; done(reply) runs on the main thread after she has spoken */
     fun ask(text: String, speak: Boolean, done: ((String) -> Unit)? = null) {
         val said = text.trim()
-        if (said.isEmpty()) { done?.let { main.post { it("") } }; return }
+        if (said.isEmpty()) {
+            if (done != null) main.post { done("") }
+            return
+        }
         lines += Line(true, said)
         thinking = true
         changed()
@@ -123,7 +126,9 @@ object Hub {
             lines += Line(false, reply)
             while (lines.size > 200) lines.removeAt(0)
             changed()
-            if (speak) say(reply) { done?.invoke(reply) } else main.post { done?.invoke(reply) }
+            if (speak) say(reply) { done?.invoke(reply) }
+            else main.post { done?.invoke(reply) }
+            Unit
         }
     }
 
@@ -143,7 +148,13 @@ object Hub {
         }
     }
 
-    private fun finished() = main.post { afterSpeaking?.also { afterSpeaking = null }?.invoke() }
+    private fun finished() {
+        main.post {
+            val after = afterSpeaking
+            afterSpeaking = null
+            after?.invoke()
+        }
+    }
 
     private fun playWav(wav: ByteArray) {
         val file = File(app.cacheDir, "reply.wav").apply { writeBytes(wav) }
@@ -165,13 +176,17 @@ object Hub {
         val ready = tts
         if (ready != null) { ready.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply"); return }
         tts = TextToSpeech(app) { status ->
-            if (status != TextToSpeech.SUCCESS) { finished(); return@TextToSpeech }
-            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(id: String?) {}
-                override fun onDone(id: String?) = finished()
-                @Deprecated("old Android") override fun onError(id: String?) = finished()
-            })
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply")
+            if (status != TextToSpeech.SUCCESS) {
+                finished()
+            } else {
+                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(id: String?) {}
+                    override fun onDone(id: String?) { finished() }
+                    @Deprecated("old Android")
+                    override fun onError(id: String?) { finished() }
+                })
+                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply")
+            }
         }
     }
 
