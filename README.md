@@ -5,7 +5,8 @@ Downloaded from GitHub (**Code → Download ZIP**)? Unzip it, then **before you 
 in the folder:
 - **Windows:** double-click **`INSTALL Windows.bat`**. It installs Python (if missing), the packages, her voice,
   **Rig & animate (UniMate, about 3 GB - the long part)** and makes a **Vermeil** shortcut on your desktop. Leave the
-  black window open until it says it's starting Vermeil. From then on open Vermeil with the desktop shortcut.
+  black window open until it says **=== FINISHED! Vermeil is installed. ===**. From then on open Vermeil with the
+  **Vermeil** shortcut (desktop or Start menu, with her V icon).
 - **Mac:** double-click **`INSTALL Mac.command`** (the first time: right-click → Open).
 - **Linux:** in a terminal in the folder: `bash "INSTALL Linux.sh"`.
 

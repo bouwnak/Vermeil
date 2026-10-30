@@ -29,6 +29,8 @@ if ($keep -ne "n") {
 # 3. the desktop shortcut
 $lnk = Join-Path ([Environment]::GetFolderPath("Desktop")) "Vermeil.lnk"
 if (Test-Path $lnk) { Remove-Item $lnk -Force }
+$menu = Join-Path ([Environment]::GetFolderPath("Programs")) "Vermeil.lnk"
+if (Test-Path $menu) { Remove-Item $menu -Force }
 
 # 4. the app folder - deleted from a copy of this script in TEMP, because a folder can't delete itself while in use
 $job = Join-Path $env:TEMP "vermeil_remove.ps1"

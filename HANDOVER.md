@@ -86,7 +86,13 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **Android app `android/` (30 Oct 2026, newest)**: the Android counterpart of `phone-ios/` (owner asked for Android next).
+- **Simple app icon + installer shortcut & finished line (30 Oct 2026, newest)**: owner asked for a simpler, minimalistic version of the glowing V icon on the installer's desktop shortcut, and a clear "finished" line.
+  - `scripts/make_icon.py` (new, PIL): cyan gradient V with one small star on a dark rounded square, no rings/text. Writes `ui/vermeil.ico` (16-256 px), `ui/vermeil.png`, `ui/vermeil_1024.png`, Android `mipmap-*/ic_launcher.png` and iOS `icon-1024.png` (full square).
+  - `scripts/install.ps1`: shortcut gets the icon + a description, is copied to the Start menu, and the window ends with a green `=== FINISHED! Vermeil is installed. ===` line. `uninstall.ps1` removes the Start-menu one too. `install.sh`: Linux launcher uses `ui/vermeil.png`, same finished line. `ui/index.html` uses `vermeil.ico` as the favicon.
+  - Left uncommitted (another tool's, now redundant): `scripts/build_icon.py`, `scripts/create_shortcut.ps1`, root `vermeil.ico`, `ui/vermeil.svg` (the old busy icon).
+  - Test: `test_installer_makes_a_shortcut_with_the_icon_and_says_finished`. 571 tests OK (3 skipped).
+
+- **Android app `android/` (30 Oct 2026)**: the Android counterpart of `phone-ios/` (owner asked for Android next).
   - Kotlin, **no libraries** (plain `android.app.Activity`, `HttpURLConnection`, `org.json`), AGP 8.7.3, Kotlin 2.0.21, minSdk 26, target 35. Screens built in code (`MainActivity.kt`: Pair, Talk, Practice & more `WebView`, Settings).
   - `ListenService.kt`: foreground service (type microphone, notification with Stop) running `SpeechRecognizer` in a loop (on-device on Android 13+), wake word → command, 8 s to say it after the wake word alone; pauses while she thinks/speaks and while the web tab is open.
   - `Hub.kt`: shared state, pairing in app-private SharedPreferences, `/api/hello|chat|speak` (`VermeilApi.kt`, `X-Vermeil-Key`), her PC voice (WAV via `MediaPlayer`) or the phone's `TextToSpeech`.

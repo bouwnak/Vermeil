@@ -82,7 +82,7 @@ Type=Application
 Name=Vermeil
 Comment=Your AI companion
 Exec="$ROOT/start-vermeil.sh"
-Icon=$ROOT/ui/phone/icon.png
+Icon=$ROOT/ui/vermeil.png
 Path=$ROOT
 Terminal=false
 Categories=Utility;
@@ -94,4 +94,6 @@ fi
 # 6. start
 echo "6/6  Starting Vermeil. Pick your features in Settings -> Plugins."
 nohup "$VPY" app.py >/dev/null 2>&1 &
-echo "Done! Next time, start it with the launcher."
+echo ""
+echo "=== FINISHED! Vermeil is installed. ==="
+echo "Open her any time with the Vermeil launcher. You can close this window now."

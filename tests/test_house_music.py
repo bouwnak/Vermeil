@@ -57,6 +57,17 @@ class UniMateCommandTests(unittest.TestCase):
         with open(os.path.join(root, "INSTALL Windows.bat"), encoding="utf-8") as f:
             self.assertIn("install.ps1", f.read())
 
+    def test_installer_makes_a_shortcut_with_the_icon_and_says_finished(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, "scripts", "install.ps1"), encoding="utf-8") as f:
+            ps = f.read()
+        self.assertIn("vermeil.ico", ps)
+        self.assertIn("IconLocation", ps)
+        self.assertIn("FINISHED", ps.split("Start-Process $pyw")[-1])     # the last thing the window says
+        with open(os.path.join(root, "scripts", "install.sh"), encoding="utf-8") as f:
+            self.assertIn("FINISHED", f.read())
+        self.assertTrue(os.path.getsize(os.path.join(root, "ui", "vermeil.ico")) > 1000)
+
 
 class LeftoverMusicTests(unittest.TestCase):
     def setUp(self):

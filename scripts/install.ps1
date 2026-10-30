@@ -50,8 +50,13 @@ $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
 $sh.TargetPath = $pyw
 $sh.Arguments = "`"$root\app.py`""
 $sh.WorkingDirectory = $root
+$ico = "$root\ui\vermeil.ico"
+$sh.Description = "Vermeil - your AI assistant"
+if (Test-Path $ico) { $sh.IconLocation = "$ico,0" }
 $sh.Save()
-Write-Host "5/7  Desktop shortcut: Vermeil"
+# the same shortcut in the Start menu, so she shows up when you search "Vermeil"
+Copy-Item $lnk (Join-Path ([Environment]::GetFolderPath("Programs")) "Vermeil.lnk") -Force -ErrorAction SilentlyContinue
+Write-Host "5/7  Shortcut: Vermeil on your desktop and in the Start menu"
 
 # 6. UniMate (Rig & animate) - installed now so it's ready when the app opens. Not needed to start: a failure only warns.
 Write-Host "6/7  Rig & animate (UniMate): Miniconda, its code, its own Python and libraries, about 3 GB. The long part..." -ForegroundColor Cyan
@@ -62,3 +67,7 @@ if ($LASTEXITCODE -ne 0) { Write-Host "   UniMate isn't finished - Vermeil still
 # 7. start - she opens on Settings -> Plugins so you can pick your features
 Write-Host "7/7  Starting Vermeil. Pick your features in Settings -> Plugins." -ForegroundColor Green
 Start-Process $pyw -ArgumentList "`"$root\app.py`"" -WorkingDirectory $root
+
+Write-Host ""
+Write-Host "=== FINISHED! Vermeil is installed. ===" -ForegroundColor Green
+Write-Host "Open her any time with the Vermeil shortcut on your desktop. You can close this window now." -ForegroundColor Green
