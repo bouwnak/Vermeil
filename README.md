@@ -1,5 +1,18 @@
 # Vermeil
 
+## ⚠ Install first, then open the app
+Downloaded from GitHub (**Code → Download ZIP**)? Unzip it, then **before you open Vermeil** run the one-click installer
+in the folder:
+- **Windows:** double-click **`INSTALL Windows.bat`**. It installs Python (if missing), the packages, her voice,
+  **Rig & animate (UniMate, about 3 GB - the long part)** and makes a **Vermeil** shortcut on your desktop. Leave the
+  black window open until it says it's starting Vermeil. From then on open Vermeil with the desktop shortcut.
+- **Mac:** double-click **`INSTALL Mac.command`** (the first time: right-click → Open).
+- **Linux:** in a terminal in the folder: `bash "INSTALL Linux.sh"`.
+
+Running the installer again is safe: it only gets what's missing. If UniMate didn't finish (for example the internet
+dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
+background.
+
 ## New (30 Oct 2026): use her on your phone anywhere, Mac/Linux, low-end PCs, share characters, talk-live practice
 - **Phone app (Android and iPhone), also on mobile data:** in the app open **Settings → 📱 Phone**, turn it on, keep
   "Anywhere (Cloudflare)" and scan the QR code with your phone's camera. It opens Vermeil in the phone's browser; tap
@@ -39,7 +52,7 @@ she switches **by herself** to Ollama on your PC, and back again later. Voice, l
 Internet is used for: Groq, music, paper search, weather, web search, news, prices, email, calendar sync, and new voices.
 Check what's installed: `python scripts/setup_local.py --check`. Use smaller/bigger models: `python scripts/setup_local.py --size small` (tiny / small / medium / large).
 
-See **FEATURES.md** for every feature (all 144 done, with honest notes on limits).
+See **FEATURES.md** for every feature (all 145 done, with honest notes on limits).
 
 ### Quick things to try
 - "dance", "take a bow", "look surprised" — she acts it out
@@ -75,7 +88,7 @@ First time on a new PC: `python -m pip install -r requirements.txt` (and `python
 | `brain/` | Thinking: `pinakamain.py` (chat, memory, voice loop), `llm.py` (Groq ⇄ Ollama), `tools.py` (everything the AI can do), `mind.py` (journal, think tools, recall), `missions.py`, `relationship.py` (our story), `coder.py` (coding helper), `paths.py`, `Vprompt.py` |
 | `senses/` | Hearing, speaking, seeing: `stt.py` (Whisper), `tts.py` (Piper voices), `wakeword.py`, `denoise.py`, `voicemood.py`, `presence.py` (faces), `objects.py` (things the camera sees) |
 | `skills/` | Things she does: `f1.py` (planner + music player), `music.py`, `spotify.py`, `gym.py`, `focus.py`, `sensei.py` (languages), `academic.py` + `scholar.py` (study, research), `productivity.py` (email, meetings, documents, calendar sync), `web.py`, `pc.py` (control your PC), `browser.py` (fills forms), `gcal.py` (Google Calendar) |
-| `scripts/` | Run them yourself: `setup_local.py` (downloads the local AI), `setup_unimate.bat` (3D animations), `cleanup_packages.py` |
+| `scripts/` | Run them yourself: `setup_local.py` (downloads the local AI), `setup_unimate.bat` / `setup_unimate.py` (3D animations; the installer runs the .py), `cleanup_packages.py` |
 | `ui/` | The window: sidebar, panels, 3D room, characters |
 | `data/` | Everything Vermeil saves: memory, characters, room, planner, gym, settings, voices, AI/face/object models |
 | `tests/` | Automatic checks: `python -m unittest discover -s tests -v` |
@@ -169,7 +182,7 @@ Advanced `.env` settings: `OLLAMA_EXE` (another ollama.exe), `OLLAMA_MODELS` (an
 - `python scripts/package_app.py` makes `dist\Vermeil-Installer-<date>.zip`. Options: `--with-my-data` (chats, memory,
   characters, room, gym…), `--offline` (Kokoro + all voices), `--with-ollama`, `--with-blender`, `--with-library`, `--list`
   (just show what would be packed). Your `env` keys and login tokens are **never** packed.
-- On the other PC: unzip, open the Vermeil folder, double-click `INSTALL.bat`. It installs Python packages, makes a
+- On the other PC: unzip, open the Vermeil folder, double-click `INSTALL.bat` (from GitHub: `INSTALL Windows.bat`). It installs Python packages and UniMate, makes a
   desktop shortcut and opens Settings → **Plugins**, where you tick the features you want. Uninstall there to free space.
 
 ## Robotics & Electronics
@@ -466,8 +479,9 @@ If a model ever shows up tiny, huge or plain white, check `Tools\play.log` for l
 - **Rig & animate 3D models:** import a .glb/.gltf (or press 🦴 **Rig & animate**). Rig it automatically or place the bones
   yourself. Animations (idle, walk, wave, dance…) come from UniMate. Its code and Python set themselves up in the
   background, libraries included (Miniconda, a portable Git, the code, the checkpoint and about 2 GB of libraries in
-  its own "unimate" environment), so on a new PC you just open Vermeil and wait. If that fails, double-click
-  `scripts\setup_unimate.bat`, or run the two commands shown in the Animate box:
+  its own "unimate" environment). `INSTALL Windows.bat` installs it all before the first start; if it's still missing,
+  **Make the animations** installs it in the background. If that fails too, double-click
+  `scripts\setup_unimate.bat`, or run the two commands the Animate box then shows:
   `"%USERPROFILE%\miniconda3\envs\unimate\python.exe" -m pip install "setuptools<81"` and
   `"%USERPROFILE%\miniconda3\envs\unimate\python.exe" -m pip install -r tools\unimate\requirements.txt --no-build-isolation`.
   UniMate's models are for non-commercial use only.

@@ -797,7 +797,6 @@ class Rigger {
       if (!(await this.api.unimate_status()).ready) {          // not ready yet: say what's missing and get it now
         const r = await this.api.unimate_setup();
         if (r.ready) return this.animatePanel(name);
-        if (r.commands?.length) return this.toast("Almost there: run the two commands shown above in a Command Prompt, then open this box again.");
         return this.toast(r.hint || "Getting UniMate ready…", 9000);
       }
       const picked = [...side.querySelectorAll("input:checked")].map((x) => x.value);

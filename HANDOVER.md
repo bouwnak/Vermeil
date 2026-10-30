@@ -86,7 +86,15 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **iPhone app `phone-ios/` (30 Oct 2026, newest)**: a real Swift app so the wake word works with the phone locked (owner chose iPhone first).
+- **Windows one-click install from GitHub with UniMate, extra-room camera, Stop button (30 Oct 2026, newest)**
+  - **Install first:** `INSTALL Windows.bat` (repo root, CRLF) runs `scripts/install.ps1`, now 7 steps: step 6 runs the new `scripts/setup_unimate.py` (calls `autosetup._unimate` with console progress: Miniconda, portable Git, code, Python 3.10, checkpoint, libraries; marks `_started`/ready in `data/auto_setup.json`; Windows only, a failure only warns). `package_app.py` leaves `INSTALL Windows.bat` out of the zip (the zip has `INSTALL.bat`). README starts with "Install first, then open the app".
+  - **UniMate libraries install themselves:** the owner didn't want to paste pip commands (another PC got stuck on "Almost there"). `app.unimate_setup()` always calls `autosetup.retry("unimate")`; `animate.status()` only shows `pip_commands()` when the last automatic try failed (`auto["status"] == "failed"`). `ui/rigger.js` toast about the commands removed.
+  - **Extra-room camera:** `ui/room.js` `_aimAtRoom(i)` frames room i like the main room's view (target and offset scaled by the room's size against the main room); `_diorama(off)` re-aims at her room after editing instead of the main view. `?mock` exposes `window.__room` (preview checks only).
+  - **Stop button:** Study → Language: **■ Stop** (`.partner-stop`) sits after **🎙 Talk live** while a live conversation runs; Talk live is disabled then.
+  - **Files:** `INSTALL Windows.bat`, `scripts/{install.ps1,setup_unimate.py,package_app.py}`, `skills/animate.py`, `app.py`, `ui/{rigger.js,room.js,app.js,study.js,style.css}`, `tests/test_house_music.py` (+2), README, FEATURES (145), HANDOVER.
+  - **Tests:** 567 run, all OK (3 skipped). Camera and Stop button checked in the `?mock` preview. The installer's UniMate step was run here (already installed → skipped); not yet run on a fresh PC. No new packages (the installer pip-installs `huggingface_hub`, already in requirements.txt).
+
+- **iPhone app `phone-ios/` (30 Oct 2026)**: a real Swift app so the wake word works with the phone locked (owner chose iPhone first).
   - `Listener.swift`: `AVAudioEngine` mic + "audio" background mode + on-device `SFSpeechRecognizer` (fresh recognition every 50 s), wake word → command after 1.3 s quiet (8 s to say it after the wake word alone), paused while she thinks/talks; handles calls/interruptions/route changes. `WakeWord.swift` = same rules and sound-alikes as `ui/phone/phone.js`.
   - `AppModel.swift` / `VermeilAPI.swift`: `/api/hello`, `/api/chat`, `/api/speak` (her PC voice as WAV, fallback iPhone voice) with `X-Vermeil-Key`; key in the Keychain. `Views.swift`: Pair, Talk (orb + chat + typing), "Practice & more" (the phone web app in a WKWebView; the ears rest while it's open), Settings. `SiriIntents.swift`: "Hey Siri, ask Vermeil" and "Hey Siri, start Vermeil".
   - Pairing: the phone web page's Settings has **📲 Open in the Vermeil iPhone app** (iPhone only) → `vermeil://pair?u=…&k=…`; or paste the normal link.

@@ -3,7 +3,7 @@
 Checked against every feature screenshot you sent (updated 21 Oct 2026, after batches 1–9).
 ✅ done · 🟡 partly done · ❌ not built yet
 
-**Totals: 144 ✅ done · 0 🟡 partly · 0 ❌ not yet (144 features)**
+**Totals: 145 ✅ done · 0 🟡 partly · 0 ❌ not yet (145 features)**
 
 ## Where things run
 | Part | Where it runs |
@@ -300,6 +300,7 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 | "Hey Siri, Vermeil" (Siri Shortcut) and Android assistant setup | ✅ | Phone app → Settings · Siri itself can't be replaced |
 | iPhone app: wake word with the phone locked, her PC voice, "Hey Siri, ask Vermeil", Practice inside | ✅ | `phone-ios/` · install from a Mac (phone-ios/README.md) · not tried on a real iPhone yet |
 | One-click install on Mac and Linux | ✅ | INSTALL Mac.command / INSTALL Linux.sh · not yet tried on a real Mac |
+| One-click install on Windows from a GitHub download, Rig & animate (UniMate) included | ✅ | INSTALL Windows.bat · UniMate's libraries also install themselves from the Animate box |
 | Low-end PC mode with automatic switching after scanning the machine (RAM, graphics card, battery) | ✅ | Settings → AI → This computer · voice: "low power mode", "full power", "scan my computer" |
 | Share characters as a file (with or without the voice) and import a friend's | ✅ | Characters → ✏ → Share · 📥 Import a character · voice: "share this character" |
 | Live language practice partner (spoken conversation, corrections, score) | ✅ | Study → Language → 🎙 Talk live · phone Practice tab · voice: "let's practice Japanese" |

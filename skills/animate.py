@@ -87,7 +87,7 @@ def libraries_installed():
 
 
 def pip_commands():
-    """the commands you run yourself (pip isn't run for you) - shown in the Animate box"""
+    """the same install by hand - shown in the Animate box only when the automatic one failed"""
     py = env_python() or os.path.join("%USERPROFILE%", "miniconda3", "envs", ENV, "python.exe")
     return [f'"{py}" -m pip install "setuptools<81"',
             f'"{py}" -m pip install -r "{os.path.join(UNIMATE_DIR, "requirements.txt")}" --no-build-isolation']
@@ -114,9 +114,13 @@ def status():
             hint = "UniMate is still being got ready. Missing: " + ", ".join(missing) + "."
             if auto.get("status") == "failed":
                 hint += " Last try failed: " + auto.get("text", "") + " (see data/auto_setup.log)"
-        elif not libs:
-            hint = "Almost there: install UniMate's libraries yourself (about 2 GB). Paste these two lines into a Command Prompt:"
+        elif not libs and auto.get("status") == "failed":
+            hint = ("UniMate's libraries didn't install by themselves (" + auto.get("text", "")[:120] + "). Press "
+                    "Make the animations to try again, or paste these two lines into a Command Prompt:")
             commands = pip_commands()
+        elif not libs:
+            hint = ("Almost there: UniMate's libraries (about 2 GB) aren't installed yet. Press Make the animations "
+                    "and Vermeil installs them in the background.")
     return {"ready": ready, "repo": repo, "checkpoint": ckpt, "conda": bool(conda), "bash": bool(bash),
             "env": env, "libraries": libs, "hint": hint, "commands": commands}
 

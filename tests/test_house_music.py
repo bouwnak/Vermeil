@@ -37,6 +37,26 @@ class UniMateCommandTests(unittest.TestCase):
         self.assertIn('-m pip install "setuptools<81"', cmds[0])
         self.assertIn("--no-build-isolation", cmds[1])
 
+    def _status(self, auto):
+        import autosetup
+        with mock.patch.object(animate, "_conda", return_value="conda"), mock.patch.object(animate, "_bash", return_value="bash"),              mock.patch.object(animate, "env_python", return_value="py"), mock.patch.object(animate, "libraries_installed", return_value=False),              mock.patch.object(animate.os.path, "isdir", return_value=True), mock.patch.object(animate.os.path, "exists", return_value=True),              mock.patch.object(autosetup, "status", return_value=auto):
+            return animate.status()
+
+    def test_libraries_install_themselves(self):
+        st = self._status({})                                  # only the libraries are missing: no commands to paste
+        self.assertEqual(st["commands"], [])
+        self.assertIn("installs them in the background", st["hint"])
+        st = self._status({"status": "failed", "text": "no internet"})     # the automatic install failed: by hand too
+        self.assertEqual(len(st["commands"]), 2)
+        self.assertIn("no internet", st["hint"])
+
+    def test_windows_installer_sets_up_unimate(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, "scripts", "install.ps1"), encoding="utf-8") as f:
+            self.assertIn("setup_unimate.py", f.read())
+        with open(os.path.join(root, "INSTALL Windows.bat"), encoding="utf-8") as f:
+            self.assertIn("install.ps1", f.read())
+
 
 class LeftoverMusicTests(unittest.TestCase):
     def setUp(self):

@@ -1,7 +1,8 @@
 # install.ps1 - sets Vermeil up on a new PC. INSTALL.bat (next to the app) runs this; you can also run:
 #   powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 # 1. checks Python   2. installs the core packages   3. downloads her default voice
-# 4. makes an empty env file for your keys   5. desktop shortcut   6. opens Vermeil on Settings -> Plugins
+# 4. makes an empty env file for your keys   5. desktop shortcut   6. Rig & animate (UniMate, about 3 GB)
+# 7. opens Vermeil on Settings -> Plugins
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -23,23 +24,23 @@ if (-not $py) {
     exit 1
 }
 $ver = & python -c "import sys; print('%d.%d' % sys.version_info[:2])"
-Write-Host "1/6  Python $ver found"
+Write-Host "1/7  Python $ver found"
 
 # 2. core packages (features are installed later from Settings -> Plugins)
-Write-Host "2/6  Installing the core packages (a few minutes the first time)..." -ForegroundColor Cyan
+Write-Host "2/7  Installing the core packages (a few minutes the first time)..." -ForegroundColor Cyan
 & python -m pip install --upgrade pip
 & python -m pip install requests pywebview numpy rapidfuzz vaderSentiment keyboard psutil pillow winotify sounddevice soundfile piper-tts pycaw comtypes
 if ($LASTEXITCODE -ne 0) { Write-Host "pip failed - check the internet connection and run INSTALL.bat again." -ForegroundColor Red; exit 1 }
 
 # 3. her default offline voice (Piper)
-Write-Host "3/6  Her voice..." -ForegroundColor Cyan
+Write-Host "3/7  Her voice..." -ForegroundColor Cyan
 & python -c "import folders, tts, os; k='en_US-amy-medium'; p=os.path.join(tts.VOICES_DIR, k + '.onnx'); print('   already here') if os.path.exists(p) else tts.download_voice(k)"
 
 # 4. env file for your keys (never copied from the old PC)
 if (-not (Test-Path "$root\env") -and -not (Test-Path "$root\.env")) {
     Copy-Item "$root\env.example" "$root\env" -ErrorAction SilentlyContinue
-    Write-Host "4/6  Made an empty 'env' file - open it with Notepad and paste your GROQ_API_KEY (and the others you use)." -ForegroundColor Yellow
-} else { Write-Host "4/6  env file already here" }
+    Write-Host "4/7  Made an empty 'env' file - open it with Notepad and paste your GROQ_API_KEY (and the others you use)." -ForegroundColor Yellow
+} else { Write-Host "4/7  env file already here" }
 
 # 5. desktop shortcut (runs without a console window)
 $pyw = Join-Path (Split-Path (Get-Command python).Source) "pythonw.exe"
@@ -50,8 +51,14 @@ $sh.TargetPath = $pyw
 $sh.Arguments = "`"$root\app.py`""
 $sh.WorkingDirectory = $root
 $sh.Save()
-Write-Host "5/6  Desktop shortcut: Vermeil"
+Write-Host "5/7  Desktop shortcut: Vermeil"
 
-# 6. start - she opens on Settings -> Plugins so you can pick your features
-Write-Host "6/6  Starting Vermeil. Pick your features in Settings -> Plugins." -ForegroundColor Green
+# 6. UniMate (Rig & animate) - installed now so it's ready when the app opens. Not needed to start: a failure only warns.
+Write-Host "6/7  Rig & animate (UniMate): Miniconda, its code, its own Python and libraries, about 3 GB. The long part..." -ForegroundColor Cyan
+& python -m pip install huggingface_hub
+& python scripts\setup_unimate.py
+if ($LASTEXITCODE -ne 0) { Write-Host "   UniMate isn't finished - Vermeil still works; it tries again from the Animate box." -ForegroundColor Yellow }
+
+# 7. start - she opens on Settings -> Plugins so you can pick your features
+Write-Host "7/7  Starting Vermeil. Pick your features in Settings -> Plugins." -ForegroundColor Green
 Start-Process $pyw -ArgumentList "`"$root\app.py`"" -WorkingDirectory $root

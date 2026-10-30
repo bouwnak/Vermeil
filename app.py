@@ -2031,11 +2031,9 @@ class Api:
         st = animate.status()
         if st["ready"]:
             return {"ready": True}
-        if st["commands"]:                               # only its libraries are left: pip is yours to run
-            return {"hint": st["hint"], "commands": st["commands"]}
         started = autosetup.retry("unimate", self.emit)
-        return {"started": started, "hint": "Getting UniMate ready in the background (Miniconda, its code, its own Python "
-                "and the checkpoint, about 3 GB). The bar at the bottom shows how far it is; open this box again when it's done."
+        return {"started": started, "hint": "Getting UniMate ready in the background (what's missing of Miniconda, its code, "
+                "its own Python, the checkpoint and its libraries, up to 3 GB). The bar at the bottom shows how far it is; open this box again when it's done."
                 if started else st["hint"] or "UniMate's setup is already running."}
 
     def unimate_animate(self, name, motions):

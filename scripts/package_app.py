@@ -246,7 +246,7 @@ def write_app_zip(out, a, packs=()):
         unix = ("INSTALL Mac.command", "INSTALL Linux.sh", "scripts/install.sh")     # need "run me" permission
         for i, f in enumerate(files, 1):
             r = rel(f)
-            if r.replace("\\", "/") in unix:
+            if r.replace("\\", "/") in unix or r == "INSTALL Windows.bat":       # the zip has its own INSTALL.bat
                 continue
             store = r.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".glb", ".onnx", ".bin", ".zip", ".exe"))
             z.write(f, "Vermeil/" + r, compress_type=zipfile.ZIP_STORED if store else zipfile.ZIP_DEFLATED)
