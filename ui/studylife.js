@@ -3,6 +3,28 @@
 // The citation helper (citationBox) lives in the Research tab.
 import { el, toast, busy } from "./util.js";
 
+/** a formula as text with real subscripts/superscripts: "E_c", "f'_{ci}", "x^2" */
+function formulaNode(text) {
+  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const html = esc(String(text || ""))
+    .replace(/_\{([^}]+)\}|_([\p{L}\p{N}]+)/gu, (_, a, b) => `<sub>${a ?? b}</sub>`)
+    .replace(/\^\{([^}]+)\}|\^([\p{L}\p{N}.]+)/gu, (_, a, b) => `<sup>${a ?? b}</sup>`);
+  const n = el("div", { class: "formula-eq" });
+  n.innerHTML = html;
+  return n;
+}
+
+/** "a = thing (kPa), b = other (MPa)" -> one list item per symbol */
+function symbolList(symbols) {
+  const parts = String(symbols || "").split(/[,;]\s*(?=[^,;()=]{1,25}\s=\s)/).map((s) => s.trim()).filter(Boolean);
+  return el("ul", { class: "formula-syms" }, parts.map((p) => {
+    const [sym, ...rest] = p.split(/\s=\s/);
+    if (!rest.length) return el("li", {}, p);
+    const name = formulaNode(sym); name.className = "formula-sym";
+    return el("li", {}, name, el("span", {}, rest.join(" = ")));
+  }));
+}
+
 const PARTS = ["Today", "Flashcards", "Mistakes", "Grades", "Notes", "Formulas", "Chapters", "Ask my library", "Essay", "Exam week"];
 
 // pronunciation tips under a Sensei "Say it" result
@@ -165,8 +187,10 @@ export function initStudyLife(api, pane, opts = {}) {
     const out = el("div", {});
     const showSheet = (s) => out.replaceChildren(el("h4", {}, `${s.title} (${s.count})`),
       ...s.topics.map((t) => el("section", { class: "formula-topic" }, el("h5", {}, t.topic),
-        el("ul", {}, t.formulas.map((f) => el("li", {}, f.name ? el("b", {}, `${f.name}: `) : "", el("code", {}, f.formula),
-          f.symbols ? el("small", { class: "muted" }, ` (${f.symbols})`) : ""))))));
+        el("div", { class: "formula-cards" }, t.formulas.map((f) => el("div", { class: "formula-card" },
+          f.name ? el("b", { class: "formula-name" }, f.name) : null, formulaNode(f.formula),
+          f.symbols ? symbolList(f.symbols) : null,
+          f.source ? el("small", { class: "muted" }, f.source) : null))))));
     body.replaceChildren(el("h3", {}, "📐 Formula sheets by course"),
       el("p", { class: "note" }, "Vermeil reads your library and sorts each file under its course. One sheet per course, plus formulas from your handwritten notes."),
       subjects.length ? null : el("p", {}, "No lecture files yet. Add some in Library."),

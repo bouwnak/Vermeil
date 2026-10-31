@@ -52,7 +52,13 @@ class H(http.server.SimpleHTTPRequestHandler):
                   "games_add_file": lambda p=None: {**(mygames.add_path(p) if p else {"error": "Pick a file in the app (browser test: pass a path)."}), **mygames.list_games()},
                   "games_add_url": lambda u: {**mygames.add_url(u), **mygames.list_games()},
                   "games_launch": lambda g: {"ok": True, "name": "(test: not started)"}}.get(name)
-        if name.startswith("gn_") or name == "mm":   # Game Night (ui/games/night.html), its scores kept in the test folder
+        if name.startswith("launcher_"):              # installed Steam / Epic... games (read only; Play does nothing in tests)
+            import launchers
+            fn = {"launcher_games": lambda: {"games": launchers.installed(), "stores": launchers.STORES},
+                  "launcher_play": lambda s, g: {"ok": True}}.get(name)
+        if name == "game_vermeil_look":               # the mini games' companion: Vermeil in tests
+            fn = lambda: {"name": "Vermeil", "model": "anime_girl.glb", "outfit": "mech", "hair": "original"}
+        if name.startswith("gn_") or name == "mm":   # Mini games (ui/games/night.html), its scores kept in the test folder
             import gamenight
             gamenight.FILE = os.path.join(os.environ["GAME_SAVE_DIR"], "gamenight.json")
             import app as vermeil_app

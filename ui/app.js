@@ -25,10 +25,11 @@ async function optional(file, name) {
   try { return (await import(file))[name]; }
   catch (e) { console.warn(`${file} isn't installed`, e); return () => notInstalled; }
 }
-const [initMind, initBaking, initFocus, initCode, initMissions, initSpotify, initElectronics, initPlanner, initGenerator] = await Promise.all([
+const [initMind, initBaking, initFocus, initCode, initMissions, initSpotify, initElectronics, initPlanner, initGenerator, initBrowser] = await Promise.all([
   optional("./mind.js", "initMind"), optional("./baking.js", "initBaking"), optional("./focus.js", "initFocus"),
   optional("./code.js", "initCode"), optional("./missions.js", "initMissions"), optional("./spotify.js", "initSpotify"),
-  optional("./electronics.js", "initElectronics"), optional("./planner.js", "initPlanner"), optional("./generator.js", "initGenerator")]);
+  optional("./electronics.js", "initElectronics"), optional("./planner.js", "initPlanner"), optional("./generator.js", "initGenerator"),
+  optional("./browser.js", "initBrowser")]);
 const $ = (id) => document.getElementById(id);
 const room = new Room($("scene"));
 if (new URLSearchParams(location.search).has("mock")) window.__room = room;   // browser preview only: lets checks drive the 3D room
@@ -41,7 +42,7 @@ let voices = [];
 let viewTimer = null;
 
 // ---------------- planner, study, code (their own files) ----------------
-let musicPanel = null, elecPanel = null, genPanel = null, planner = null, study = null, codePanel = null, mind = null, gym = null, baking = null, cooking = null, focusPanel = null, chat = null, missionsPanel = null, spotifyPanel = null;
+let musicPanel = null, elecPanel = null, genPanel = null, planner = null, study = null, codePanel = null, mind = null, gym = null, baking = null, cooking = null, focusPanel = null, chat = null, missionsPanel = null, spotifyPanel = null, browserPanel = null;
 const renderPlanner = () => planner?.render();
 
 function showHistory(history) {
@@ -441,6 +442,7 @@ function openPanel(name) {
   if (name === "music" && open) musicPanel.load();
   if (name === "kitchen" && open) kitchenTab(state.ui?.kitchen_tab);
   if (name === "focus" && open) focusPanel.load();
+  if (name === "browser" && open) browserPanel.load();
   if (name === "chat" && open) chat.load();
   if (name === "missions" && open) missionsPanel.load();
   if (name === "spotify" && open) spotifyPanel.load();
@@ -555,6 +557,7 @@ window.onPyEvent = async (e) => {
     case "phone": renderPhone(e); break;
     case "phone_chat": addLog("you", `📱 ${e.you}`); addLog("her", e.reply); break;
     case "partner": window.dispatchEvent(new CustomEvent("partner", { detail: e })); break;
+    case "browser": window.dispatchEvent(new CustomEvent("browser", { detail: e })); break;
     case "app_update": showAppUpdate(e); break;
     case "quest": window.dispatchEvent(new CustomEvent("quest", { detail: e })); break;
     case "gift": window.dispatchEvent(new CustomEvent("gift", { detail: e })); break;
@@ -1484,6 +1487,7 @@ setTimeout(bootDone, 60000);   // never stay stuck on the loading screen
     if (kind) { kitchenTab(kind); api.save_ui({ kitchen_tab: kind }).then((u) => { if (u) state.ui = u; }); }
   });
   focusPanel = initFocus(api);
+  browserPanel = initBrowser(api);
   chat = initChat(api, () => activeChar()?.name);
   refreshGuide();
   missionsPanel = initMissions(api);
@@ -1599,16 +1603,26 @@ function renderAnimTest() {
     const wrap = document.createElement("div"); wrap.className = "anim-group";
     const h = document.createElement("p"); h.className = "anim-title"; h.textContent = title;
     const grid = document.createElement("div"); grid.className = "catalog";
-    grid.append(...buttons.map(([label, fn]) => {
+    grid.append(...buttons.map(([label, fn, missing]) => {
       const b = document.createElement("button"); b.type = "button"; b.textContent = label;
-      b.addEventListener("click", () => { fn(); toast(`Playing: ${label}`, 1500); });
+      if (missing) b.className = "missing";
+      b.addEventListener("click", () => { fn(); if (!missing) toast(`Playing: ${label}`, 1500); });
       return b;
     }));
     wrap.append(h, grid);
     return wrap;
   };
   const names = room.animationNames();
-  const clips = names.map((n) => [ANIM_LABELS[n] || n, () => room.testAnimation(n, 8)]);
+  const GYM = { squat: "Squats", lunge: "Lunges", deadlift: "Deadlift", pushup: "Push-ups", curl: "Bicep curls", row: "Rows",
+    press: "Overhead press", plank: "Plank", jumping_jacks: "Jumping jacks" };
+  const UNIMATE = ["idle", "walk", "wave", "talk", "happy", "dance", "cheer", "jump", "sad", "sit"];
+  const fromUniMate = state ? /-animated\.glb$/i.test(activeChar()?.model || "") : false;   // drawn once before the characters load
+  const clips = names.filter((n) => !GYM[n] && !(fromUniMate && UNIMATE.includes(n))).map((n) => [ANIM_LABELS[n] || n, () => room.testAnimation(n, 8)]);
+  const made = fromUniMate ? names.filter((n) => UNIMATE.includes(n)).map((n) => [ANIM_LABELS[n] || n, () => room.testAnimation(n, 8)]) : [];
+  // every gym exercise: the ones this character can't do yet say how to get them
+  const gym = Object.entries(GYM).map(([k, label]) => names.includes(k) ? [label, () => room.testAnimation(k, 10)]
+    : [`${label} (not made yet)`, () => toast("Make it in Characters → 🦴 Rig & animate → 🏋 Gym exercises.", 5000), true]);
+  const hands = ["relaxed", "fist", "open", "point", "grip"].map((p) => [`Hands: ${p}`, () => { if (!room.testHands(p, 4)) toast("This model has no finger bones (a paw or a stub).", 3500); }]);
   const spots = room.spots?.() || [];
   const go = (kind, label) => {                                // looked up when you press it, so moved furniture counts
     if (!spots.some((x) => x.kind === kind)) return [];
@@ -1621,7 +1635,11 @@ function renderAnimTest() {
   const talk = [["Talk for 5 s", () => { room.speaking = true; setTimeout(() => (room.speaking = false), 5000); }]];
   box.replaceChildren(...[
     names.length ? null : Object.assign(document.createElement("p"), { className: "note", textContent: "This character has no animations of its own - try Kit, or the face / emote buttons." }),
+    room.rigSummary() ? Object.assign(document.createElement("p"), { className: "note", textContent: `Rig: ${room.rigSummary()}.` }) : null,
+    group("Made with UniMate (cleaned: feet on the floor, relaxed arms, no jitter)", made),
     group("Animations (from the 3D model)", clips),
+    group("Gym exercises", gym),
+    group("Hands (poses fit the finger count)", hands),
     group("Use the room", uses),
     group("Faces / moods", faces),
     group("Emotes", emotes),

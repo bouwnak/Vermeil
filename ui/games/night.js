@@ -32,7 +32,7 @@ async function call(name, ...args) {
     }
     apiP ||= pywebview();
     const api = await apiP;
-    if (!api?.[name]) return { error: "Game Night needs the Vermeil app (open it from Games)." };
+    if (!api?.[name]) return { error: "Mini games need the Vermeil app (open them from Games)." };
     return await api[name](...args);
   } catch (e) {
     return { error: String(e?.message || e) };
@@ -98,8 +98,9 @@ function say(key, extra) {
   let n = 0;
   p.textContent = "";
   typer = setInterval(() => { p.textContent = text.slice(0, ++n); if (n >= text.length) clearInterval(typer); }, 22);
-  her.talk(text.length * 22 + 250);
+  her.talk(Math.max(text.length * 22 + 250, text.length * 75));   // the mouth keeps moving while the voice says it
   her.react(clip, face);
+  if (!isMuted()) call("gn_say", text);                             // out loud, in the current character's voice
   sound(snd);
   if (fx === "confetti") { confetti(); flash("#f5c542"); }
   if (fx === "sparkle") burst(["✨", "⭐"], $("vmView"), 8);
@@ -142,7 +143,12 @@ function paintCup(t) {
 // ---------------- tabs ----------------
 const stage = $("gnStage");
 startWaves();
-her = closeUp($("vmView"), { onPoke: poke });
+// the character you're talking to in the assistant (its model, outfit and name), not always Vermeil
+call("game_vermeil_look").then((look) => {
+  const ok = look && !look.error;
+  if (ok && look.name) { $("vmName").textContent = look.name; $("vmLoading").textContent = `${look.name} is coming…`; }
+  her = closeUp($("vmView"), { onPoke: poke, model: ok ? look.model : undefined, outfit: look?.outfit, hair: look?.hair });
+});
 $("vmView").addEventListener("click", (e) => { if ($("gnHer").classList.contains("vm-flat") || e.target.closest(".vm-flat-face")) poke(); });
 const paintMute = () => { $("gnMute").textContent = isMuted() ? "🔇" : "🔊"; };
 $("gnMute").onclick = () => { setMuted(!isMuted()); paintMute(); };

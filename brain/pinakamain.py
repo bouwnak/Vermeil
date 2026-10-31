@@ -653,7 +653,10 @@ class SpeechStream:
     """
     MIN_SENTENCE = 22
 
-    def __init__(self, voice=None, rate=None, pitch=None, on_text=None, rvc=None):
+    def __init__(self, voice=None, rate=None, pitch=None, on_text=None, rvc=None, plain=False):
+        self.plain = plain                      # just this voice: no clone, no feelings, no Emotional voice (language lessons)
+        if plain:
+            rvc = {}
         d_rate, d_pitch, self.vol_x, self.pause, _ = VOICE_STYLES.get(VOICE_STYLE, VOICE_STYLES["normal"])
         self.rate = _shift(rate or VOICE_RATE, d_rate, "%")
         self.pitch = _shift(pitch or VOICE_PITCH, d_pitch, "Hz")
@@ -675,6 +678,11 @@ class SpeechStream:
     def _push(self, sentence):
         self.pushed += 1
         rate, pitch, gain, face, style = self.rate, self.pitch, 1.0, None, None
+        if self.plain:
+            if tts_ready and sentence.strip():
+                self._start()
+                self.q.put((sentence, self._submit(tts.synth, sentence, self.voice, rate, pitch, VOICE), gain, face))
+            return
         if _use_chatter(sentence):              # Chatterbox acts *laughs* / *sighs* out itself: keep them as [tags]
             import chatter
             sentence = chatter.tagged(sentence)
@@ -925,15 +933,16 @@ def clean_endearments(text):
     return t.strip()
 
 
-def speak(text, voice=None, rate=None, pitch=None, rvc=None):
+def speak(text, voice=None, rate=None, pitch=None, rvc=None, plain=False):
     """Say text out loud and wait until it finishes (stop_speaking() interrupts).
-    Sentences are made in parallel, so the first one starts playing almost straight away."""
+    Sentences are made in parallel, so the first one starts playing almost straight away.
+    plain=True: exactly this voice, without her voice clone or feelings (e.g. a Japanese phrase in a lesson)."""
     if not text:
         return
     if not tts_ready:
         print(f"{persona['name']}: {text}")
         return
-    SpeechStream(voice, rate, pitch, rvc=rvc).finish(text)
+    SpeechStream(voice, rate, pitch, rvc=rvc, plain=plain).finish(text)
 
 
 def _use_chatter(text):

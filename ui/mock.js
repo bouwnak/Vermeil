@@ -646,7 +646,23 @@ export const mockApi = {
   travel_swap: async (plan, day, i) => { plan.days[day - 1].stops[i] = { ...plan.days[day - 1].stops[i], name: "A different place", note: "New suggestion" }; return plan; },
   travel_edit: async (plan, day, i, stop) => { plan.days[day - 1].stops[i] = { ...stop, cost: +stop.cost || 0 }; return plan; },
   travel_saved: async () => [],
-  browse_inside: async (t) => (t ? { ok: true, url: t } : { error: "Type what to search or a link." }),
+  browse_inside: async (t, tab) => {
+    if (!t) return { error: "Type what to search or a link." };
+    const url = /^https?:/.test(t) ? t : /\.\w/.test(t) ? `https://${t}` : `https://www.google.com/search?q=${encodeURIComponent(t)}`;
+    const b = st.br ||= { tabs: [], n: 1, history: [] };
+    let x = tab && b.tabs.find((y) => y.id === tab);
+    if (!x) { x = { id: b.n++ }; b.tabs.push(x); }
+    Object.assign(x, { url, title: new URL(url).hostname, host: new URL(url).hostname });
+    b.history.unshift({ url, title: x.title, at: "2026-10-31 21:00" });
+    setTimeout(() => ev({ type: "browser", ...{ tabs: b.tabs, history: b.history } }), 50);
+    return { ok: true, id: x.id, url };
+  },
+  browser_state: async () => { const b = st.br ||= { tabs: [], n: 1, history: [] };
+    return { tabs: b.tabs, history: b.history, dial: b.dial ||= [{ name: "Google", url: "https://www.google.com" }, { name: "YouTube", url: "https://www.youtube.com" }, { name: "GitHub", url: "https://github.com" }] }; },
+  browser_nav: async (id, action) => { const b = st.br; if (action === "close") { b.tabs = b.tabs.filter((t) => t.id !== id); setTimeout(() => ev({ type: "browser", tabs: b.tabs }), 30); } return { ok: true }; },
+  browser_dial: async (action, name, url) => { const b = st.br; if (action === "add") b.dial.push({ name: name || url, url: /^https?:/.test(url) ? url : `https://${url}` });
+    if (action === "remove") b.dial = b.dial.filter((d) => d.url !== url); if (action === "clear_history") b.history = []; return mockApi.browser_state(); },
+  travel_to_calendar: async (plan, start) => (start ? { ok: true, start, message: `Your ${plan.request.place} trip is on the calendar, with each day's itinerary.` } : { error: "Pick the first day of the trip." }),
   quest_buy: async (key, price, name) => { const q = st.quest; if (q.owned.includes(key)) return { ok: true, already: true, vcash: q.vcash, owned: q.owned };
     if (q.vcash < price) return { error: `You need ${price - q.vcash} more VCash.`, vcash: q.vcash };
     q.vcash -= price; q.owned.push(key); ev({ type: "toast", text: `Bought ${name} for ${price} VCash 🛒` }); return { ok: true, vcash: q.vcash, owned: q.owned }; },

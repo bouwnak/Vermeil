@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<title>Vermeil — Game Night</title>
+<title>Vermeil — Mini games</title>
 <link rel="stylesheet" href="../vendor/fonts/nunito.css">
 <link rel="stylesheet" href="games.css">
 <link rel="stylesheet" href="night.css">
@@ -17,7 +17,7 @@
   <button class="btn ghost" id="gnBack" type="button">← Games</button>
   <div class="gn-title">
     <p class="eyebrow">Vermeil</p>
-    <h1>Game Night</h1>
+    <h1>Mini games</h1>
   </div>
   <button class="btn ghost gn-mute" id="gnMute" type="button" title="Sound on/off" aria-label="Sound on/off">🔊</button>
   <button class="gn-cup" id="gnCup" type="button" title="This week's tournament">🏆 <span id="gnCupText">0 – 0</span></button>
@@ -40,9 +40,9 @@
 <div class="gn-body">
   <main class="gn-stage" id="gnStage"></main>
   <aside class="gn-vermeil" id="gnHer">
-    <div class="vm-view" id="vmView" title="Click me!"><span class="vm-flat-face" aria-hidden="true">💜</span><span class="vm-loading">Vermeil is coming…</span></div>
+    <div class="vm-view" id="vmView" title="Click me!"><span class="vm-flat-face" aria-hidden="true">💜</span><span class="vm-loading" id="vmLoading">Coming…</span></div>
     <div class="vm-talk">
-      <b class="vm-name">Vermeil</b>
+      <b class="vm-name" id="vmName">Vermeil</b>
       <p id="gnSay" aria-hidden="true"></p>
       <p class="sr-only" id="gnSayLive" aria-live="polite"></p>
     </div>

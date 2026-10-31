@@ -485,39 +485,52 @@ export function initStudy(api) {
     const rest = reply.slice(m[0].length).split(/\n\s*\n/);
     return rest.length > 1 ? rest.slice(1).join("\n\n") : "";
   };
-  const partnerDraw = (her, you) => {
+  // the conversation as a chat box: her lines (🔊 to hear again) and what you said out loud. No typing: you answer by voice.
+  const chat = [];                                    // {who: "her"|"you"|"note", text, ok, fix}
+  let partnerLang = "";
+  const partnerDraw = () => {
     const pct = game.turns ? Math.round(100 * game.right / game.turns) : 0;
+    const log = el("div", { class: "pg-chat" }, chat.map((m) => m.who === "her"
+      ? el("div", { class: "msg assistant pg-msg" }, el("strong", { class: "msg-speaker" }, "Vermeil"), el("p", {}, m.text),
+        listenButton(() => m.text, partnerLang))
+      : m.who === "you"
+        ? el("div", { class: `msg user pg-msg ${m.ok ? "good" : "miss"}` }, el("strong", { class: "msg-speaker" }, m.ok ? "You ✓" : "You ✗"),
+          el("p", {}, m.text), m.fix ? el("p", { class: "pg-fix" }, m.fix) : null)
+        : el("p", { class: "note pg-note" }, m.text)));
     partnerBox.replaceChildren(
       el("div", { class: "pg-score" }, el("span", {}, `⭐ ${game.points}`), el("span", {}, `🔥 combo ${game.combo}`),
         el("span", {}, `✓ ${game.right} / ${game.turns}${game.turns ? ` (${pct}%)` : ""}`)),
-      you || null,
-      her ? el("p", { class: "pg-her" }, short(her, 220)) : null);
+      log,
+      partnerOn ? el("div", { class: "pg-mic" }, el("i"), "🎙 Answer out loud: she's listening. Say “stop practice” to finish.") : null);
+    log.scrollTop = log.scrollHeight;
   };
   window.addEventListener("partner", ({ detail: e }) => {
     if (e.event === "start") {
       Object.assign(game, { points: 0, combo: 0, best: 0, right: 0, turns: 0 });
+      chat.length = 0;
+      partnerLang = e.language || langSel.value;
       partnerShow(true);
       partnerBox.hidden = false;
+      langOut.replaceChildren();
       const first = e.session?.messages?.slice(-1)[0];
-      partnerDraw(first ? first.content : `Talking in ${e.name}…`,
-        el("p", { class: "note" }, `${e.name}: answer out loud. Say it right for points; say “stop practice” to finish.`));
+      chat.push({ who: "her", text: first ? herTalk(first.content) : `Talking in ${e.name}…` });
+      partnerDraw();
     } else if (e.event === "turn") {
       const ok = !String(e.correction || "").trim();
       game.turns += 1;
       if (ok) { game.right += 1; game.combo += 1; game.best = Math.max(game.best, game.combo); game.points += 10 * Math.min(game.combo, 5); }
       else game.combo = 0;
-      const you = el("div", { class: `pg-you ${ok ? "good" : "miss"}` },
-        el("b", {}, ok ? (game.combo > 1 ? `✓ Perfect! Combo ×${Math.min(game.combo, 5)}` : "✓ Perfect!") : "✗ Almost"),
-        el("p", {}, `You: ${short(e.you, 120)}`),
-        ok ? null : el("p", { class: "pg-fix" }, short(e.correction, 160)));
-      partnerDraw(e.talk ?? herTalk(e.reply), you);
+      chat.push({ who: "you", text: e.you, ok, fix: ok ? "" : short(e.correction, 200) });
+      const her = e.talk ?? herTalk(e.reply);
+      if (her) chat.push({ who: "her", text: her });
+      partnerDraw();
       partnerBox.classList.remove("pop"); void partnerBox.offsetWidth; partnerBox.classList.add("pop");
     } else if (e.event === "stop") {
       partnerShow(false);
       const pct = game.turns ? Math.round(100 * game.right / game.turns) : 0;
-      partnerDraw(null, el("div", { class: "pg-you" }, el("b", {}, e.error ? `Stopped: ${short(e.error)}` :
-        `🏁 Finished! ⭐ ${game.points} points · ${game.right} of ${game.turns} said right (${pct}%) · best combo ${game.best}`),
-        el("p", { class: "note" }, "Her full feedback and your mistakes are under Earlier conversations.")));
+      chat.push({ who: "note", text: e.error ? `Stopped: ${short(e.error)}` :
+        `🏁 Finished! ⭐ ${game.points} points · ${game.right} of ${game.turns} said right (${pct}%) · best combo ${game.best}. Her full feedback is under Earlier conversations.` });
+      partnerDraw();
       if (langLoaded) renderLanguage();
     }
   });
@@ -539,11 +552,6 @@ export function initStudy(api) {
           data = await api.study_files(); toast("Saved to Review — it will come back for spaced repetition."); openReview(r.review); }
         finally { busy(e.target, false); }
       } }, "Make a quiz"),
-      el("button", { class: "ghost", onclick: async (e) => {
-        busy(e.target, true, "Starting…");
-        try { const r = await api.sensei_talk_start(topicIn.value || "everyday small talk", langSel.value, Number(levelSel.value)); if (r.error) return toast(r.error); openTalk(r); }
-        finally { busy(e.target, false); }
-      } }, "Conversation practice"),
       partnerBtn,
       partnerStop,
       el("button", { class: "ghost", title: "A lesson built from the mistakes she corrected in your conversations", onclick: async (e) => {
@@ -596,221 +604,33 @@ export function initStudy(api) {
     }
   }
 
+  /** an earlier conversation, to read again (new ones are spoken: 🎙 Talk live) */
   function openTalk(p) {
     const currentLang = p.language || langSel.value || "ja";
-    let voiceOpen = false;
-    let recognizing = false;
-    let recognition = null;
-
-    // Speech recognition setup
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const voiceLangMap = { ja: "ja-JP", ko: "ko-KR", es: "es-ES", zh: "zh-CN", fr: "fr-FR", de: "de-DE", tl: "fil-PH", en: "en-US", it: "it-IT", ru: "ru-RU" };
-    const sttLang = voiceLangMap[currentLang] || currentLang;
-
-    const voiceStatus = el("div", {
-      class: "voice-status-pill",
-      style: "display:none;align-items:center;gap:8px;background:rgba(231,76,60,0.15);border:1px solid #e74c3c;border-radius:20px;padding:4px 14px;color:#ff6b6b;font-size:12px;font-weight:700;margin:6px 0;"
-    }, el("span", { style: "display:inline-block;width:8px;height:8px;border-radius:50%;background:#e74c3c;animation:pulse 1s infinite alternate;" }, ""), "🎙️ Listening to your voice… speak in real-life!");
-
-    const log = el("div", { class: "code-log", style: "max-height:320px;overflow-y:auto;" });
+    const log = el("div", { class: "pg-chat" });
     const draw = () => {
       log.replaceChildren(...p.messages.map((m) => {
         const isUser = m.role === "user";
-        const b = el("div", { class: `msg ${isUser ? "user" : "assistant"}` });
-        const speaker = el("strong", { class: "msg-speaker" }, isUser ? "You: " : "Vermeil: ");
-        b.append(speaker);
-        if (isUser) {
-          b.append(document.createTextNode(m.content));
-        } else {
-          const body = el("div", { class: "msg-body", style: "display:inline;" });
-          setMd(body, m.content, api);
-          b.append(body, listenButton(() => m.content, currentLang));
-        }
+        const b = el("div", { class: `msg ${isUser ? "user" : "assistant"} pg-msg` }, el("strong", { class: "msg-speaker" }, isUser ? "You" : "Vermeil"));
+        if (isUser) b.append(el("p", {}, m.content));
+        else { const body = el("div", { class: "msg-body" }); setMd(body, m.content, api); b.append(body, listenButton(() => m.content, currentLang)); }
         return b;
       }));
       if (p.score) { const s = el("div", { class: "msg assistant score-box" }); setMd(s, p.score, api); log.append(el("h3", {}, "Teacher's feedback"), s); }
       log.scrollTop = log.scrollHeight;
     };
     draw();
-
-    const input = el("textarea", { rows: 2, placeholder: "Reply with your voice or type here… (say anything!)", "aria-label": "Your reply" });
-    const send = el("button", { class: "primary" }, "Send");
-
-    async function sendReply(text) {
-      if (!text || !text.trim()) return;
-      p.messages.push({ role: "user", content: text.trim() });
-      draw();
-      busy(send, true, "Thinking…");
-      try {
-        const r = await api.practice_reply(p.id, text.trim());
-        if (r.error) return toast(r.error);
-        Object.assign(p, r);
-        draw();
-        // If Open Voice Mode is active, Vermeil speaks her response out loud!
-        const latestAssistant = [...p.messages].reverse().find((m) => m.role === "assistant");
-        if (latestAssistant) {
-          if (voiceOpen) {
-            await api.sensei_say(latestAssistant.content, currentLang);
-            // After she finishes speaking, automatically resume listening for your next turn!
-            setTimeout(() => { if (voiceOpen && !recognizing) startListening(); }, 600);
-          }
-        }
-      } finally {
-        busy(send, false);
-      }
-    }
-
-    send.addEventListener("click", () => {
-      const t = input.value;
-      input.value = "";
-      sendReply(t);
-    });
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send.click(); } });
-
-    // Open Voice Speech Recognition
-    function startListening() {
-      if (!SpeechRec) {
-        toast("Web Speech Recognition not supported in this environment. You can use the mic or type.");
-        return;
-      }
-      try {
-        if (recognition) recognition.abort();
-        recognition = new SpeechRec();
-        recognition.lang = sttLang;
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognizing = true;
-        voiceStatus.style.display = "inline-flex";
-
-        recognition.onresult = (e) => {
-          const transcript = e.results[0]?.[0]?.transcript;
-          if (transcript) {
-            toast(`You said: "${transcript}"`);
-            sendReply(transcript);
-          }
-        };
-        recognition.onerror = () => {
-          recognizing = false;
-          voiceStatus.style.display = "none";
-        };
-        recognition.onend = () => {
-          recognizing = false;
-          voiceStatus.style.display = "none";
-        };
-        recognition.start();
-      } catch (err) {
-        recognizing = false;
-        voiceStatus.style.display = "none";
-      }
-    }
-
-    function stopListening() {
-      if (recognition) {
-        try { recognition.abort(); } catch { /* ignore */ }
-      }
-      recognizing = false;
-      voiceStatus.style.display = "none";
-    }
-
-    // Voice mode toggle button
-    const voiceToggleBtn = el("button", {
-      class: "ghost small",
-      style: "font-weight:700;display:flex;align-items:center;gap:6px;",
-      onclick: () => {
-        voiceOpen = !voiceOpen;
-        voiceToggleBtn.classList.toggle("primary", voiceOpen);
-        voiceToggleBtn.classList.toggle("ghost", !voiceOpen);
-        voiceToggleBtn.textContent = voiceOpen ? "🔊 Open Voice: ON" : "🎙️ Open Voice Mode (Hands-free)";
-        if (voiceOpen) {
-          toast("Open Voice active! Vermeil speaks out loud and listens for your voice.");
-          startListening();
-        } else {
-          stopListening();
-          toast("Open Voice paused.");
-        }
-      }
-    }, "🎙️ Open Voice Mode (Hands-free)");
-
-    const micBtn = el("button", {
-      class: "ic",
-      title: "Tap to speak your reply",
-      "aria-label": "Speak reply",
-      onclick: () => {
-        if (recognizing) stopListening();
-        else startListening();
-      }
-    }, "🎙️");
-
-    // Conversation Guide / Coach
-    const guideTopics = {
-      food: [
-        { orig: "これをお願いします", en: "I would like to order this please" },
-        { orig: "おすすめは何ですか？", en: "What do you recommend?" },
-        { orig: "お会計をお願いします", en: "The check/bill please" },
-        { orig: "とても美味しいです！", en: "It is very delicious!" }
-      ],
-      general: [
-        { orig: "はじめまして、よろしくお願いします！", en: "Nice to meet you!" },
-        { orig: "もう一度ゆっくり言っていただけますか？", en: "Could you say that more slowly please?" },
-        { orig: "私もそう思います！", en: "I agree with you!" },
-        { orig: "あなたはどうですか？", en: "How about you?" },
-        { orig: "なるほど、分かりました！", en: "I see, I understand!" }
-      ]
-    };
-    const topicKey = /food|restaurant|cafe|order|cook/i.test(p.topic) ? "food" : "general";
-    const guideItems = guideTopics[topicKey];
-
-    const guidePanel = el("details", {
-      open: true,
-      style: "background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;margin-bottom:12px;"
-    },
-      el("summary", { style: "font-weight:800;font-size:12px;color:var(--accent,#3e8eff);cursor:pointer;" }, "💡 Conversation Guide (Real-Life Prompts & Hints)"),
-      el("p", { class: "muted small", style: "margin:4px 0 8px;" }, "Tap any phrase to hear pronunciation or click to speak it in the conversation:"),
-      el("div", { style: "display:flex;flex-wrap:wrap;gap:6px;" },
-        ...guideItems.map((item) => {
-          const chip = el("div", {
-            style: "background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:background .15s;"
-          },
-            el("span", { style: "font-weight:600;" }, item.orig),
-            el("small", { style: "opacity:0.7;" }, `(${item.en})`),
-            el("button", {
-              class: "ic x",
-              style: "font-size:11px;width:18px;height:18px;padding:0;",
-              title: "Hear pronunciation",
-              onclick: (e) => {
-                e.stopPropagation();
-                api.sensei_say(item.orig, currentLang);
-              }
-            }, "🔊")
-          );
-          chip.onclick = () => {
-            input.value = item.orig;
-            send.click();
-          };
-          return chip;
-        })
-      )
-    );
-
     langOut.replaceChildren(
       el("div", { class: "row", style: "justify-content:space-between;align-items:center;margin-bottom:8px;" },
-        el("strong", { style: "font-size:14px;" }, `Conversation: ${p.topic}`),
-        voiceToggleBtn
-      ),
-      voiceStatus,
-      guidePanel,
+        el("strong", { style: "font-size:14px;" }, `Conversation: ${p.topic}`)),
       log,
-      el("div", { class: "code-input", style: "display:flex;gap:6px;margin-top:8px;" }, input, micBtn, send),
-      el("div", { class: "row", style: "margin-top:8px;justify-content:flex-end;" },
+      p.score ? null : el("div", { class: "row", style: "margin-top:8px;justify-content:flex-end;" },
         el("button", { class: "ghost", onclick: async (e) => {
-          stopListening();
           busy(e.target, true, "Checking your mistakes…");
           try { const r = await api.practice_finish(p.id); if (r.error) return toast(r.error); Object.assign(p, r); draw(); renderLanguage(); }
           finally { busy(e.target, false); }
-        } }, "Finish & get feedback")
-      )
-    );
-    input.focus();
+        } }, "Finish & get feedback")));
+    langOut.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   async function renderLanguage() {

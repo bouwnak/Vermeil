@@ -17,6 +17,24 @@ MAX_BONES = 70
 HELPER = re.compile(r"drv|twist|helper|jiggle|corrective|_end\b|nub|lip|brow|eye|lid|tongue|teeth|cheek|nose|"
                     r"mandible|jaw|mouth|face|cape|hair|skirt|cloth|breast|tail_?tip|^bone", re.I)
 
+# bones UniMate should never get: it's trained on bodies, so on fingers, hair, skirts, capes and helper bones it makes
+# twitching fingers and stiff floating cloth. The app moves those itself (ui/rigparts.js: hand poses + springs).
+# Same words as rigparts.js (short words only as whole words: "elbow" isn't a bow, "calf_l" isn't a finger).
+NOT_BODY = re.compile(
+    r"drv|driver|twist|helper|corrective|roll\b|^bk_|_ex$|^ex_|_ex_|nub$|end$|^end|_end_|tip$|_top$|target|pole|^ik_|_ik$|"
+    r"weapon|grab|prop\b|socket|attach|offset|"
+    r"brow|eye|lid|lash|lip|teeth|tooth|tongue|cheek|nose|forehead|face|mouth|chin|jaw|"
+    r"finger|thumb|index|middle|(^|_)ring|pinky|little|digit|claw|^f_|knuckle|handsub|"
+    r"hair|skirt|cloth|cape|cloak|dress|feeler|ribbon|tail|(^|_)ears?(_|[lr]?$)|coat|scarf|bust|breast|chain|string|"
+    r"(^|_)tie(_|$)|sleeve|hood|jiggle|phys|dyn|spring|accessor|(^|_)belt|antenna|tentacle|frill|(^|_)bow(_|$)|braid|"
+    r"ponytail|fringe|veil|wing|apron|robe|gown", re.I)
+
+
+def body_name(name):
+    """the cleaned name of a bone ("L_hand_084" -> "l_hand"), as rigparts.js compares them"""
+    return re.sub(r"[_.]?\d+$", "", re.sub(r"^mixamorig:?", "", name or "", flags=re.I)).lower()
+
+
 _CTYPE = {5120: np.int8, 5121: np.uint8, 5122: np.int16, 5123: np.uint16, 5125: np.uint32, 5126: np.float32}
 _COUNT = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16}
 
@@ -88,13 +106,16 @@ def _path(parent, i):
     return out
 
 
-def slim(src, dest, max_bones=MAX_BONES):
-    """Write a copy of `src` with at most `max_bones` bones to `dest`. Returns (bones before, bones after)."""
+def slim(src, dest, max_bones=MAX_BONES, body_only=False):
+    """Write a copy of `src` with at most `max_bones` bones to `dest`. Returns (bones before, bones after).
+    body_only: also take off every finger, hair, cloth, face and helper bone (NOT_BODY), even when it fits."""
     js, binary = read_glb(src)
     skins = js.get("skins", [])
     joints = sorted({j for s in skins for j in s["joints"]})
     before = len(joints)
-    if before <= max_bones:
+    names = {j: js["nodes"][j].get("name", "") for j in joints}
+    extra = [j for j in joints if NOT_BODY.search(body_name(names[j]))] if body_only else []
+    if before <= max_bones and not extra:
         write_glb(dest, js, binary)
         return before, before
     nodes = js["nodes"]
@@ -135,21 +156,30 @@ def slim(src, dest, max_bones=MAX_BONES):
                     weight[int(node)] += float(w)
             prims.append((p, n["skin"], jj, ww, k))
 
-    # remove end bones until it fits: helpers first, then the ones that move the least skin
+    # remove end bones until it fits: non-body bones first (all of them with body_only), then helpers, then the ones
+    # that move the least skin
     keep = set(joints)
     roots = [j for j in joints if jparent[j] is None]
-    while len(keep) > max_bones:
-        has_child = {jparent[j] for j in keep if jparent[j] is not None}
-        leaves = [j for j in keep if j not in has_child and j not in roots]
-        if not leaves:
-            break
-        name = lambda j: re.sub(r"[._]\d+$", "", nodes[j].get("name", ""))
-        drop = min(leaves, key=lambda j: (not HELPER.search(name(j)), weight[j]))
+    extra = set(extra)
+    name = lambda j: re.sub(r"[._]\d+$", "", nodes[j].get("name", ""))
+
+    def drop_bone(drop):
         keep.discard(drop)
         weight[jparent[drop]] += weight[drop]
         for j in joints:                                  # bones under it now hang from its parent
             if jparent[j] == drop:
                 jparent[j] = jparent[drop]
+
+    while True:
+        has_child = {jparent[j] for j in keep if jparent[j] is not None}
+        leaves = [j for j in keep if j not in has_child and j not in roots]
+        loose = [j for j in leaves if j in extra]
+        if loose:
+            drop_bone(loose[0])
+            continue
+        if len(keep) <= max_bones or not leaves:
+            break
+        drop_bone(min(leaves, key=lambda j: (j not in extra and not HELPER.search(name(j)), weight[j])))
 
     def kept(j):
         while j not in keep:

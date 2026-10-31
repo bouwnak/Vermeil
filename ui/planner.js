@@ -1,6 +1,7 @@
 // planner.js - month calendar + "what's on this day" + add form.
 import { $, el, toast } from "./util.js";
 import * as fx from "./fx.js";
+import { drawTravel } from "./planlife.js";
 
 const KINDS = {
   event: { label: "Event", cls: "k-event" },
@@ -47,13 +48,7 @@ export function initPlanner(api) {
       el("select", { name: "priority", "aria-label": "Priority" },
         ["normal", "high", "low"].map((p) => el("option", { value: p }, `${p[0].toUpperCase() + p.slice(1)} priority`))),
       el("button", { class: "primary", type: "submit" }, "Add")),
-    el("h3", {}, "Reminders for a situation"),
-    el("p", { class: "note" }, "Not at a clock time: when you get back to the computer. You can also just say \"remind me to … when I get home\"."),
-    el("ul", { class: "day-list", id: "smartList" }),
-    el("form", { class: "add-form", id: "smartAdd" },
-      el("input", { name: "event", placeholder: "e.g. take out the trash", "aria-label": "What to remind", required: true }),
-      el("span", { class: "note" }, "when I get back"),
-      el("button", { class: "primary", type: "submit" }, "Add")),
+    el("details", { class: "planner-travel", id: "plannerTravel" }, el("summary", {}, "✈️ Travel planner"), el("div", { id: "plannerTravelBody" })),
     el("h3", {}, "Tasks without a date"),
     el("ul", { class: "day-list", id: "anytimeList" }),
     el("h3", {}, "Shopping list"),
@@ -62,20 +57,19 @@ export function initPlanner(api) {
     el("ul", { class: "day-list", id: "noteList" }),
   );
 
-  // ---------- situation reminders ----------
-  const smart = $("smartAdd");
-  const drawSmart = (items) => $("smartList").replaceChildren(...(items.length ? items.map((r) => el("li", {},
-    el("span", { class: "what" }, r.event), el("small", {}, r.on === "home" ? "when you get back" : `${r.minutes} min before ${r.match || "your next event"}`),
-    el("button", { class: "x", "aria-label": `Remove ${r.event}`, onclick: async () => drawSmart(await api.smart_reminder_remove(r.event)) }, "×")))
-    : [el("li", { class: "none" }, "None.")]));
-  smart.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const r = await api.smart_reminder_add(smart.event.value, "home", "", 0);
-    toast(r.message, 5000);
-    drawSmart(r.items);
-    smart.event.value = "";
+  // ---------- ✈️ travel: a trip plan, then its days go on the calendar ----------
+  const travel = $("plannerTravel");
+  travel.addEventListener("toggle", () => {
+    if (travel.open && !travel.dataset.drawn) {
+      travel.dataset.drawn = "1";
+      drawTravel($("plannerTravelBody"), api, (start) => {
+        const d = new Date(`${start}T00:00`);
+        shown = new Date(d.getFullYear(), d.getMonth(), 1); selected = start;
+        render();
+        $("calGrid").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   });
-  api.smart_reminders().then(drawSmart).catch(() => {});
 
   const form = $("planAdd");
   const syncForm = () => {

@@ -8,6 +8,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { CozyRoom, CATALOG } from "./cozyroom.js";
 import { inPlace } from "./inplace.js";
+import { analyzeRig, cleanClips, rigExtras } from "./rigparts.js";
 import { buildGymRoom, GYM_LAYOUT } from "./gymroom.js";
 
 const INK = 0x2e2135;
@@ -532,15 +533,18 @@ export class Room {
       if (m) ears.push({ bone: o, side: m[1].toUpperCase() === "L" ? 1 : -1 });
     });
     if (!head) root.traverse((o) => { if (o.isBone && /^spine\.?005$/i.test(o.name)) head = o; });   // Rigify-style rigs
-    // fingers the animations don't move: the app curls them a little by itself (relaxed hands, grip when holding a book)
+    // UniMate's clips (models saved as <name>-animated.glb) are cleaned: body bones only, smooth, feet on the floor,
+    // arms hanging naturally (ui/rigparts.js). Hand-made clips (Vermeil's own) are left as they are.
+    const info = analyzeRig(root);
+    if (/-animated\.glb$/i.test(file)) {
+      try { cleanClips(root, gltf.animations, info); } catch (e) { console.warn("clean clips", e); }
+    }
+    // fingers and hair/cloth the animations don't move: hand poses that fit the fingers, and swinging springs
     const animated = new Set(gltf.animations.flatMap((a) => a.tracks.map((tr) => tr.name.split(".")[0])));
-    const fingers = [];
-    root.traverse((o) => {
-      if (!o.isBone || animated.has(o.name) || /(end|nub|tip|top)$/i.test(o.name)) return;
-      if (!/(finger|thumb|index|middle|ring|pinky|^f_)/i.test(o.name)) return;
-      fingers.push({ bone: o, base: o.quaternion.clone(), thumb: /thumb/i.test(o.name), k: Math.random() * 6 });
-    });
-    const c = { kind: "gltf", root, head, headBase: head?.rotation.clone(), mouths, mixer: null, actions: {}, ears, fingers };
+    for (const e of ears) animated.add(e.bone.name);
+    const extras = rigExtras(root, info, { skip: animated });
+    const fingers = Object.values(extras.info.hands).flatMap((h) => h.fingers);
+    const c = { kind: "gltf", root, head, headBase: head?.rotation.clone(), mouths, mixer: null, actions: {}, ears, fingers, extras };
     this._findLooks(c);
     this._findFace(c, file);
     if (gltf.animations.length) {
@@ -561,6 +565,10 @@ export class Room {
         "squat", "lunge", "deadlift", "pushup", "curl", "row", "press", "plank", "jumping_jacks"]) {   // gym demos (UniMate "Gym exercises") + moods + furniture + reading + extras (if the model has them)
         const clip = gltf.animations.find((a) => a.name.toLowerCase() === name);
         if (clip) c.actions[name] = c.mixer.clipAction(clip);
+      }
+      for (const clip of gltf.animations) {                 // every other clip too (your own UniMate sentences), for Settings > Test
+        const k = clip.name.toLowerCase();
+        if (!c.actions[k] && !Object.values(c.actions).some((x) => x.getClip() === clip)) c.actions[k] = c.mixer.clipAction(clip);
       }
       for (const n of ["book_take", "book_put", "cheer", "jump", "stretch", "yawn", "shrug", "bow", "nod", "shake", "point"]) if (c.actions[n]) { c.actions[n].setLoop(THREE.LoopOnce, 1); c.actions[n].clampWhenFinished = true; }
       root.traverse((o) => { if (o.isBone && /^hand\.?R$/i.test(o.name)) c.handR = o; if (o.isBone && /^hand\.?L$/i.test(o.name)) c.handL = o;
@@ -1243,15 +1251,12 @@ export class Room {
     return true;
   }
 
-  /** Fingers: relaxed and slightly curled, a little twitch while talking, a fist when holding a book. */
+  /** Hands and swinging bones (ui/rigparts.js): relaxed fingers that curl the right way for this hand (5, 4, 3
+   *  fingers or a paw), a grip when holding a book, an open hand when waving; hair and clothes follow the body. */
   _moveFingers(c, t, dt, talk) {
-    const grip = c.book ? 1 : 0;
-    c._grip = (c._grip ?? 0) + (grip - (c._grip ?? 0)) * Math.min(1, dt * 6);
-    const q = new THREE.Quaternion(), X = new THREE.Vector3(1, 0, 0);
-    for (const f of c.fingers) {
-      const curl = 0.22 + Math.sin(t * 1.3 + f.k) * 0.04 + talk * Math.sin(t * 7 + f.k) * 0.08 + c._grip * 0.9;
-      f.bone.quaternion.copy(f.base).multiply(q.setFromAxisAngle(X, curl * (f.thumb ? 0.5 : 1)));
-    }
+    const test = this._handTest && t < this._handTest.until ? this._handTest.pose : null;
+    c.extras.hands.set(test || (c.book ? "grip" : c._pose === "wave" ? "wave" : "relaxed"));
+    c.extras.update(dt, t, talk);
   }
 
   /** Floppy ears: the animation keeps them hanging down; on top of that they react to feelings and movement.
@@ -1753,7 +1758,18 @@ export class Room {
     return true;
   }
 
-  stopTest() { this._forced = null; }
+  stopTest() { this._forced = null; this._handTest = null; }
+
+  /** Settings > Test: what the rig analysis found (body bones, swinging bones, fingers per hand) */
+  rigSummary() { return this.char?.extras?.summary() || ""; }
+
+  /** Settings > Test: hold a hand pose (relaxed / fist / open / point / grip / wave) for a few seconds */
+  testHands(pose, seconds = 4) {
+    const x = this.char?.extras;
+    if (!x || !Object.values(x.info.hands).some((h) => h.fingers.length)) return false;
+    this._handTest = { pose, until: this.clock.elapsedTime + seconds };
+    return true;
+  }
 
   /** Smoothly switch the model to one of its animations. Only does work when the animation actually changes. */
   _setPose(c, name, dur = 0.3) {
@@ -1995,7 +2011,7 @@ export class Room {
         if (c.head && !c.mixer) c.head.rotation.copy(c.headBase);
         if (c.head) { c.head.rotation.y += lookX; c.head.rotation.x += lookY; }
         for (const [mesh, i] of c.mouths) mesh.morphTargetInfluences[i] = talk;
-        if (c.fingers.length) this._moveFingers(c, t, dt, talk);
+        if (c.extras) this._moveFingers(c, t, dt, talk);
         if (c.face) this._faceLife(c, t, dt, this.expr?.until > t ? this.expr.name : "neutral", talk);
         else if (!c.mouths.length && this.speaking && c.head) c.head.rotation.x += talk * 0.06;
       } else if (c.kind === "penguin") {

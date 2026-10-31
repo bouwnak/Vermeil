@@ -223,7 +223,7 @@ class AppTests(unittest.TestCase):
     def test_browse_inside(self):
         import webview, focus
         with mock.patch.object(webview, "create_window") as win, mock.patch.object(focus, "current", return_value=None):
-            self.assertEqual(self.api.browse_inside("hydrology formulas")["url"], "https://duckduckgo.com/?q=hydrology+formulas")
+            self.assertEqual(self.api.browse_inside("hydrology formulas")["url"], "https://www.google.com/search?q=hydrology+formulas")
             self.assertEqual(self.api.browse_inside("youtube.com")["url"], "https://youtube.com")
             self.assertIn("my browser", self.api._quick_command("search inside for steel beams"))
         self.assertEqual(win.call_count, 3)

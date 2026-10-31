@@ -32,17 +32,19 @@ SETUP_HINT = ("UniMate isn't set up yet. Double-click scripts\\setup_unimate.bat
 # UniMate's scripts are bash scripts: without Git for Windows, the app downloads its portable copy here (no installer)
 PORTABLE_GIT = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "Vermeil", "PortableGit")
 
+# UniMate was trained on short sentences that start "An object ...". Saying where the arms and feet are matters: a
+# vague prompt ("breathes calmly") keeps the T-pose arms of the model, and "in place" stops it drifting away.
 PROMPTS = {
-    "idle": "An object stands in place and breathes calmly.",
-    "walk": "An object walks forward.",
-    "wave": "An object waves with its right hand.",
-    "talk": "An object talks and gestures with its hands.",
-    "happy": "An object bounces happily in place.",
-    "dance": "An object dances in place.",
-    "cheer": "An object cheers with its arms raised.",
-    "jump": "An object jumps in place.",
-    "sad": "An object hangs its head sadly.",
-    "sit": "An object sits down and stays seated.",
+    "idle": "An object stands still in place with its arms relaxed down at its sides, breathing slowly and shifting its weight a little.",
+    "walk": "An object walks forward at a steady pace, swinging its arms naturally.",
+    "wave": "An object stands in place and waves hello with its right hand raised, its left arm relaxed at its side.",
+    "talk": "An object stands in place and talks, gesturing gently with its hands in front of its chest.",
+    "happy": "An object bounces happily in place with its arms loose.",
+    "dance": "An object dances in place, moving its hips and arms to the beat.",
+    "cheer": "An object cheers in place with both arms raised above its head.",
+    "jump": "An object jumps straight up in place and lands on both feet.",
+    "sad": "An object stands in place with its head down and shoulders slumped, arms hanging.",
+    "sit": "An object sits down on the ground and stays seated.",
     # gym demos (Gym -> "Demo" makes her do the exercise next to you)
     "squat": "An object does bodyweight squats, bending the knees and standing back up.",
     "lunge": "An object does forward lunges, alternating legs.",
@@ -332,12 +334,14 @@ def animate(model_path, motions, progress=lambda pct, text: None):
     samples = os.path.join(work, "samples")
     animated = os.path.join(work, "animated")
 
+    # UniMate gets the body only: fingers, hair, clothes, face and helper bones come off (it makes them twitch and
+    # float), and the app moves those itself. The clips go back onto the full model afterwards (ui/rigger.js _merge).
     import slimrig
-    if slimrig.bone_count(model_path) > slimrig.MAX_BONES:   # game rigs: too many helper / face bones for UniMate
-        os.makedirs(os.path.join(work, "slim"), exist_ok=True)
-        slim = os.path.join(work, "slim", os.path.basename(model_path))
-        before, after = slimrig.slim(model_path, slim)
-        progress(0.04, f"This rig has {before} bones; UniMate takes {slimrig.MAX_BONES}. Keeping the {after} body bones…")
+    os.makedirs(os.path.join(work, "slim"), exist_ok=True)
+    slim = os.path.join(work, "slim", os.path.basename(model_path))
+    before, after = slimrig.slim(model_path, slim, body_only=True)
+    if after < before:
+        progress(0.04, f"Giving UniMate the {after} body bones (of {before}); hands, hair and clothes are moved by the app…")
         model_path = slim
 
     progress(0.05, "Reading the skeleton…")

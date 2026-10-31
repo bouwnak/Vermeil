@@ -39,7 +39,7 @@
       </button>
       <button class="hub-card" id="cardNight" type="button" data-preview="night" data-sfx="open">
         <span class="hub-art art-night" aria-hidden="true">🎲</span>
-        <span class="hub-text"><b>Game Night with Vermeil</b><small>Chess, cards, trivia, word games, drawing, puzzles, typing, rhythm and escape rooms — plus a weekly tournament</small></span>
+        <span class="hub-text"><b>Mini games</b><small>Chess, cards, trivia, word games, drawing, puzzles, typing, rhythm and escape rooms — plus a weekly tournament</small></span>
         <span class="hub-go" aria-hidden="true">›</span>
       </button>
       <div class="my-games" id="myGames"></div>
@@ -55,10 +55,18 @@
         <div class="pv-collage" id="collage"></div>
         <div class="pv-retro-title">RETRO</div>
       </div>
-      <div class="pv pv-mine pv-night" data-pv="night"><span class="pv-mine-icon" aria-hidden="true">🎲</span><b>Game Night</b><small>Play against Vermeil and win the weekly trophy</small></div>
+      <div class="pv pv-mine pv-night" data-pv="night"><span class="pv-mine-icon" aria-hidden="true">🎲</span><b>Mini games</b><small>Play against your companion and win the weekly trophy</small></div>
       <div class="pv pv-mine" data-pv="mine"><span class="pv-mine-icon" aria-hidden="true">🎮</span><b id="pvMineName">Your game</b><small>Opens in its own window — Vermeil stays here</small></div>
     </aside>
   </div>
+
+  <!-- games installed with Steam, Epic Games, GOG, Ubisoft (skills/launchers.py) -->
+  <section class="lib-shelf" id="libShelf" hidden>
+    <div class="rg-title"><h2>Installed games</h2><span class="muted" id="libCount"></span>
+      <nav class="lib-stores" id="libStores" aria-label="Launcher"></nav>
+      <button class="btn ghost small" id="libRefresh" type="button" title="Look for new games again">⟳</button></div>
+    <div class="lib-grid" id="libGrid"></div>
+  </section>
 </section>
 
 <!-- ============ Retro Games (laid out like retrogames.cc) ============ -->

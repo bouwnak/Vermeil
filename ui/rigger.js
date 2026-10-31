@@ -15,6 +15,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { inPlace } from "./inplace.js";
 import { ViewAxis } from "./viewaxis.js";
 import { makeTalkClip, talkBones } from "./talkanim.js";
+import { analyzeRig, cleanClips, retargetClip } from "./rigparts.js";
 
 // Presets, in "box" units: x and z from -0.5 to 0.5 of the model's width/depth, y from 0 (feet) to 1 (top).
 // [name, parent, x, y, z]. Joints ending in .L are mirrored to .R automatically.
@@ -50,7 +51,7 @@ export const MOTIONS = [
   ["idle", "Standing (idle)", "An object stands in place and breathes calmly."],
   ["walk", "Walking", "An object walks forward."],
   ["wave", "Waving", "An object waves with its right hand."],
-  ["talk", "Talking gestures", "An object talks and gestures with its hands."],
+  ["talk", "Talking (made right away, no UniMate)", ""],
   ["happy", "Happy", "An object bounces happily in place."],
   ["dance", "Dancing", "An object dances in place."],
   ["cheer", "Cheering", "An object cheers with its arms raised."],
@@ -793,20 +794,20 @@ class Rigger {
     this.mode = "animate";
     this.tools([{ label: "✓ Done", click: () => this.close() }]);
     const st = await this.api.unimate_status();
+    const prev = await this.api.unimate_previous(name).catch(() => ({ outputs: [] }));
     const side = this.$(".rig-side");
     side.hidden = false;
     side.innerHTML = `<h3>🎬 Animate</h3>
-      <button type="button" class="primary rig-talk">🗣 Automatic talking animation</button>
-      <p class="note">Made right away, no UniMate needed: while she speaks her head nods and tilts, the jaw moves (if the rig has one) and her hands gesture. Her textures stay as they are.</p>
-      <h3>With UniMate</h3>
-      <p class="note">${st.ready ? "Tick what it should learn to do. Each one takes a little while; it runs in the background." : st.hint}</p>
+      ${prev.outputs?.length ? `<button type="button" class="primary rig-fix">✨ Fix my animations (${prev.outputs.map((o) => o.clip).join(", ")})</button>
+      <p class="note">Puts the animations UniMate already made back on the model, cleaned: feet on the floor, arms hanging naturally, no jitter, fingers and hair/cloth handled by the app. No waiting for UniMate.</p>` : ""}
+      <p class="note">${st.ready ? "Tick what she should learn to do. Talking is made right away; the others are made by UniMate in the background." : st.hint}</p>
       ${(st.commands || []).map((c) => `<pre class="rig-cmd" title="Click to copy">${c.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</pre>`).join("")}
       ${st.commands?.length ? `<p class="note">Then close and open this box again.</p>` : ""}
       <div class="rig-motions">${MOTIONS.map(([k, label], i) => `<label class="rig-check"><input type="checkbox" value="${k}" ${i < 3 ? "checked" : ""}> ${label}</label>`).join("")}</div>
       <button type="button" class="ghost rig-gym">🏋 Gym exercises</button>
       <div class="rig-motions rig-gym-list" hidden>${GYM_MOTIONS.map(([k, label]) => `<label class="rig-check"><input type="checkbox" value="${k}"> ${label}</label>`).join("")}</div>
       <p class="note rig-gym-note" hidden>In Gym, press 👯 Demo on an exercise and she does it next to you.</p>
-      <p class="note">Ears and fingers are moved by the app itself, so you don't need animations for those.</p>
+      <p class="note">UniMate only moves the body. Hands (their poses fit the finger count: 5, 4, 3 fingers or a paw), hair, clothes, tails and ears are moved by the app itself, so they swing naturally.</p>
       <button type="button" class="primary rig-make">Make the animations</button>`;
     // one press is enough: the button greys out at once and a second press while it works does nothing
     const once = (btn, fn) => btn.addEventListener("click", async () => {
@@ -814,7 +815,20 @@ class Rigger {
       btn.disabled = true;
       try { await fn(); } finally { btn.disabled = false; }
     });
-    once(side.querySelector(".rig-talk"), () => this.autoTalk(name));
+    const fix = side.querySelector(".rig-fix");
+    if (fix) once(fix, async () => {
+      this.busy("Putting the animations back on the model, cleaned…", 0.5);
+      try {
+        const saved = await this._merge(prev.outputs, prev.model || name, false);
+        this.busy(null);
+        this.onSaved(saved, true);
+        this.toast(`Fixed ✓ ${prev.outputs.length} animation${prev.outputs.length > 1 ? "s" : ""} cleaned (${this._lastReport || ""}). Try them in Settings → Test.`, 9000);
+        this.close();
+      } catch (err) {
+        this.busy(null);
+        this.toast(`Couldn't fix them: ${err.message || err}`);
+      }
+    });
     side.querySelector(".rig-gym").addEventListener("click", () => {       // show + tick every gym move
       side.querySelector(".rig-gym-list").hidden = false;
       side.querySelector(".rig-gym-note").hidden = false;
@@ -834,9 +848,12 @@ class Rigger {
       }
       const picked = [...side.querySelectorAll("input:checked")].map((x) => x.value);
       if (!picked.length) return this.toast("Tick at least one.");
+      this._withTalk = picked.includes("talk");                   // made here, no UniMate needed
+      const forUniMate = picked.filter((k) => k !== "talk");
+      if (!forUniMate.length) return this.autoTalk(name);
       side.hidden = true;
       this.busy("Getting UniMate ready…", 0);
-      const res = await this.api.unimate_animate(name, picked);
+      const res = await this.api.unimate_animate(name, forUniMate);
       if (res?.error) { this.busy(null); this.toast(res.error); side.hidden = false; }
       this._animName = name;
     });
@@ -894,23 +911,30 @@ class Rigger {
     }
   }
 
-  /** UniMate gives one animated GLB per motion, all on the same rig: keep the first, add the other clips to it */
-  async _merge(outputs, name) {
+  /** UniMate gives one animated GLB per motion, made on its slimmed copy of the rig. The clips go back onto the
+   *  ORIGINAL model (all its finger, hair and cloth bones kept) and are cleaned (ui/rigparts.js): body bones only,
+   *  no jitter, feet on the floor, arms hanging naturally, seamless loops. + the talking clip when it was ticked. */
+  async _merge(outputs, name, withTalk = this._withTalk) {
     const loader = new GLTFLoader();
-    let base = null;
+    const base = await loader.loadAsync(`models/${encodeURIComponent(name)}`);
     const clips = [];
     for (const { clip, url } of outputs) {
       const g = await loader.loadAsync(url);
-      if (!base) base = g;
       const a = g.animations[0];
       if (!a) continue;
-      a.name = clip;
-      clips.push(a);
+      const moved = retargetClip(a, g.scene, base.scene);
+      moved.name = clip;
+      clips.push(moved);
     }
-    if (!base) throw new Error("UniMate didn't make any animations");
+    if (!clips.length) throw new Error("UniMate didn't make any animations");
+    const info = analyzeRig(base.scene);
+    const r = cleanClips(base.scene, clips.concat(base.animations.filter((a) => a.name !== "talk")), info);
+    this._lastReport = `${r.dropped} shaky tracks removed, ${r.grounded} put back on the floor, ${r.arms} with relaxed arms`;
     inPlace(clips);                                   // the walk is saved in place, so it loops smoothly
-    const ik = this.gltf.scene.userData?.ik;
+    const keep = base.animations.filter((a) => !clips.some((c) => c.name === a.name) && (withTalk ? a.name !== "talk" : true));
+    if (withTalk) { const talk = makeTalkClip(base.scene, info); if (talk) keep.push(talk); }
+    const ik = this.gltf?.scene.userData?.ik;
     if (ik) base.scene.userData.ik = ik;
-    return this._export(base.scene, clips, name.replace(/(-rigged)?\.glb$/i, "") + "-animated.glb");
+    return this._export(base.scene, keep.concat(clips), name.replace(/(-rigged)?(-animated)?\.glb$/i, "") + "-animated.glb");
   }
 }

@@ -1,7 +1,7 @@
 // focus.js - Focus Session Director (work/break rounds, distraction log, summary) + Progress charts.
 import { $, el, toast, setMd, busy } from "./util.js";
 import { play, alarm } from "./fx.js";
-import { drawWeek, drawGoals, drawHabits, drawTravel, drawScreen } from "./planlife.js";
+import { drawWeek, drawGoals, drawHabits, drawScreen } from "./planlife.js";
 import { sleepBars } from "./gymlife.js";
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart(2, "0")}`;
@@ -9,14 +9,15 @@ const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart
 export function initFocus(api) {
   const root = $("focusBody");
   let tab = "focus";
+  let sub = "charts";                    // My progress: charts / week / habits / screen
   // session state (lives in the window; Python keeps the log)
   const st = { on: false, phase: "work", round: 1, rounds: 4, work: 25, brk: 5, left: 0, focused: 0, task: "", id: null, paused: false };
 
   const tabs = el("div", { class: "tabs", role: "tablist" });
   const view = el("div");
   root.replaceChildren(tabs, view);
-  const TABS = [["focus", "Focus session"], ["week", "📅 Week"], ["goals", "🌳 Goals"], ["habits", "🟩 Habits"], ["travel", "✈️ Travel"],
-    ["screen", "⏱️ Screen time"], ["progress", "My progress"]];
+  const TABS = [["focus", "Focus session"], ["goals", "🌳 Goals"], ["progress", "📈 My progress"]];
+  const SUBS = [["charts", "📈 Charts"], ["week", "📅 Week"], ["habits", "🟩 Habits"], ["screen", "⏱️ Screen time"]];
   const drawTabs = () => tabs.replaceChildren(...TABS.map(([k, l]) =>
     el("button", { role: "tab", "aria-selected": String(k === tab), onclick: () => { tab = k; load(); } }, l)));
 
@@ -111,7 +112,6 @@ export function initFocus(api) {
         task, preset, el("button", { class: "primary", type: "submit" }, "Start focusing")),
       el("p", { class: "note" }, `This week: ${s.week.sessions} sessions · ${s.week.minutes} focused minutes · ${s.week.distractions} distractions.`),
       await countdownBox(),
-      browserBox(),
       await blockBox());
   }
 
@@ -123,17 +123,6 @@ export function initFocus(api) {
     return el("div", { class: "countdowns" }, el("h5", {}, "⏳ Coming up"),
       ...x.countdowns.map((c) => el("span", { class: `cd ${c.days <= 1 ? "soon" : c.days <= 7 ? "week" : ""}` },
         `${c.kind === "event" ? "📌" : "📝"} ${c.title} · `, el("b", {}, when(c.days)))));
-  }
-
-  /** 🌐 her own browser window ("search inside for ..." by voice does the same) */
-  function browserBox() {
-    const q = el("input", { placeholder: "Search or a link (opens in Vermeil's browser)", "aria-label": "Search inside" });
-    return el("form", { class: "row", onsubmit: async (e) => {
-      e.preventDefault();
-      const r = await api.browse_inside(q.value);
-      if (r.error) return toast(r.error);
-      q.value = "";
-    } }, q, el("button", { class: "ghost small" }, "🌐 Open inside"));
   }
 
   /** Focus mode: the PC is locked to Vermeil - every other window is minimized while you work */
@@ -151,9 +140,9 @@ export function initFocus(api) {
       focus_sites: sitesOn.checked, focus_sites_list: sites.value, focus_mute: mute.checked }); toast("Saved."); };
     [on, words, hard, sitesOn, sites, mute].forEach((x) => x.addEventListener("change", save));
     return el("details", { class: "focus-block" }, el("summary", {}, "🔒 Lock to Vermeil"),
-      el("label", { class: "check", for: "focusBlockOn" }, on, "While I work, lock the PC to Vermeil: every other window (browser, games, chat, other apps) gets minimized"),
+      el("label", { class: "check", for: "focusBlockOn" }, on, "While I work, lock the PC to Vermeil: she fills the whole screen and stays on top, and every other window (browser, games, chat, other apps) gets minimized"),
       el("small", { class: "note" }, "Also allow (optional, words in the window title, separated by commas):"), words,
-      el("small", { class: "note" }, "The taskbar still works. Breaks and the end of the session unlock everything."),
+      el("small", { class: "note" }, "Breaks and the end of the session unlock everything."),
       el("label", { class: "check", for: "focusSitesOn" }, sitesOn, "Block distracting websites (closes the tab's window even in an allowed browser)"), sites,
       el("label", { class: "check", for: "focusMute" }, mute, "Mute all notifications while I work (Windows pop-ups and her reminders wait for the break)"),
       el("label", { class: "check", for: "focusHard" }, hard, "Hard lock: no pause or skip, and stopping early means typing a long sentence"));
@@ -170,11 +159,11 @@ export function initFocus(api) {
     svg.innerHTML = `<svg viewBox="-4 0 ${w + 8} ${h}" preserveAspectRatio="none" role="img" aria-label="${label}">${bars}</svg>`;
     return svg;
   }
-  async function drawProgress() {
+  async function drawProgress(into) {
     const p = await api.progress(30);
     const t = p.totals;
     const q = p.quiz.filter((x) => x != null);
-    view.replaceChildren(
+    into.replaceChildren(
       el("p", { class: "note" }, "The last 30 days. Each bar is one day."),
       el("div", { class: "prog" }, el("h4", {}, `Quiz scores${q.length ? ` · average ${Math.round(q.reduce((a, b) => a + b, 0) / q.length)}%` : ""}`), spark(p.quiz, { max: 100, label: "Quiz scores", unit: "%" })),
       el("div", { class: "prog" }, el("h4", {}, `Focus · ${t.focus_minutes} minutes`), spark(p.focus, { label: "Focus minutes", unit: " min" })),
@@ -188,9 +177,15 @@ export function initFocus(api) {
 
   async function load() {
     drawTabs();
-    if (tab === "progress") return drawProgress();
-    const extra = { week: drawWeek, goals: drawGoals, habits: drawHabits, travel: drawTravel, screen: drawScreen }[tab];
-    if (extra) return extra(view, api);
+    if (tab === "goals") return drawGoals(view, api);
+    if (tab === "progress") {
+      const subs = el("div", { class: "tabs sub-tabs", role: "tablist" }, SUBS.map(([k, l]) =>
+        el("button", { role: "tab", "aria-selected": String(k === sub), onclick: () => { sub = k; load(); } }, l)));
+      const inner = el("div");
+      view.replaceChildren(subs, inner);
+      if (sub === "charts") return drawProgress(inner);
+      return { week: drawWeek, habits: drawHabits, screen: drawScreen }[sub](inner, api);
+    }
     if (st.on) return drawTimer();
     return drawSetup();
   }

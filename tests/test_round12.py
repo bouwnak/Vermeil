@@ -104,11 +104,12 @@ class LanguageTests(unittest.TestCase):
         spoken = []
         with mock.patch.object(tts, "installed_voices", return_value=[]), mock.patch.object(tts, "catalog", return_value={}), \
                 mock.patch.object(tts, "edge_available", return_value=True), mock.patch.object(app.threading, "Thread") as T, \
-                mock.patch.object(pm, "speak", side_effect=lambda t, v, *a: spoken.append((t, v))):
+                mock.patch.object(pm, "speak", side_effect=lambda t, v, *a, **k: spoken.append((t, v, k.get("plain")))):
             T.return_value.start = lambda: T.call_args.kwargs["target"](*T.call_args.kwargs.get("args", ()))
             r = api.sensei_say("こんにちは (Hello)", "ja")
         self.assertEqual(r["said"], "こんにちは")
         self.assertEqual(spoken[0][1], "ja-JP-NanamiNeural")
+        self.assertTrue(spoken[0][2])                    # the plain voice: not her voice clone or feelings
         with mock.patch.object(tts, "installed_voices", return_value=[]), mock.patch.object(tts, "catalog", return_value={}), \
                 mock.patch.object(tts, "edge_available", return_value=False):
             self.assertIn("edge-tts", api.sensei_say("こんにちは", "ja")["error"])

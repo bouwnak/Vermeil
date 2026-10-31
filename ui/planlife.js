@@ -92,7 +92,7 @@ export async function drawScreen(view, api) {
 }
 
 // ---------------- ✈️ travel planner ----------------
-export async function drawTravel(view, api) {
+export async function drawTravel(view, api, onCalendar = null) {
   const f = {
     place: el("input", { placeholder: "Where? (e.g. Cebu, Tokyo)", "aria-label": "Place", required: true }),
     days: el("input", { type: "number", min: 1, max: 14, placeholder: "Days", "aria-label": "Number of days", required: true }),
@@ -117,28 +117,52 @@ export async function drawTravel(view, api) {
       const p = await api.travel_plan(req());
       busy(go, false);
       if (p.error) return toast(p.error);
-      showPlan(out, api, p);
+      showPlan(out, api, p, onCalendar);
     } },
       f.place, f.days, f.origin, f.start, f.people, f.budget, f.currency,
       el("label", { class: "inline" }, "Price ", f.stars, starLabel), go),
     out);
   const saved = await api.travel_saved();
   if (saved.length) out.replaceChildren(el("h5", {}, "Saved plans"), ...saved.map((p) =>
-    el("button", { class: "ghost small", onclick: () => showPlan(out, api, p) }, `${p.request.place} · ${p.request.days} days`)));
+    el("button", { class: "ghost small", onclick: () => showPlan(out, api, p, onCalendar) }, `${p.request.place} · ${p.request.days} days`)));
 }
 
-function showPlan(out, api, plan) {
+/** "Put it on your calendar?" - every trip day becomes a calendar event with that day's itinerary */
+function calendarAsk(api, plan, onCalendar) {
+  const start = el("input", { type: "date", "aria-label": "First day of the trip", value: plan.request.start || "" });
+  const box = el("div", { class: "edit-card trip-cal" },
+    el("b", {}, "📅 Add this trip to your calendar?"),
+    el("p", { class: "note" }, "Each day of the trip goes on the calendar, with that day's itinerary."),
+    el("div", { class: "row" }, el("label", { class: "inline" }, "First day ", start),
+      el("button", { class: "primary small", onclick: async (e) => {
+        if (!start.value) return toast("Pick the first day of the trip.");
+        busy(e.currentTarget, true, "Adding…");
+        const r = await api.travel_to_calendar(plan, start.value);
+        if (r.error) { busy(e.currentTarget, false); return toast(r.error); }
+        toast(r.message, 7000);
+        box.replaceChildren(el("b", {}, "✅ On your calendar"), el("p", { class: "note" }, r.message));
+        onCalendar?.(r.start);
+      } }, "Yes, add it"),
+      el("button", { class: "ghost small", onclick: () => box.remove() }, "Not now")));
+  return box;
+}
+
+function showPlan(out, api, plan, onCalendar = null) {
   const cur = plan.request.currency;
-  const redraw = (p) => { if (p.error) return toast(p.error); plan = p; showPlan(out, api, p); };
+  const redraw = (p) => { if (p.error) return toast(p.error); plan = p; showPlan(out, api, p, onCalendar); };
   const a = plan.airfare || {};
   const links = plan.links || {};
   out.replaceChildren(
     el("h4", {}, `${plan.request.place} · ${plan.request.days} days · ${"★".repeat(plan.request.stars)}`),
+    calendarAsk(api, plan, onCalendar),
     plan.summary ? el("p", {}, plan.summary) : null,
     el("p", { class: "note" }, `Estimated total: ${peso(plan.estimate, cur)} per person (prices are estimates; check the links).`),
     a.route ? el("div", { class: "edit-card" }, el("b", {}, "✈️ Airfare "), `${a.route}: ${peso(a.low, cur)} – ${peso(a.high, cur)} ${a.airlines ? "· " + a.airlines : ""}`, a.tip ? el("small", { class: "note" }, ` ${a.tip}`) : null) : null,
     el("h5", {}, "🏨 Where to stay"),
-    el("ul", { class: "day-list" }, (plan.stays || []).map((s) => el("li", {}, el("span", { class: "what" }, `${s.name} (${s.type}, ${s.area})`), el("b", {}, `${peso(s.per_night, cur)}/night`), s.why ? el("small", {}, ` ${s.why}`) : null))),
+    el("div", { class: "stay-list" }, (plan.stays || []).map((s) => el("div", { class: "stay" },
+      el("div", { class: "stay-top" }, el("b", {}, s.name), el("span", { class: "stay-price" }, `${peso(s.per_night, cur)}/night`)),
+      el("small", { class: "note" }, [s.type, s.area].filter(Boolean).join(" · ")),
+      s.why ? el("p", {}, s.why) : null))),
     el("div", { class: "row" }, ...[["flights", "Google Flights"], ["skyscanner", "Skyscanner"], ["hotels", "Booking.com"], ["airbnb", "Airbnb"], ["maps", "Map"]]
       .filter(([k]) => links[k]).map(([k, l]) => el("button", { class: "ghost small", onclick: () => api.browse_inside(links[k]) }, `🔗 ${l}`))),
     ...(plan.days || []).map((d) => el("div", { class: "trip-day" },

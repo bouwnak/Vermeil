@@ -873,7 +873,7 @@ class Api:
         old = pm.VOICE_STYLE
         pm.VOICE_STYLE = "normal"
         try:
-            pm.speak(say, v, "-35%" if sensei.speed() == "slow" else "-10%")   # Study -> Language: 🐢 slow
+            pm.speak(say, v, "-35%" if sensei.speed() == "slow" else "-10%", plain=True)   # Study -> Language: 🐢 slow
         finally:
             pm.VOICE_STYLE = old
 
@@ -1232,8 +1232,11 @@ class Api:
             try:
                 from datetime import datetime
                 mins = (datetime.now() - datetime.fromisoformat(cur["started"])).total_seconds() / 60
-                if mins % max(1, cur["work"] + cur["break"]) >= cur["work"]:    # on a break: everything is free
-                    time.sleep(5)
+                working = mins % max(1, cur["work"] + cur["break"]) < cur["work"]
+                if not only:
+                    self._focus_kiosk(working)                    # full screen + on top while you work
+                if not working:                                   # on a break: everything is free
+                    time.sleep(2)
                     continue
                 h = u.GetForegroundWindow()
                 title = self._focus_other_window(h, allow, only)
@@ -1246,6 +1249,22 @@ class Api:
             except Exception as e:  # noqa: BLE001
                 print(f"[focus block] {e}")
             time.sleep(1)
+        self._focus_kiosk(False)
+
+    def _focus_kiosk(self, on):
+        """Focus lock: Vermeil fills the whole screen and stays on top of everything (on=False gives the PC back)"""
+        on = bool(on)
+        if on == getattr(self, "_kiosk", False) or not getattr(self, "_window", None):
+            return
+        try:
+            self._window.on_top = on
+            if on != getattr(self, "_retro_full", False):
+                self._window.toggle_fullscreen()
+                self._retro_full = on
+            self._kiosk = on
+            self.emit({"type": "focus_kiosk", "on": on})
+        except Exception as e:  # noqa: BLE001
+            print(f"[focus kiosk] {e}")
 
     def _focus_from_voice(self, task, work=25, brk=5, rounds=4):
         self.focus_start(task, work, brk, rounds)
@@ -1318,7 +1337,9 @@ class Api:
         import focus
         self._settings["quiet_mode"] = getattr(self, "_focus_quiet", self._settings["quiet_mode"])
         self._windows_toasts(True)
-        return focus.finish(minutes)
+        res = focus.finish(minutes)
+        self._focus_kiosk(False)
+        return res
 
     # ---------- focus & planning extras (skills/planlife.py) ----------
     def focus_extras(self):
@@ -1389,29 +1410,62 @@ class Api:
         import planlife
         return planlife.travel_saved()
 
-    def browse_inside(self, text):
-        """her own browser window inside the app ("search inside for ...", "open youtube.com inside")"""
-        import focus
-        t = str(text or "").strip()
-        if not t:
+    def travel_to_calendar(self, plan, start):
+        """Planner -> a trip plan: one calendar event per trip day, that day's itinerary as its notes"""
+        import datetime as _dt
+        try:
+            first = _dt.date.fromisoformat(str(start or "")[:10])
+        except ValueError:
+            return {"error": "Pick the first day of the trip."}
+        place = (plan.get("request") or {}).get("place", "Trip")
+        icons = {"commute": "🚌", "food": "🍽️", "hotel": "🏨"}
+        days = plan.get("days") or [{"day": i + 1, "stops": []} for i in range(int((plan.get("request") or {}).get("days") or 1))]
+        for i, d in enumerate(days):
+            stops = " → ".join(f"{s.get('time') or ''} {icons.get(s.get('kind'), '📍')} {s.get('name', '')}".strip() for s in d.get("stops") or [])
+            title = f"✈️ {place} · Day {d.get('day', i + 1)}" + (f": {d['title']}" if d.get("title") else "")
+            f1.add_event(title, (first + _dt.timedelta(days=i)).isoformat(), None, None, stops)
+        last = first + _dt.timedelta(days=len(days) - 1)
+        return {"ok": True, "start": first.isoformat(),
+                "message": f"Your {place} trip is on the calendar: {first:%b %d} – {last:%b %d}, with each day's itinerary."}
+
+    def browse_inside(self, text, tab=None):
+        """her own browser ("search inside for ...", "open youtube.com inside", the 🌐 Browser panel):
+        a new tab, or `tab` goes to the new address"""
+        import focus, vbrowser
+        url = vbrowser.to_url(text)
+        if not url:
             return {"error": "Type what to search or a link."}
-        if re.match(r"https?://", t):
-            url = t
-        elif re.fullmatch(r"[\w-]+(\.[\w-]+)+(/\S*)?", t):
-            url = f"https://{t}"
-        else:
-            url = f"https://duckduckgo.com/?q={quote_plus(t)}"
         if focus.current() and self._settings.get("focus_sites", True):
-            host = re.sub(r"^www\.", "", url.split("/")[2].lower())
+            host = vbrowser.host(url)
             site = next((s for s in self._focus_sites() if s.split(".")[0] and s.split(".")[0] in host.split(".")), None)
             if site:
                 return {"error": f"🔒 {site} is blocked until your focus session ends."}
         try:
-            import webview
-            webview.create_window(f"Vermeil Browser - {t[:40]}", url, width=1100, height=760)
+            return self._browser().open(url, tab)
         except Exception as e:  # noqa: BLE001
             return {"error": f"Couldn't open the browser window: {e}"}
-        return {"ok": True, "url": url}
+
+    def _browser(self):
+        if not getattr(self, "_vbrowser", None):
+            import vbrowser
+            self._vbrowser = vbrowser.Browser(self.emit)
+        return self._vbrowser
+
+    def browser_state(self):
+        return self._browser().state()
+
+    def browser_nav(self, tab, action):
+        return self._browser().nav(int(tab), action)
+
+    def browser_dial(self, action, name="", url=""):
+        b = self._browser()
+        if action == "add":
+            return b.dial_add(name, url)
+        if action == "remove":
+            return b.dial_remove(url)
+        if action == "clear_history":
+            return b.history_clear()
+        return {"error": "Unknown action."}
 
     def _screen_loop(self):
         """Settings -> Screen time: which app is in front, every 30 s (not while you're away)"""
@@ -2536,6 +2590,26 @@ class Api:
     def unimate_cancel(self):
         import animate
         return animate.cancel()
+
+    def unimate_previous(self, name):
+        """the clips UniMate already made for this model (ui/models/_unimate/<name>/result.json), so the Animate box
+        can put them on the model again - cleaned, on the full rig - without running UniMate again"""
+        import animate
+        base = re.sub(r"(-animated)+(\.glb)$", r"\2", os.path.basename(str(name or "")), flags=re.I)
+        stem = os.path.splitext(base)[0]
+        for folder in (stem, re.sub(r"-rigged$", "", stem)):
+            try:
+                with open(os.path.join(animate.WORK_DIR, folder, "result.json"), encoding="utf-8") as f:
+                    out = json.load(f)
+            except (OSError, ValueError):
+                continue
+            rel = lambda p: os.path.relpath(p, UI_DIR).replace(os.sep, "/")
+            clip_file = lambda c: os.path.join(animate.WORK_DIR, folder, f"{c}.glb")       # the folder may have moved
+            found = [{"clip": o["clip"], "url": rel(clip_file(o["clip"]))} for o in out if os.path.exists(clip_file(o["clip"]))]
+            if found:
+                original = base if os.path.exists(os.path.join(UI_DIR, "models", base)) else f"{folder}.glb"
+                return {"outputs": found, "model": original}
+        return {"outputs": [], "model": base}
 
     # ---------- Settings > General > Update (skills/updater.py) ----------
     def app_update_check(self):
@@ -3883,7 +3957,32 @@ class Api:
         import mygames
         return {**mygames.remove(gid), **self.games_list()}
 
-    # ---------- Game Night with Vermeil (ui/games/night.html): library, tournament, puzzles, trivia, words... ----------
+    def launcher_games(self):
+        """Games hub -> Installed games: Steam, Epic Games, GOG and Ubisoft games on this PC (skills/launchers.py)"""
+        import launchers
+        return {"games": launchers.installed(), "stores": launchers.STORES}
+
+    def launcher_play(self, store, gid):
+        import launchers
+        return launchers.play(store, gid)
+
+    # ---------- Mini games with Vermeil (ui/games/night.html): library, tournament, puzzles, trivia, words... ----------
+    def gn_say(self, text):
+        """Mini games: her line out loud, in the voice (and voice clone) of the character you're talking to.
+        A new line cuts off the one before, so she never lags behind the game."""
+        text = re.sub(r"[~*_]+", "", str(text or "")).strip()[:240]
+        if not text or not pm.tts_ready:
+            return False
+        lock = self.__dict__.setdefault("_gn_voice", threading.Lock())
+        if lock.locked():
+            pm.stop_speaking()
+
+        def go():
+            with lock:
+                pm.speak(text)
+        threading.Thread(target=go, daemon=True, name="minigame-voice").start()
+        return True
+
     def gn_library(self):
         import gamenight
         return {**gamenight.library(), "tournament": gamenight.tournament()}

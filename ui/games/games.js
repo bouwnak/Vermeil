@@ -209,6 +209,61 @@ $("gamesLinkForm").onsubmit = (e) => {
 };
 call("games_list").then(renderMine);
 
+// ---------------- installed launcher games (Steam, Epic...): a shelf of covers under the hub ----------------
+const lib = { games: [], stores: {}, store: "all" };
+function libCard(g) {
+  const c = document.createElement("div");
+  c.className = "rg-card lib-card"; c.tabIndex = 0; c.setAttribute("role", "button"); c.title = `Play ${g.name} (${g.store_name})`;
+  const thumb = document.createElement("div");
+  thumb.className = "rg-thumb lib-thumb";
+  const tile = () => { thumb.insertAdjacentHTML("afterbegin", '<span class="noimg lib-noimg"></span>'); thumb.querySelector(".lib-noimg").textContent = g.name; };
+  if (g.cover) {
+    const img = document.createElement("img");
+    img.loading = "lazy"; img.alt = ""; img.src = g.cover;
+    img.onerror = () => { img.remove(); tile(); };
+    thumb.append(img);
+  } else tile();
+  const stats = document.createElement("div");
+  stats.className = "rg-stats";
+  const tag = document.createElement("span"); tag.className = `rg-tag lib-${g.store}`; tag.textContent = g.store_name;
+  const size = document.createElement("span"); size.className = "lib-size"; size.textContent = g.ready ? (g.size_gb ? `${g.size_gb} GB` : "") : "Updating";
+  stats.append(tag, size);
+  const btn = document.createElement("span"); btn.className = "rg-play"; btn.textContent = "Play";
+  thumb.append(stats, btn);
+  const name = document.createElement("div"); name.className = "rg-name"; name.textContent = g.name;
+  c.append(thumb, name);
+  const go = async () => {
+    loader.show(`Starting ${g.name}…`, `Opening it with ${g.store_name}`, g.cover);
+    loader.progress(0.6);
+    const r = await call("launcher_play", g.store, g.id);
+    setTimeout(() => loader.hide(), 1600);
+    if (r?.error) { loader.hide(); toast(r.error); }
+  };
+  c.onclick = go;
+  c.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } };
+  return c;
+}
+function paintLib() {
+  const shown = lib.games.filter((g) => lib.store === "all" || g.store === lib.store);
+  $("libShelf").hidden = !lib.games.length;
+  $("libCount").textContent = `${shown.length} game${shown.length === 1 ? "" : "s"}`;
+  const have = [...new Set(lib.games.map((g) => g.store))];
+  $("libStores").replaceChildren(...(have.length > 1 ? ["all", ...have] : []).map((s) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "lib-store" + (s === lib.store ? " on" : "");
+    b.textContent = s === "all" ? "All" : lib.stores[s] || s;
+    b.onclick = () => { lib.store = s; paintLib(); };
+    return b;
+  }));
+  $("libGrid").replaceChildren(...shown.map(libCard));
+}
+async function loadLib() {
+  const r = await call("launcher_games");
+  if (r && !r.error) { lib.games = r.games || []; lib.stores = r.stores || {}; paintLib(); }
+}
+$("libRefresh").onclick = loadLib;
+loadLib();
+
 // the Retro picture: a collage of the games inside, with RETRO across the middle
 async function buildCollage() {
   const res = await call("retro_games", "", 1, "");

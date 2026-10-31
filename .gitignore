@@ -153,3 +153,4 @@ data/auto_setup.json
 
 # Settings -> Backup: the safety copy made before a restore
 backups/
+ui/games/covers/

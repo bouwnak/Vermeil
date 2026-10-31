@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { inPlace } from "../inplace.js";
+import { analyzeRig, cleanClips, rigExtras } from "../rigparts.js";
 
 // clips that play once and then go back to idling
 const ONCE = new Set(["cheer", "clap", "laugh", "bow", "nod", "shake", "shrug", "point", "surprised", "happy", "angry", "sad", "shy",
@@ -18,8 +19,8 @@ const MODEL = "anime_girl.glb", HEIGHT = 1.6;
 
 const stub = { react() {}, talk() {}, ready: Promise.resolve(false) };
 
-/** Put Vermeil in `box`. Returns { react(clip, face), talk(ms), ready } */
-export function closeUp(box, { outfit = "mech", hair = "original", onPoke = () => {} } = {}) {
+/** Put the character in `box` (model: a file in ui/models, default Vermeil). Returns { react(clip, face), talk(ms), ready } */
+export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original", onPoke = () => {} } = {}) {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
@@ -40,7 +41,7 @@ export function closeUp(box, { outfit = "mech", hair = "original", onPoke = () =
   const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(1, 2, 3); scene.add(key);
   const rim = new THREE.DirectionalLight(new THREE.Color(accent), 3.2); rim.position.set(-2, 1.5, -2); scene.add(rim);
 
-  let mixer = null, actions = {}, current = null, head = null, face = null, root = null;
+  let mixer = null, actions = {}, current = null, head = null, jaw = null, face = null, root = null, extras = null;
   let faceName = "idle", faceUntil = 0, talkUntil = 0, blinkIn = 2.5, mouthT = 0, mouthOpen = false;
   const look = { x: 0, y: 0, tx: 0, ty: 0 };
   const target = new THREE.Vector3(), headPos = new THREE.Vector3();
@@ -73,7 +74,7 @@ export function closeUp(box, { outfit = "mech", hair = "original", onPoke = () =
     if (face.mats[part].emissiveMap) face.mats[part].emissiveMap = t;
   }
 
-  const ready = new GLTFLoader().loadAsync(`../models/${MODEL}`).then((gltf) => {
+  const ready = new GLTFLoader().loadAsync(`../models/${model || MODEL}`).then((gltf) => {
     root = gltf.scene;
     const s = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
     root.scale.multiplyScalar(HEIGHT / Math.max(s.y, 1e-6));
@@ -87,6 +88,7 @@ export function closeUp(box, { outfit = "mech", hair = "original", onPoke = () =
       m = /^hair_(\w+)$/i.exec(n);
       if (m) o.visible = m[1].toLowerCase() === hair;
       if (o.isBone && !head && /head/i.test(n) && !/(top|end|nub)/i.test(n)) head = o;
+      if (o.isBone && !jaw && /jaw|chin|mouth/i.test(n) && !/(end|nub)/i.test(n)) jaw = o;
       if (o.isMesh) o.frustumCulled = false;
       for (const mt of [].concat(o.material || [])) if (/^(eyes|mouth)$/i.test(mt.name)) mats[mt.name.toLowerCase()] = mt;
     });
@@ -98,6 +100,9 @@ export function closeUp(box, { outfit = "mech", hair = "original", onPoke = () =
       face = { mats, tex, cur: {} };
     }
     scene.add(root);
+    const info = analyzeRig(root);                        // UniMate clips cleaned, hands posed, hair/cloth swinging
+    if (/-animated\.glb$/i.test(model || "")) try { cleanClips(root, gltf.animations, info); } catch (e) { console.warn(e); }
+    extras = rigExtras(root, info, { skip: new Set(gltf.animations.flatMap((a) => a.tracks.map((t) => t.name.split(".")[0]))) });
     if (gltf.animations.length) {
       inPlace(gltf.animations);
       mixer = new THREE.AnimationMixer(root);
@@ -134,10 +139,17 @@ export function closeUp(box, { outfit = "mech", hair = "original", onPoke = () =
     if (document.hidden || !root) return;
     const dt = Math.min(clock.getDelta(), 0.1), now = performance.now();
     mixer?.update(dt);
+    extras?.update(dt, now / 1000, now < talkUntil ? 1 : 0);
     look.x += (look.tx - look.x) * Math.min(1, dt * 4);
     look.y += (look.ty - look.y) * Math.min(1, dt * 4);
     const q0 = head?.quaternion.clone();                  // the look is added on top of the clip, then taken off again
-    if (head) { head.rotation.y += look.x * 0.45; head.rotation.x += look.y * 0.25; }
+    const j0 = jaw?.quaternion.clone();
+    const talking = now < talkUntil;
+    if (head) {
+      head.rotation.y += look.x * 0.45; head.rotation.x += look.y * 0.25;
+      if (talking && !face) { head.rotation.x += Math.sin(now / 160) * 0.035; head.rotation.z += Math.sin(now / 410) * 0.025; }   // a model without face pictures nods as it talks
+    }
+    if (jaw && talking && !face) jaw.rotation.x += (0.5 + 0.5 * Math.sin(now / 70)) * 0.18;
     root.updateMatrixWorld(true);
     // the camera follows her head (a jump or a bow moves it)
     if (head) { head.getWorldPosition(headPos); target.lerp(headPos.clone().add(new THREE.Vector3(0, -0.07, 0)), Math.min(1, dt * 3)); }
@@ -158,6 +170,7 @@ export function closeUp(box, { outfit = "mech", hair = "original", onPoke = () =
     }
     renderer.render(scene, camera);
     if (head) head.quaternion.copy(q0);
+    if (jaw) jaw.quaternion.copy(j0);
   })();
 
   return {
