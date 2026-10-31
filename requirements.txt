@@ -8,6 +8,8 @@
 # The Study round (31 Oct 2026) needs nothing new (photo notes use the vision AI already set up).
 # The Gym & health round (31 Oct 2026) needs nothing new (GPS runs use the browser's location).
 # The Adventure round (31 Oct 2026) needs nothing new (chess, puzzles and the phone retro player are built in).
+# The Music, media and wrap-up round (31 Oct 2026) adds shazamio for "What song is this?":  python -m pip install shazamio
+#   (if pip tries to build it and fails, use:  python -m pip install --only-binary :all: shazamio)
 #
 #   python -m pip install -r requirements.txt
 #
@@ -61,6 +63,7 @@ moviepy                  # Generator: turn pictures + voice into a video
 
 # --- Music, browser, calendar ---
 yt-dlp                   # play music (also needs ffplay: comes with the Music plugin pack)
+shazamio                 # Music → 👂 What song is this? (names a song it hears through the mic)
 playwright               # her own browser window for filling forms (uses your Edge/Chrome)
 google-api-python-client # optional: add events to Google Calendar
 google-auth-oauthlib

@@ -249,7 +249,19 @@ export const mockApi = {
       analysis: null, analyse: { id: "p1", name: "Gym Hype", analysed: "now", stats: { songs: 4, total_minutes: 20, artists: 2, variety: 50, top_artists: [{ name: "Eminem", songs: 2 }, { name: "Kanye West", songs: 2 }] },
         ai: { genres: [{ name: "hip hop", pct: 80 }, { name: "rap rock", pct: 20 }], eras: [{ decade: "2000s", pct: 100 }], moods: ["intense"], energy: 9, tempo: "fast", vibe: "Loud gym rap.", name_ideas: ["Beast Mode"] } },
       make: { ...pl, id: "p3", name: "Beast Mode", message: "(preview) Made 'Beast Mode'." },
-      to_lyrics: { ...pl, songs: songs.map((x) => ({ ...x, lyric: true })), changed: 4, message: "Switched 4 songs to lyric videos." } }[action] ?? { message: `(preview) ${action}` };
+      to_lyrics: { ...pl, songs: songs.map((x) => ({ ...x, lyric: true })), changed: 4, message: "Switched 4 songs to lyric videos." },
+      lyrics: { source: "LRCLIB (synced to the song, free)", title: "Lose Yourself", artist: "Eminem", plain: "",
+        synced: Array.from({ length: 40 }, (_, i) => ({ t: 60 + i * 3.5, line: `(preview) line ${i + 1} of the song` })) },
+      like_this: { message: "Songs like Lose Yourself: Playing 12 songs." },
+      listen: { title: "Blinding Lights", artist: "The Weeknd", cover: "", link: "", at: "2026-10-31 20:15" },
+      heard: { heard: [{ title: "Blinding Lights", artist: "The Weeknd", cover: "", link: "", at: "2026-10-31 20:15" }] },
+      make_cover: { ...pl, cover: "" },
+      watch_list: { items: st.watch ||= [
+        { id: "w1", title: "Spirited Away", kind: "movie", year: "2001", genres: ["Animation", "Fantasy"], where: ["Netflix"], about: "A girl in a spirit world.", checked: "2026-10-31", country: "PH", watched: false },
+        { id: "w2", title: "Arcane", kind: "show", year: "2021", genres: ["Animation", "Action"], where: ["Netflix"], about: "", watched: true, rating: 5 }],
+        genres: ["Action", "Comedy", "Drama", "Horror", "Romance", "Sci-fi", "Fantasy", "Animation", "Thriller", "Documentary"], kinds: ["movie", "show", "anime"] },
+      watch_suggest: { picks: [{ title: "Your Name", year: "2016", kind: "movie", genres: ["Romance", "Animation"], why: "Like Spirited Away: beautiful and emotional.", where: ["Netflix"] }] },
+    }[action] ?? { message: `(preview) ${action}` };
   },
   playlab_list: async () => ({ items: [{ id: "p1", name: "Gym Hype", songs: 42, analysed: "2026-10-22 21:00" }] }),
   playlab_analyse: async () => mockApi.playlab_get("p1"),
@@ -565,6 +577,20 @@ export const mockApi = {
   smart_reminder_add: async (event, on, match, minutes) => { mockSmart.push({ event, on, match, minutes }); return { message: `Okay, I'll remind you to ${event}.`, items: structuredClone(mockSmart) }; },
   smart_reminder_remove: async (t) => { mockSmart = mockSmart.filter((r) => r.event !== t); return structuredClone(mockSmart); },
   screen_help: async (q) => { const answer = `That's a Python error: **ModuleNotFoundError**. Run \`python -m pip install requests\` and try again. (mock${q ? `, you asked: ${q}` : ""})`; ev({ type: "reply", text: answer }); return { answer }; },
+  recap_year: async () => ({ year: 2026, note: "(preview) Look at you: 12,450 XP this year. Same time next year? 💜", slides: [
+    { icon: "✨", title: "Your 2026 with Vermeil", big: "12,450 XP", sub: "Level 14 · 41 active days lately · best streak 23 days" },
+    { icon: "🎯", title: "Time in focus", big: "86.5 hours", sub: "142 sessions · best day 2026-05-12 (240 min)", list: ["Calculus", "Essay", "Coding"] },
+    { icon: "🏋", title: "In the gym", big: "96 workouts", sub: "1,840 sets · 212.4 tonnes lifted", list: ["Bench press", "Squat", "Deadlift"] },
+    { icon: "🎵", title: "Your music", big: "2,310 songs played", sub: "Top artist: Eminem", list: ["Lose Yourself", "Till I Collapse", "Stronger"] }] }),
+  gifts: async () => ({ waiting: st.giftOpen ? [] : [{ id: "g1", why: ["1240 XP this week (you usually get about 600)", "11.5 hours of focus"], vcash: 162 }], opened: [] }),
+  gift_open: async () => { st.giftOpen = true; return { gift: { vcash: 162, note: "(preview) I noticed how hard you worked. Rest a bit. 💜", treat: "Take tonight off." }, waiting: [], opened: [] }; },
+  spotify_like_this: async () => ({ message: "(preview) Playing 12 songs like Sunrise on Spotify." }),
+  gn_bpm: async () => ({ bpm: 120 }),
+  cleanup_scan: async () => ({ files: 18234, seconds: 4.2, big_mb: 500, old_days: 90, total_mb: 5310, roots: [],
+    big: [{ id: "b1", name: "movie.mkv", folder: "C:\\Users\\you\\Videos", mb: 3900, days: 400 }],
+    old: [{ id: "o1", name: "setup.exe", folder: "C:\\Users\\you\\Downloads", mb: 120, days: 300 }, { id: "o2", name: "notes.pdf", folder: "C:\\Users\\you\\Downloads", mb: 2, days: 120 }],
+    dups: [{ keep: { id: "k1", name: "song.mp3", folder: "C:\\Users\\you\\Music", mb: 8, days: 900 }, extra: [{ id: "d1", name: "song (1).mp3", folder: "C:\\Users\\you\\Downloads", mb: 8, days: 30 }] }] }),
+  cleanup_trash: async (ids) => ({ moved: ids.length, mb: 128, failed: [] }),
   quest_state: async () => {
     const q = st.quest ||= { xp: 1240 };
     const tier = Math.min(30, Math.floor(q.xp / 300));

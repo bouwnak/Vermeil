@@ -346,6 +346,10 @@ class Api:
                 self._gym_reminders()
             except Exception as e:  # noqa: BLE001
                 print(f"[gym reminders] {e}")
+            try:
+                self._gift_check()
+            except Exception as e:  # noqa: BLE001
+                print(f"[gift] {e}")
             time.sleep(20)
 
     def _exam_bedtime(self):
@@ -1845,11 +1849,22 @@ class Api:
                "spotify_playlists": mymusic.spotify_playlists, "import_spotify": mymusic.import_spotify,
                "analyse": mymusic.analyse, "analysis": lambda pid: mymusic.analysis(pid) or {},
                "make": mymusic.make_from, "to_lyrics": mymusic.convert_to_lyrics}
+        import medialife   # lyrics, "more like this", song ID, album covers, the watchlist
+        fns.update({"lyrics": medialife.lyrics, "lyrics_sources": lambda: medialife.LYRICS_SOURCES,
+                    "like_this": lambda song=None: medialife.like_this_youtube(song),
+                    "listen": lambda secs=8: medialife.identify(max(4, min(int(secs), 15))), "heard": lambda: {"heard": medialife.heard()},
+                    "make_cover": medialife.make_cover, "cover_styles": lambda: medialife.COVER_STYLES,
+                    "watch_list": medialife.watch_list, "watch_add": medialife.watch_add, "watch_where": medialife.watch_where,
+                    "watch_toggle": medialife.watch_toggle, "watch_remove": medialife.watch_remove,
+                    "watch_suggest": medialife.watch_suggest})
         if action not in fns:
             return {"error": "Unknown music action."}
         try:
-            return fns[action](*args)
-        except (KeyError, ValueError) as e:
+            r = fns[action](*args)
+            if action == "make_cover":
+                self._xp("draw", 1, why="album cover")
+            return r
+        except (KeyError, ValueError, RuntimeError) as e:
             return {"error": str(e).strip("'")}
         except Exception as e:
             print(f"[music] {action}: {e}")
@@ -1910,6 +1925,14 @@ class Api:
     def spotify_now(self):
         import spotify
         return self._sp(spotify.now_playing)
+
+    def spotify_like_this(self):
+        """Spotify: play songs like the one playing now"""
+        import medialife
+        try:
+            return self._sp(medialife.like_this_spotify)
+        except ValueError as e:
+            return {"error": str(e)}
 
     def spotify_cmd(self, action, value=None):
         import spotify
@@ -2587,6 +2610,54 @@ class Api:
     def quest_state(self):
         import quest
         return quest.state()
+
+    # ---------- clean-up wizard (skills/cleanup.py): big files, old downloads, duplicates -> Recycle Bin ----------
+    def cleanup_scan(self, big_mb=500, old_days=90):
+        import cleanup
+        try:
+            return cleanup.scan(big_mb=max(50, int(big_mb)), old_days=max(7, int(old_days)))
+        except Exception as e:  # noqa: BLE001
+            print(f"[cleanup] {e}")
+            return {"error": f"The scan stopped: {e}"}
+
+    def cleanup_trash(self, ids):
+        """only after you ticked the files and said yes in the window"""
+        import cleanup
+        return cleanup.to_recycle_bin(list(ids or [])[:5000])
+
+    # ---------- yearly recap and Vermeil's surprise gift (skills/recap.py) ----------
+    def recap_year(self, year=None):
+        import recap
+        try:
+            return recap.year_recap(int(year) if year else None)
+        except Exception as e:  # noqa: BLE001
+            print(f"[recap] {e}")
+            return {"error": f"Couldn't make the recap: {e}"}
+
+    def gifts(self):
+        import recap
+        return recap.gifts()
+
+    def gift_open(self, gid):
+        import recap
+        try:
+            r = recap.gift_open(gid)
+        except (KeyError, ValueError) as e:
+            return {"error": str(e).strip("'")}
+
+        return r
+
+    def _gift_check(self):
+        """at most once a day (recap.gift_check also keeps it to one gift a week), after 6 pm"""
+        import recap
+        now = datetime.now()
+        if now.hour < 18 or getattr(self, "_gift_day", "") == now.date().isoformat():
+            return
+        self._gift_day = now.date().isoformat()
+        g = recap.gift_check(now.date())
+        if g:
+            self.emit({"type": "alert", "text": "🎁 Vermeil left you a gift. Open it in Battle Pass."})
+            self.emit({"type": "gift", "gift": g})
 
     def quest_award(self, kind, n=1):
         """only small, self-reported things can be given from the window (a drawing, a shadowed line, a card)"""

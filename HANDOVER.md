@@ -86,7 +86,40 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **Adventure round (31 Oct 2026, newest)**: the owner picked ideas 102, 104, 105, 106, 107 ("an appraisal feature for chances of boosted stats … the stats should not have a fixed rate … a max range of high and low"), 126–135 and 138–140 from FEATURE_IDEAS.md. GodsWar ideas were left for later on purpose.
+- **Music & life round (31 Oct 2026, newest)**: the owner asked for "all of the rest" of the picked ideas: 142, 146, 147, 150, 151, 155, 156, 198 and 200 from FEATURE_IDEAS.md. GodsWar was left out on purpose, because the owner wants to change something there first.
+  - **Music extras** (`skills/medialife.py`, new; saves to `data/medialife.json`; the web, AI and mic calls take `fetch=`/`ask=`/`rec=`/`recognize=` so tests fake them):
+    - Synced lyrics from LRCLIB (`/api/get`, then `/api/search`) or lyrics.ovh (words only). They are cached and work with `parse_lrc`, `line_at` and `clean` (strips "(Official Video)" and similar).
+    - "More like this": the AI picks about 12 songs. `like_this_youtube` queues them in Vermeil Music, and `like_this_spotify` uses the new `spotify.play_uris`.
+    - Album covers: `make_cover(pid, style, name_on)` paints with the image Generator and saves a JPEG data URL on the playlist. It gives draw XP.
+    - "What song is this?": `identify` records 8 s (`app` clamps 4–15 s) and asks Shazam through `shazamio` (optional). The last songs are kept in `heard`.
+    - Watchlist: `watch_add/where/toggle/remove/list` and `watch_suggest(genres, kind)`. "Where to watch" is an AI guess for the owner's country.
+  - **Clean-up wizard** (`skills/cleanup.py`, new):
+    - `scan` finds big files, old downloads and duplicates (size, then hash) in the user folders, including OneDrive.
+    - It never looks in Vermeil's folder, `dnd`, voice-model folders or system folders.
+    - `to_recycle_bin(ids)` only moves files from the last scan that haven't changed since. It uses send2trash if installed, otherwise Windows `SHFileOperationW` with undo.
+  - **Yearly recap and gift** (`skills/recap.py`, new; saves to `data/recap.json`):
+    - Recap: `numbers(year)` collects quest XP per year, focus, gym, music history and Game Night. `slides` makes the cards, and `year_recap` adds an AI note (cached per day, with a fallback).
+    - Gift: `gift_check` runs once per ISO week. A hard week means XP ≥ 1.4× the usual and ≥ 700, 10+ h of focus, or 5 workouts. The gift is VCash (100 + xp/20, at most 300), a note and a treat. `gift_open` pays it out via `quest.give_vcash`.
+  - `skills/quest.py`: `award` also keeps whole-year totals in `years`. `skills/spotify.py`: `play_uris`.
+  - `app.py`:
+    - `mm` gains lyrics, lyrics_sources, like_this, listen, heard, make_cover, cover_styles and watch_*.
+    - New methods: `spotify_like_this`, `cleanup_scan`, `cleanup_trash`, `recap_year`, `gifts`, `gift_open`.
+    - `_gift_check` runs from `_alert_loop` after 6 pm, once a day, and emits a `gift` event.
+  - UI:
+    - `ui/visualizer.js` (new) keeps the beat from the song's BPM (`gn_bpm`). The Smart TV in `ui/shop.js` draws rainbow bars, and the lamps in `ui/cozyroom.js` pulse. It is turned on with 🌈 in Music.
+    - `ui/mymusic.js`: 🎤 lyrics (source picker, click a line to seek), ✨, 👂 with the heard list, 🌈, a cover maker on playlists, and a 🎬 Watchlist tab.
+    - `ui/spotify.js`: a ✨ button.
+    - `ui/quest.js`: a "🎁 Your year" tab with a full-screen story, and the gift card on top of the Battle Pass.
+    - `ui/cleanup.js` (new) under Settings → General.
+    - Also `ui/app.js`, `index.html`, `style.css` and `mock.js`.
+  - FEATURE_IDEAS.md: 85 ideas that are now built were replaced with new ones, so every number there is still to do.
+  - Tests:
+    - `tests/test_medialife.py` (13), `tests/test_recap.py` (8), `tests/test_cleanup_wizard.py` (4; named so because `test_cleanup.py` is the package clean-up).
+    - Full suite: 702 tests, OK (3 skipped).
+    - Browser (ui-dev 8770, `?mock`): lyrics sync and seek, the extras buttons, heard list, watchlist and suggestions, cover maker, gift card → VCash popup, the recap grid and story (Escape closes only the story), clean-up scan → tick → move, TV bars and lamp pulse.
+    - Not tried: a real mic with Shazam, real Spotify, and a real clean-up scan on the PC.
+  - New optional pip package: `python -m pip install shazamio`
+- **Adventure round (31 Oct 2026)**: the owner picked ideas 102, 104, 105, 106, 107 ("an appraisal feature for chances of boosted stats … the stats should not have a fixed rate … a max range of high and low"), 126–135 and 138–140 from FEATURE_IDEAS.md. GodsWar ideas were left for later on purpose.
   - **Dungeon Adventure** (`game/extras.py`, new):
     - Day and night: `clock` minutes on the campaign (a new one starts at 08:00), `advance` (walking, resting, battles), `phase`, `sky`. At night outdoor places can bring night monsters (`NIGHT_MONSTERS`, `maybe_night_encounter`).
     - Pets and mounts: after a win against a tameable beast there is a chance to tame it with food (`tame_offer_roll`, `tame`). Up to 6 pets; the active one gives a perk (gold, heal or ride). Riding means faster travel and fewer ambushes. Also `pet_set`, `pet_ride`, `pet_release`, `pet_rename`.

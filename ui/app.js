@@ -16,6 +16,8 @@ import { initLife } from "./life.js";
 import { initChat } from "./chat.js";
 import { initPlugins } from "./plugins.js";
 import { initMyMusic } from "./mymusic.js";
+import { beat } from "./visualizer.js";
+import { initCleanup } from "./cleanup.js";
 // features whose code can be uninstalled (Settings -> Plugins deletes their files; Install gets them from Drive):
 // a missing file gives a do-nothing panel instead of breaking the whole app
 const notInstalled = new Proxy({}, { get: (_, k) => k === "then" ? undefined : k === "status" ? () => null : () => Promise.resolve() });
@@ -535,7 +537,7 @@ window.onPyEvent = async (e) => {
     case "gym_cmd": gym?.command(e.action, e.seconds); renderHud(); break;
     case "plugin": pluginsUI?.onEvent(e); break;
     case "gen": genPanel?.onEvent(e); break;
-    case "music": music = e; renderHud(); break;
+    case "music": music = e; beat.set("vermeil", e.playing && !e.paused && e.title ? { title: e.title } : null); renderHud(); break;
     case "character":
       state = await api.get_state();
       renderCharacters(); renderStatus(); await loadCharacter();
@@ -555,6 +557,7 @@ window.onPyEvent = async (e) => {
     case "partner": window.dispatchEvent(new CustomEvent("partner", { detail: e })); break;
     case "app_update": showAppUpdate(e); break;
     case "quest": window.dispatchEvent(new CustomEvent("quest", { detail: e })); break;
+    case "gift": window.dispatchEvent(new CustomEvent("gift", { detail: e })); break;
     case "study_media": window.dispatchEvent(new CustomEvent("study-media", { detail: e })); break;
     case "characters_changed":
       state = await api.get_state();
@@ -1470,6 +1473,7 @@ setTimeout(bootDone, 60000);   // never stay stuck on the loading screen
   codePanel = initCode(api);
   mind = initMind(api);
   gym = initGym(api);
+  initCleanup(api);
   elecPanel = initElectronics(api);
   genPanel = initGenerator(api);
   musicPanel = initMyMusic(api);
@@ -1485,7 +1489,9 @@ setTimeout(bootDone, 60000);   // never stay stuck on the loading screen
   missionsPanel = initMissions(api);
   chat.renderMessages(state.history);
   missionsPanel.load().then(renderHud).catch(() => {});
+  beat.useApi(api);
   spotifyPanel = window.__spotifyPanel = initSpotify(api, { onState: (n) => {
+    beat.set("spotify", n?.playing && n.track ? { title: n.track.title, artist: n.track.artist, pos: n.progress || 0 } : null);
     $("spotifySub").textContent = n?.track ? `${n.playing ? "▶" : "❚❚"} ${n.track.title}` : "Your music";
     renderHud();
   } });

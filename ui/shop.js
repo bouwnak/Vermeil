@@ -5,6 +5,7 @@
 //   ambient        quiet room sounds made in the browser (no sound files), with a volume
 // Everything is built from simple shapes, like rewards.js, so it needs no model files.
 import * as THREE from "three";
+import { beat } from "./visualizer.js";
 
 export const roomHooks = { api: null, open: null };      // set by app.js: the Python API and a way to open a panel
 
@@ -309,11 +310,31 @@ export const LIVING_CATALOG = {
       t.needsUpdate = true;
     };
     draw(false);
+    // 🌈 music visualizer (ui/visualizer.js): bars to the beat while a song plays and no video is set
+    let showing = false, since = 0;
+    const bars = (time) => {
+      const n = 24, h = beat.bands(n), w = 512 / n, hue = (time * 20) % 360, song = beat.now;
+      d.fillStyle = "#0b0716"; d.fillRect(0, 0, 512, 288);
+      for (let i = 0; i < n; i++) {
+        const bh = h[i] * 220;
+        d.fillStyle = `hsl(${(hue + i * 9) % 360} 90% ${55 + h[i] * 15}%)`;
+        d.fillRect(i * w + 3, 250 - bh, w - 6, bh);
+        d.globalAlpha = 0.25; d.fillRect(i * w + 3, 254, w - 6, bh * 0.25); d.globalAlpha = 1;
+      }
+      d.fillStyle = "#fff"; d.font = "bold 20px sans-serif"; d.textAlign = "left";
+      d.fillText(`♪ ${(song?.title || "").slice(0, 40)}`, 14, 30);
+      t.needsUpdate = true;
+    };
+    const update = (time, dt) => {
+      const want = beat.active && !ctx.spec.video;
+      if (want) { since += dt || 0.016; if (since > 0.05) { since = 0; bars(time); } showing = true; }
+      else if (showing) { showing = false; draw(!!ctx.spec.video); }
+    };
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.9), new THREE.MeshBasicMaterial({ map: t, toneMapped: false }));
     screen.position.z = 0.035;
     const g = group(cube(1.7, 1.0, 0.05, std(0x0d0d10, { roughness: 0.25 }), 0, 0, 0), screen);
     void c;
-    return { group: g, interact: { label: "Smart TV: play a video", onClick: () => {
+    return { group: g, update, interact: { label: "Smart TV: play a video", onClick: () => {
       roomHooks.open?.("tv", { last: ctx.spec.video, save: (url) => { ctx.spec.video = url; draw(!!url); ctx._room.onChange?.(); } });
       return "tv";
     } } };

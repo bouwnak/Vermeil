@@ -14,7 +14,37 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (31 Oct 2026, latest): Adventure round
+## New (31 Oct 2026, latest): Music, media and wrap-up round
+
+In **Music** (Vermeil's own player), under the player:
+
+- **🎤 Lyrics** that follow the song: the line being sung lights up, and clicking a line jumps there. Choose the
+  service: **LRCLIB** (synced, free) or **lyrics.ovh** (words only).
+- **✨ More like this** queues about 12 songs that sound like the one playing. On the **Spotify** card the **✨** button
+  does the same on Spotify.
+- **👂 What song is this?** listens through the microphone for 8 seconds and names the song (Shazam). It needs one
+  package: `python -m pip install shazamio`
+- **🌈 Visualizer**: while music plays, the room's **Smart TV** shows bars to the beat and the lamps pulse. It
+  keeps time from the song's tempo; it doesn't analyse the real sound.
+- On a playlist, **🎨 Make a cover** paints an album cover in a style you pick (dreamy, neon, anime…) and can write the
+  name on it.
+- A new **🎬 Watchlist** tab: add movies, shows and anime, see where they stream in your country (an AI guess, so
+  check before you pay), mark them watched with stars, and get suggestions by genre.
+
+**Battle Pass → 🎁 Your year** is a year-in-review like Spotify Wrapped: XP, focus hours, flashcards, workouts,
+songs, games and a note from Vermeil. Press **▶ Play my recap** for the story view (click or use the arrow keys).
+
+After a **hard week** (much more XP than usual, 10+ hours of focus or 5 workouts) Vermeil leaves a **🎁 gift** in the
+Battle Pass: some VCash, a note, and a treat idea.
+
+**Settings → General → 🧹 Clean-up wizard** finds big files, old downloads and duplicate files in Downloads, Desktop,
+Documents, Videos, Pictures and Music. Nothing is removed until you tick files and confirm, and then they go to the
+**Recycle Bin**, so you can still get them back. It never looks in Vermeil's folder, your `dnd` folder, voice-model
+folders or system folders.
+
+FEATURE_IDEAS.md: every idea that's now built was swapped for a new one.
+
+## New (31 Oct 2026): Adventure round
 
 **Games → 🎲 Game Night with Vermeil** is a new page where she plays with you:
 

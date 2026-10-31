@@ -9,6 +9,7 @@ import { PET_CATALOG } from "./pets.js";
 import { REWARD_CATALOG } from "./rewards.js";
 import { SHOP_CATALOG, LIVING_CATALOG, buildDecor } from "./shop.js";
 import { House } from "./house.js";
+import { beat } from "./visualizer.js";
 
 const W = 5, BACK = -4, FRONT = 4.5, H = 3.2;     // room: x -5..5, z -4..4.5, height 3.2 m
 
@@ -1407,7 +1408,16 @@ export class CozyRoom {
     else if (this.sky === "auto" && (this._lastClock = (this._lastClock || 0) + dt) > 20) {
       this._lastClock = 0; this.applyHour(this._clockHour());
     }
+    const lights = [];
+    for (const item of this.items.values()) {           // 🌈 visualizer: undo last frame's pulse before the item's own update
+      if (!item._lights) { item._lights = []; item.group.traverse((o) => { if (o.isPointLight) item._lights.push(o); }); }
+      for (const l of item._lights) { if (l.userData.vizPre != null) { l.intensity = l.userData.vizPre; l.userData.vizPre = null; } lights.push(l); }
+    }
     for (const item of this.items.values()) item.ctx.update?.(t, dt);
+    if (beat.active && lights.length) {                  // lamps pulse to the beat
+      const k = 0.55 + beat.level() * 1.1;
+      for (const l of lights) { l.userData.vizPre = l.intensity; l.intensity *= k; }
+    }
     this.decor?.userData.tick?.(t);
   }
 }

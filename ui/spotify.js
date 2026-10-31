@@ -75,7 +75,11 @@ export function initSpotify(api, { onState = () => {} } = {}) {
           el("button", { class: "ic big", title: now.playing ? "Pause" : "Play", onclick: () => cmd(now.playing ? "pause" : "resume") }, now.playing ? "❚❚" : "▶"),
           el("button", { class: "ic", title: "Next", onclick: () => cmd("next") }, "⏭"),
           el("button", { class: `ic${now.repeat !== "off" ? " on" : ""}`, title: `Repeat: ${now.repeat}`, onclick: () => cmd("repeat", { off: "context", context: "track", track: "off" }[now.repeat] || "context") }, now.repeat === "track" ? "🔂" : "🔁"),
-          el("button", { class: `ic heart${liked ? " on" : ""}`, title: liked ? "Remove from Liked Songs" : "Save to Liked Songs", onclick: async () => { await cmd("like", !liked); liked = !liked; draw(); } }, liked ? "♥" : "♡")),
+          el("button", { class: `ic heart${liked ? " on" : ""}`, title: liked ? "Remove from Liked Songs" : "Save to Liked Songs", onclick: async () => { await cmd("like", !liked); liked = !liked; draw(); } }, liked ? "♥" : "♡"),
+          el("button", { class: "ic", title: "More like this: play similar songs", "aria-label": "Play songs like this one", onclick: async (e) => {
+            e.target.disabled = true;
+            try { const r = await api.spotify_like_this(); toast(r.message || r.error, 5000); } finally { e.target.disabled = false; }
+          } }, "✨")),
         el("label", { class: "sp-vol" }, "🔊", vol)));
   }
 

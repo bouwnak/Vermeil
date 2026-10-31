@@ -84,12 +84,66 @@ export function initQuest(api) {
       el("p", { class: "note" }, "You can also just say it: “I drank water”, “I slept 8 hours”. Each tick gives XP; reaching a day's goal gives more.")];
   }
 
+  // ---------- "Your year with Vermeil" (skills/recap.py) ----------
+  let recap = null;
+  async function drawYear() {
+    const playBtn = el("button", { class: "primary", onclick: () => recap && story(recap) }, "▶ Play my recap");
+    const box = el("div", { class: "recap-grid" }, el("p", { class: "note" }, "Counting your year…"));
+    (async () => {
+      recap = recap || await api.recap_year();
+      if (recap.error) { box.replaceChildren(el("p", { class: "note" }, recap.error)); return; }
+      box.replaceChildren(...recap.slides.map(card), el("blockquote", { class: "recap-note" }, `💜 ${recap.note}`));
+    })();
+    return [el("div", { class: "row" }, el("h3", {}, "Your year with Vermeil"), playBtn,
+      el("button", { class: "ghost small", title: "Count again", onclick: () => { recap = null; draw(); } }, "↻")),
+      el("p", { class: "note" }, "Like a year-in-review: your XP, focus, workouts, studying, songs and games, counted from what you saved."), box];
+  }
+  const card = (c) => el("div", { class: "recap-card" }, el("div", { class: "recap-icon" }, c.icon), el("small", {}, c.title),
+    el("b", {}, c.big), c.sub ? el("span", {}, c.sub) : null, c.list?.length ? el("ol", {}, c.list.map((x) => el("li", {}, x))) : null);
+
+  function story(r) {
+    const pages = [...r.slides, { icon: "💜", title: "From me", big: "", sub: r.note }];
+    let i = 0;
+    const page = el("div", { class: "recap-page" });
+    const dots = el("div", { class: "recap-dots" });
+    const shut = () => { clearInterval(timer); box.remove(); window.removeEventListener("keydown", key, true); };
+    const go = (d) => { i += d; if (i >= pages.length) return shut(); i = Math.max(0, i); show(); };
+    const key = (e) => { e.stopPropagation(); if (e.key === "Escape") shut(); else if (e.key === "ArrowRight") go(1); else if (e.key === "ArrowLeft") go(-1); };
+    function show() {
+      page.replaceChildren(card(pages[i]));
+      page.firstChild.classList.add("in");
+      dots.replaceChildren(...pages.map((_, k) => el("i", { class: k <= i ? "on" : "" })));
+    }
+    const box = el("div", { class: "recap-story", role: "dialog", "aria-label": "Your year recap", onclick: (e) => go(e.clientX < innerWidth / 3 ? -1 : 1) },
+      dots, page, el("button", { class: "close", "aria-label": "Close", onclick: (e) => { e.stopPropagation(); shut(); } }, "×"));
+    const timer = setInterval(() => go(1), 6000);
+    window.addEventListener("keydown", key, true);           // first, so Escape closes only the story
+    document.body.append(box);
+    show();
+  }
+
+  // ---------- Vermeil's surprise gift after a hard week ----------
+  async function giftCard() {
+    let g;
+    try { g = await api.gifts(); } catch { return null; }
+    const w = g.waiting?.[0];
+    if (!w) return null;
+    return el("div", { class: "gift-card" }, el("span", { class: "gift-box" }, "🎁"),
+      el("div", {}, el("strong", {}, "Vermeil left you a gift"), el("small", { class: "note" }, `Because: ${w.why.join(", ")}`)),
+      el("button", { class: "primary", onclick: async () => {
+        const r = await api.gift_open(w.id);
+        if (r.error) return toast(r.error);
+        celebrate(`+${r.gift.vcash} VCash`, [r.gift.note, `🎟 ${r.gift.treat}`], "🎁");
+        refresh();
+      } }, "Open it"));
+  }
+
   async function draw() {
     if (!last) return;
-    const tabs = el("div", { class: "tabs", role: "tablist" }, [["pass", "🏆 Battle Pass"], ["quests", "📜 Quests & badges"], ["habits", "💧 Habits"]]
+    const tabs = el("div", { class: "tabs", role: "tablist" }, [["pass", "🏆 Battle Pass"], ["quests", "📜 Quests & badges"], ["habits", "💧 Habits"], ["year", "🎁 Your year"]]
       .map(([k, l]) => el("button", { role: "tab", "aria-selected": String(k === tab), onclick: () => { tab = k; draw(); } }, l)));
-    const body = tab === "pass" ? drawPass() : tab === "quests" ? drawQuests() : await drawHabits();
-    root.replaceChildren(head(), tabs, ...body);
+    const body = tab === "pass" ? drawPass() : tab === "quests" ? drawQuests() : tab === "year" ? await drawYear() : await drawHabits();
+    root.replaceChildren(head(), await giftCard() || "", tabs, ...body);
   }
 
   // ---------- "+N XP", level up, rewards ----------
@@ -117,6 +171,7 @@ export function initQuest(api) {
     refresh();
   });
 
+  window.addEventListener("gift", () => refresh());
   document.querySelector('[data-panel="pass"]')?.addEventListener("click", () => setTimeout(draw, 0));
   refresh();
   return { refresh };

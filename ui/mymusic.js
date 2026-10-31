@@ -1,9 +1,10 @@
 // mymusic.js - "Vermeil Music": your own Spotify-style app. Songs come from YouTube and play in Vermeil's player;
 // playlists, Liked Songs and analyses are yours (data/my_music.json). Python side: skills/mymusic.py via api.mm(...).
 import { $, el, toast, busy } from "./util.js";
+import { beat } from "./visualizer.js";
 
 const fmt = (s) => `${Math.floor((s || 0) / 60)}:${String(Math.floor((s || 0) % 60)).padStart(2, "0")}`;
-const TABS = [["library", "Your Library"], ["search", "Search"], ["queue", "Queue"], ["recent", "Recent"], ["import", "Import"], ["lab", "Playlist Lab"]];
+const TABS = [["library", "Your Library"], ["search", "Search"], ["queue", "Queue"], ["recent", "Recent"], ["import", "Import"], ["lab", "Playlist Lab"], ["watch", "🎬 Watchlist"]];
 const STYLES = [["similar", "Similar (same + similar artists)"], ["discover", "Discover (only new artists)"], ["mix", "Mix (some favourites + new)"],
   ["chill", "Chill version"], ["hype", "Hype / gym version"]];
 
@@ -15,7 +16,82 @@ export function initMyMusic(api) {
   const tabs = el("nav", { class: "tabs", role: "tablist" });
   const view = el("div", { class: "mm-view" });
   const spBody = $("spotifyBody");             // the Spotify feature's content: shown in the Spotify tab
-  body.replaceChildren(player, tabs, view);
+  const extras = el("div", { class: "row mm-extras" });
+  const lyricsBox = el("div", { class: "mm-lyrics", hidden: true });
+  const heardBox = el("div", { class: "mm-heard", hidden: true });
+  body.replaceChildren(player, extras, heardBox, lyricsBox, tabs, view);
+
+  // ---------------- lyrics, more like this, what song is this?, visualizer ----------------
+  let lyr = null, lyrKey = "", lyrSource = "lrclib";
+  try { lyrSource = localStorage.getItem("vermeil.lyricsSource") || "lrclib"; } catch { /* private mode */ }
+  const srcSel = el("select", { "aria-label": "Lyrics service", onchange: () => {
+    lyrSource = srcSel.value; try { localStorage.setItem("vermeil.lyricsSource", lyrSource); } catch { /* ignore */ } lyrKey = ""; showLyrics(); } },
+    el("option", { value: "lrclib" }, "LRCLIB (synced)"), el("option", { value: "lyricsovh" }, "lyrics.ovh (words only)"));
+  srcSel.value = lyrSource;
+  const vizBtn = el("button", { class: "ghost small", "aria-pressed": String(beat.enabled), title: "Bars on the room TV and the lamps pulse to the music",
+    onclick: () => { beat.setEnabled(!beat.enabled); vizBtn.setAttribute("aria-pressed", String(beat.enabled));
+      toast(beat.enabled ? "🌈 Visualizer on: look at the room TV and lamps." : "Visualizer off."); } }, "🌈 Visualizer");
+  extras.replaceChildren(
+    el("button", { class: "ghost small", title: "Lyrics that follow the song", onclick: () => { lyricsBox.hidden = !lyricsBox.hidden; if (!lyricsBox.hidden) showLyrics(); } }, "🎤 Lyrics"),
+    el("button", { class: "ghost small", title: "Queue songs that sound like this one", onclick: async (e) => {
+      busy(e.target, true, "Finding songs like this…");
+      try { const r = await mm("like_this"); toast(r.message || r.error, 5000); setTimeout(refresh, 1500); } finally { busy(e.target, false); }
+    } }, "✨ More like this"),
+    el("button", { class: "ghost small", title: "Listens through the microphone for 8 seconds", onclick: async (e) => {
+      busy(e.target, true, "👂 Listening…");
+      try { const r = await mm("listen", 8); if (r.error) return toast(r.error, 6000); toast(`🎶 ${r.title} — ${r.artist}`, 6000); drawHeard(); }
+      finally { busy(e.target, false); }
+    } }, "👂 What song is this?"),
+    vizBtn);
+
+  async function drawHeard() {
+    const r = await mm("heard");
+    const h = r.heard || [];
+    heardBox.hidden = !h.length;
+    heardBox.replaceChildren(el("details", { open: true }, el("summary", {}, `👂 Songs I recognised (${h.length})`),
+      el("ul", {}, h.slice(0, 6).map((x) => el("li", {}, x.cover ? el("img", { src: x.cover, alt: "" }) : null,
+        el("span", {}, el("b", {}, x.title), el("small", {}, ` ${x.artist} · ${x.at}`)),
+        el("button", { class: "ic", title: "Play it", "aria-label": `Play ${x.title}`, onclick: async () => {
+          const res = await mm("search", `${x.title} ${x.artist}`);
+          const list = Array.isArray(res) ? res : res.songs || res.results || [];
+          if (!list.length) return toast("I couldn't find it on YouTube.");
+          play(list, 0);
+        } }, "▶"))))));
+  }
+
+  async function showLyrics() {
+    const s = now?.song;
+    if (!s) { lyricsBox.replaceChildren(el("p", { class: "note" }, "Play a song to see its lyrics.")); return; }
+    const key = `${lyrSource}|${s.title}|${s.artist}`;
+    if (key !== lyrKey) {
+      lyrKey = key; lyr = null;
+      lyricsBox.replaceChildren(el("div", { class: "row" }, el("b", {}, "🎤 Lyrics"), srcSel), el("p", { class: "note" }, "Looking for the lyrics…"));
+      const r = await mm("lyrics", s.title, s.artist, now?.length || 0, lyrSource);
+      if (key !== lyrKey) return;
+      lyr = r;
+      const lines = r.error ? [el("p", { class: "note" }, r.error)]
+        : r.synced?.length ? r.synced.map((l) => el("p", { title: "Jump here", onclick: () => cmd("seek", String(Math.floor(l.t))) }, l.line || "♪"))
+        : r.plain.split("\n").map((l) => el("p", { class: "plain" }, l || " "));
+      lyricsBox.replaceChildren(el("div", { class: "row" }, el("b", {}, "🎤 Lyrics"), srcSel,
+        el("small", { class: "note" }, r.error ? "" : `${r.synced?.length ? "Synced" : "Words only"} · from ${r.source}`)), el("div", { class: "mm-lyr-lines" }, ...lines));
+    }
+    syncLyrics();
+  }
+  function syncLyrics() {
+    if (lyricsBox.hidden || !lyr?.synced?.length) return;
+    const pos = (now?.position || 0) + 0.3;
+    let at = -1;
+    for (let i = 0; i < lyr.synced.length && lyr.synced[i].t <= pos; i++) at = i;
+    const ps = lyricsBox.querySelectorAll(".mm-lyr-lines p");
+    ps.forEach((p, i) => p.classList.toggle("on", i === at));
+    const cur = ps[at];
+    if (cur && !cur.classList.contains("seen")) {
+      ps.forEach((p) => p.classList.remove("seen"));
+      cur.classList.add("seen");
+      const box = cur.parentElement;
+      box.scrollTo({ top: cur.offsetTop - box.offsetTop - box.clientHeight / 2 + cur.clientHeight / 2, behavior: "smooth" });
+    }
+  }
 
   // ---------------- now playing ----------------
   function drawPlayer() {
@@ -40,7 +116,12 @@ export function initMyMusic(api) {
       now?.queue?.length ? el("details", { class: "mm-queue" }, el("summary", {}, `Up next (${now.queue.length})`), el("ol", {}, now.queue.map((q) => el("li", {}, q)))) : null);
   }
   async function cmd(a, v) { const r = await mm("cmd", a, v); if (r?.message) toast(r.message, 2500); setTimeout(refresh, 600); }
-  async function refresh() { now = await mm("now"); if (!now.error) drawPlayer(); }
+  async function refresh() {
+    now = await mm("now");
+    if (now.error) return;
+    drawPlayer();
+    if (!lyricsBox.hidden) showLyrics();
+  }
 
   // ---------------- song rows ----------------
   function songRow(s, i, list, ctx = {}) {
@@ -87,6 +168,7 @@ export function initMyMusic(api) {
     if (tab === "recent") return drawRecent();
     if (tab === "import") return drawImport();
     if (tab === "lab") return drawLab();
+    if (tab === "watch") return drawWatch();
     drawLibrary();
   }
 
@@ -194,6 +276,7 @@ export function initMyMusic(api) {
         editable ? el("button", { class: "ghost small", onclick: () => editDetails(p) }, "✎ Edit details") : null,
         editable ? el("button", { class: "ghost small", onclick: () => { tab = "lab"; labPick = p.id; openPl = null; load(); } }, "🧪 Analyse / make similar") : null,
         editable ? el("button", { class: "danger small", onclick: async () => { if (!confirm(`Delete “${p.name}”?`)) return; await mm("delete", p.id); openPl = null; load(); } }, "🗑 Delete") : null,
+        editable ? coverMaker(p) : null,
         p.count ? el("button", { class: "ghost small", title: "Swaps music videos for lyric videos: no skits or long intros, and songs play to the end", onclick: async (e) => {
           busy(e.target, true, "Finding lyric videos…");
           try { const r = await mm("to_lyrics", p.id); if (r.error) return toast(r.error, 6000); toast(r.message, 5000); openPl = r; drawPlaylist(); }
@@ -202,6 +285,70 @@ export function initMyMusic(api) {
         el("button", { class: "ghost small", onclick: () => { openPl = null; load(); } }, "← Back")),
       p.songs.length ? el("ol", { class: "mm-list" }, p.songs.map((s, i) => songRow(s, i, p.songs, { pid: p.id })))
         : el("p", { class: "none" }, "No songs yet. Use Search and press “＋ Playlist” on a song."));
+  }
+
+  // ---------------- 🎨 album cover from the Generator ----------------
+  function coverMaker(p) {
+    const style = el("select", { "aria-label": "Cover style" }, [["dreamy", "Dreamy"], ["neon", "Neon"], ["anime", "Anime"], ["vinyl", "Retro vinyl"],
+      ["minimal", "Minimal"], ["photo", "Film photo"]].map(([v, l]) => el("option", { value: v }, l)));
+    const named = el("input", { type: "checkbox", checked: true, "aria-label": "Write the name on it" });
+    return el("span", { class: "row mm-covermaker" }, style, el("label", { class: "note" }, named, " name on it"),
+      el("button", { class: "ghost small", title: "Paints a cover from the playlist's songs (can take up to a minute)", onclick: async (e) => {
+        busy(e.target, true, "🎨 Painting…");
+        try {
+          const r = await mm("make_cover", p.id, style.value, named.checked);
+          if (r.error) return toast(r.error, 6000);
+          openPl = await mm("playlist", p.id); drawPlaylist(); toast("🎨 New cover!");
+        } finally { busy(e.target, false); }
+      } }, "🎨 Make a cover"));
+  }
+
+  // ---------------- 🎬 movie / show watchlist ----------------
+  const picked = new Set();
+  async function drawWatch() {
+    if (!view.querySelector(".watch-list, .none")) view.replaceChildren(el("p", { class: "note" }, "Loading your watchlist…"));
+    const w = await mm("watch_list");
+    if (w.error) return view.replaceChildren(el("p", { class: "note" }, w.error));
+    const title = el("input", { placeholder: "Movie or show, e.g. Spirited Away", maxlength: "100", "aria-label": "Title" });
+    const kind = el("select", { "aria-label": "Kind" }, w.kinds.map((k) => el("option", { value: k }, k[0].toUpperCase() + k.slice(1))));
+    const sKind = el("select", { "aria-label": "What to suggest" }, w.kinds.map((k) => el("option", { value: k }, `${k}s`)));
+    const picks = el("div", { class: "watch-picks" });
+    const done = (r) => { if (r.error) toast(r.error, 5000); else drawWatch(); };
+    const stars = (it) => el("span", { class: "stars", role: "group", "aria-label": "Your rating" }, [1, 2, 3, 4, 5].map((n) =>
+      el("button", { class: `ic${(it.rating || 0) >= n ? " on" : ""}`, "aria-label": `${n} stars`, onclick: async () => {
+        await mm("watch_toggle", it.id, n); done(await mm("watch_toggle", it.id)); } }, "★")));
+    const row = (it) => el("li", { class: `watch-row${it.watched ? " seen" : ""}` },
+      el("div", { class: "what" }, el("b", {}, `${it.title}${it.year ? ` (${it.year})` : ""}`),
+        el("small", {}, [it.kind, ...(it.genres || [])].join(" · ")), it.about ? el("small", { class: "note" }, it.about) : null,
+        el("div", { class: "row chips" }, (it.where || []).length ? it.where.map((x) => el("span", { class: "chip" }, `📺 ${x}`)) : el("small", { class: "note" }, "Where to watch: not checked yet"),
+          it.checked ? el("small", { class: "note" }, `checked ${it.checked}${it.country ? ` for ${it.country}` : ""}`) : null)),
+      it.watched ? stars(it) : null,
+      el("span", { class: "acts" },
+        el("button", { class: "ghost small", title: "Ask again where it's streaming", onclick: async (e) => { busy(e.target, true, "…"); try { done(await mm("watch_where", it.id)); } finally { busy(e.target, false); } } }, "📺 Where?"),
+        el("button", { class: "ghost small", onclick: async () => done(await mm("watch_toggle", it.id)) }, it.watched ? "↩ Not watched" : "✔ Watched"),
+        el("button", { class: "ic x", "aria-label": `Remove ${it.title}`, onclick: async () => done(await mm("watch_remove", it.id)) }, "×")));
+    const toWatch = w.items.filter((x) => !x.watched), seen = w.items.filter((x) => x.watched);
+    const addBtn = el("button", { class: "primary" }, "＋ Add");
+    view.replaceChildren(
+      el("h3", {}, "🎬 Watchlist"),
+      el("form", { class: "row", onsubmit: async (e) => { e.preventDefault(); busy(addBtn, true, "Adding…");
+        try { done(await mm("watch_add", title.value, kind.value)); } finally { busy(addBtn, false); } } }, title, kind, addBtn),
+      el("p", { class: "note" }, "Vermeil looks up where each one streams in your country (the AI's best guess, so check before you pay)."),
+      toWatch.length ? el("ul", { class: "watch-list" }, toWatch.map(row)) : el("p", { class: "none" }, "Nothing to watch yet. Add something or get suggestions below."),
+      seen.length ? el("details", {}, el("summary", {}, `Watched (${seen.length})`), el("ul", { class: "watch-list" }, seen.map(row))) : null,
+      el("h4", {}, "✨ Suggest something by genre"),
+      el("div", { class: "row chips genre-pick" }, w.genres.map((g) => el("button", { class: `chip${picked.has(g) ? " on" : ""}`, "aria-pressed": String(picked.has(g)),
+        onclick: (e) => { if (picked.has(g)) picked.delete(g); else picked.add(g); e.target.classList.toggle("on"); e.target.setAttribute("aria-pressed", String(picked.has(g))); } }, g))),
+      el("div", { class: "row" }, sKind, el("button", { class: "ghost", onclick: async (e) => {
+        busy(e.target, true, "Thinking…");
+        try {
+          const r = await mm("watch_suggest", [...picked], sKind.value);
+          if (r.error) return toast(r.error, 5000);
+          picks.replaceChildren(...r.picks.map((p) => el("div", { class: "watch-pick" }, el("b", {}, `${p.title}${p.year ? ` (${p.year})` : ""}`),
+            el("small", {}, (p.genres || []).join(" · ")), el("span", {}, p.why), el("small", { class: "note" }, (p.where || []).length ? `📺 ${p.where.join(", ")}` : ""),
+            el("button", { class: "ghost small", onclick: async () => done(await mm("watch_add", p.title, p.kind)) }, "＋ Add to my list"))));
+        } finally { busy(e.target, false); }
+      } }, "Suggest")), picks);
   }
 
   function editDetails(p) {

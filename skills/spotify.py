@@ -400,6 +400,12 @@ def play_uri(uri):
     return "Playing."
 
 
+def play_uris(uris):
+    """play a list of tracks as a new queue"""
+    _player("PUT", "/me/player/play", body={"uris": list(uris)[:50]})
+    return "Playing."
+
+
 def play(query, kind=None):
     """'Sunrise Rex Orange County' -> best match. kind: track / artist / album / playlist (None = guess)."""
     q = (query or "").strip()

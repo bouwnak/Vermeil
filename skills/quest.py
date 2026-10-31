@@ -214,6 +214,9 @@ def award(kind, n=1, xp=None, today=None):
                     gained += q["xp"]
                     d["xp"] += q["xp"]
                     done.append(q["text"])
+        y = s.setdefault("years", {}).setdefault(str(today.year), {})       # whole-year totals for the yearly recap
+        y[kind] = y.get(kind, 0) + n
+        y["xp"] = y.get("xp", 0) + gained
         s["xp"] += gained
         cash = int(gained * VCASH_PER_XP)
         s["vcash"] += cash
