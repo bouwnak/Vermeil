@@ -258,6 +258,29 @@ class AppTests(unittest.TestCase):
             self.assertEqual(seen, ["Hydrology", "RCD"])                     # USB files sorted by subject
         pm.exam_week = None
 
+    def test_gym_health_wiring(self):
+        import gym, gymcoach, gymlife, tempfile
+        from datetime import datetime, timedelta
+        tmp = tempfile.mkdtemp(prefix="vermeil-gl-")
+        self.addCleanup(lambda: __import__("shutil").rmtree(tmp, True))
+        routine = {"days": [{"day": 1, "title": "A", "exercises": [{"name": "Bench press", "sets": 2, "target": "10", "kg": 50}]}]}
+        last = {"date": "2026-10-20", "sets": [{"exercise": "Bench press", "set": 1, "reps": "10", "kg": 50},
+                                               {"exercise": "Bench press", "set": 2, "reps": "10", "kg": 50}]}
+        with mock.patch.object(gymlife, "STATE_FILE", os.path.join(tmp, "gl.json")),                 mock.patch.object(gymcoach, "STATE_FILE", os.path.join(tmp, "ml.json")),                 mock.patch.object(gym, "get_routine", return_value=routine),                 mock.patch.object(gym, "last_performance", return_value=last),                 mock.patch.object(gym, "_log", return_value={}),                 mock.patch.object(gym, "get_profile", return_value={"weight": 70}):
+            self.assertEqual(self.api.gym_next_weights()[0]["next"], 52.5)          # every set hit 10 -> heavier
+            self.assertEqual(self.api.gym_protein()["target"], 140)
+            self.assertEqual(self.api.gym_sleep_save(need=8, bedtime="00:00")["need"], 8)
+            self.assertIn("sleep", self.api.progress(7))                              # sleep shows in Focus progress
+            self.api.gym_supp_save({"name": "Fish oil", "times": [(datetime.now() - timedelta(minutes=1)).strftime("%H:%M")]})
+            seen = []
+            with mock.patch.object(self.api, "emit", side_effect=seen.append):
+                self.api._gym_reminders()
+                self.api._gym_reminders()
+            self.assertEqual(sum("Fish oil" in e.get("text", "") for e in seen), 1)  # reminded once
+            with mock.patch("productivity._state", return_value={"home_city": "Manila"}),                     mock.patch("llm.ask", return_value='{"items": [{"food": "Eggs", "price": 200}]}'),                     mock.patch.object(gym, "meal_plan", return_value={"meals": [{"items": [{"food": "Eggs", "grams": 100}]}]}):
+                g = self.api.gym_grocery()
+            self.assertEqual((g["store"], g["total"]), ("SM Supermarket", 200))
+
     def test_planner(self):
         with mock.patch.object(app.f1, "user_data", {"events": [{"title": "Old", "date": "2000-01-01"},
                                                                 {"title": "Soon", "date": "2999-01-01"}],

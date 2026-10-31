@@ -282,6 +282,21 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## ➕ Extra features you asked for in chat
 ✅ 3D cozy room (themes, furniture editor, day/night by your clock, brightness) · ✅ characters (Vermeil, Pip, Robo, your own GLB/VRM) · ✅ planner (calendar, tasks, reminders, birthdays, shopping, notes) · ✅ study (library, review sets, research, assignment help) · ✅ coding helper · ✅ gym mode (your routine, timer, editor, history, best reps, +2.5 kg upgrade, sessions) · ✅ journal & think · ✅ voice commands · ✅ top-left status pills · ✅ night theme with sounds and effects · ✅ Groq → Ollama automatic switch · ✅ saved preferences · ✅ package cleanup script · ✅ smaller AI requests: only the tools that fit each message are sent (~1–2k tokens instead of ~9k), so Groq lasts longer and the local AI isn't overloaded
 
+## 🆕 31 Oct 2026: Gym & health
+
+| Feature | Where | How |
+|---|---|---|
+| 👯 Exercise demo | Gym → Workout → 👯 Demo | She does the move next to you; UniMate can make real gym clips (🏋 Gym exercises) |
+| 📈 Progressive overload | Gym → Coach & PRs | Heavier only when every set hit the top reps |
+| 🥩 Protein bar | Gym → Calories | Today's protein vs your goal |
+| 🛒 Grocery list with prices | Gym → Sleep & health | A week of food from the meal plan; SM Supermarket (PH) or Walmart (US) prices |
+| 🛌 Sleep goal | Gym → Sleep & health, Focus → My progress | Hours needed, sleep debt, make-up tips, wind-down reminder |
+| 🧭 Coach plan that adapts | Gym → Workout | Missed days → catch-up lifts; long break → comeback week |
+| 🏆 Personal records wall | Gym → Coach & PRs | Best lifts with trophies |
+| 🏃 GPS runs | Gym → Runs | Distance, pace, steps and route (like Strava) |
+| 🫀 Muscles this week | Gym → Coach & PRs | Body map that fades over 7 days |
+| 💊 Supplement reminders | Gym → Sleep & health | Times, reminders and a "taken" button |
+
 ## 🆕 31 Oct 2026: Study round
 
 | Feature | Where | How |

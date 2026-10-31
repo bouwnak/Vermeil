@@ -2,6 +2,7 @@
 import { $, el, toast, setMd, busy } from "./util.js";
 import { play, alarm } from "./fx.js";
 import { drawWeek, drawGoals, drawHabits, drawTravel, drawScreen } from "./planlife.js";
+import { sleepBars } from "./gymlife.js";
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart(2, "0")}`;
 
@@ -178,6 +179,7 @@ export function initFocus(api) {
       el("div", { class: "prog" }, el("h4", {}, `Quiz scores${q.length ? ` · average ${Math.round(q.reduce((a, b) => a + b, 0) / q.length)}%` : ""}`), spark(p.quiz, { max: 100, label: "Quiz scores", unit: "%" })),
       el("div", { class: "prog" }, el("h4", {}, `Focus · ${t.focus_minutes} minutes`), spark(p.focus, { label: "Focus minutes", unit: " min" })),
       el("div", { class: "prog" }, el("h4", {}, `Gym · ${t.gym_sessions} days`), spark(p.gym, { label: "Gym volume", unit: " kg", color: "#9A7BFF" })),
+      p.sleep ? el("div", { class: "prog" }, el("h4", {}, `Sleep · ${p.sleep.summary}`), sleepBars(p.sleep), el("small", { class: "note" }, p.sleep.tips[0] || "")) : null,
       el("div", { class: "prog" }, el("h4", {}, `Language · ${t.language_days} days · streak ${t.language_streak}`), spark(p.language, { max: 1, label: "Language practice", color: "#3DDC97" })),
       el("h4", {}, "Topics to work on"),
       p.weak_topics.length ? el("ul", { class: "day-list" }, p.weak_topics.map((w) => el("li", {}, el("span", { class: "what" }, w.topic), el("b", {}, `${w.pct}%`))))

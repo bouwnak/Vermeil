@@ -86,7 +86,40 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **Study round (31 Oct 2026, newest)**: the owner picked ideas 62, 63, 65 ("grouped by subject (hydrology, RCD, steel)"), 67 ("plus merging duplicate topics"), 70, 72, 73, 74, 76, 77, 78, 79 and 80 from FEATURE_IDEAS.md.
+- **Gym & health (31 Oct 2026, newest)**: the owner picked ideas 81 ("plus a UniMate gym button"), 84 ("heavier only when all max reps are done in all sets"), 88, 89 ("prices from the nearest mall: SM in PH, Walmart in the US"), 91 ("required hours, make-up suggestions, progress in Focus"), 92, 93, 94 ("Strava-like GPS"), 97 and 98 from FEATURE_IDEAS.md.
+  - `skills/gymlife.py` (new). It saves to `data/gymlife.json`. The AI call takes `ask=` so tests can fake it.
+    - `next_weights(days, last_fn)`: +2.5 kg (+1.25 under 10 kg) only when every planned set was done AND every set hit the top of the rep range; otherwise it says which sets fell short.
+    - `adjust_plan(log, days, next_day, today, per_week)`: when there are more workouts left this week than days, today adds the next day's first 2 lifts (3 sets). After 10+ days off it is a comeback week (about 80%).
+    - `prs(log, e1rm, rep_value)`: best estimated 1RM, heaviest and most reps per exercise. The top 3 get 🥇🥈🥉, and `new` marks records from the last 7 days.
+    - `week_muscles(log, muscles_for)`: `{muscle: 0..1}` for the last 7 days, fading by days ago.
+    - `protein_target` (2 g/kg, 1.8 on a bulk) and `protein_bar`.
+    - `grocery_list(plan, days=7)` turns the meal plan into buy amounts. `grocery_prices(items, country, ask)` asks the AI for SM Supermarket (₱) or Walmart ($) prices, cached for 7 days; `country_for(home_city)` picks the store.
+    - Sleep: `sleep_settings`/`sleep_save` (hours needed, bedtime, wind-down minutes), `sleep_report(sleep, need, bedtime)` (7 nights, debt, met nights, streak, make-up tips: up to 1 h earlier for 4 nights, naps, no sleeping in) and `wind_down_due`.
+    - Supplements: `supp_save`, `supp_remove`, `supp_take` (with undo), `supp_list` (per-time slots, due flags, a 7-day count) and `supp_due` (each slot reminded once, within 2 h).
+    - Runs: `run_stats(points)` (haversine; skips GPS jumps over 12 m/s, fixes worse than 50 m and jitter under 2 m; pace, steps, kcal), `run_save`, `runs` (week km/steps, best pace, longest) and `run_remove`.
+    - `demo_for(name)` / `DEMOS` / `DEMO_PROMPTS`: exercise name → demo move (word-boundary regexes, so "Stretching" is not "chin").
+  - `app.py`:
+    - New API methods: `gym_next_weights`, `gym_coach_plan` (setting `gym_days_per_week`, default the routine's day count, max 6), `gym_prs`, `gym_week_muscles`, `gym_protein`, `gym_grocery(country, goal, meals)`, `gym_sleep_report`, `gym_sleep_save`, `gym_supplements`, `gym_supp_save`/`_remove`/`_take`, `gym_runs`, `gym_run_save` (+XP) and `gym_run_remove`.
+    - `_gym_reminders()` in `_alert_loop`: one wind-down alert before bedtime per day (setting `sleep_reminder`, default on) and supplement alerts.
+    - `progress()` adds `sleep` for Focus → My progress.
+  - `skills/animate.py`: the PROMPTS gain squat, lunge, deadlift, pushup, curl, row, press, plank and jumping_jacks.
+  - UI:
+    - `ui/gymlife.js` (new): `coachBanner`, `drawCoach` (next week's weights + "Save the heavier weights", muscles this week, PR wall), `drawHealth` (sleep, supplements, grocery list), `drawRuns` (GPS with `watchPosition`, live distance/time/pace/steps, route drawing, past activities), `proteinBar`, `sleepBars`, `routeSvg` and `demoKey`.
+    - `ui/gym.js`: new tabs Coach & PRs, Sleep & health and Runs. The coach banner sits on Workout, each exercise gets "👯 Demo", the protein bar is under Today's meals, and the meal goal is remembered (localStorage `mealGoal`) for the grocery list.
+    - `ui/muscles.js`: `muscleMapWeighted(weights)`.
+    - `ui/room.js`: `demoExercise(key)` plays the model's own clip when UniMate made one (those clip names are now loaded); otherwise a simple body motion (`ex_*` emotes).
+    - `ui/app.js`: a `gym-demo` listener opens the gym room and calls `room.demoExercise`.
+    - `ui/rigger.js`: `GYM_MOTIONS` and a "🏋 Gym exercises" button in the UniMate box that ticks them all.
+    - `ui/focus.js`: a sleep card in My progress.
+    - Also changed: `ui/mock.js` and `ui/style.css`.
+  - Tests:
+    - `tests/test_gymlife.py` (13).
+    - `tests/test_app.py` +1 (`test_gym_health_wiring`): next weights, protein goal, sleep in progress, a supplement reminded once, and SM prices for a Manila home city.
+    - Full suite: Ran 655 tests, OK (skipped=3).
+    - Browser (`ui-dev` ?mock): every new tab works. Tried there: the coach banner, saving the heavier weight, the muscle map and PR wall, the sleep card, ticking a supplement, a Walmart grocery list, a faked GPS run (live stats → saved with its route), the protein bar, the Focus sleep card, and Demo for 5 moves with no errors.
+    - Not tried: real GPS outdoors, real AI prices, or a UniMate-made exercise clip.
+  - No new pip packages.
+- **Study round (31 Oct 2026)**: the owner picked ideas 62, 63, 65 ("grouped by subject (hydrology, RCD, steel)"), 67 ("plus merging duplicate topics"), 70, 72, 73, 74, 76, 77, 78, 79 and 80 from FEATURE_IDEAS.md.
   - `skills/studylife.py` (new). It saves to `data/studylife.json`. Every AI call takes `ask=` so tests can fake it.
     - Today's list: `today_list(due, cards_due, mistakes_n, weak, exam)`.
     - Practice exams: `exam_report(review, results)` scores each source file and gives a grade.

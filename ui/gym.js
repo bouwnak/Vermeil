@@ -2,6 +2,7 @@
 import { $, el, toast } from "./util.js";
 import { sparks as fxSparks, play as fxPlay, alarm, stopAlarm } from "./fx.js";
 import { muscleMap, muscleLegend } from "./muscles.js";
+import { coachBanner, demoKey, drawCoach, drawHealth, drawRuns, proteinBar } from "./gymlife.js";
 
 const STAT_LABELS = { weight: "Weight (kg)", biceps_r: "Biceps R (cm)", biceps_l: "Biceps L (cm)", thigh_r: "Thigh R (cm)",
   thigh_l: "Thigh L (cm)", chest: "Chest (cm)", waist: "Waist (cm)" };
@@ -126,7 +127,7 @@ export function initGym(api) {
   const view = el("div");
   root.replaceChildren(timerBox, tabs, view);
   function drawTabs() {
-    tabs.replaceChildren(...[["workout", "Workout"], ["alts", "Alternatives"], ["history", "History"], ["progress", "Progress"], ["stats", "Body stats"], ["calories", "Calories"]].map(([k, l]) =>
+    tabs.replaceChildren(...[["workout", "Workout"], ["alts", "Alternatives"], ["history", "History"], ["progress", "Progress"], ["stats", "Body stats"], ["calories", "Calories"], ["coach", "Coach & PRs"], ["health", "Sleep & health"], ["runs", "Runs"]].map(([k, l]) =>
       el("button", { role: "tab", "aria-selected": String(k === tab), onclick: () => { tab = k; load(); } }, l)));
   }
 
@@ -138,6 +139,9 @@ export function initGym(api) {
     if (tab === "stats") return drawStats();
     if (tab === "calories") return drawCalories();
     if (tab === "progress") return drawProgress();
+    if (tab === "coach") return drawCoach(view, api);
+    if (tab === "health") return drawHealth(view, api);
+    if (tab === "runs") return drawRuns(view, api);
     state = await api.gym_state(day || state?.day || null);
     drawWorkout();
   }
@@ -153,6 +157,7 @@ export function initGym(api) {
     const done = new Map(state.today.sets.map((s) => [`${s.exercise}#${s.set}`, s]));
     const plan = state.plan;
     const total = plan.exercises.reduce((n, e) => n + e.sets, 0);
+    const banner = el("span");
     const doneCount = plan.exercises.reduce((n, e) => n + [...Array(e.sets)].filter((_, i) => done.has(`${e.name}#${i + 1}`)).length, 0);
     view.replaceChildren(
       el("div", { class: "row gym-head" }, pick, startBtn, clock,
@@ -162,7 +167,9 @@ export function initGym(api) {
         el("button", { class: "ghost small", onclick: importFile }, "Re-import Excel")),
       el("progress", { class: "gym-progress", max: total || 1, value: doneCount, "aria-label": "Sets done" }),
       el("p", { class: "note" }, `${doneCount} of ${total} sets done. Tick ✓ after each set — the rest timer starts by itself.`),
+      banner,
       ...plan.exercises.map((ex) => exerciseCard(ex, done)));
+    coachBanner(api).then((b) => banner.replaceWith(b)).catch(() => {});
   }
 
   function exerciseCard(ex, done) {
@@ -231,6 +238,8 @@ export function initGym(api) {
             fxSparks?.(b.left + b.width / 2, b.top + b.height / 2);
           } }, "⬆ +2.5 kg") : null,
         ex.link ? el("button", { class: "ghost small", onclick: () => api.open_url(ex.link) }, "▶ How to") : null,
+        demoKey(ex.name) ? el("button", { class: "ghost small", title: "Vermeil does this exercise next to you in the gym room",
+          onclick: () => window.dispatchEvent(new CustomEvent("gym-demo", { detail: { key: demoKey(ex.name), name: ex.name } })) }, "👯 Demo") : null,
         el("button", { class: "ghost small", title: "Find exercises that can replace this one", onclick: () => openAlternatives(ex.name, state.day) }, "⇄ Alternatives")),
       ex.notes ? el("p", { class: "note" }, ex.notes) : null,
       ex.tip ? el("p", { class: "tip-line" }, `💡 ${ex.tip}`) : null,
@@ -500,6 +509,8 @@ export function initGym(api) {
       result.replaceChildren(el("p", { class: "note" }, `${m.note} Fix anything that looks off, then add it.`), addForm({ ...m, photo: true }));
     });
     const t = d.total;
+    const protein = el("div");
+    proteinBar(api).then((b) => protein.replaceWith(b)).catch(() => {});
     logBox.replaceChildren(
       el("h3", {}, "📷 Today's meals"),
       el("div", { class: "row" },
@@ -510,11 +521,13 @@ export function initGym(api) {
         el("span", { class: "what" }, (m.photo ? "📷 " : "") + m.name), el("small", {}, `${m.kcal} kcal · ${m.protein} g protein`),
         el("button", { class: "x", "aria-label": `Remove ${m.name}`, onclick: async () => drawLog(await api.gym_meal_remove(m.id)) }, "×"))))
         : el("p", { class: "none" }, "Nothing logged today."),
+      protein,
       el("p", { class: "note" }, `Today: ${t.kcal} kcal · ${t.protein} g protein · ${t.carbs} g carbs · ${t.fat} g fat. Photo numbers are estimates (±20%).`));
   }
 
   // ---------------- meal planner: a day of meals for bulk / cut / recomp from the numbers above ----------------
   let mealGoal = "recomp", mealCount = 4, mealDishes = [];
+  try { mealGoal = localStorage.getItem("mealGoal") || "recomp"; } catch {}
   try { mealCount = +localStorage.getItem("mealCount") || 4; } catch {}
   const mealBox = el("div", { class: "meal-box" });
   async function drawMeals() {
@@ -522,7 +535,7 @@ export function initGym(api) {
     if (r.error) return mealBox.replaceChildren(el("h3", {}, "🍽 Meal planner"), el("p", { class: "note" }, r.error));
     mealDishes = r.meals.map((m) => m.pick);
     const goals = el("div", { class: "seg" }, r.goals.map(([k, l]) => el("button", { type: "button", class: k === mealGoal ? "on" : "",
-      onclick: () => { mealGoal = k; drawMeals(); } }, l)));
+      onclick: () => { mealGoal = k; try { localStorage.setItem("mealGoal", k); } catch {} drawMeals(); } }, l)));
     const count = el("div", { class: "seg meal-count", title: "How many meals a day" }, el("span", {}, "Meals a day"),
       (r.meal_options || [2, 3, 4, 5, 6]).map((n) => el("button", { type: "button", class: n === r.meal_count ? "on" : "",
         onclick: () => { mealCount = n; mealDishes = []; try { localStorage.setItem("mealCount", n); } catch {} drawMeals(); } }, String(n))));

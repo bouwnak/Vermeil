@@ -557,7 +557,8 @@ export class Room {
       const talk = find(/talk|speak/i);
       if (talk) c.actions.talk = c.mixer.clipAction(talk);                 // gestures while she speaks
       for (const name of ["happy", "sad", "surprised", "angry", "think", "sleepy", "dance", "sit", "type", "lounge", "lie", "crouch", "lookout",
-        "book_take", "book_read", "book_put", "dance_hiphop", "dance_idol", "dance_twirl", "dance_sway", "cheer", "jump", "stretch", "yawn", "laugh", "shy", "clap", "shrug", "bow", "nod", "shake", "point", "look_around"]) {   // moods + furniture + reading + extras (if the model has them)
+        "book_take", "book_read", "book_put", "dance_hiphop", "dance_idol", "dance_twirl", "dance_sway", "cheer", "jump", "stretch", "yawn", "laugh", "shy", "clap", "shrug", "bow", "nod", "shake", "point", "look_around",
+        "squat", "lunge", "deadlift", "pushup", "curl", "row", "press", "plank", "jumping_jacks"]) {   // gym demos (UniMate "Gym exercises") + moods + furniture + reading + extras (if the model has them)
         const clip = gltf.animations.find((a) => a.name.toLowerCase() === name);
         if (clip) c.actions[name] = c.mixer.clipAction(clip);
       }
@@ -717,6 +718,16 @@ export class Room {
     const clip = pick[Math.floor(Math.random() * pick.length)];
     this._fidget = { clip, until: t + Math.min(6, a[clip].getClip().duration || 3) };
     return clip;
+  }
+
+  /** Gym: she does the exercise next to you. key: squat / lunge / deadlift / pushup / curl / row / press / plank /
+   *  jumping_jacks. Uses the model's own clip when it has one (UniMate "Gym exercises"), else a simple body motion. */
+  demoExercise(key, seconds = 8) {
+    if (!this.char || !key) return false;
+    if (this.char.actions?.[key]) return this.testAnimation(key, seconds);
+    this.emote = { name: `ex_${key}`, t0: this.clock.elapsedTime, dur: seconds };
+    this.setExpression("happy", 2);
+    return true;
   }
 
   /** wave / dance / jump / spin / nod / shake / bow / think / celebrate */
@@ -1322,6 +1333,20 @@ export class Room {
           case "nod": if (c.head) c.head.rotation.x += Math.sin(u * Math.PI * 4) * 0.25; break;
           case "shake": if (c.head) c.head.rotation.y += Math.sin(u * Math.PI * 4) * 0.35; break;
           case "bow": turnGroup.rotation.x = s * 0.45; break;
+          case "ex_squat": case "ex_lunge": turnGroup.position.y = -Math.abs(Math.sin(t * 2.4)) * 0.22; break;
+          case "ex_deadlift": turnGroup.rotation.x = Math.abs(Math.sin(t * 2)) * 0.6; break;
+          case "ex_jumping_jacks": turnGroup.position.y = Math.abs(Math.sin(t * 6)) * 0.2; turnGroup.rotation.z = Math.sin(t * 6) * 0.06; break;
+          case "ex_pushup": case "ex_plank": turnGroup.rotation.x = 0.25 + (em.name === "ex_pushup" ? Math.abs(Math.sin(t * 2.2)) * 0.12 : 0); break;
+          case "ex_curl": case "ex_row": case "ex_press":
+            if (c.kind === "vrm") {
+              const h = c.vrm.humanoid, w = Math.abs(Math.sin(t * 2.4));
+              const bone = em.name === "ex_press" ? "UpperArm" : "LowerArm";
+              for (const [side, sign] of [["left", 1], ["right", -1]]) {
+                const b = h.getNormalizedBoneNode(side + bone);
+                if (b) { if (em.name === "ex_press") b.rotation.z = sign * (1.2 + w * 1.4); else b.rotation.x = -w * (em.name === "ex_row" ? 1 : 2); }
+              }
+            } else turnGroup.position.y = -Math.abs(Math.sin(t * 2.4)) * 0.05;
+            break;
           case "dance": case "celebrate":
             if (c.actions?.[em.name === "dance" ? "dance" : "happy"]) break;      // the model has its own dance / cheer
             turnGroup.position.y = Math.abs(Math.sin(t * 7)) * 0.12;

@@ -43,6 +43,16 @@ PROMPTS = {
     "jump": "An object jumps in place.",
     "sad": "An object hangs its head sadly.",
     "sit": "An object sits down and stays seated.",
+    # gym demos (Gym -> "Demo" makes her do the exercise next to you)
+    "squat": "An object does bodyweight squats, bending the knees and standing back up.",
+    "lunge": "An object does forward lunges, alternating legs.",
+    "deadlift": "An object bends at the hips with a flat back and stands up tall, like a deadlift.",
+    "pushup": "An object does push-ups on the floor.",
+    "curl": "An object does bicep curls with both arms.",
+    "row": "An object pulls both arms back to the chest, like a rowing exercise.",
+    "press": "An object pushes both hands straight up overhead and lowers them, like a shoulder press.",
+    "plank": "An object holds a plank on the floor.",
+    "jumping_jacks": "An object does jumping jacks.",
 }
 
 

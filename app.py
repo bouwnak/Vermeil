@@ -342,6 +342,10 @@ class Api:
                 self._exam_bedtime()
             except Exception as e:  # noqa: BLE001
                 print(f"[exam week] {e}")
+            try:
+                self._gym_reminders()
+            except Exception as e:  # noqa: BLE001
+                print(f"[gym reminders] {e}")
             time.sleep(20)
 
     def _exam_bedtime(self):
@@ -1416,7 +1420,12 @@ class Api:
 
     def progress(self, days=30):
         import focus
-        return focus.progress(days)
+        out = focus.progress(days)
+        try:
+            out["sleep"] = self.gym_sleep_report()
+        except Exception as e:  # noqa: BLE001
+            print(f"[sleep] {e}")
+        return out
 
     def study_review(self, review_id):
         return academic.get_review(review_id)
@@ -3485,6 +3494,110 @@ class Api:
         import gym
         import gymcoach
         return gymcoach.advice(gym.history(14), gym.streak())
+
+    # ---------- Gym & health round (skills/gymlife.py) ----------
+    def gym_next_weights(self):
+        """next week's weights: heavier only when every set hit the top of the rep range"""
+        import gym
+        import gymlife
+        return gymlife.next_weights(gym.get_routine()["days"], gym.last_performance)
+
+    def gym_coach_plan(self):
+        """the plan changes when you miss days: catch-up lifts or a comeback week"""
+        import gym
+        import gymlife
+        return gymlife.adjust_plan(gym._log(), gym.get_routine()["days"], gym.next_day(),
+                                   per_week=self._settings.get("gym_days_per_week"))
+
+    def gym_prs(self):
+        import gym
+        import gymlife
+        return gymlife.prs(gym._log(), gym.e1rm, gym.rep_value)
+
+    def gym_week_muscles(self):
+        import gym
+        import gymlife
+        return gymlife.week_muscles(gym._log(), gym.muscles_for)
+
+    def gym_protein(self):
+        import gym
+        import gymcoach
+        import gymlife
+        return gymlife.protein_bar(gymcoach.meals()["total"], gymlife.protein_target(gym.get_profile()))
+
+    def gym_grocery(self, country="", goal="recomp", meals=4, dishes=None, prices=True):
+        """a week of groceries from the meal plan, priced at SM Supermarket (PH) or Walmart (US)"""
+        import gym
+        import gymlife
+        plan = gym.meal_plan(goal, meals=meals, dishes=dishes)
+        if plan.get("error"):
+            return plan
+        import productivity as prod
+        country = country if country in gymlife.STORES else gymlife.country_for(prod._state().get("home_city"))
+        items = gymlife.grocery_list(plan)
+        if not prices:
+            return {"items": items, "country": country}
+
+        def ask(prompt):
+            import llm
+            return llm.ask(prompt, model="smart", json_mode=True, temperature=0.2)
+        return gymlife.grocery_prices(items, country, ask=ask)
+
+    def gym_sleep_report(self):
+        import gymcoach
+        import gymlife
+        s = gymlife.sleep_settings()
+        return gymlife.sleep_report(gymcoach._load()["sleep"], s["need"], s["bedtime"]) | {"wind_down": s["wind_down"]}
+
+    def gym_sleep_save(self, need=None, bedtime=None, wind_down=None):
+        import gymlife
+        out = gymlife.sleep_save(need, bedtime, wind_down)
+        return out if out.get("error") else self.gym_sleep_report()
+
+    def gym_supplements(self):
+        import gymlife
+        return gymlife.supp_list()
+
+    def gym_supp_save(self, item):
+        import gymlife
+        return gymlife.supp_save(item or {})
+
+    def gym_supp_remove(self, sid):
+        import gymlife
+        return gymlife.supp_remove(sid)
+
+    def gym_supp_take(self, sid, slot, undo=False):
+        import gymlife
+        return gymlife.supp_take(sid, slot, undo=bool(undo))
+
+    def gym_runs(self):
+        import gymlife
+        return gymlife.runs()
+
+    def gym_run_save(self, points, note="", kind="run"):
+        import gymlife
+        out = gymlife.run_save(points, note, kind)
+        if not out.get("error"):
+            self._xp("gym", why="GPS run saved")
+        return out
+
+    def gym_run_remove(self, rid):
+        import gymlife
+        return gymlife.run_remove(rid)
+
+    def _gym_reminders(self):
+        """wind-down before bedtime (once a day) and supplement times"""
+        import gymlife
+        now = datetime.now()
+        s = gymlife.sleep_settings()
+        today = date.today().isoformat()
+        if self._settings.get("sleep_reminder", True) and gymlife.wind_down_due(now, s["bedtime"], s["wind_down"])                 and getattr(self, "_winddown_told", "") != today:
+            self._winddown_told = today
+            self.emit({"type": "alert", "text": f"🌙 Bed at {s['bedtime']}. Time to wind down: screens off, lights low."})
+        told = self.__dict__.setdefault("_supp_told", set())
+        for key, text in gymlife.supp_due(now, told):
+            told.add(key)
+            self.emit({"type": "alert", "text": text})
 
     # ---------- Robotics & Electronics (panel + Circuit Lab page ui/electronics/lab.html) ----------
     def elec_formulas(self):

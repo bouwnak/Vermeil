@@ -58,6 +58,18 @@ export const MOTIONS = [
   ["sad", "Sad", "An object hangs its head sadly."],
   ["sit", "Sitting", "An object sits down and stays seated."],
 ];
+// Gym → "Demo" plays these while you train (same keys as skills/animate.py PROMPTS and gymlife.py DEMOS)
+export const GYM_MOTIONS = [
+  ["squat", "Squats", "An object does bodyweight squats, bending the knees and standing back up."],
+  ["lunge", "Lunges", "An object does forward lunges, alternating legs."],
+  ["deadlift", "Deadlift (hip hinge)", "An object bends at the hips with a flat back and stands up tall, like a deadlift."],
+  ["pushup", "Push-ups", "An object does push-ups on the floor."],
+  ["curl", "Bicep curls", "An object does bicep curls with both arms."],
+  ["row", "Rows / pulls", "An object pulls both arms back to the chest, like a rowing exercise."],
+  ["press", "Overhead press", "An object pushes both hands straight up overhead and lowers them, like a shoulder press."],
+  ["plank", "Plank", "An object holds a plank on the floor."],
+  ["jumping_jacks", "Jumping jacks", "An object does jumping jacks."],
+];
 
 const SIDE = (name) => (/[._]L$/i.test(name) ? 1 : /[._]R$/i.test(name) ? -1 : 0);
 const OTHER = (name) => name.replace(/([._])([LR])$/i, (m, d, s) => d + (s === "L" ? "R" : s === "l" ? "r" : s === "R" ? "L" : "l"));
@@ -791,6 +803,9 @@ class Rigger {
       ${(st.commands || []).map((c) => `<pre class="rig-cmd" title="Click to copy">${c.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</pre>`).join("")}
       ${st.commands?.length ? `<p class="note">Then close and open this box again.</p>` : ""}
       <div class="rig-motions">${MOTIONS.map(([k, label], i) => `<label class="rig-check"><input type="checkbox" value="${k}" ${i < 3 ? "checked" : ""}> ${label}</label>`).join("")}</div>
+      <button type="button" class="ghost rig-gym">🏋 Gym exercises</button>
+      <div class="rig-motions rig-gym-list" hidden>${GYM_MOTIONS.map(([k, label]) => `<label class="rig-check"><input type="checkbox" value="${k}"> ${label}</label>`).join("")}</div>
+      <p class="note rig-gym-note" hidden>In Gym, press 👯 Demo on an exercise and she does it next to you.</p>
       <p class="note">Ears and fingers are moved by the app itself, so you don't need animations for those.</p>
       <button type="button" class="primary rig-make">Make the animations</button>`;
     // one press is enough: the button greys out at once and a second press while it works does nothing
@@ -800,6 +815,11 @@ class Rigger {
       try { await fn(); } finally { btn.disabled = false; }
     });
     once(side.querySelector(".rig-talk"), () => this.autoTalk(name));
+    side.querySelector(".rig-gym").addEventListener("click", () => {       // show + tick every gym move
+      side.querySelector(".rig-gym-list").hidden = false;
+      side.querySelector(".rig-gym-note").hidden = false;
+      side.querySelectorAll(".rig-gym-list input").forEach((x) => { x.checked = true; });
+    });
     side.querySelectorAll(".rig-cmd").forEach((pre) => pre.addEventListener("click", () => {
       navigator.clipboard?.writeText(pre.textContent).then(() => this.toast("Copied - paste it into a Command Prompt."), () => {});
     }));

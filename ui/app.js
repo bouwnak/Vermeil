@@ -1506,6 +1506,13 @@ window.addEventListener("gym-session", (e) => {
   room.setGymRoom(on, startedAt, state?.ui?.gym_layout);
 });
 
+// Gym → "Demo": she does the exercise next to you (the gym room opens if it isn't showing)
+window.addEventListener("gym-demo", (e) => {
+  const { key } = e.detail || {};
+  if (!room.gym && state?.settings?.gym_room !== false) room.setGymRoom(true, null, state?.ui?.gym_layout);
+  if (!room.demoExercise(key)) toast("She can't show that one yet.");
+});
+
 // ---------------- Settings: split into tabs like the other panels ----------------
 (function settingsTabs() {
   const panel = $("panel-settings");

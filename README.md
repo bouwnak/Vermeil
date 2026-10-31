@@ -14,7 +14,35 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (31 Oct 2026, latest): Study round
+## New (31 Oct 2026, latest): Gym & health
+
+Open **Gym**. There are three new tabs:
+
+- **Coach & PRs**
+  - **📈 Next week's weights**: a weight only goes up when you did every set AND every set reached the top of the rep
+    range. Otherwise it says which sets fell short. **Save the heavier weights** puts them in your routine.
+  - **🫀 Muscles this week**: a body map. Bright = trained recently, and it fades over 7 days.
+  - **🏆 Personal records**: your best lifts with trophies; new records this week glow.
+- **Sleep & health**
+  - **🛌 Sleep**: set how many hours you need and your bedtime. You see the last 7 nights, your sleep debt and how to
+    make it up. She reminds you to wind down before bed, and your sleep also shows in **Focus → My progress**.
+  - **💊 Supplements & medicine**: add each one with its times. You get a reminder until you tap ✓.
+  - **🛒 Grocery list**: a week of food from your meal plan with prices from SM Supermarket (Philippines) or Walmart
+    (US). It picks the store from your home city; you can change it.
+- **Runs**: press **Start** and move. Like Strava, it uses GPS for distance, time, pace, steps and a map of your route.
+  Open Vermeil on your phone (Settings → Phone) to track runs outside.
+
+Also new:
+
+- **Workout** shows a coach note. If you missed days, today adds the main lifts you would skip; after a long break it
+  is a lighter comeback week.
+- **👯 Demo** on an exercise: Vermeil does it next to you in the gym room. For the real moves, open her model in the
+  rigger, press **🏋 Gym exercises** in the UniMate box, then **Make the animations**.
+- **Calories**: a protein bar for today.
+
+Nothing new to install.
+
+## New (31 Oct 2026): Study round
 
 Open **Study**. The first tab is now **My study**:
 

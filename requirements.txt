@@ -6,6 +6,7 @@
 # Vermeil's little life (31 Oct 2026) needs nothing new (the double clap uses sounddevice + numpy, already below).
 # The Focus & planning round (31 Oct 2026) needs nothing new (screen time uses psutil, her browser uses pywebview).
 # The Study round (31 Oct 2026) needs nothing new (photo notes use the vision AI already set up).
+# The Gym & health round (31 Oct 2026) needs nothing new (GPS runs use the browser's location).
 #
 #   python -m pip install -r requirements.txt
 #

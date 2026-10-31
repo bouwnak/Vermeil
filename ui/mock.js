@@ -63,7 +63,7 @@ export const mockApi = {
   focus_finish: async (m) => { focusCur = null; return { summary: `Focused ${m} min, 1 distraction.`, tips: "- Put your phone in another room.\n- Start with the hardest part." }; },
   progress: async () => { const d = [...Array(30)].map((_, i) => i); return { days: d, quiz: d.map((i) => (i % 4 ? null : 55 + i)), focus: d.map((i) => (i % 3 ? 0 : 25 + i)),
     gym: d.map((i) => (i % 2 ? 0 : 3000 + i * 40)), language: d.map((i) => (i > 25 ? 1 : 0)), totals: { focus_minutes: 400, gym_sessions: 15, language_days: 4, language_streak: 4, quizzes: 8 },
-    weak_topics: [{ topic: "Structural Analysis · shear diagrams", pct: 25 }] }; },
+    weak_topics: [{ topic: "Structural Analysis · shear diagrams", pct: 25 }], sleep: await mockApi.gym_sleep_report() }; },
   productivity_settings: async () => ({ ...prodSet }),
   save_productivity: async (d) => Object.assign(prodSet, d),
   calendar_sync_now: async () => ({ message: "Synced 12 Google Calendar events (next 90 days)." }),
@@ -516,7 +516,45 @@ export const mockApi = {
   sensei_draw_sets: async () => ({ Hiragana: "あいうえおかきくけこ", Katakana: "アイウエオ" }),
   gym_advice: async () => ({ rest: true, title: "Take a rest day", last_sleep: 5.5, avg_sleep: 6.4, tips: ["You've trained 4 days in a row. Take today off (or just walk and stretch): muscles grow while you rest.",
     "Only 5.5 h of sleep last night. Keep today lighter and aim for bed 30 min earlier.", "You average 6.4 h of sleep. 7-9 h helps recovery more than any supplement."] }),
-  gym_sleep: async () => ({ ok: true }),
+  gym_sleep: async (h) => { (st.sleepNights ||= {})[new Date().toISOString().slice(0, 10)] = +h; return { ok: true }; },
+  gym_sleep_report: async () => {
+    const need = st.sleepNeed || 8, nights = [...Array(7)].map((_, i) => { const d = new Date(Date.now() - (6 - i) * 864e5).toISOString().slice(0, 10);
+      const h = st.sleepNights?.[d] ?? [7, 6, null, 8.5, 5.5, 7.5, 6.5][i]; return { date: d, hours: h, met: h != null && h >= need }; });
+    const debt = nights.reduce((s, n) => s + (n.hours != null ? Math.max(0, need - n.hours) : 0), 0), met = nights.filter((n) => n.met).length;
+    return { need, bedtime: st.bedtime || "23:00", wind_down: 45, nights, debt, met, avg: 6.8, streak: nights.at(-1).met ? 1 : 0, pct: Math.round(met / 7 * 100),
+      tips: [`You owe ${debt} h this week. Go to bed 60 min earlier (22:00) for the next 4 nights.`, "A 20-minute nap before 3 pm helps. Longer than 90 min makes it harder to sleep tonight."],
+      summary: `${met}/7 nights with ${need} h · ${debt} h sleep debt` }; },
+  gym_sleep_save: async (need, bed) => { st.sleepNeed = +need || 8; st.bedtime = bed || "23:00"; return mockApi.gym_sleep_report(); },
+  gym_next_weights: async () => [
+    { name: "Incline Bench", day: 1, target: "8-10", sets: 3, status: "up", kg: 60, next: 62.5, why: "All 3 sets hit 10 reps. Go to 62.5 kg." },
+    { name: "Barbell squat", day: 1, target: "6-8", sets: 4, status: "keep", kg: 80, next: 80, why: "Same weight until every set reaches 8 (set 3: 7/8, set 4: 6/8)." },
+    { name: "Lat pulldown", day: 2, target: "10-12", sets: 3, status: "keep", kg: 45, next: 45, why: "Only 2 of 3 sets done last time. Same weight: do all 3 sets." },
+    { name: "Bicep curl", day: 2, target: "12", sets: 3, status: "new", kg: null, next: null, why: "No log yet: do it once first." }],
+  gym_coach_plan: async () => ({ day: 1, done: 1, per_week: 4, days_left: 2, left: 3, gap: 3, deload: false,
+    message: "You missed some days: 3 workouts left but only 2 days this week. Today adds the 2 main lifts from Day 2 (3 sets each) so nothing big is skipped.",
+    extra: [{ name: "Lat pulldown", from_day: 2, sets: 3, target: "10-12" }, { name: "Seated row", from_day: 2, sets: 3, target: "10-12" }] }),
+  gym_prs: async () => [
+    { name: "Barbell squat", e1rm: 101.3, e1rm_set: "80 kg × 8", kg: 80, reps: 8, trophy: "🥇", new: true },
+    { name: "Bench press", e1rm: 80, e1rm_set: "60 kg × 10", kg: 60, reps: 10, trophy: "🥈", new: false },
+    { name: "Lat pulldown", e1rm: 60, e1rm_set: "45 kg × 10", kg: 45, reps: 12, trophy: "🥉", new: false },
+    { name: "Plank", e1rm: 0, kg: 0, reps: 60, trophy: "", new: false }],
+  gym_week_muscles: async () => ({ quads: 1, glutes: 0.9, "upper chest": 0.71, triceps: 0.6, lats: 0.43, biceps: 0.3 }),
+  gym_protein: async () => { const target = 150, have = mockMeals.total.protein; return { have, target, pct: Math.min(100, Math.round(have / target * 100)), text: `${have} / ${target} g protein · ${Math.max(0, target - have)} g to go` }; },
+  gym_grocery: async (c) => { const ph = c !== "US"; const cur = ph ? "₱" : "$", f = ph ? 1 : 0.02;
+    const items = [["Chicken breast", "1.5 kg", 420], ["Rice", "2 kg", 110], ["Eggs", "24 eggs", 220], ["Oats", "750 g", 160], ["Vegetables", "1.75 kg", 260], ["Greek yogurt", "1 kg", 380]]
+      .map(([food, qty, p]) => ({ food, qty, grams: 0, price: Math.round(p * f * 100) / 100, link: "https://www.walmart.com/search?q=" + food }));
+    return { store: ph ? "SM Supermarket" : "Walmart", currency: cur, country: ph ? "PH" : "US", items, total: Math.round(items.reduce((s, i) => s + i.price, 0) * 100) / 100, note: "Prices are estimates. Check the store before you go." }; },
+  gym_supplements: async () => { const now = new Date().toTimeString().slice(0, 5); st.supps ||= [{ id: "a1", name: "Creatine", dose: "5 g", times: ["08:00"] }, { id: "b2", name: "Vitamin D", dose: "1000 IU", times: ["08:00", "20:00"] }];
+    st.taken ||= new Set(); return { items: st.supps.map((x) => ({ ...x, slots: x.times.map((t) => ({ time: t, taken: st.taken.has(x.id + "@" + t), due: t <= now && !st.taken.has(x.id + "@" + t) })) })),
+      week: [...Array(7)].map((_, i) => ({ date: "", taken: i === 6 ? st.taken.size : 3, want: 3 })) }; },
+  gym_supp_save: async (x) => { if (!x.name) return { error: "Name it first (e.g. Creatine, Vitamin D)." }; if (!x.times?.length) return { error: "Add at least one time like 08:00." }; st.supps.push({ id: String(Date.now()), ...x }); return mockApi.gym_supplements(); },
+  gym_supp_remove: async (id) => { st.supps = st.supps.filter((x) => x.id !== id); return mockApi.gym_supplements(); },
+  gym_supp_take: async (id, t, undo) => { undo ? st.taken.delete(id + "@" + t) : st.taken.add(id + "@" + t); return mockApi.gym_supplements(); },
+  gym_runs: async () => { st.runs ||= [{ id: "r1", date: "2026-10-30T06:10", kind: "run", km: 5.02, seconds: 1740, pace: 5.78, pace_text: "5:47 /km", steps: 6436, kcal: 301,
+      route: [[14.6, 121.0], [14.602, 121.003], [14.605, 121.004], [14.607, 121.008], [14.604, 121.011], [14.601, 121.007], [14.6, 121.0]] }];
+    return { runs: st.runs, week_km: st.runs.reduce((s, r) => s + r.km, 0), week_steps: st.runs.reduce((s, r) => s + r.steps, 0), week_count: st.runs.length, best_pace: "5:47 /km", longest: 5.02 }; },
+  gym_run_save: async (pts, note, kind) => { if (!pts || pts.length < 2) return { error: "Too short to save (under 20 m). Was location allowed?" }; st.runs.unshift({ id: String(Date.now()), date: new Date().toISOString().slice(0, 16), kind, km: 0.5, seconds: 180, pace: 6, pace_text: "6:00 /km", steps: 641, kcal: 30, route: pts.map((p) => [p[0], p[1]]) }); return mockApi.gym_runs(); },
+  gym_run_remove: async (id) => { st.runs = st.runs.filter((r) => r.id !== id); return mockApi.gym_runs(); },
   gym_meal_today: async () => structuredClone(mockMeals),
   gym_meal_photo: async () => ({ name: "Chicken adobo with rice", kcal: 650, protein: 38, carbs: 70, fat: 22, note: "A bowl of adobo over white rice, fairly sure." }),
   gym_meal_add: async (m) => { mockMeals.meals.push({ id: String(Date.now()), ...m, kcal: +m.kcal || 0, protein: +m.protein || 0 }); for (const k of ["kcal", "protein", "carbs", "fat"]) mockMeals.total[k] += +m[k] || 0; ev({ type: "quest", xp: 5, why: "Meal logged", rewards: [], quests_done: [] }); return structuredClone(mockMeals); },

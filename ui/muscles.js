@@ -106,3 +106,24 @@ export function muscleLegend(muscles = []) {
   });
   return box;
 }
+
+/** weights: {muscle: 0..1} (1 = trained today, fading over the week) -> a body map in one colour, brighter = more recent */
+export function muscleMapWeighted(weights = {}, { title = "", color = "#ff7a59" } = {}) {
+  const svg = muscleMap([], { title });
+  const level = {};
+  for (const [m, v] of Object.entries(weights)) {
+    const k = String(m).toLowerCase().trim();
+    for (const name of ALIASES[k] || [k]) if (SHAPES[name]) level[name] = Math.max(level[name] || 0, Number(v) || 0);
+  }
+  // walk the shapes in the same order muscleMap drew them
+  const nodes = [...svg.querySelectorAll(".mm-muscle")];
+  let n = 0;
+  for (const [name, shapes] of Object.entries(SHAPES)) {
+    for (let s = 0; s < shapes.length; s++, n++) {
+      const v = level[name];
+      if (v) { nodes[n].style.fill = color; nodes[n].style.fillOpacity = String(0.2 + 0.8 * v); nodes[n].classList.add("on"); }
+    }
+  }
+  svg.setAttribute("aria-label", Object.keys(weights).length ? `Trained this week: ${Object.keys(weights).join(", ")}` : "Nothing trained this week");
+  return svg;
+}
