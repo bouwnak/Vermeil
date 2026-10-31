@@ -7,6 +7,16 @@ import { Nav } from "./nav.js";
 
 const rnd = (s) => { let x = Math.sin(s * 12.9898) * 43758.5453; return x - Math.floor(x); };
 
+/** the light for a place. When the day/night clock (not the map itself) makes it dusk or night, the daytime colours are
+ * swapped for evening or moonlit ones. */
+export function atmo(L) {
+  const a = { sky: L.sky, fog: L.fog, sun: L.sun, ambient: L.ambient, ground: L.ground[0], time: L.time };
+  if (!L.clocked) return a;
+  const fog = L.fog || ["#cfe9d0", 30, 95];
+  if (L.time === "night") return { ...a, sky: ["#060a1e", "#1c2648"], fog: ["#121a30", fog[1] * 0.8, fog[2] * 0.85], sun: "#9fb2ff", ambient: "#44558f" };
+  return { ...a, sky: ["#3a2a5a", "#ff9a6a"], fog: ["#c88a78", fog[1], fog[2]], sun: "#ffb27a", ambient: "#9a7ab0" };
+}
+
 export class WorldScene {
   constructor(engine, vfx, audio) {
     this.engine = engine;
@@ -80,7 +90,7 @@ export class WorldScene {
     // the solid things (rocks, trunks, walls...) as circles, so a walker's body - not just its centre - stays out of them
     this.blockers = L.objects.filter((o) => o.c > 0.15).map((o) => [o.x, o.z, o.c]);
     const night = L.time === "night" || L.time === "dark" || L.time === "dusk";
-    this.engine.setAtmosphere({ sky: L.sky, fog: L.fog, sun: L.sun, ambient: L.ambient, ground: L.ground[0], time: L.time });
+    this.engine.setAtmosphere(atmo(L));
     this.makeGround(L);
     this.makePaths(L);
     this.makeWater(L);

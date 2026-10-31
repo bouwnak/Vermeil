@@ -37,10 +37,12 @@ from paths import data_file
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PHONE_DIR = os.path.join(ROOT, "ui", "phone")
+GAMES_DIR = os.path.join(ROOT, "ui", "games")         # the retro player + emulator, shared with the phone
 STATE_FILE = data_file("phone.json")
 TOOLS_DIR = os.path.join(ROOT, "tools", "cloudflared")
 PORT = int(os.environ.get("PHONE_PORT", "8790"))
 MAX_JSON = 64 * 1024
+MAX_SAVE = 32 * 1024 * 1024         # a retro game's save state sent from the phone
 MAX_AUDIO = 8 * 1024 * 1024
 MAX_UPLOAD = 300 * 1024 * 1024        # a file sent to the Study library (lecture videos can be big)
 STATIC = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -128,6 +130,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             path = "/phone/index.html"
         if path == "/sw.js":                                   # the service worker must sit at the top to cover the app
             path = "/phone/sw.js"
+        if path.startswith("/phone/retro/"):
+            return self._retro_file(urllib.parse.unquote(path[len("/phone/retro/"):]))
         m = re.fullmatch(r"/phone/([a-z0-9_-]+\.[a-z]+)", path)
         ext = os.path.splitext(m.group(1))[1] if m else ""
         file = os.path.join(PHONE_DIR, m.group(1)) if m else ""
@@ -137,6 +141,29 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             data = f.read()
         extra = {"Service-Worker-Allowed": "/"} if m.group(1) == "sw.js" else None
         return self._send(200, data, STATIC[ext], extra)
+
+    def _retro_file(self, rel):
+        """the retro player, the emulator and your downloaded games (ui/games), for playing on the phone. The phone's
+        retro screen puts the key in a cookie, because the emulator loads its own files and can't add the key header."""
+        srv = self.server.owner
+        cookie = dict(c.strip().split("=", 1) for c in (self.headers.get("Cookie") or "").split(";") if "=" in c)
+        if srv.locked_until > time.time():
+            return self._send(429, {"error": "Too many wrong keys. Wait a minute."})
+        if not key_ok(cookie.get("vk"), srv.key()):
+            srv.failed()
+            return self._send(401, {"error": "not connected"})
+        parts = rel.split("/")
+        allowed = rel == "player.html" or parts[0] in ("emulatorjs", "roms")
+        if not allowed or any(p in ("", ".", "..") for p in parts) or not all(re.fullmatch(r"[\w .()\[\]+,'&!-]+", p) for p in parts):
+            return self._send(404, {"error": "not found"})
+        file = os.path.join(GAMES_DIR, *parts)
+        if not os.path.isfile(file) or not os.path.realpath(file).startswith(os.path.realpath(GAMES_DIR) + os.sep):
+            return self._send(404, {"error": "not found"})
+        import mimetypes
+        with open(file, "rb") as f:
+            data = f.read()
+        ctype = STATIC.get(os.path.splitext(file)[1].lower()) or mimetypes.guess_type(file)[0] or "application/octet-stream"
+        return self._send(200, data, ctype)
 
     def do_POST(self):
         srv = self.server.owner
@@ -153,7 +180,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
         upload = name == "upload"
         audio = not upload and (ctype.startswith("audio/") or ctype == "application/octet-stream")
-        if n > (MAX_UPLOAD if upload else MAX_AUDIO if audio else MAX_JSON):
+        if n > (MAX_UPLOAD if upload else MAX_AUDIO if audio else MAX_SAVE if name == "retro_save" else MAX_JSON):
             return self._send(413, {"error": "That file is too big (300 MB at most)." if upload else "too big"})
         raw = self.rfile.read(n) if n else b""
         if upload:

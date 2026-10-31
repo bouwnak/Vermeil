@@ -13,6 +13,7 @@ if os.environ.get("GAME_NO_AI") == "1":
     from game import ai
     ai.disable(True)
 API = GameAPI()
+_GN = type("GN", (), {"_xp": lambda self, *a, **k: {}})()        # stands in for the Vermeil window in Game Night calls
 
 
 class H(http.server.SimpleHTTPRequestHandler):
@@ -51,6 +52,12 @@ class H(http.server.SimpleHTTPRequestHandler):
                   "games_add_file": lambda p=None: {**(mygames.add_path(p) if p else {"error": "Pick a file in the app (browser test: pass a path)."}), **mygames.list_games()},
                   "games_add_url": lambda u: {**mygames.add_url(u), **mygames.list_games()},
                   "games_launch": lambda g: {"ok": True, "name": "(test: not started)"}}.get(name)
+        if name.startswith("gn_") or name == "mm":   # Game Night (ui/games/night.html), its scores kept in the test folder
+            import gamenight
+            gamenight.FILE = os.path.join(os.environ["GAME_SAVE_DIR"], "gamenight.json")
+            import app as vermeil_app
+            fn = getattr(vermeil_app.Api, name, None)
+            fn = fn and functools.partial(fn, _GN)
         if name == "dev_preview_image":               # save a game picture for the Games hub (ui/games/img/<name>.jpg)
             def fn(pic, data_url):
                 import base64, re

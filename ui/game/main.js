@@ -5,12 +5,12 @@ import * as THREE from "three";
 import { Engine } from "./engine3d.js";
 import { Audio } from "./audio.js";
 import { VFX } from "./vfx.js";
-import { WorldScene } from "./world.js";
+import { WorldScene, atmo } from "./world.js";
 import { Actor, angDiff, WEAPON_ATTACK } from "./characters.js";
 import { DiceTray } from "./dice3d.js";
 import * as A from "./assets.js";
 import { call, appCall, isTest } from "./bridge.js";
-import { UI, $, h, companionName } from "./ui.js";
+import { UI, $, h, companionName, rangeText } from "./ui.js";
 import { Portraits } from "./portraits.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -263,6 +263,7 @@ class Game {
     vc.value = "rogue";
     $("cBack").onclick = () => { this.audio.sfx("close"); $("create").hidden = true; $("title").hidden = false; this.mode = "title"; this.letGo(); this.previewKey = null; this.engine.shot(...TITLE_SHOT); };
     $("cStart").onclick = () => this.startNew();
+    $("cName").oninput = () => this.nameLabel();
     $("cRandom").onclick = () => {
       this.audio.resume(); this.audio.sfx("dice");
       const b = $("cRandom"); b.classList.remove("rolling"); void b.offsetWidth; b.classList.add("rolling");
@@ -271,6 +272,7 @@ class Game {
       this.pick.cls = cls[Math.floor(Math.random() * cls.length)].id;
       const female = Math.random() < 0.5, list = NAMES[female ? "female" : "male"];
       $("cName").value = list[Math.floor(Math.random() * list.length)];
+      this.nameLabel();
       const gopts = [...$("cGenre").options].map((o) => o.value);
       $("cGenre").value = Math.random() < 0.35 ? "" : gopts[1 + Math.floor(Math.random() * (gopts.length - 1))];
       render(); this.preview();
@@ -293,9 +295,18 @@ class Game {
       if (this.previewKey !== key) { a.dispose(); return; }
       this.letGo();
       this.previewActor = a;
-      a.label.style.display = "none";
+      a.label.classList.add("hero-name");
+      this.nameLabel();
       this.seatOnLog(a);
     } catch (e) { console.warn(e); }
+  }
+
+  /** the name you typed floats over the hero on the log */
+  nameLabel() {
+    const a = this.previewActor; if (!a?.label) return;
+    const n = $("cName").value.trim();
+    a.label.querySelector(".n").textContent = n;
+    a.label.dataset.hide = n ? "" : "1";
   }
 
   /** the hero on the log goes away at once (you picked someone else, or went back to the title) */
@@ -313,6 +324,9 @@ class Game {
         vermeil_control: $("cVControl").value, skip_portal: new URLSearchParams(location.search).has("skipportal"),
         ...Object.fromEntries(Object.entries(this.audio.vol).filter(([k]) => k.endsWith("_volume"))) },
     };
+    const slot = await this.pickSlot();
+    if (slot === false) return;
+    if (slot) opts.slot = slot;
     $("cStart").disabled = true;
     this.loading("The Dungeon Master is dreaming up your world…");
     const r = await call("new", opts);
@@ -324,6 +338,19 @@ class Game {
     if (r.state.settings.skip_portal) return this.enterWorld(r.intro);
     await this.portalCinematic(r);
     await this.enterWorld(r.intro);
+  }
+
+  /** three campaigns can run at once, each in its own slot. All full: pick one to replace (false = cancelled) */
+  async pickSlot() {
+    const c = await call("campaigns");
+    if (c.error || c.free) return c.free || null;
+    return new Promise((res) => {
+      const row = (s) => h("div", { class: "save" }, h("div", {}, h("b", {}, `Campaign ${s.slot}`),
+        h("div", { class: "muted" }, `${s.title || "Adventure"} · ${s.player} Lv ${s.level} ${s.cls} · ${s.location}`)),
+        h("button", { class: "small danger", onclick: () => { if (confirm(`Replace campaign ${s.slot} (${s.player})? It will be gone.`)) { this.ui.closeDialog(); res(s.slot); } } }, "Replace"));
+      this.ui.dialog("All three campaign slots are in use", [h("p", {}, "Each adventure keeps its own slot. Pick one to replace, or go back and keep them all."), ...c.slots.map(row)],
+        [{ label: "Go back", fn: () => res(false) }]);
+    });
   }
 
   loading(text) {
@@ -575,6 +602,7 @@ class Game {
     this.engine.warmUp();
     await Promise.race([new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))), sleep(700)]);
     this.builtId = loc.id;
+    await this.syncPet();
     this.loadScreen({ p: 1, count: "Ready" });
     await sleep(200);
     this.hideLoad();
@@ -741,7 +769,7 @@ class Game {
         const dx = mx * Math.cos(yaw) + mz * Math.sin(yaw), dz = -mx * Math.sin(yaw) + mz * Math.cos(yaw);
         const len = Math.hypot(dx, dz);
         const run = k.shift || this.run;
-        const step = (run ? 5.6 : 3) * dt;
+        const step = (run ? 5.6 : 3) * (this.riding ? 1.6 : 1) * dt;
         const p = this.player;
         const [nx, nz] = this.world.collide(p.pos.x + (dx / len) * step, p.pos.z + (dz / len) * step);   // slide around rocks and trunks
         if (this.world.nav.walkable(nx, nz)) { p.pos.x = nx; p.pos.z = nz; }
@@ -749,11 +777,13 @@ class Game {
         else if (this.world.nav.walkable(p.pos.x, nz)) p.pos.z = nz;
         p.path = [];
         p.wantHeading = Math.atan2(dx, dz);
-        p.speed = run ? 5.6 : 3;
+        p.speed = (run ? 5.6 : 3) * (this.riding ? 1.6 : 1);
         this.manual = true;
       } else if (this.manual) { this.player.speed = 0; this.manual = false; }
     }
+    this.petFollow(dt);
     for (const a of this.party.values()) a.update(dt);
+    this.petActor?.update(dt);
     this.titleV?.update(dt); this.previewActor?.update(dt); this.cineHero?.update(dt);
     for (const a of this.npcs.values()) { if (this.mode === "explore") this.npcLife(a, dt, t); this.lodUpdate(a, dt); }
     for (const a of this.animals) { this.animalLife(a, dt); this.lodUpdate(a, dt); }
@@ -955,7 +985,8 @@ class Game {
   }
 
   labels() {
-    const all = [...this.party.values(), ...this.npcs.values(), ...this.groups.flatMap((g) => g.actors), ...this.foes.values()];
+    const all = [...this.party.values(), ...this.npcs.values(), ...this.groups.flatMap((g) => g.actors), ...this.foes.values(),
+      ...(this.mode === "create" && this.previewActor ? [this.previewActor] : []), ...(this.petActor ? [this.petActor] : [])];
     const cam = this.engine.camera.position;
     for (const a of all) {
       if (!a.label) continue;
@@ -1178,7 +1209,7 @@ class Game {
     const list = r.saves || [];
     const running = !!this.state && this.state.status === "active";
     $("saveList").replaceChildren(...list.map((s) => h("div", { class: "save" },
-      h("div", {}, h("b", {}, s.slot === "auto" ? "Autosave" : `Slot ${s.slot}`), h("div", { class: "muted" }, s.empty ? "Empty" : s.damaged ? "Damaged save" :
+      h("div", {}, h("b", {}, s.slot === "auto" ? "Autosave" : `Campaign ${s.slot}${this.state?.slot === s.slot && running ? " (this one)" : ""}`), h("div", { class: "muted" }, s.empty ? "Empty" : s.damaged ? "Damaged save" :
         `${s.title || "Adventure"} · ${s.player} Lv ${s.level} ${s.cls} · ${s.location} · ${Math.round((s.play_seconds || 0) / 60)} min${s.status === "complete" ? " · finished" : ""}`)),
       h("div", { class: "btns" },
         running && s.slot !== "auto" ? h("button", { class: "small", onclick: async () => {
@@ -1279,7 +1310,9 @@ class Game {
       h("div", { class: "test-row" }, h("input", { id: "tLevel", type: "number", min: 1, max: 100, value: st.party[0]?.level || 1, style: "width:80px" }),
         btn("⬆ Set party level", () => run("level", +$("tLevel").value)),
         btn("💰 +1000 gold", () => run("gold", 1000)), btn("❤ Full heal", () => run("heal")),
-        btn("🏆 Win this fight", () => run("win")), btn("🃏 Offer Mythic cards", () => run("mythic"))),
+        btn("🏆 Win this fight", () => run("win")), btn("🃏 Offer Mythic cards", () => run("mythic")),
+        btn("🐾 A beast to tame", () => run("pet")), btn("🔨 Crafting materials", () => run("materials")),
+        btn("🌙 Make it night", () => run("clock", 22)), btn("☀️ Make it morning", () => run("clock", 7))),
     );
   }
 
@@ -1387,6 +1420,10 @@ class Game {
           case "recruit_full": await this.recruitDialog(e, true); break;
           case "recruit": await this.onRecruit(e); break;
           case "monster_offer": await this.monsterOffer(e); break;
+          case "tame_offer": await this.tameDialog(e, newState); break;
+          case "tamed": this.banner("Tamed!", `${e.pet.name} is yours${e.pet.perk === "ride" ? " - you can ride it" : ""}`, "level"); this.audio.sfx("levelup"); break;
+          case "tame_failed": { const o = (newState || this.state)?.pets?.offer; if (!e.gone && o) await this.tameDialog({ ...o, text: "It sniffs the food but won't come closer. Another bite?" }, newState); break; }
+          case "pet_help": this.ui.toast(e.text, "good"); break;
           case "dismiss": this.ui.toast(e.text); break;
           case "shop": this.shopDialog(e); break;
           case "trader": this.banner("A wandering trader!", e.name, "level"); this.audio.sfx("coin"); this.ui.toast(`${e.name} the trader has set up camp here. Rare goods!`, "good"); break;
@@ -1402,6 +1439,8 @@ class Game {
       } catch (err) { console.error("event failed", e, err); }
     }
     this.ui.renderHud();
+    this.syncPet();
+    this.relight();
   }
 
   nameOf(uid) {
@@ -1886,6 +1925,84 @@ class Game {
     });
   }
 
+  /** a beaten beast stayed behind: feed it something (better food = better chance) or leave it */
+  tameDialog(e, st) {
+    this.audio.sfx("levelup");
+    this.banner("A beast stays behind", `${e.name} · level ${e.level}`, "level");
+    const foods = (st || this.state)?.pets?.foods || [];
+    const best = foods.reduce((b, f) => (!b || f.bonus > b.bonus ? f : b), null);
+    const perk = { ride: "You could ride it: faster travel, fewer ambushes.", gold: "It would dig up gold after fights.", heal: "It would lick your wounds after fights." }[e.perk] || "";
+    return new Promise((res) => {
+      const pick = (uid) => async () => { this.busy = false; await this.request(() => call("tame", uid), "…"); res(); };
+      this.busy = false;
+      this.ui.dialog(`Tame the ${e.name}?`, [h("p", {}, e.text || ""), h("p", { class: "muted" }, `${perk} Better food means a better chance.`),
+        foods.length ? h("p", { class: "muted" }, "Pick the food to offer:") : h("p", { class: "muted" }, "You have no food it would eat (trail rations, bones, slime gel, hides or heartfruit).")],
+        [{ label: "Leave it", fn: pick(null) }, ...foods.slice(0, 5).map((f) => ({ label: `${f.name} ×${f.qty} (+${f.bonus}%)`, primary: f === best, fn: pick(f.uid) }))]);
+    });
+  }
+
+  /** run a pets call, then update the HUD, the open panel and the pet that walks with you */
+  async petCall(name, ...args) {
+    const r = await call(name, ...args);
+    if (r.error) { this.ui.toast(r.error, "bad"); return; }
+    if (r.state) this.state = r.state;
+    this.ui.renderHud();
+    if (this.ui.open) this.ui.renderDrawer();
+    await this.syncPet();
+  }
+
+  /** the pet you take along walks with you (and carries you when you ride it) */
+  async syncPet() {
+    const P = this.state?.pets, want = P?.pets?.find((p) => p.id === P.active);
+    const key = want && this.player ? `${want.id}|${want.model}|${want.name}|${this.builtId}` : "";
+    if (this.petKey === key) return;
+    this.petKey = key;
+    this.ride(false);
+    this.petActor?.dispose(); this.petActor = null;
+    if (!key || !want.model) return;
+    try {
+      const a = await Actor.create(this.world, { uid: "pet", name: want.name, model: want.model, body: want.body || "quadruped", size: want.size, team: "party" });
+      if (this.petKey !== key) { a.dispose(); return; }
+      a.label.classList.add("pet");
+      a.pos.set(this.player.pos.x - 1.5, 0, this.player.pos.z - 1.5);
+      a.onStep = (x) => this.footstep(x);
+      this.petActor = a;
+    } catch (err) { console.warn("pet", err); }
+  }
+
+  ride(on) {
+    const P = this.player, m = this.petActor;
+    on = !!(on && m && P);
+    if (on === !!this.riding) return;
+    this.riding = on;
+    if (!P) return;
+    P.rideLift = on ? m.height * 0.62 : 0;
+    P.anim.sit(on ? 0.3 : null);
+  }
+
+  petFollow(dt) {
+    const m = this.petActor, P = this.player;
+    if (!m || !P) return;
+    this.ride(!!this.state?.pets?.riding && this.mode === "explore");
+    if (this.riding) { m.pos.x = P.pos.x; m.pos.z = P.pos.z; m.path = []; m.heading = m.wantHeading = P.heading; m.speed = P.speed; return; }
+    if (this.mode !== "explore") return;
+    const tx = P.pos.x - Math.sin(P.heading) * 1.8 - Math.cos(P.heading) * 1.3, tz = P.pos.z - Math.cos(P.heading) * 1.8 + Math.sin(P.heading) * 1.3;
+    const d = Math.hypot(tx - m.pos.x, tz - m.pos.z);
+    if (d > 2 && (!m.path.length || (m._repath = (m._repath || 0) - dt) < 0)) { m._repath = 0.6; m.goTo(tx, tz, { run: d > 5 || P.speed > 4 }); }
+    if (d > 25) { m.pos.set(tx, 0, tz); m.path = []; }
+  }
+
+  /** the clock moved on (rest, a fight, searching): relight the place without rebuilding it */
+  relight() {
+    const L = this.state?.location?.layout;
+    if (!L || this.state.location.id !== this.builtId) return;
+    const k = `${L.time}|${L.clocked}`;
+    if (this._lit === k) return;
+    const first = this._lit == null || this._litId !== this.builtId;
+    this._lit = k; this._litId = this.builtId;
+    if (!first) this.engine.setAtmosphere(atmo(L));
+  }
+
   async onRecruit(e) {
     const npcA = this.npcs.get(e.actor.npc_id) || [...this.npcs.values()].find((a) => a.info.name === e.actor.name);
     let a;
@@ -1906,7 +2023,7 @@ class Game {
     const trader = e.role === "wandering_trader";
     const refresh = (r) => { if (r.state) this.state = { ...this.state, ...r.state }; if (r.goods) goods = r.goods; if (r.services) services = r.services; this.ui.renderHud(); draw(); };
     const priceOf = (it) => Math.max(1, Math.floor(it.price));
-    const tabs = () => h("div", { class: "tabs shop-tabs" }, ...[["buy", trader ? "Rare goods" : "Buy"], ["sell", "Sell"], services.reforge ? ["reforge", "Reforge gear"] : null, services.inn ? ["inn", "Rooms"] : null].filter(Boolean)
+    const tabs = () => h("div", { class: "tabs shop-tabs" }, ...[["buy", trader ? "Rare goods" : "Buy"], ["sell", "Sell"], services.reforge ? ["reforge", "Reforge gear"] : null, services.craft ? ["craft", "Craft"] : null, services.appraise ? ["appraise", "Appraise"] : null, services.inn ? ["inn", "Rooms"] : null].filter(Boolean)
       .map(([k, l]) => h("button", { class: tab === k ? "on" : "", onclick: () => { tab = k; this.audio.sfx("click"); draw(); } }, l)));
     const buyList = () => goods.length ? h("div", { class: "shop-grid" }, ...goods.map((it) => this.ui.itemRow(it, [h("span", { class: "price" }, `${priceOf(it)}g`),
       h("button", { class: "small", disabled: this.state.gold < priceOf(it) ? "" : null, onclick: async () => {
@@ -1915,7 +2032,7 @@ class Game {
     const sellList = () => {
       const inv = (this.state.inventory || []).filter((i) => !i.quest && !i.equipped_by && i.slot !== "currency");
       return inv.length ? h("div", { class: "shop-grid" }, ...inv.slice(0, 30).map((it) => this.ui.itemRow(it, [h("span", { class: "price" }, `${Math.max(1, Math.floor(it.value / 2))}g`),
-        h("button", { class: "small", onclick: async () => { const r = await call("sell", it.uid); if (r.error) { this.ui.toast(r.error, "bad"); return; } this.audio.sfx("coin"); refresh(r); } }, "Sell")]))) : h("p", { class: "muted" }, "Nothing to sell (worn gear and quest items can't be sold).");
+        h("button", { class: "small", onclick: async () => { const r = await call("sell", it.uid, e.npc); if (r.error) { this.ui.toast(r.error, "bad"); return; } this.audio.sfx("coin"); refresh(r); } }, "Sell")]))) : h("p", { class: "muted" }, "Nothing to sell (worn gear and quest items can't be sold).");
     };
     const reforgeList = () => h("div", {}, h("p", { class: "muted" }, "The smith hammers your gear stronger: every bonus goes up, up to +5. Worn items can be reforged too."),
       h("div", { class: "shop-grid" }, ...(services.reforge || []).map((r) => {
@@ -1926,6 +2043,40 @@ class Game {
           if (npc) { npc.anim.play("attack"); this.vfx.burst(npc.pos.clone().add(V3(0, 1, 0)), "fire", 25, 2, 0.3, 0.5); }
           refresh(x); } }, r.maxed ? "Done" : "Reforge")]);
       })));
+    const smithHit = () => { this.audio.voiceFx("clang"); if (npc) { npc.anim.play("attack"); this.vfx.burst(npc.pos.clone().add(V3(0, 1, 0)), "fire", 25, 2, 0.3, 0.5); } };
+    const craftList = () => {
+      const C = services;                 // { materials, points, craft: [...] }
+      return h("div", {}, h("p", { class: "muted" }, `Combine gear with materials to make it one rarity better. You have ${C.points} material points `
+        + `(${C.materials.map((m) => `${m.name} ×${m.qty}`).join(", ") || "none - beasts drop hides, bones, gel and teeth"}). The new piece comes out unappraised.`),
+        h("div", { class: "shop-grid" }, ...C.craft.map((r) => {
+          const it = (this.state.inventory || []).find((x) => x.uid === r.uid) || r;
+          const no = r.maxed || r.worn_by || C.points < r.need || this.state.gold < r.cost;
+          return this.ui.itemRow(it, [h("span", { class: "price" }, r.maxed ? "legendary" : r.worn_by ? "worn" : `${r.need} pts + ${r.cost}g → ${r.to}`),
+            h("button", { class: "small", disabled: no ? "" : null, title: r.worn_by ? `Take it off ${r.worn_by} first` : "", onclick: async () => {
+              const x = await call("craft", e.npc, r.uid); if (x.error) { this.ui.toast(x.error, "bad"); return; }
+              smithHit(); this.audio.sfx("levelup"); this.ui.toast(`Crafted: ${x.result.item.name} (unappraised)`, "good");
+              tab = "appraise"; refresh(x); } }, "Craft")]);
+        })));
+    };
+    const appraiseList = () => h("div", {}, h("p", { class: "muted" }, "Appraising rolls the stats anywhere inside their range - the same item can come out stronger or weaker. "
+      + "Rolls near the top are boosted. Appraise again (it costs more) and choose: keep the old stats or take the new ones."),
+      h("div", { class: "shop-grid" }, ...services.appraise.filter((r) => Object.keys(r.ranges || {}).length).map((r) => {
+        const it = (this.state.inventory || []).find((x) => x.uid === r.uid) || r;
+        const now = r.appraised ? Object.entries(r.bonus || {}).map(([k, v]) => `${k} ${v}`).join(", ") : "?";
+        const row = this.ui.itemRow(it, [r.grade ? h("span", { class: `grade ${r.grade}`, title: "S is the best roll, D the worst" }, r.grade) : null,
+          h("span", { class: "price", title: `Now: ${now}` }, `${rangeText(r.ranges)} · ${r.cost}g`),
+          h("button", { class: "small", disabled: r.reroll || this.state.gold < r.cost ? "" : null, onclick: async () => {
+            const x = await call("appraise", e.npc, r.uid); if (x.error) { this.ui.toast(x.error, "bad"); return; }
+            smithHit(); this.audio.sfx(x.result.roll.grade === "S" ? "levelup" : "coin");
+            if (x.result.first) this.ui.toast(`Grade ${x.result.roll.grade}: ${Object.entries(x.result.roll.bonus).map(([k, v]) => `${k} ${v}`).join(", ")}${x.result.roll.boosted.length ? " - boosted!" : ""}`, "good");
+            refresh(x); } }, r.grade ? "Appraise again" : "Appraise")].filter(Boolean));
+        if (!r.reroll) return row;
+        const cmp = (bonus, other) => h("div", {}, ...Object.entries(bonus).map(([k, v]) => h("div", { class: v > (other[k] ?? v) ? "up" : v < (other[k] ?? v) ? "down" : "" }, `${k} ${v}`)));
+        const choose = (take) => async () => { const x = await call("appraise_choose", e.npc, r.uid, take); if (x.error) { this.ui.toast(x.error, "bad"); return; } this.audio.sfx(take ? "levelup" : "click"); refresh(x); };
+        return h("div", {}, row, h("div", { class: "appraise-pick" },
+          h("div", {}, h("b", {}, "Keep "), h("span", { class: `grade ${r.grade}` }, r.grade), cmp(r.bonus || {}, r.reroll.bonus), h("button", { class: "small", onclick: choose(false) }, "Keep these")),
+          h("div", {}, h("b", {}, "New roll "), h("span", { class: `grade ${r.reroll.grade}` }, r.reroll.grade), cmp(r.reroll.bonus, r.bonus || {}), h("button", { class: "small", onclick: choose(true) }, "Take the new roll"))));
+      })));
     const innPanel = () => h("div", {}, h("p", {}, services.inn.what), h("button", { class: "big", disabled: this.state.gold < services.inn.cost ? "" : null, onclick: async () => {
       this.ui.closeDialog(); this._shopOpen = false;
       const r = await this.request(() => call("inn", e.npc), "Resting at the inn…");
@@ -1935,7 +2086,7 @@ class Game {
     const draw = () => {
       body.replaceChildren(
         h("div", { class: "shop-head" }, trader ? h("span", { class: "trader-tag" }, "Wandering trader — rare goods, leaves when you do") : null, h("span", { class: "price" }, `You have ${this.state.gold} gold`)),
-        tabs(), tab === "buy" ? buyList() : tab === "sell" ? sellList() : tab === "reforge" ? reforgeList() : innPanel());
+        tabs(), tab === "buy" ? buyList() : tab === "sell" ? sellList() : tab === "reforge" ? reforgeList() : tab === "craft" ? craftList() : tab === "appraise" ? appraiseList() : innPanel());
     };
     draw();
     this.ui.dialog(`${e.name}${trader ? "'s cart" : "'s shop"}`, [body], [{ label: "Done", fn: () => { this._shopOpen = false; this.talkPartner = null; this.audio.sfx("close"); } }]);

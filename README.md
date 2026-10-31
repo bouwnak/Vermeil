@@ -14,7 +14,38 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (31 Oct 2026, latest): Gym & health
+## New (31 Oct 2026, latest): Adventure round
+
+**Games → 🎲 Game Night with Vermeil** is a new page where she plays with you:
+
+- **♟️ Chess** against her (Easy, Medium, Hard).
+- **🃏 Cards**: Color Clash (Uno-style; press **Uno!** on your last card) and Go Fish (she remembers what you asked).
+- **❓ Trivia**: pick categories; you both answer every question.
+- **🟩 Words**: five-letter guessing and hangman, in English or another language.
+- **🎨 Draw**: you draw and she guesses, or she draws and you guess.
+- **🔢 Puzzle of the day**: a new sudoku and nonogram every day, with a streak.
+- **⌨️ Typing**: a race with words from your study cards.
+- **🥁 Rhythm**: pick a song from your playlists and hit D F J K on the beat.
+- **🗝️ Escape room**: pick a study topic; each door opens with an answer.
+- **📚 Library** shows the hours you played each game (retro games too); ★ keeps favourites on top.
+- **🏆 Tournament**: every win or draw is a point this week. The winner gets a trophy on Monday.
+
+In the **Dungeon Adventure**:
+
+- Your hero's name shows over the camp log, and there are **3 save slots**.
+- **Day and night**: time passes as you walk and rest. At night, outside places can bring night monsters.
+- **Pets and mounts**: after a win against a beast she may let you tame it with food. Your pet helps (gold, healing)
+  and some can be ridden for faster travel.
+- **Crafting** at the blacksmith: gear + materials from beasts → one rarity better.
+- **Appraisal**: every stat has a low–high range, so two copies of the same weapon can roll different numbers. Rolls at
+  the top are **boosted** (grade S). Appraise again and choose the old or the new roll.
+
+Also new: **🕹 Games** on the phone plays your retro games and keeps the save in sync, and **Talk live** has 8 new
+scenes (restaurant, train, pharmacy, bank, landlord, phone call, complaint, date).
+
+Nothing new to install.
+
+## New (31 Oct 2026): Gym & health
 
 Open **Gym**. There are three new tabs:
 

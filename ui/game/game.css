@@ -163,6 +163,15 @@ input[type=range] { accent-color: var(--portal); }
 .plaque-goal:before { content: "❗ "; color: var(--gold); }
 .topright { position: fixed; top: 12px; right: 12px; display: flex; gap: 8px; align-items: center; z-index: 5; }
 .gold { background: var(--stone); border: 2px solid var(--edge); border-radius: 999px; padding: 6px 12px; font-weight: 900; color: var(--gold); }
+.clock { background: var(--stone); border: 2px solid var(--edge); border-radius: 999px; padding: 6px 12px; font-weight: 800; color: #dfe8ff; white-space: nowrap; }
+.clock.night { color: #a9b8ff; box-shadow: 0 0 12px #4a5aff55; }
+.lbl.pet .n::before { content: "🐾 "; }
+.appraise-pick { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.appraise-pick > div { flex: 1 1 180px; border: 2px solid var(--edge); border-radius: 10px; padding: 8px; }
+.appraise-pick .up { color: #7be07b; } .appraise-pick .down { color: #ff8a7a; }
+.grade { display: inline-block; min-width: 1.6em; text-align: center; border-radius: 6px; font-weight: 900; padding: 0 4px; }
+.grade.S { background: #ffd34a; color: #3a2600; } .grade.A { background: #b48cff; color: #1c0a3a; } .grade.B { background: #5ab0ff; color: #001a33; }
+.grade.C { background: #7bc77b; color: #062006; } .grade.D { background: #888; color: #111; }
 .gold:before { content: "◉ "; }
 
 .initiative { position: fixed; top: 74px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 4; }

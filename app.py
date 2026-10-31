@@ -985,7 +985,14 @@ class Api:
                 "hear": self._phone_hear, "partner_start": self._phone_partner_start,
                 "partner_reply": self._phone_partner_reply, "partner_stop": lambda p: self.partner_stop(),
                 "cards": self._phone_cards, "card_answers": self._phone_card_answers, "notices": self._phone_notices,
-                "upload": self._phone_upload}
+                "upload": self._phone_upload, **self._phone_retro()}
+
+    def _phone_retro(self):
+        """retro games on the phone: the same downloads and the same saves as on the computer"""
+        import retrogames
+        fns = {"retro_library": retrogames.library, "retro_prepare": retrogames.prepare, "retro_progress": retrogames.progress,
+               "retro_save": retrogames.save_data, "retro_load": retrogames.load_data}
+        return {k: (lambda p, f=f: f(*((p or {}).get("args") or []))) for k, f in fns.items()}
 
     # ---------- phone: offline flashcards, notifications, send a file to the Study library ----------
     def _phone_note(self, title, body):
@@ -3797,6 +3804,83 @@ class Api:
         import mygames
         return {**mygames.remove(gid), **self.games_list()}
 
+    # ---------- Game Night with Vermeil (ui/games/night.html): library, tournament, puzzles, trivia, words... ----------
+    def gn_library(self):
+        import gamenight
+        return {**gamenight.library(), "tournament": gamenight.tournament()}
+
+    def gn_record(self, game, seconds=0, result=None, detail=""):
+        import gamenight
+        res = gamenight.record(game, seconds, result, detail=detail)
+        if result == "win":
+            self._xp("game_win", xp=5, why=f"Won at {gamenight.GAMES.get(game, ('', game))[1]}")
+        return res
+
+    def gn_fav(self, game):
+        import gamenight
+        return gamenight.toggle_fav(game)
+
+    def gn_puzzle(self, kind):
+        import gamenight
+        try:
+            return gamenight.daily_puzzle(kind)
+        except ValueError as e:
+            return {"error": str(e)}
+
+    def gn_puzzle_check(self, kind, grid, seconds=0):
+        import gamenight
+        try:
+            res = gamenight.puzzle_check(kind, grid, seconds=seconds)
+        except ValueError as e:
+            return {"error": str(e)}
+        if res.get("solved") and res.get("streak"):
+            self._xp("puzzle", xp=8, why=f"Puzzle of the day ({kind})")
+        return res
+
+    def gn_trivia(self, categories=None, n=10):
+        import gamenight
+        return gamenight.trivia(categories, n)
+
+    def gn_words(self, lang="en"):
+        import gamenight
+        return gamenight.words(lang)
+
+    def gn_typing(self, n=40, deck=""):
+        import gamenight
+        return gamenight.typing_words(n, deck)
+
+    def gn_escape_topics(self):
+        import gamenight
+        return {"topics": gamenight.escape_topics()}
+
+    def gn_escape(self, topic=""):
+        import gamenight
+        return gamenight.escape_room(topic)
+
+    def gn_escape_check(self, answer, room):
+        import gamenight
+        return {"right": gamenight.escape_check(answer, room or {})}
+
+    def gn_doodle(self, exclude=None):
+        import gamenight
+        return gamenight.her_doodle(exclude or ())
+
+    def gn_doodle_check(self, doodle_id, guess):
+        import gamenight
+        return {"right": gamenight.doodle_check(doodle_id, guess)}
+
+    def gn_draw_prompt(self):
+        import gamenight
+        return gamenight.draw_prompt()
+
+    def gn_guess_drawing(self, data_uri, secret=""):
+        import gamenight
+        return gamenight.guess_drawing(data_uri, secret)
+
+    def gn_bpm(self, title, artist=""):
+        import gamenight
+        return gamenight.song_bpm(title, artist)
+
     # ---------- 3D Build Lab (ui/builder/): prompt -> robot / device in 3D, assembled and simulated ----------
     def build_design(self, prompt):
         import builder
@@ -4463,7 +4547,8 @@ class Api:
 # ---------- Dungeon Adventure game mode (game/ package, page ui/game/index.html) ----------
 GAME_METHODS = ("info", "new", "load", "save", "saves", "delete_save", "state", "action", "cancel", "combat_act", "engage", "travel",
                 "talk", "open_treasure", "rest", "search", "use_item", "equip", "unequip", "discard", "compare", "choose_card", "shop",
-                "buy", "sell", "reforge", "inn", "preload_list", "recruit", "monster_recruit", "dismiss", "settings", "test", "results", "export", "speak", "vermeil_say")
+                "buy", "sell", "reforge", "inn", "preload_list", "recruit", "monster_recruit", "dismiss", "settings", "test", "results", "export", "speak", "vermeil_say",
+                "pets", "tame", "pet_set", "pet_ride", "pet_release", "pet_rename", "craft", "appraise", "appraise_choose", "campaigns")
 
 
 def _game_api(self):

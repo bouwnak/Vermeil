@@ -487,3 +487,58 @@ async function start() {
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 start();
+
+// ---------------------------------------------------------------- retro games (the computer's player, emulator and saves)
+// The emulator loads its own files and can't send the key header, so the key goes in a cookie for /phone/retro/ only.
+window.retroHost = {
+  async call(name, ...args) { try { return await api(name, { args }); } catch (e) { return { error: e.message }; } },
+  accent: () => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#3e8eff",
+  started(msg) { $("retroInfo").textContent = typeof msg === "string" ? msg : ""; },
+  saved() { toast("Saved — it's on your computer too."); },
+  failed(text) { toast(text); closeRetro(); },
+  poke() {},
+};
+async function loadRetro() {
+  const box = $("retroList");
+  box.textContent = "Loading…";
+  let lib;
+  try { lib = await api("retro_library", { args: [] }); } catch (e) { box.textContent = e.message; return; }
+  const seen = new Set(), games = [];
+  for (const g of [...(lib.favorites || []), ...(lib.recent || [])]) if (g.url && !seen.has(g.url)) { seen.add(g.url); games.push(g); }
+  box.textContent = games.length ? "" : "No games yet. Play one in Games → Retro Games on your computer first.";
+  for (const g of games) {
+    const b = document.createElement("button");
+    b.textContent = g.title || g.name || "Game";
+    b.append(Object.assign(document.createElement("small"), { textContent: [g.platform, g.saved ? "💾 saved" : ""].filter(Boolean).join(" · ") }));
+    b.onclick = () => playRetro(g);
+    box.append(b);
+  }
+}
+async function playRetro(g) {
+  document.cookie = "vk=" + KEY + "; path=/phone/retro; SameSite=Strict; max-age=86400";
+  $("retroInfo").textContent = "Getting " + (g.title || "the game") + " ready…";
+  try {
+    const info = await api("retro_prepare", { args: [g] });
+    for (let i = 0; i < 600; i++) {                     // the computer downloads the game first (if it's new)
+      const p = await api("retro_progress", { args: [info.id, info.bios || "", info.parent || ""] });
+      if (p.error) throw new Error(p.error);
+      if (p.done) break;
+      $("retroInfo").textContent = "Downloading… " + (p.total ? Math.round(p.got / p.total * 100) : 0) + "%";
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    const q = new URLSearchParams({ core: info.core, rom: info.rom, bios: info.bios || "", parent: info.parent || "", id: info.id, name: g.title || "", image: g.image || "" });
+    const f = document.createElement("iframe");
+    f.allow = "autoplay; fullscreen; gamepad"; f.src = "/phone/retro/player.html?" + q;
+    $("retroFrame").replaceChildren(f);
+    $("retroTitle").textContent = g.title || "";
+    $("retroPlay").hidden = false;
+  } catch (e) { $("retroInfo").textContent = e.message; }
+}
+async function closeRetro() {
+  const f = $("retroFrame").querySelector("iframe");
+  try { if (f) await Promise.race([f.contentWindow.backupSram?.(), new Promise((r) => setTimeout(r, 1500))]); } catch { /* not started */ }
+  $("retroFrame").replaceChildren(); $("retroPlay").hidden = true;
+  loadRetro();
+}
+$("retroClose").onclick = closeRetro;
+document.querySelector('.tabs button[data-tab="games"]').addEventListener("click", loadRetro);

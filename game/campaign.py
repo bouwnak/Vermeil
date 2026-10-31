@@ -12,7 +12,7 @@ import threading
 import time
 import uuid
 
-from . import ai, combat, companion, dm, layout, voices, world
+from . import ai, combat, companion, dm, extras, layout, voices, world
 from .actors import LEVEL_CAP, level_up, make_enemy, make_hero, make_monster_ally, make_recruit, make_vermeil, power, public, stats, VERMEIL_MODEL
 from .content import content
 from .dice import Dice, stream
@@ -57,7 +57,8 @@ class Game:
                                          "xp_earned": 0, "gold_earned": 0, "damage_dealt": 0, "damage_taken": 0, "crits": 0, "misses": 0,
                                          "major_items": [], "places_visited": 1, "treasures": 0, "recruits": []},
                 "turn": 0, "status": "active", "pending_cards": [], "card_history": [], "combat": None, "layouts": {}, "shops": {},
-                "side_quests": [], "vermeil_memory": [], "start_level": 1, "action_log": [], "level_scale": 100}
+                "side_quests": [], "vermeil_memory": [], "start_level": 1, "action_log": [], "level_scale": 100,
+                "clock": extras.START_CLOCK}
         cp = companion_profile or {}
         camp["companion"] = {k: cp.get(k) for k in ("id", "name", "persona", "model", "body", "gender")}
         camp["companion"]["name"] = (str(cp.get("name") or "").strip() or "Vermeil")[:24]
@@ -158,6 +159,8 @@ class Game:
         C = content()
         l = self.loc(lid)
         lay = self.layout_for(l["id"], self.camp.get("came_from"))
+        t = extras.sky(self.camp, l, lay.get("time", "day"))                      # the day/night clock lights open places
+        lay = dict(lay, time=t, clocked=t != lay.get("time", "day"))
         if lay.get("exits"):                          # sealed exits show a lock (the saved layout itself stays as it is)
             lay = dict(lay, exits=[dict(e, locked=self.blocked(e["to"]) if e.get("to") in self.camp["locations"] else None) for e in lay["exits"]])
         encs = []
@@ -165,7 +168,7 @@ class Game:
             if e["done"]: continue
             pts = lay["spawns"]["enemy"]
             p = pts[i % len(pts)] if pts else {"x": 8, "z": 8}
-            encs.append({"id": e["id"], "boss": e.get("boss", False), "x": p["x"], "z": p["z"],
+            encs.append({"id": e["id"], "boss": e.get("boss", False), "night": bool(e.get("night")), "x": p["x"], "z": p["z"],
                          "enemies": [{"template": t, "level": lv, "name": C.enemy(t)["name"],
                                       "model": C.available_models(C.enemy(t)["models"])[0], "body": C.enemy(t).get("body"),
                                       "size": C.enemy(t).get("size"), "sound": C.enemy(t).get("sound"), "tint": C.enemy(t).get("tint")} for t, lv in e["enemies"]]})
@@ -242,6 +245,7 @@ class Game:
             s["inventory"] = self.inventory_public()
             s["card_history"] = camp.get("card_history", [])
             s["dice_faces"] = None
+        s.update(extras.extras_public(self))
         return s
 
     # ================================================================ the main free-text action
@@ -355,7 +359,11 @@ class Game:
             if enc: enc["done"] = True
             boss_down = any((cb["enemies"].get(u) or {}).get("kind") == "boss" for u in cb["defeated"])
             self.vermeil("victory", events=ev)
+            extras.advance(self, extras.FIGHT_MINUTES, ev)
+            extras.pet_after_win(self, cb, ev)
             ev += self._monster_join_roll(cb)
+            if not self.camp.get("monster_offer"):
+                ev += extras.tame_offer_roll(self, cb)
             ev += self._quest_check()
             if boss_down and self.camp["quest"]["boss"]["defeated"]:
                 ev += self._finish_campaign()
@@ -526,6 +534,7 @@ class Game:
             chk = (intent or {}).get("check") or {"stat": "wis", "dc": 11}
             r = self._check(chk["stat"], chk["dc"], "Search")
             ev = [r["event"]]
+            extras.advance(self, extras.SEARCH_MINUTES, ev)
             if r["ok"]:
                 ev += self._discover()
             else:
@@ -567,15 +576,19 @@ class Game:
             L["visited"] = L["discovered"] = True
             for x in L["links"]: self.loc(x)["discovered"] = True
             if L["safe"]: self.camp["last_safe"] = dest
-            if not first and self.dice.chance(0.45, "roaming"):
+            if not first and self.dice.chance(extras.roam_chance(self.camp), "roaming"):
                 enc = world.roaming(self.camp, L, stream(self.camp["seed"], "roam", self.camp["turn"]))
                 if enc: self.camp["layouts"].pop(dest, None) if False else None
             if first: self.camp["stats"]["places_visited"] = self.camp["stats"].get("places_visited", 0) + 1
             trader = self._trader_moves(L)
+            later = []                                     # time passes on the road; after dark night monsters may be here
+            extras.advance(self, extras.RIDE_MINUTES if extras.riding(self.camp) else extras.TRAVEL_MINUTES, later)
+            extras.maybe_night_encounter(self, L, later)
             ev.append({"type": "travel", "from": cur["id"], "to": dest, "location": self.location_public()})
             txt, fact = dm.describe(self.camp, L, first)
             self.narrate(ev, txt)
             if fact: self._fact(fact)
+            ev += later
             if first: self.vermeil("arrive", f"Arrived at {L['name']}.", events=ev)
             if trader:
                 self.narrate(ev, f"A wandering trader, {trader['name']}, has stopped here with a loaded cart. "
@@ -742,6 +755,7 @@ class Game:
                                "cost": reforge_cost(it), "maxed": it.get("plus", 0) >= REFORGE_MAX,
                                "worn_by": next((p["name"] for p in self.camp["party"] if it["uid"] in (p.get("equipment") or {}).values()), None)}
                               for it in gear]
+            out.update(extras.craft_services(self.camp))      # crafting + appraisal (game/extras.py)
         if n.get("role") in ("innkeeper", "priest") or (n.get("role") == "merchant" and self.loc(n.get("location")).get("safe")):
             out["inn"] = {"cost": self.inn_cost(), "what": "A hot meal and a safe bed: everyone fully healed, revived and refreshed."}
         return out
@@ -764,6 +778,9 @@ class Game:
             self.camp["stats"]["gold_spent"] = self.camp["stats"].get("gold_spent", 0) + cost
             ev = [{"type": "rest", "party": [public(p, self.camp) for p in self.camp["party"]]}]
             self.narrate(ev, f"You pay {cost} gold for a warm meal and soft beds. Everyone wakes up fully rested.")
+            c = self.camp.setdefault("clock", extras.START_CLOCK)       # you sleep until 07:00
+            wake = (c // extras.DAY_MINUTES + (1 if c % extras.DAY_MINUTES >= 7 * 60 else 0)) * extras.DAY_MINUTES + 7 * 60
+            extras.advance(self, wake - c, ev)
             self.vermeil("rest", events=ev)
             return ev
 
@@ -898,6 +915,7 @@ class Game:
                 p["statuses"] = []
             ev.append({"type": "rest", "party": [public(p, self.camp) for p in self.camp["party"]]})
             self.narrate(ev, "You rest. Wounds close, spirits lift." + (" The inn's stew helps." if loc["safe"] else ""))
+            extras.advance(self, extras.REST_MINUTES, ev)
             self.vermeil("rest", events=ev)
             return ev
 
@@ -961,6 +979,9 @@ class Game:
     def equip(self, actor_uid, item_uid):
         with self.lock:
             if self.in_combat(): raise GameError("No changing gear mid-fight!")
+            it = next((x for x in self.camp.get("inventory", []) if x["uid"] == item_uid), None)
+            if it and it.get("appraised") is False:
+                raise GameError(f"{it['name']} hasn't been appraised yet - a blacksmith can tell you what it really is.")
             try:
                 equip(self.camp, actor_uid, item_uid)
             except ValueError as e:
@@ -1200,6 +1221,22 @@ class Game:
                          "reason": "Test mode: Mythic cards", "kind": "boss"}
                 self.camp.setdefault("pending_cards", []).append(offer)
                 ev.append({"type": "card_offer", "offer": card_offer_public(offer)})
+            elif cmd == "pet":                                       # a tamed mount (or the beast you name)
+                t = arg if arg in content().enemies else "raptor"
+                e = content().enemy(t)
+                self.camp["tame_offer"] = {"template": t, "name": e["name"], "level": 1, "model": (content().available_models(e["models"]) or [None])[0], "body": e.get("body"),
+                                           "size": e.get("size"), "perk": extras.perk_for(t, e.get("body")), "tries": 0}
+                add(self.camp, make_item(self.camp, "heartfruit", qty=3))
+                ev.append({"type": "tame_offer", **self.camp["tame_offer"], "text": f"Test mode: a {e['name']} waits to be tamed (3 heartfruit added)."})
+            elif cmd == "materials":
+                for base, n in (("scrap_metal", 4), ("monster_hide", 4), ("crystal", 3), ("gold_ingot", 2)):
+                    add(self.camp, make_item(self.camp, base, qty=n))
+                self.narrate(ev, "Test mode: crafting materials added (scrap, hides, crystals, gold ingots).", kind="system")
+            elif cmd == "clock":
+                h = max(0, min(23, int(arg if arg is not None else 22)))
+                c = self.camp.get("clock", extras.START_CLOCK)
+                extras.advance(self, (h * 60 - c % extras.DAY_MINUTES) % extras.DAY_MINUTES, ev)
+                self.narrate(ev, f"Test mode: it is now {extras.clock_text(self.camp['clock'])}.", kind="system")
             elif cmd == "heal":
                 for p in self.camp["party"]:
                     st = stats(p, self.camp)
@@ -1225,7 +1262,10 @@ class Game:
 
     def _autosave(self):
         try:
-            if not self.in_combat(): self.save("auto")
+            if not self.in_combat():
+                self.save("auto")
+                if self.camp.get("slot") in extras.CAMPAIGN_SLOTS:     # each campaign also keeps its own slot up to date
+                    self.save(self.camp["slot"])
         except Exception as e:
             print(f"[game] autosave failed: {e}")
 

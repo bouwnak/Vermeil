@@ -279,6 +279,23 @@ SCENES = {
                                     "seat and gate."),
     "friend": ("🎌 Making a new friend", "Role-play: we just met at school. Introduce yourselves, hobbies, favourite "
                                         "food and plans for the weekend."),
+    "restaurant": ("🍜 Ordering food abroad", "Role-play: you are a waiter at a local restaurant abroad and I am a tourist "
+                                             "who doesn't know the dishes. Explain the menu, ask about allergies and spice, "
+                                             "take my order and bring the bill."),
+    "train": ("🚆 At the train station", "Role-play: you work at the ticket counter. Help me buy a ticket, choose the "
+                                        "time and platform, and explain a transfer."),
+    "pharmacy": ("💊 At the pharmacy", "Role-play: you are a pharmacist. Ask what I need, how I feel, and explain how "
+                                      "to take the medicine."),
+    "bank": ("🏦 At the bank", "Role-play: you are a bank clerk. Help me open an account or change money; ask for my ID "
+                              "and explain the fees."),
+    "landlord": ("🏠 Renting an apartment", "Role-play: you are a landlord showing me an apartment. Talk about rent, the "
+                                           "deposit, rules and when I can move in."),
+    "phone": ("📞 A phone call", "Role-play: you are a receptionist on the phone. I call to book an appointment; ask my "
+                                "name, the day and time, and confirm it."),
+    "complaint": ("🧾 Returning something", "Role-play: you are a shop clerk. I want to return something broken. Ask what "
+                                           "happened, ask for the receipt, and offer a refund or exchange."),
+    "date": ("💐 A first date", "Role-play: we are on a relaxed first date at a café. Ask about my hobbies, dreams and "
+                               "favourite things, and share yours. Keep it sweet and simple."),
 }
 
 

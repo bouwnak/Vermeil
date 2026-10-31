@@ -282,6 +282,29 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## ➕ Extra features you asked for in chat
 ✅ 3D cozy room (themes, furniture editor, day/night by your clock, brightness) · ✅ characters (Vermeil, Pip, Robo, your own GLB/VRM) · ✅ planner (calendar, tasks, reminders, birthdays, shopping, notes) · ✅ study (library, review sets, research, assignment help) · ✅ coding helper · ✅ gym mode (your routine, timer, editor, history, best reps, +2.5 kg upgrade, sessions) · ✅ journal & think · ✅ voice commands · ✅ top-left status pills · ✅ night theme with sounds and effects · ✅ Groq → Ollama automatic switch · ✅ saved preferences · ✅ package cleanup script · ✅ smaller AI requests: only the tools that fit each message are sent (~1–2k tokens instead of ~9k), so Groq lasts longer and the local AI isn't overloaded
 
+## 🆕 31 Oct 2026: Adventure round
+
+| Feature | Where | How |
+|---|---|---|
+| 🏷️ Hero name over the log | Dungeon Adventure → camp | Your name floats over your seat |
+| 💾 3 save slots | Dungeon Adventure → start | Pick a slot for each adventure |
+| 🌙 Day and night | Dungeon Adventure | A clock; night monsters outside after dark |
+| 🐺 Pets and mounts | Dungeon Adventure → after a win | Tame with food; gold/heal perks; ride for faster travel |
+| ⚒️ Crafting + appraisal | Dungeon Adventure → blacksmith | One rarity up; stats roll inside a low–high range, top rolls are boosted |
+| ♟️ Chess vs Vermeil | Games → Game Night → Chess | 3 levels |
+| 🃏 Color Clash and Go Fish | Game Night → Cards | Uno-style call; she remembers your asks |
+| 🕹 Retro games on the phone | Phone → 🕹 Games | Save states synced with the PC |
+| ❓ Trivia with categories | Game Night → Trivia | AI questions; you both answer |
+| 🥁 Rhythm game | Game Night → Rhythm | Your playlist songs, D F J K |
+| 🟩 Words in several languages | Game Night → Words | Five letters and hangman |
+| 🎨 Drawing game | Game Night → Draw | She guesses yours, you guess hers |
+| 🗣️ More Talk live scenes | Study → Language → 🎙 Talk live | 8 new everyday scenes |
+| 🔢 Puzzle of the day | Game Night → Puzzle of the day | Sudoku + nonogram, streak |
+| ⌨️ Typing with study words | Game Night → Typing | Words from your cards |
+| 🗝️ Escape room | Game Night → Escape room | Doors from your study topics |
+| 📚 Library | Game Night → Library | Hours played and favourites |
+| 🏆 Weekly tournament | Game Night → Tournament | Points all week, a trophy for the winner |
+
 ## 🆕 31 Oct 2026: Gym & health
 
 | Feature | Where | How |

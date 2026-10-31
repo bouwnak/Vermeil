@@ -106,6 +106,7 @@ $("confirmYes").onclick = () => {
   setTimeout(() => { location.href = `../game/index.html${keep}`; }, 350);
 };
 $("cardRetro").onclick = () => { show("retro"); if (!rg.loaded) loadGames(); };
+$("cardNight").onclick = () => { musicStop(0.3); location.href = `night.html${keep}`; };
 
 // the big picture on the right follows the game you point at
 function preview(which) {
@@ -552,7 +553,7 @@ async function play(g, fromEl) {
 
   loader.progress(0.8);
   loader.sub("Starting the game…");
-  rg.playing = { ...g, id: info.id, image: cover };
+  rg.playing = { ...g, id: info.id, image: cover, t0: Date.now() };
   try { sessionStorage.setItem("retro_cover", cover); } catch {}
   const q = new URLSearchParams({ core: info.core, rom: info.rom, bios: info.bios || "", parent: info.parent || "", id: info.id, name: g.title, image: cover });
   const frame = document.createElement("iframe");
@@ -632,6 +633,7 @@ async function leaveGame(to = "retro") {
   document.body.classList.remove("playing");
   $("stageBar").classList.remove("show");
   call("retro_fullscreen", false);
+  if (rg.playing?.t0) call("gn_record", "retro", Math.round((Date.now() - rg.playing.t0) / 1000));   // hours in the Game Night library
   rg.playing = null;
   await loadLibrary();
   if (to === "hub") { show("hub"); $("cardRetro").focus({ preventScroll: true }); return; }

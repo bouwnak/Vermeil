@@ -7,6 +7,7 @@
 # The Focus & planning round (31 Oct 2026) needs nothing new (screen time uses psutil, her browser uses pywebview).
 # The Study round (31 Oct 2026) needs nothing new (photo notes use the vision AI already set up).
 # The Gym & health round (31 Oct 2026) needs nothing new (GPS runs use the browser's location).
+# The Adventure round (31 Oct 2026) needs nothing new (chess, puzzles and the phone retro player are built in).
 #
 #   python -m pip install -r requirements.txt
 #

@@ -86,7 +86,33 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **Gym & health (31 Oct 2026, newest)**: the owner picked ideas 81 ("plus a UniMate gym button"), 84 ("heavier only when all max reps are done in all sets"), 88, 89 ("prices from the nearest mall: SM in PH, Walmart in the US"), 91 ("required hours, make-up suggestions, progress in Focus"), 92, 93, 94 ("Strava-like GPS"), 97 and 98 from FEATURE_IDEAS.md.
+- **Adventure round (31 Oct 2026, newest)**: the owner picked ideas 102, 104, 105, 106, 107 ("an appraisal feature for chances of boosted stats … the stats should not have a fixed rate … a max range of high and low"), 126–135 and 138–140 from FEATURE_IDEAS.md. GodsWar ideas were left for later on purpose.
+  - **Dungeon Adventure** (`game/extras.py`, new):
+    - Day and night: `clock` minutes on the campaign (a new one starts at 08:00), `advance` (walking, resting, battles), `phase`, `sky`. At night outdoor places can bring night monsters (`NIGHT_MONSTERS`, `maybe_night_encounter`).
+    - Pets and mounts: after a win against a tameable beast there is a chance to tame it with food (`tame_offer_roll`, `tame`). Up to 6 pets; the active one gives a perk (gold, heal or ride). Riding means faster travel and fewer ambushes. Also `pet_set`, `pet_ride`, `pet_release`, `pet_rename`.
+    - Crafting: gear + material points + gold → one rarity better, and it comes out unappraised (`craft_services`, `craft`).
+    - Appraisal: every stat has a low–high range (`stat_ranges`). Appraising rolls anywhere in it, so the same item can come out stronger or weaker; the top 20% is "boosted", with grades S–D. Appraise again (it costs more) and choose to keep the old roll or take the new one (`appraise`, `appraise_choose`).
+    - 3 save slots (`CAMPAIGN_SLOTS`, `pick_slot`).
+  - `game/campaign.py`: the sky and clock in the state, and test_tool `pet`/`materials`/`clock`. `game/api.py`: the new calls; buy/sell return the shop services so the craft tab refreshes. `app.py` `GAME_METHODS` gains pets, tame, pet_set, pet_ride, pet_release, pet_rename, craft, appraise, appraise_choose and campaigns.
+  - UI: `ui/game/main.js` (the hero name over the camp log, the slot picker, the tame dialog, the pets panel, the craft and appraise shop tabs, a clock in the HUD), `ui/game/world.js` (`atmo`: the sky darkens at night), `ui/game/characters.js` (`rideLift`), and `ui/game/ui.js`, `index.html`, `game.css`.
+  - **Game Night with Vermeil** (`skills/gamenight.py`, new; saves to `data/gamenight.json`; the AI calls take `ask=`/`see=` so tests fake them):
+    - Library: hours, times played, wins and favourites per game (`record`, `library`, `toggle_fav`). Weekly tournament: win +3, draw +1, ISO week; the winner gets a trophy when the week rolls over (`tournament`, `_roll_week`).
+    - Puzzle of the day with a streak: sudoku (one solution, `make_sudoku`, `_sudoku_solve`) and a 10×10 nonogram (`daily_puzzle`, `puzzle_check`).
+    - Trivia with categories (`trivia`; `TRIVIA_BANK` if the AI fails). Five letters and hangman in several languages (`words`; other languages are asked from the AI once and cached).
+    - Typing words from your study cards (`typing_words`), escape rooms from your study topics (`escape_topics`, `escape_room`, `escape_check`), the drawing game both ways (`her_doodle`, `doodle_check`, `draw_prompt`, `guess_drawing` with the vision AI) and song tempos for the rhythm game (`song_bpm`, cached, folded into 70–190).
+  - `app.py`: `gn_library`, `gn_record` (+5 XP on a win), `gn_fav`, `gn_puzzle`, `gn_puzzle_check` (+8 XP), `gn_trivia`, `gn_words`, `gn_typing`, `gn_escape_topics`, `gn_escape`, `gn_escape_check`, `gn_doodle`, `gn_doodle_check`, `gn_draw_prompt`, `gn_guess_drawing`, `gn_bpm`.
+  - `ui/games/night.html`, `night.js`, `night.css` (new): tabs Library, Chess (her own engine: negamax with alpha-beta and quiescence, castling, en passant, promotion, 3 levels), Cards (Color Clash, an Uno-style game with the Uno call, and Go Fish where she remembers your asks), Trivia, Words, Draw, Puzzle of the day, Typing, Rhythm (songs from your playlists, D F J K), Escape room and Tournament. `?tab=` opens a tab. Slow AI replies are ignored if you already left the tab.
+  - `ui/games/index.html`, `games.js`, `games.css`: the Game Night card; retro games now count their play time in the library.
+  - Retro save states on the phone: `brain/phone.py` serves `/phone/retro/player.html`, `emulatorjs/**` and `roms/**` only with the `vk` key cookie (safe segments, realpath check), and saves up to 32 MB. `app._phone_retro()` adds retro_library/prepare/progress/save/load. `ui/phone/*`: a 7th tab "🕹 Games" with favourites and recent games; the save is backed up when you close. `sw.js` cache is vermeil-phone-3.
+  - `skills/sensei.py`: Talk live gains restaurant, train, pharmacy, bank, landlord, phone call, complaint and date scenes.
+  - `game_tools/dev_server.py`: `gn_*` and `mm` work with `?bridge` (a stand-in `_GN`; data goes to the test save folder).
+  - Tests:
+    - `tests/test_adventure_extras.py` (9), `tests/test_gamenight.py` (12), `tests/test_app.py` +1 (`test_game_night_wiring`).
+    - Full suite: 677 tests OK (skipped=3).
+    - Browser (dev server 8771, `?bridge`): every Game Night tab with the real AI (chess replies on Easy and Hard, Color Clash, Go Fish, trivia, five letters, hangman, both draw modes, sudoku, nonogram, typing from study cards, rhythm, an escape room door, the tournament) and the hub card. Adventure: crafting, appraise/again/choose, taming and riding, night sky.
+    - Not tried: a retro game on a real phone.
+  - No new pip packages.
+- **Gym & health (31 Oct 2026)**: the owner picked ideas 81 ("plus a UniMate gym button"), 84 ("heavier only when all max reps are done in all sets"), 88, 89 ("prices from the nearest mall: SM in PH, Walmart in the US"), 91 ("required hours, make-up suggestions, progress in Focus"), 92, 93, 94 ("Strava-like GPS"), 97 and 98 from FEATURE_IDEAS.md.
   - `skills/gymlife.py` (new). It saves to `data/gymlife.json`. The AI call takes `ask=` so tests can fake it.
     - `next_weights(days, last_fn)`: +2.5 kg (+1.25 under 10 kg) only when every planned set was done AND every set hit the top of the rep range; otherwise it says which sets fell short.
     - `adjust_plan(log, days, next_day, today, per_week)`: when there are more workouts left this week than days, today adds the next day's first 2 lifts (3 sets). After 10+ days off it is a comeback week (about 80%).

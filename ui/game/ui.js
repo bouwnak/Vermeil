@@ -23,6 +23,8 @@ const h = (tag, attrs = {}, ...kids) => {
 };
 export { $, h };
 
+/** "patk 8-14, hp 15-26" - an unappraised item's possible stats */
+export const rangeText = (r) => Object.entries(r || {}).map(([k, [lo, hi]]) => `${k} ${lo}-${hi}`).join(", ");
 const ICON = { weapon: "🗡", offhand: "🛡", armor: "🥋", accessory: "💍", consumable: "🧪", material: "💎", quest: "📜", currency: "🪙" };
 const STAT_NAMES = { hp: "Max HP", mana: "Mana / Stamina", patk: "Physical attack", matk: "Magic attack", pdef: "Physical defence", mdef: "Magic defence",
   spd: "Speed", crit: "Critical %", acc: "Accuracy", eva: "Evasion" };
@@ -41,7 +43,7 @@ export class UI {
     $("btnHist").onclick = () => { $("history").hidden = !$("history").hidden; this.renderHistory(); };
     document.addEventListener("keydown", (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
-      const map = { b: "bag", e: null, c: "stats", k: "skills", q: "quests", p: "partyp", m: "map", j: "journal", l: "log" };
+      const map = { b: "bag", e: null, c: "stats", k: "skills", q: "quests", p: "partyp", t: "pets", m: "map", j: "journal", l: "log" };
       const k = e.key.toLowerCase();
       if (map[k] !== undefined && map[k] && !$("hud").hidden) this.toggle(map[k]);
     });
@@ -72,6 +74,8 @@ export class UI {
     if (this._gold != null && this._gold !== s.gold) { const g = $("gold"); g.classList.remove("bump"); void g.offsetWidth; g.classList.add("bump"); }
     this._gold = s.gold;
     $("gold").textContent = s.gold;
+    const ck = s.clock;
+    if (ck) { const c = $("clock"); c.textContent = `${ck.icon} ${ck.text}`; c.title = `Day ${ck.day} · ${ck.phase}${s.pets?.riding ? " · riding" : ""}`; c.classList.toggle("night", ck.phase === "night"); }
     $("locName").textContent = s.location?.name || "";
     const cur = s.quest.stages.find((x) => x.current);
     $("goal").textContent = cur ? cur.objective : "The adventure is complete";
@@ -197,11 +201,11 @@ export class UI {
   renderDrawer() {
     const s = this.s; if (!s) return;
     const titles = { bag: "Backpack", equip: "Equipment", stats: "Character", skills: "Skills & abilities", cards: "Upgrade cards", quests: "Quests",
-      partyp: "Party", map: "Map", journal: "Journal", log: "Campaign log" };
+      partyp: "Party", pets: "Pets & mounts", map: "Map", journal: "Journal", log: "Campaign log" };
     $("drawerTitle").textContent = titles[this.open];
     const body = $("drawerBody");
     const fn = { bag: () => this.bag(), equip: () => this.equipPanel(), stats: () => this.statsPanel(), skills: () => this.skills(), cards: () => this.cardsPanel(),
-      quests: () => this.quests(), partyp: () => this.partyPanel(), map: () => this.mapPanel(), journal: () => this.journal(), log: () => this.logPanel() }[this.open];
+      quests: () => this.quests(), partyp: () => this.partyPanel(), pets: () => this.petsPanel(), map: () => this.mapPanel(), journal: () => this.journal(), log: () => this.logPanel() }[this.open];
     body.replaceChildren(...[].concat(fn()));
   }
 
@@ -216,8 +220,9 @@ export class UI {
   }
 
   itemRow(it, actions) {
-    const bonus = Object.entries(it.bonus || {}).map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${k}`).join(", ");
-    const sub = [it.dice ? `${it.dice} dmg` : null, bonus || null, it.element ? `${it.element}` : null, it.equipped_by ? `worn by ${it.equipped_by}` : null,
+    const bonus = it.appraised === false ? `? unappraised (${rangeText(it.ranges)})`
+      : Object.entries(it.bonus || {}).map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${k}`).join(", ");
+    const sub = [it.dice ? `${it.dice} dmg` : null, bonus || null, it.grade ? `grade ${it.grade}` : null, it.element ? `${it.element}` : null, it.equipped_by ? `worn by ${it.equipped_by}` : null,
       it.use ? useText(it.use) : null].filter(Boolean).join(" · ");
     return h("div", { class: "item", style: `--rar:${RAR[it.rarity] || "#888"}`, title: `${it.name} (${it.rarity})` },
       h("div", { class: "ic" }, ICON[it.slot] || "•"),
@@ -308,6 +313,24 @@ export class UI {
       ...q.stages.map((st) => h("div", { class: `quest ${st.done ? "done" : ""} ${st.current ? "cur" : ""}` }, st.objective, h("small", { class: "muted" }, st.location !== "???" ? `  — ${st.location}` : ""))),
       h("div", { class: "sect" }, "Side quests"),
       ...(q.side.length ? q.side.map((sq) => h("div", { class: `quest ${sq.done ? "done" : ""}` }, sq.objective, h("small", { class: "muted" }, ` — from ${sq.giver_name}, reward ${sq.reward_gold} gold`))) : [h("p", { class: "muted" }, "Talk to people - some of them need help.")]),
+    ];
+  }
+
+  /** pets you tamed: take one along (it helps after wins), ride the big ones, rename or let them go */
+  petsPanel() {
+    const g = this.g, P = this.s.pets || { pets: [] };
+    if (!P.pets.length) return [h("p", { class: "muted" }, "No pets yet. After a fight, a tired beast sometimes stays behind. Feed it (trail rations, bones, slime gel, hides, or best of all heartfruit) and it may come with you."),
+      h("p", { class: "muted" }, "Wolves, boars, raptors and dinos can be ridden: faster travel and fewer ambushes. Slimes heal, flyers find gold.")];
+    return [h("p", { class: "muted" }, `${P.pets.length}/${P.max} pets. The one you take along helps after every win and grows closer to you.`),
+      ...P.pets.map((p) => h("div", { class: `ability ${p.id === P.active ? "on" : ""}` },
+        h("b", {}, `${p.id === P.active ? "🐾 " : ""}${p.name}`), ` — Lv ${p.level} · bond ${p.bond || 0}/100`,
+        h("small", {}, (P.perks || {})[p.perk] || p.perk),
+        h("div", { class: "btns" },
+          p.id === P.active ? h("button", { class: "small", onclick: () => g.petCall("pet_set", null) }, "Leave at camp")
+            : h("button", { class: "small", onclick: () => g.petCall("pet_set", p.id) }, "Take along"),
+          p.id === P.active && p.perk === "ride" ? h("button", { class: "small", onclick: () => g.petCall("pet_ride", !P.riding) }, P.riding ? "Get off" : "Ride") : null,
+          h("button", { class: "small", onclick: () => { const n = prompt("A new name?", p.name); if (n) g.petCall("pet_rename", p.id, n); } }, "Rename"),
+          h("button", { class: "small danger", onclick: () => { if (confirm(`Let ${p.name} go? It won't come back.`)) g.petCall("pet_release", p.id); } }, "Let go")))),
     ];
   }
 

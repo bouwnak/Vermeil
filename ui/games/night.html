@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Vermeil — Game Night</title>
+<link rel="stylesheet" href="../vendor/fonts/nunito.css">
+<link rel="stylesheet" href="games.css">
+<link rel="stylesheet" href="night.css">
+</head>
+<body class="night">
+<header class="gn-head">
+  <button class="btn ghost" id="gnBack" type="button">← Games</button>
+  <div class="gn-title">
+    <p class="eyebrow">Vermeil</p>
+    <h1>Game Night</h1>
+  </div>
+  <button class="gn-cup" id="gnCup" type="button" title="This week's tournament">🏆 <span id="gnCupText">0 – 0</span></button>
+</header>
+
+<nav class="gn-tabs" id="gnTabs" role="tablist">
+  <button type="button" data-tab="library" class="on">📚 Library</button>
+  <button type="button" data-tab="chess">♟️ Chess</button>
+  <button type="button" data-tab="cards">🃏 Cards</button>
+  <button type="button" data-tab="trivia">❓ Trivia</button>
+  <button type="button" data-tab="words">🟩 Words</button>
+  <button type="button" data-tab="draw">🎨 Draw</button>
+  <button type="button" data-tab="puzzles">🔢 Puzzle of the day</button>
+  <button type="button" data-tab="typing">⌨️ Typing</button>
+  <button type="button" data-tab="rhythm">🥁 Rhythm</button>
+  <button type="button" data-tab="escape">🗝️ Escape room</button>
+  <button type="button" data-tab="tournament">🏆 Tournament</button>
+</nav>
+
+<div class="gn-her" id="gnHer" aria-live="polite"><span class="gn-face" aria-hidden="true">💜</span><p id="gnSay">Game night! Pick something and I'll play with you.</p></div>
+
+<main class="gn-stage" id="gnStage"></main>
+
+<script type="module" src="night.js"></script>
+</body>
+</html>

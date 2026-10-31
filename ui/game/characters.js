@@ -522,7 +522,7 @@ export class Actor {
     // turn smoothly toward where we want to face
     this.heading += angDiff(this.heading, this.wantHeading) * Math.min(1, dt * 8);
     this.group.rotation.y = this.heading;
-    if (this.world.ground) this.pos.y = this.world.ground(this.pos.x, this.pos.z);
+    if (this.world.ground) this.pos.y = this.world.ground(this.pos.x, this.pos.z) + (this.rideLift || 0);
     this.anim.combat = this.combat;
     if (!this.anim.dead) this.anim.setMove(this.speed, this.combat);
     this.anim.update(dt, this.group.quaternion);

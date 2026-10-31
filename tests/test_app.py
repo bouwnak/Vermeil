@@ -281,6 +281,22 @@ class AppTests(unittest.TestCase):
                 g = self.api.gym_grocery()
             self.assertEqual((g["store"], g["total"]), ("SM Supermarket", 200))
 
+    def test_game_night_wiring(self):
+        import gamenight, sensei, tempfile
+        tmp = tempfile.mkdtemp(prefix="vermeil-gn-")
+        self.addCleanup(lambda: __import__("shutil").rmtree(tmp, True))
+        with mock.patch.object(gamenight, "FILE", os.path.join(tmp, "gn.json")),                 mock.patch.object(self.api, "_xp") as xp:
+            r = self.api.gn_record("chess", 90, "win", "chess Easy")
+            self.assertEqual(r["tournament"]["you"], 3)
+            xp.assert_called_once()
+            self.assertEqual(self.api.gn_library()["tournament"]["you"], 3)
+            self.assertIn("grid", self.api.gn_puzzle("sudoku"))
+            self.assertIn("error", self.api.gn_puzzle("nope"))
+            self.assertEqual(self.api.gn_escape_check("Paris", {"answer": "paris"}), {"right": True})
+        self.assertIn("restaurant", sensei.SCENES)                                 # Talk live: ordering food abroad
+        h = self.api._phone_handlers()
+        self.assertTrue({"retro_library", "retro_prepare", "retro_progress", "retro_save", "retro_load"} <= set(h))
+
     def test_planner(self):
         with mock.patch.object(app.f1, "user_data", {"events": [{"title": "Old", "date": "2000-01-01"},
                                                                 {"title": "Soon", "date": "2999-01-01"}],

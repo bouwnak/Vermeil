@@ -359,6 +359,7 @@ body.playing { overflow: hidden; }
 
 /* ---------- your own games (the ⇅ button) ---------- */
 .my-games { display: contents; }
+.art-night { background: linear-gradient(145deg, #6b2a5c, #1d0d22); color: #fff; border-color: #a0457f; }
 .art-mine { background: linear-gradient(145deg, #3b2a6b, #120d22); color: #fff; border-color: #5a45a0; }
 .hub-card.broken { opacity: .55; }
 .dialog.wide { width: min(560px, calc(100vw - 32px)); text-align: left; }

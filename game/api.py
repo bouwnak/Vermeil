@@ -8,7 +8,7 @@ import json
 import os
 import traceback
 
-from . import ai, voices
+from . import ai, extras, voices
 from . import campaign as _campaign
 from .campaign import Game, GameError, list_saves
 from .content import content, reload
@@ -79,11 +79,15 @@ class GameAPI:
     @_safe
     def new(self, opts):
         opts = opts or {}
+        slot = extras.pick_slot(list_saves(), str(opts.get("slot") or "") or None)
+        if not slot: raise GameError("All three campaign slots are in use - delete one (or pick one to replace) first.")
         self.game = Game.new(name=opts.get("name") or "Hero", species=opts.get("species") or "human", cls_id=opts.get("cls") or "warrior",
                              genre=opts.get("genre") or None, premise=(opts.get("premise") or "").strip()[:300] or None, seed=opts.get("seed"),
                              settings={k: v for k, v in (opts.get("settings") or {}).items()}, vermeil_voice=self.vermeil_voice,
                              companion_profile=self.companion() if callable(self.companion) else None)
+        self.game.camp["slot"] = slot
         self.game.save("auto")
+        self.game.save(slot)
         self._sync_clone()
         g = self.game
         return {"intro": g.camp["intro"], "state": g.state()}
@@ -199,7 +203,7 @@ class GameAPI:
     def buy(self, npc_id, item_uid):
         g = self._g()
         r = g.buy(npc_id, item_uid)
-        return {"result": r, "goods": g.camp["shops"].get(npc_id, []), "state": g.state()}
+        return {"result": r, "goods": g.camp["shops"].get(npc_id, []), "services": g.services(npc_id), "state": g.state()}
 
     @_safe
     def reforge(self, npc_id, item_uid):
@@ -218,9 +222,10 @@ class GameAPI:
         return {"models": content().used_models()}
 
     @_safe
-    def sell(self, item_uid):
+    def sell(self, item_uid, npc_id=None):
         g = self._g()
-        return {"result": g.sell(item_uid), "state": g.state()}
+        r = g.sell(item_uid)
+        return {"result": r, "state": g.state(), **({"services": g.services(npc_id)} if npc_id else {})}
 
     @_safe
     def recruit(self, npc_id, accept, replace_uid=None):
@@ -279,6 +284,72 @@ class GameAPI:
             r = companion.react(g.camp, situation, detail)
             if r: g.say("vermeil", r["line"], companion.name(g.camp))
         return {"line": r}
+
+    # ---------------- the Adventure round: pets & mounts, crafting & appraisal, campaign slots (game/extras.py)
+    def _with(self, fn, *a):
+        g = self._g()
+        with g.lock:
+            if g.in_combat() and fn not in (extras.pets_public,): raise GameError("Not in the middle of a fight!")
+            r = fn(g, *a)
+        return r
+
+    def _smith(self, npc_id):
+        n = self._g().camp["npcs"].get(npc_id) or {}
+        if n.get("role") not in ("blacksmith", "engineer"): raise GameError("Only a blacksmith can do that.")
+
+    @_safe
+    def pets(self):
+        return extras.pets_public(self._g().camp)
+
+    @_safe
+    def tame(self, food_uid=None):
+        g = self._g()
+        ev = self._with(extras.tame, food_uid)
+        g._autosave()
+        return {"events": ev, "state": g.state()}
+
+    @_safe
+    def pet_set(self, pet_id):
+        return {"pets": self._with(extras.pet_set, pet_id), "state": self._g().state()}
+
+    @_safe
+    def pet_ride(self, on=True):
+        return {"pets": self._with(extras.pet_ride, bool(on)), "state": self._g().state()}
+
+    @_safe
+    def pet_release(self, pet_id):
+        return {"pets": self._with(extras.pet_release, pet_id), "state": self._g().state()}
+
+    @_safe
+    def pet_rename(self, pet_id, name):
+        return {"pets": self._with(extras.pet_rename, pet_id, name), "state": self._g().state()}
+
+    @_safe
+    def craft(self, npc_id, item_uid, use=None):
+        self._smith(npc_id)
+        g = self._g()
+        r = self._with(extras.craft, item_uid, use)
+        return {"result": r, "services": g.services(npc_id), "state": g.state()}
+
+    @_safe
+    def appraise(self, npc_id, item_uid):
+        self._smith(npc_id)
+        g = self._g()
+        r = self._with(extras.appraise, item_uid)
+        return {"result": r, "services": g.services(npc_id), "state": g.state()}
+
+    @_safe
+    def appraise_choose(self, npc_id, item_uid, take):
+        g = self._g()
+        r = self._with(extras.appraise_choose, item_uid, bool(take))
+        return {"result": r, "services": g.services(npc_id), "state": g.state()}
+
+    @_safe
+    def campaigns(self):
+        """the three campaign slots (each adventure keeps its own) + which one is running"""
+        saves = list_saves()
+        return {"slots": [s for s in saves if s["slot"] in extras.CAMPAIGN_SLOTS], "auto": next((s for s in saves if s["slot"] == "auto"), None),
+                "running": (self.game.camp.get("slot") if self.game else None), "free": extras.pick_slot(saves)}
 
     @_safe
     def reload_content(self):
