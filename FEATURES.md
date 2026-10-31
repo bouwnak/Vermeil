@@ -282,6 +282,20 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## ➕ Extra features you asked for in chat
 ✅ 3D cozy room (themes, furniture editor, day/night by your clock, brightness) · ✅ characters (Vermeil, Pip, Robo, your own GLB/VRM) · ✅ planner (calendar, tasks, reminders, birthdays, shopping, notes) · ✅ study (library, review sets, research, assignment help) · ✅ coding helper · ✅ gym mode (your routine, timer, editor, history, best reps, +2.5 kg upgrade, sessions) · ✅ journal & think · ✅ voice commands · ✅ top-left status pills · ✅ night theme with sounds and effects · ✅ Groq → Ollama automatic switch · ✅ saved preferences · ✅ package cleanup script · ✅ smaller AI requests: only the tools that fit each message are sent (~1–2k tokens instead of ~9k), so Groq lasts longer and the local AI isn't overloaded
 
+## 🆕 31 Oct 2026: Fixes and a livelier Game Night
+
+| Feature | Where | How |
+|---|---|---|
+| 💜 Vermeil up close | Game Night, right side | Her 3D model: follows your mouse, blinks, talks, reacts to each game; click her |
+| 🔊 Sounds and effects | Every Game Night game | Synth sounds, confetti, emoji bursts, shake on a mistake; 🔊 mutes |
+| 🎮 Adventure and Retro on their own | Games hub | Not in the Game Night library any more |
+| 🏃 GPS runs on the phone | Phone → 🏃 Run | Moved from the PC's Gym page |
+| 📐 Formulas by course | Study → My study → Formulas | AI groups lessons into courses (e.g. Engineering Economics) |
+| 📚 Citations | Study → Research | Moved from My study |
+| 🧾 Fair review XP | Study → Review | XP once a day per review, only for right answers |
+| ↔️ Scrolling tab bars | Every page with tabs | One line with a scroll bar; one click is enough |
+| 🦴 Clear UniMate errors | Kitchen → UniMate | Says why a model was skipped; stands up a lying model and tries again |
+
 ## 🆕 31 Oct 2026: Music, media and wrap-up round
 
 | Feature | Where | How |
@@ -330,7 +344,7 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 | 🛌 Sleep goal | Gym → Sleep & health, Focus → My progress | Hours needed, sleep debt, make-up tips, wind-down reminder |
 | 🧭 Coach plan that adapts | Gym → Workout | Missed days → catch-up lifts; long break → comeback week |
 | 🏆 Personal records wall | Gym → Coach & PRs | Best lifts with trophies |
-| 🏃 GPS runs | Gym → Runs | Distance, pace, steps and route (like Strava) |
+| 🏃 GPS runs | Phone → 🏃 Run | Distance, pace, steps and route (like Strava) |
 | 🫀 Muscles this week | Gym → Coach & PRs | Body map that fades over 7 days |
 | 💊 Supplement reminders | Gym → Sleep & health | Times, reminders and a "taken" button |
 
@@ -346,7 +360,7 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 | 📕 Mistake notebook | Study → My study → Mistakes | Every wrong answer saved with the right answer |
 | 🎓 Grade tracker | Study → My study → Grades | "What do I need on the final?" |
 | 🗣 Pronunciation coach | Study → Language → Say it | How to say the words you got wrong |
-| 📚 Citation helper | Study → My study → Citations | APA 7 / MLA 9 from a link or a book title |
+| 📚 Citation helper | Study → Research | APA 7 / MLA 9 from a link or a book title |
 | ✍️ Essay coach | Study → My study → Essay | Outline, then feedback on your draft |
 | 🔌 USB auto-import | Study → Library (plug in a drive) | New files sorted by subject |
 | 🎯 Exam-week mode | Study → My study → Exam week | Daily plan, bedtime reminder, lighter chat |
@@ -423,11 +437,11 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 |---|---|---|
 | XP, levels, streak, 3 daily quests, badges, Battle Pass of room items / wallpapers / titles | ✅ | Battle Pass (menu) |
 | Habit tracker (−/+, 7 days, streaks, by voice: "I drank water") | ✅ | Battle Pass → Habits |
-| Spaced flashcards (Leitner boxes 1–16 days) with combos | ✅ | Study → Play → Flashcards |
+| Spaced flashcards (Leitner boxes 1–16 days) with combos | ✅ | Study → My study → Flashcards |
 | Jump to the moment in a video lecture from a review question | ✅ | Study → Review / Play (▶ Watch where this was said) |
-| Ask my library with file/page (and video time) sources | ✅ | Study → Play → Ask my library |
-| Printable formula sheet | ✅ | Study → Play → Formula sheet |
-| 25-minute study timer, quiet work, spoken cheer at breaks, XP per block | ✅ | Study → Play → Study timer / Focus |
+| Ask my library with file/page (and video time) sources | ✅ | Study → My study → Ask my library |
+| Printable formula sheet | ✅ | Study → My study → Formulas |
+| 25-minute study timer, quiet work, spoken cheer at breaks, XP per block | ✅ | Focus |
 | Accent score per word (tap red words to hear them) | ✅ | Study → Language → Pronunciation |
 | Role-play scenes, shadowing, slow/normal speed, word bank (auto-saved, quizzed), weekly report | ✅ | Study → Language |
 | Kana/kanji/alphabet writing trainer (shape check; very similar characters can pass) | ✅ | Study → Language → ✍ Writing trainer |

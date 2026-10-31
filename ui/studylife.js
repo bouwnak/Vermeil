@@ -1,8 +1,9 @@
 // studylife.js - Study -> "My study": today's list, mistakes, grades, handwritten notes, formula sheets by subject,
-// video chapters, citations, essay coach, exam week and the curiosity corner (skills/studylife.py).
+// video chapters, flashcards, ask my library, essay coach, exam week and the curiosity corner (skills/studylife.py).
+// The citation helper (citationBox) lives in the Research tab.
 import { el, toast, busy } from "./util.js";
 
-const PARTS = ["Today", "Mistakes", "Grades", "Notes", "Formulas", "Chapters", "Citations", "Essay", "Exam week"];
+const PARTS = ["Today", "Flashcards", "Mistakes", "Grades", "Notes", "Formulas", "Chapters", "Ask my library", "Essay", "Exam week"];
 
 // pronunciation tips under a Sensei "Say it" result
 export function coachTips(coach) {
@@ -24,6 +25,25 @@ export function examReport(rep) {
       : el("p", { class: "note" }, "Every part is 70% or better. 🎉"));
 }
 
+// ---- 76 citations (shown in Study → Research)
+export function citationBox(api) {
+  const q = el("input", { placeholder: "Paste a link, or type a book title (and author)", "aria-label": "Link or book title" });
+  const out = el("div", {});
+  const copy = (label, text) => el("div", { class: "cite" }, el("b", {}, label), el("p", {}, text),
+    el("button", { class: "ghost small", onclick: () => { navigator.clipboard?.writeText(text.replace(/\*/g, "")); toast("Copied."); } }, "Copy"));
+  return el("details", { class: "research-tool" },
+    el("summary", { style: "font-weight:800;cursor:pointer;" }, "📚 Citation helper"),
+    el("p", { class: "note" }, "APA 7 and MLA 9. Check the details: italics are shown as *stars*."),
+    el("div", { class: "row" }, q, el("button", { class: "primary", onclick: async (e) => {
+      busy(e.target, true, "Looking it up…");
+      try {
+        const r = await api.study_cite(q.value);
+        if (r.error) return toast(r.error, 7000);
+        out.replaceChildren(copy("APA 7", r.apa), copy("MLA 9", r.mla));
+      } finally { busy(e.target, false); }
+    } }, "Cite")), out);
+}
+
 export function initStudyLife(api, pane, opts = {}) {
   const fact = el("div", { class: "fact-card", hidden: true });
   const bar = el("div", { class: "chips" });
@@ -31,7 +51,8 @@ export function initStudyLife(api, pane, opts = {}) {
   pane.append(fact, bar, body);
   let part = "Today";
   const draw = { Today: today, Mistakes: mistakes, Grades: grades, Notes: notes, Formulas: formulas,
-    Chapters: chapters, Citations: citations, Essay: essay, "Exam week": examWeek };
+    Chapters: chapters, Essay: essay, "Exam week": examWeek,
+    Flashcards: async () => opts.play?.open("cards", body), "Ask my library": async () => opts.play?.open("ask", body) };
   function pick(p) {
     part = p;
     bar.replaceChildren(...PARTS.map((x) => el("button", { class: x === p ? "chip on" : "chip", onclick: () => pick(x) }, x)));
@@ -49,7 +70,7 @@ export function initStudyLife(api, pane, opts = {}) {
   // ---- 62 today
   async function today() {
     const r = await api.study_today();
-    const go = { review: (i) => opts.openReview?.(i.id), cards: () => opts.showTab?.("Play"), mistakes: () => pick("Mistakes"),
+    const go = { review: (i) => opts.openReview?.(i.id), cards: () => pick("Flashcards"), mistakes: () => pick("Mistakes"),
       weak: () => opts.showTab?.("Review"), exam: () => pick("Exam week") };
     body.replaceChildren(
       el("h3", {}, r.items.length ? `Today: about ${r.minutes} minutes` : "Nothing due today 🎉"),
@@ -139,15 +160,17 @@ export function initStudyLife(api, pane, opts = {}) {
 
   // ---- 65 formula sheet per subject
   async function formulas() {
+    body.replaceChildren(el("p", { class: "note" }, "Reading your library for its courses…"));
     const { subjects, sheets } = await api.study_subjects();
     const out = el("div", {});
     const showSheet = (s) => out.replaceChildren(el("h4", {}, `${s.title} (${s.count})`),
       ...s.topics.map((t) => el("section", { class: "formula-topic" }, el("h5", {}, t.topic),
         el("ul", {}, t.formulas.map((f) => el("li", {}, f.name ? el("b", {}, `${f.name}: `) : "", el("code", {}, f.formula),
           f.symbols ? el("small", { class: "muted" }, ` (${f.symbols})`) : ""))))));
-    body.replaceChildren(el("h3", {}, "📐 Formula sheets by subject"),
-      el("p", { class: "note" }, "Uses the library files with that subject plus formulas from your handwritten notes. Set a file's subject in Library."),
-      el("div", { class: "row" }, subjects.map((s) => el("button", { class: sheets[s] ? "ghost" : "primary", onclick: async (e) => {
+    body.replaceChildren(el("h3", {}, "📐 Formula sheets by course"),
+      el("p", { class: "note" }, "Vermeil reads your library and sorts each file under its course. One sheet per course, plus formulas from your handwritten notes."),
+      subjects.length ? null : el("p", {}, "No lecture files yet. Add some in Library."),
+      el("div", { class: "row" }, subjects.map(({ name: s, files: n }) => el("button", { class: sheets[s] ? "ghost" : "primary", title: `${n} file${n === 1 ? "" : "s"}`, onclick: async (e) => {
         if (sheets[s] && !e.shiftKey) return showSheet(sheets[s]);
         busy(e.target, true, `Making ${s}…`);
         try { const r = await api.study_subject_formulas(s); if (r.error) return toast(r.error, 7000); sheets[s] = r; showSheet(r); }
@@ -161,7 +184,7 @@ export function initStudyLife(api, pane, opts = {}) {
     const vids = (opts.files?.() || []).filter((f) => /\.(mp4|mkv|mov|avi|webm|mp3|m4a|wav)$/i.test(f.name));
     const out = el("div", {});
     body.replaceChildren(el("h3", {}, "🎬 Lecture chapters"),
-      el("p", { class: "note" }, "Splits a video lecture into chapters. To jump to where they explain something, use Play → Ask my library."),
+      el("p", { class: "note" }, "Splits a video lecture into chapters. To jump to where they explain something, use My study → Ask my library."),
       vids.length ? el("div", { class: "row" }, vids.map((v) => el("button", { class: "ghost", onclick: async (e) => {
         busy(e.target, true, "Finding chapters…");
         try {
@@ -171,24 +194,6 @@ export function initStudyLife(api, pane, opts = {}) {
             el("li", {}, el("a", { href: c.url, target: "_blank", rel: "noopener" }, c.time), ` ${c.title}`))));
         } finally { busy(e.target, false); }
       } }, `▶ ${v.name}`))) : el("p", {}, "No video or audio lectures in your library yet."), out);
-  }
-
-  // ---- 76 citations
-  async function citations() {
-    const q = el("input", { placeholder: "Paste a link, or type a book title (and author)", "aria-label": "Link or book title" });
-    const out = el("div", {});
-    const copy = (label, text) => el("div", { class: "cite" }, el("b", {}, label), el("p", {}, text),
-      el("button", { class: "ghost small", onclick: () => { navigator.clipboard?.writeText(text.replace(/\*/g, "")); toast("Copied."); } }, "Copy"));
-    body.replaceChildren(el("h3", {}, "📚 Citation helper"),
-      el("p", { class: "note" }, "APA 7 and MLA 9. Check the details: italics are shown as *stars*."),
-      el("div", { class: "row" }, q, el("button", { class: "primary", onclick: async (e) => {
-        busy(e.target, true, "Looking it up…");
-        try {
-          const r = await api.study_cite(q.value);
-          if (r.error) return toast(r.error, 7000);
-          out.replaceChildren(copy("APA 7", r.apa), copy("MLA 9", r.mla));
-        } finally { busy(e.target, false); }
-      } }, "Cite")), out);
   }
 
   // ---- 77 essay coach

@@ -343,8 +343,12 @@ i.dot.k-event, i.dot.k-task, i.dot.k-reminder, i.dot.k-birthday, i.dot.k-weekly 
 .add-form .primary { border-color: var(--ink); }
 
 /* study */
-.tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--line); margin-bottom: 12px; }
-.tabs button { border: 0; background: none; padding: 8px 14px; font-weight: 800; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1.5px; }
+.tabs { display: flex; flex-wrap: nowrap; gap: 4px; border-bottom: 1.5px solid var(--line); margin-bottom: 12px;
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: var(--line-2, #8885) transparent; padding-bottom: 2px; }
+.tabs::-webkit-scrollbar { height: 6px; }
+.tabs::-webkit-scrollbar-thumb { background: var(--line-2, #8885); border-radius: 3px; }
+.tabs::-webkit-scrollbar-track { background: transparent; }
+.tabs button { flex: 0 0 auto; white-space: nowrap; border: 0; background: none; padding: 8px 14px; font-weight: 800; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; }
 .tabs button[aria-selected="true"] { color: var(--blue); border-bottom-color: var(--gold); }
 .review { margin: 12px 0; }
 .review:empty { display: none; }
@@ -992,7 +996,6 @@ button.primary.sp, .spotify-panel .primary { background: var(--sp); border-color
 .sp-tab .row input { flex: 1; }
 .hud-chip.spotify { border-color: rgba(29,185,84,.6); }
 @media (max-width: 520px) { .sp-now { grid-template-columns: 1fr; } .sp-cover { width: 100%; height: auto; aspect-ratio: 1; } }
-.spotify-panel .tabs { overflow-x: auto; scrollbar-width: none; }
 .spotify-panel .tabs button { white-space: nowrap; padding: 8px 9px; }
 
 /* timer alarm: the screen edge pulses red while it rings */
@@ -1471,10 +1474,11 @@ details[open] > summary ~ * { animation: fadeUp .25s ease both; }
 details > summary { transition: color .15s ease; }
 details > summary:hover { color: var(--strong); }
 .tabs button { position: relative; }
-.tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 20%; right: 20%; bottom: -1.5px; height: 3px; border-radius: 2px; background: var(--blue); box-shadow: 0 0 10px var(--blue-glow); animation: tabLine .3s ease both; }
+.tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 20%; right: 20%; bottom: 0; height: 3px; border-radius: 2px; background: var(--blue); box-shadow: 0 0 10px var(--blue-glow); animation: tabLine .3s ease both; }
 button { transition: transform .12s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease, opacity .2s ease; }
 button:not(:disabled):active { transform: scale(.96); }
-button.primary:not(:disabled):hover { box-shadow: 0 4px 16px var(--blue-glow, rgba(62,142,255,.35)); transform: translateY(-1px); }
+.tabs button:not(:disabled):active { transform: none; }
+button.primary:not(:disabled):hover { box-shadow: 0 4px 16px var(--blue-glow, rgba(62,142,255,.35)); }
 input:focus-visible, textarea:focus-visible, select:focus-visible { box-shadow: 0 0 0 3px var(--blue-soft, rgba(62,142,255,.2)); transition: box-shadow .2s ease; }
 button:disabled { opacity: .65; }
 @keyframes paneIn { from { opacity: 0; transform: translateY(6px); } }
@@ -1712,11 +1716,9 @@ input.tiny { width: 56px; }
 .meal-add { margin-top: 8px; }
 .sleep-row label { display: flex; align-items: center; gap: 6px; }
 
-/* Settings: update-available dot */
-.upd-dot, .menu .item.has-update::after { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #ff5a7a;
+/* Settings → General: update-available dot beside the Update title */
+.upd-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #ff5a7a;
   box-shadow: 0 0 0 3px color-mix(in srgb, #ff5a7a 30%, transparent); vertical-align: middle; }
-.menu .item.has-update { position: relative; }
-.menu .item.has-update::after { content: ""; position: absolute; top: 10px; right: 12px; }
 
 /* ---------- living room: boot tip, VCash shop, designs, TV and forecast popups (livingroom.js) ---------- */
 .boot-tip { margin-top: 10px; max-width: 340px; font-size: 13px; color: var(--muted, #b9a9c9); text-align: center; line-height: 1.4; min-height: 2.8em; }
@@ -1856,16 +1858,6 @@ input.tiny { width: 56px; }
 .supps .slot.on { border-color: var(--ok); color: var(--ok); }
 .supps .slot.due { border-color: #ffc83d; color: #ffc83d; }
 .grocery li { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; }
-.run-week { flex-wrap: wrap; gap: 8px; }
-.run-live { margin: 8px 0; }
-.run-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
-.run-stats b { display: block; font-size: 22px; color: var(--strong); }
-.run-stats small { color: var(--muted); }
-.route svg { width: 100%; height: auto; max-height: 160px; background: var(--paper); border-radius: var(--radius-s); }
-.run-list { display: grid; gap: 8px; }
-.run { display: grid; grid-template-columns: 120px 1fr auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-s); }
-.run small { display: block; color: var(--muted); }
-@media (max-width: 520px) { .run-stats { grid-template-columns: repeat(2, 1fr); } .run { grid-template-columns: 1fr auto; } .run .route { grid-column: 1 / -1; } }
 
 /* ---------- Music extras: lyrics, song ID, covers, watchlist ---------- */
 .mm-extras { flex-wrap: wrap; gap: 6px; margin: 6px 0; }

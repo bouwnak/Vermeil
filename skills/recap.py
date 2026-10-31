@@ -113,7 +113,7 @@ def _music(year):
 
 def _games():
     import gamenight
-    lib = gamenight.library()
+    lib = gamenight.library(everything=True)
     played = [g for g in lib["games"] if g.get("minutes")]
     played.sort(key=lambda g: -g["minutes"])
     t = gamenight.tournament()

@@ -153,11 +153,11 @@ class ChapterAndFormulaTests(_Tmp):
         files = [{"id": "a", "subject": "Hydrology"}, {"id": "b", "subject": "Steel"}]
         got = {}
         make = lambda ids: got.setdefault("ids", ids) and {"topics": [{"topic": "Runoff", "formulas": []}], "count": 1}
-        s = studylife.formula_for_subject("hydrology", files, make=make)
+        s = studylife.formula_for_subject("hydrology", files, make=make, ask=lambda *a, **k: "{}")
         self.assertEqual(got["ids"], ["a"])
         self.assertEqual(s["title"], "hydrology formula sheet")
         self.assertIn("hydrology", studylife.formula_saved())
-        self.assertIn("No RCD files", studylife.formula_for_subject("RCD", files, make=make)["error"])
+        self.assertIn("No RCD files", studylife.formula_for_subject("RCD", files, make=make, ask=lambda *a, **k: "{}")["error"])
         self.assertEqual(studylife.subjects(files)[:3], ["Hydrology", "Steel", "RCD"])
 
 
@@ -208,3 +208,28 @@ class FactAndCoachTests(_Tmp):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CourseTests(_Tmp):
+    FILES = [{"id": "a", "name": "CE40 Lesson 3 - Effective Rate.pdf"}, {"id": "b", "name": "CE40 Lesson 1 - Simple Interest.pdf"},
+             {"id": "c", "name": "Hydro week 2.pdf"}]
+    ANSWER = '{"courses": {"a": "Engineering Economics", "b": "Engineering Economics", "c": "Hydrology"}}'
+
+    def test_courses_group_lessons_and_are_saved(self):
+        calls = []
+        def ask(prompt, *a, **k):
+            calls.append(prompt)
+            return self.ANSWER
+        self.assertEqual(studylife.course_list(self.FILES, ask=ask),
+                         [{"name": "Engineering Economics", "files": 2}, {"name": "Hydrology", "files": 1}])
+        studylife.courses(self.FILES, ask=ask)
+        self.assertEqual(len(calls), 1)                                         # asked once, then remembered
+
+    def test_offline_falls_back_and_formula_uses_the_course(self):
+        def down(*a, **k):
+            raise OSError("offline")
+        self.assertEqual(len(studylife.courses(self.FILES, ask=down)), 3)
+        got = {}
+        make = lambda ids: got.setdefault("ids", ids) and {"topics": [], "count": 0}
+        studylife.formula_for_subject("Engineering Economics", self.FILES, make=make, ask=lambda *a, **k: self.ANSWER)
+        self.assertEqual(sorted(got["ids"]), ["a", "b"])

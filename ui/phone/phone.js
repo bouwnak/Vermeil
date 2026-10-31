@@ -542,3 +542,74 @@ async function closeRetro() {
 }
 $("retroClose").onclick = closeRetro;
 document.querySelector('.tabs button[data-tab="games"]').addEventListener("click", loadRetro);
+
+// ---------------------------------------------------------------- Run: GPS like Strava (saved on the computer's Gym)
+let runWatch = null, runPts = [], runTick = null, runLock = null;
+const runDist = (a, b) => {
+  const R = 6371000, r = (x) => (x * Math.PI) / 180;
+  const h = Math.sin(r(b[0] - a[0]) / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(r(b[1] - a[1]) / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+};
+const runKm = () => runPts.reduce((s, p, i) => (i ? s + runDist(runPts[i - 1], p) : 0), 0) / 1000;
+const runPace = (secs, km) => (km >= 0.05 ? Math.floor(secs / 60 / km) + ":" + String(Math.round(((secs / 60 / km) % 1) * 60)).padStart(2, "0") + " /km" : "-");
+function routeSvg(route, w = 160, h = 110) {
+  if (!route || route.length < 2) return "";
+  const lats = route.map((p) => p[0]), lons = route.map((p) => p[1]);
+  const a = Math.min(...lats), b = Math.max(...lats), c = Math.min(...lons), d = Math.max(...lons);
+  const span = Math.max(b - a, d - c, 1e-5);
+  const pts = route.map(([la, lo]) => (((lo - c) / span) * (w - 10) + 5).toFixed(1) + "," + (h - ((la - a) / span) * (h - 10) - 5).toFixed(1)).join(" ");
+  return '<svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="Route map"><polyline points="' + pts +
+    '" fill="none" stroke="#ff7a59" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+}
+function drawRunLive() {
+  const secs = runPts.length > 1 ? (runPts[runPts.length - 1][2] - runPts[0][2]) / 1000 : 0, km = runKm();
+  const cell = (label, value) => { const d = document.createElement("div"); d.append(Object.assign(document.createElement("small"), { textContent: label }), Object.assign(document.createElement("b"), { textContent: value })); return d; };
+  $("runStats").replaceChildren(cell("Distance", km.toFixed(2) + " km"),
+    cell("Time", Math.floor(secs / 60) + ":" + String(Math.floor(secs % 60)).padStart(2, "0")),
+    cell("Pace", runPace(secs, km)), cell("Steps", String(Math.round((km * 1000) / 0.78))));
+  $("runMap").innerHTML = routeSvg(runPts.map((p) => [p[0], p[1]]), 240, 140);
+}
+async function loadRuns() {
+  let r;
+  try { r = await api("gym_runs"); } catch (e) { $("runWeek").textContent = e.message; return; }
+  $("runWeek").textContent = "This week: " + r.week_km + " km · " + r.week_count + " activit" + (r.week_count === 1 ? "y" : "ies") +
+    " · " + r.week_steps.toLocaleString() + " steps" + (r.best_pace ? " · best pace " + r.best_pace : "") + (r.longest ? " · longest " + r.longest + " km" : "");
+  const box = $("runList");
+  box.textContent = r.runs.length ? "" : "No runs yet. Press ▶ Start and go!";
+  for (const x of r.runs) {
+    const row = document.createElement("div");
+    row.className = "run-item";
+    const map = document.createElement("div"); map.className = "route"; map.innerHTML = routeSvg(x.route);
+    const info = document.createElement("div");
+    info.append(Object.assign(document.createElement("b"), { textContent: ({ run: "🏃", walk: "🚶", ride: "🚴" }[x.kind] || "🏃") + " " + x.km + " km" }),
+      Object.assign(document.createElement("small"), { textContent: x.date.replace("T", " ") + " · " + Math.round(x.seconds / 60) + " min · " + x.pace_text + " · ~" + x.kcal + " kcal" }));
+    const del = Object.assign(document.createElement("button"), { className: "x", textContent: "×", ariaLabel: "Delete this activity" });
+    del.onclick = async () => { if (!confirm("Delete this activity?")) return; try { await api("gym_run_remove", { args: [x.id] }); } catch (e) { toast(e.message); } loadRuns(); };
+    row.append(map, info, del);
+    box.append(row);
+  }
+}
+$("runBtn").onclick = async () => {
+  const btn = $("runBtn");
+  if (!runWatch) {
+    if (!navigator.geolocation) return toast("This phone has no location.");
+    runPts = [];
+    runWatch = navigator.geolocation.watchPosition((pos) => {
+      const c = pos.coords;
+      runPts.push([c.latitude, c.longitude, pos.timestamp || Date.now(), c.accuracy ?? null]);
+    }, (e) => toast("Location: " + e.message), { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
+    runTick = setInterval(drawRunLive, 1000);
+    try { runLock = await navigator.wakeLock?.request("screen"); } catch { /* the screen may sleep */ }
+    btn.textContent = "■ Stop & save"; $("runKind").disabled = true;
+    drawRunLive();
+    return;
+  }
+  navigator.geolocation.clearWatch(runWatch); clearInterval(runTick); runWatch = null;
+  try { runLock?.release(); } catch { /* */ } runLock = null;
+  btn.textContent = "▶ Start"; $("runKind").disabled = false;
+  try { await api("gym_run_save", { args: [runPts, "", $("runKind").value] }); toast("Saved. Nice work!"); }
+  catch (e) { toast(e.message); }
+  loadRuns();
+};
+document.querySelector('.tabs button[data-tab="run"]').addEventListener("click", loadRuns);
+if (store.get("tab", "chat") === "run") loadRuns();

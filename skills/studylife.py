@@ -11,7 +11,7 @@ USB files sorted by subject, exam-week mode, a daily curiosity fact and pronunci
   essay_outline(topic) / essay_feedback(outline, draft) thesis -> points -> evidence, then feedback on your draft
   notebook: photo_notes(path, subject) / notebook() / merge_duplicates() / note_remove(nid)
   chapters(file_id)                                     a video lecture split into chapters with times
-  formula_for_subject(subject, files)                   one formula sheet per subject (Hydrology, RCD, Steel...)
+  courses / course_list / formula_for_subject          formula sheets per course, found by reading the library
   guess_subject(path, subjects)                         which subject a USB file belongs to
   exam_plan(exams, today, sleep) / exam_active(state)   exam week: a daily plan, a bedtime, lighter chat
   fact_of_day(subjects)                                 one interesting fact a day about your subjects
@@ -519,11 +519,52 @@ def subjects(files):
     return list(dict.fromkeys(have + DEFAULT_SUBJECTS))
 
 
-def formula_for_subject(subject, files, make=None):
-    ids = [f["id"] for f in files if (f.get("subject") or "").lower() == (subject or "").lower()]
+def courses(files, ask=None):
+    """{file id: its general course}: "Engineering Economics" for "CE40 Lesson 3 - Effective Rate...", never the
+    lesson's own topic. Each file is asked about once (the answer is saved); when the AI can't answer, the file's own
+    subject or the keyword guess stands in until the next try."""
+    with _lock:
+        known = dict(_read().get("courses", {}))
+    todo = [f for f in files if f.get("id") and f["id"] not in known][:80]
+    if todo:
+        listing = "\n".join(f'{f["id"]}: {f.get("name", "")}' + (f' (subject: {f["subject"]})' if f.get("subject") else "")
+                             for f in todo)
+        try:
+            got = _ask_json("These are a student's lecture files. For each one, name the general COURSE it belongs to, the "
+                            "way a university names a subject (e.g. 'Engineering Economics', 'Hydrology', 'Reinforced "
+                            "Concrete Design'), not the lesson's own topic (not 'Simple Interest' or 'Effective Rate'). "
+                            "Files of the same course must get exactly the same name. Reply as JSON: "
+                            '{"courses": {"<id>": "<course>"}}.\n\n' + listing, ask).get("courses") or {}
+        except Exception:                                   # noqa: BLE001 - offline: fall back below, ask again later
+            got = {}
+        new = {f["id"]: str(got.get(f["id"]) or "").strip()[:60] for f in todo}
+        new = {k: v for k, v in new.items() if v}
+        if new:
+            with _lock:
+                d = _read()
+                d.setdefault("courses", {}).update(new)
+                _write(d)
+            known.update(new)
+    return {f["id"]: known.get(f["id"]) or f.get("subject") or guess_subject(f.get("name", "")) or "Other"
+            for f in files if f.get("id")}
+
+
+def course_list(files, ask=None):
+    """65: the courses in the library for the formula-sheet buttons, the one with the most files first"""
+    count = {}
+    for c in courses(files, ask).values():
+        count[c] = count.get(c, 0) + 1
+    order = sorted(count, key=lambda c: (c == "Other", -count[c], c.lower()))
+    return [{"name": c, "files": count[c]} for c in order]
+
+
+def formula_for_subject(subject, files, make=None, ask=None):
+    want = (subject or "").lower()
+    by_course = courses(files, ask)
+    ids = [f["id"] for f in files if by_course.get(f.get("id"), "").lower() == want or (f.get("subject") or "").lower() == want]
     notes = [f for n in notebook(subject) for f in n.get("formulas") or []]
     if not ids and not notes:
-        return {"error": f"No {subject} files yet. In Library, set a file's subject to {subject} (or add handwritten notes)."}
+        return {"error": f"No {subject} files in your library yet (or handwritten notes with that subject)."}
     if make is None:
         import studygame
         make = studygame.formula_sheet

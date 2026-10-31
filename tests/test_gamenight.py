@@ -36,7 +36,10 @@ class LibraryTests(_Tmp):
         chess = next(g for g in lib["games"] if g["id"] == "chess")
         self.assertEqual((chess["minutes"], chess["win"]), (30, 1))
         gamenight.record("retro", 7200)                                          # time only, no result
-        self.assertEqual(next(g for g in gamenight.library()["games"] if g["id"] == "retro")["hours"], 2.0)
+        self.assertEqual(next(g for g in gamenight.library(everything=True)["games"] if g["id"] == "retro")["hours"], 2.0)
+        ids = {g["id"] for g in gamenight.library()["games"]}                   # Adventure and retro have their own place
+        self.assertFalse({"retro", "adventure"} & ids)
+        self.assertIn("chess", ids)
 
     def test_new_week_gives_the_trophy(self):
         gamenight.record("chess", 60, "win", MON)

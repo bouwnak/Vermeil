@@ -1693,12 +1693,11 @@ $("appUpdate")?.addEventListener("click", async (ev) => {
   if (!r?.started) showAppUpdate({ done: true, error: r?.error || "Couldn't start the update." });
 });
 $("appRestart")?.addEventListener("click", () => { toast("Restarting Vermeil…"); api.app_restart(); });
-// a dot on Settings when GitHub has a newer Vermeil (checked at start and every 6 hours)
+// a note in Settings → General when GitHub has a newer Vermeil (checked at start and every 6 hours; no dot on the menu)
 async function checkForUpdate() {
   try {
     const r = await api.app_update_check();
     const has = !!r?.new && !r.error;
-    document.querySelector('.menu [data-panel="settings"]')?.classList.toggle("has-update", has);
     $("updDotTitle").hidden = !has;
     if (has && !$("appUpdateNote").textContent) $("appUpdateNote").textContent = `A new version is ready${r.message ? `: ${r.message}` : ""}. Tap Update Vermeil.`;
   } catch { /* offline */ }

@@ -8,6 +8,9 @@
 <link rel="stylesheet" href="../vendor/fonts/nunito.css">
 <link rel="stylesheet" href="games.css">
 <link rel="stylesheet" href="night.css">
+<script type="importmap">
+{ "imports": { "three": "../vendor/three/build/three.module.js", "three/addons/": "../vendor/three/examples/jsm/" } }
+</script>
 </head>
 <body class="night">
 <header class="gn-head">
@@ -16,6 +19,7 @@
     <p class="eyebrow">Vermeil</p>
     <h1>Game Night</h1>
   </div>
+  <button class="btn ghost gn-mute" id="gnMute" type="button" title="Sound on/off" aria-label="Sound on/off">🔊</button>
   <button class="gn-cup" id="gnCup" type="button" title="This week's tournament">🏆 <span id="gnCupText">0 – 0</span></button>
 </header>
 
@@ -33,9 +37,17 @@
   <button type="button" data-tab="tournament">🏆 Tournament</button>
 </nav>
 
-<div class="gn-her" id="gnHer" aria-live="polite"><span class="gn-face" aria-hidden="true">💜</span><p id="gnSay">Game night! Pick something and I'll play with you.</p></div>
-
-<main class="gn-stage" id="gnStage"></main>
+<div class="gn-body">
+  <main class="gn-stage" id="gnStage"></main>
+  <aside class="gn-vermeil" id="gnHer">
+    <div class="vm-view" id="vmView" title="Click me!"><span class="vm-flat-face" aria-hidden="true">💜</span><span class="vm-loading">Vermeil is coming…</span></div>
+    <div class="vm-talk">
+      <b class="vm-name">Vermeil</b>
+      <p id="gnSay" aria-hidden="true"></p>
+      <p class="sr-only" id="gnSayLive" aria-live="polite"></p>
+    </div>
+  </aside>
+</div>
 
 <script type="module" src="night.js"></script>
 </body>

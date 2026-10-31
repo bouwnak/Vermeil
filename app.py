@@ -989,7 +989,11 @@ class Api:
                 "hear": self._phone_hear, "partner_start": self._phone_partner_start,
                 "partner_reply": self._phone_partner_reply, "partner_stop": lambda p: self.partner_stop(),
                 "cards": self._phone_cards, "card_answers": self._phone_card_answers, "notices": self._phone_notices,
-                "upload": self._phone_upload, **self._phone_retro()}
+                "upload": self._phone_upload, **self._phone_retro(),
+                # GPS runs live on the phone only (the computer can't walk outside)
+                "gym_runs": lambda p: self.gym_runs(),
+                "gym_run_save": lambda p: self.gym_run_save(*((p or {}).get("args") or [])),
+                "gym_run_remove": lambda p: self.gym_run_remove(*((p or {}).get("args") or []))}
 
     def _phone_retro(self):
         """retro games on the phone: the same downloads and the same saves as on the computer"""
@@ -1449,10 +1453,14 @@ class Api:
         return academic.check_blank(given, item)
 
     def study_save_score(self, review_id, score, total, results=None):
+        today = time.strftime("%Y-%m-%d")
+        first_today = not any(str(a.get("at", "")).startswith(today)
+                              for a in (academic.get_review(review_id) or {}).get("attempts", []))
         res = academic.save_score(review_id, score, total, results)
         try:
             pct = int(score) / max(1, int(total))
-            self._xp("review", xp=int(10 + 20 * pct), why=f"Review finished: {score}/{total}")
+            if first_today and int(score) > 0:              # XP once a day per review, and only for right answers
+                self._xp("review", xp=int(10 + 20 * pct), why=f"Review finished: {score}/{total}")
         except (TypeError, ValueError):
             pass
         if isinstance(results, list):
@@ -2857,10 +2865,10 @@ class Api:
 
     def study_subjects(self):
         import studylife
-        return {"subjects": studylife.subjects(academic.list_files()), "sheets": studylife.formula_saved()}
+        return {"subjects": studylife.course_list(academic.list_files()), "sheets": studylife.formula_saved()}
 
     def study_subject_formulas(self, subject):
-        """65: one formula sheet per subject (Hydrology, RCD, Steel...)"""
+        """65: one formula sheet per course found in the library (Engineering Economics, Hydrology...)"""
         import studylife
         try:
             res = studylife.formula_for_subject(subject, academic.list_files())

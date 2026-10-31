@@ -156,3 +156,43 @@ class UiTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UnimateSkipTests(unittest.TestCase):
+    def _asset(self, reason):
+        import json, shutil, tempfile
+        d = tempfile.mkdtemp(prefix="vermeil-um-")
+        self.addCleanup(shutil.rmtree, d, True)
+        self._write(d, reason)
+        return d
+
+    @staticmethod
+    def _write(d, reason):
+        import json
+        os.makedirs(os.path.join(d, "work", "features"), exist_ok=True)
+        with open(os.path.join(d, "work", "features", "filtered_clips.json"), "w", encoding="utf-8") as f:
+            json.dump({"m": [{"reason": reason}]}, f)
+
+    def test_reason_is_read_and_explained(self):
+        d = self._asset("128 joints outside [10, 100]")
+        self.assertEqual(animate.skip_reason(d), "128 joints outside [10, 100]")
+        self.assertIn("one character per .glb", animate.explain(animate.skip_reason(d)))
+        self.assertIn("Rig it", animate.explain("5 joints outside [10, 100]"))
+        self.assertEqual(animate.skip_reason(os.path.join(d, "nope")), "")
+
+    def test_lying_model_is_stood_up_then_explained(self):
+        d = self._asset("bad horizontal separation")
+        calls = []
+        def run(args, log):
+            calls.append(args)
+            self._write(d, "bad horizontal separation")
+            raise RuntimeError("stage 4 produced no cond")
+        with mock.patch.object(animate, "_run", side_effect=run):
+            with self.assertRaises(RuntimeError):
+                animate._read_skeleton("m.glb", d, print)
+        self.assertEqual(len(calls), 1 + len(animate.TURNS))                     # the plain try, then each turn
+        self.assertIn("--rest_rotation", calls[1])
+        with mock.patch.object(animate, "_run", side_effect=RuntimeError("stage 4 produced no cond")), \
+                mock.patch.object(animate, "skip_reason", return_value="3 joints outside [10, 100]"):
+            with self.assertRaisesRegex(RuntimeError, "Rig it"):
+                animate._read_skeleton("m.glb", d, print)

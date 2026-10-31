@@ -3,6 +3,11 @@
 // a rhythm game with your songs, escape rooms from your study topics and the weekly tournament.
 // Scores, puzzles, questions and words come from Python (skills/gamenight.py through Api.gn_*); in a normal
 // browser (testing) add ?bridge.
+import { closeUp } from "./closeup.js";
+import { sound, confetti, burst, shake, flash } from "./gnfx.js";
+import { startWaves, setMuted, isMuted } from "./hubfx.js";
+import { sfx as uiSfx } from "../psp.js";
+
 const $ = (id) => document.getElementById(id);
 const isTest = new URLSearchParams(location.search).has("bridge");
 const keep = isTest ? "?bridge" : "";
@@ -71,12 +76,42 @@ const LINES = {
   typing: ["Type fast! I'm racing you.", "Ready, set…"],
   escape: ["You're locked in! Answer to get out~", "I hid the keys well this time."],
 };
+// how she reacts to each line: [animation, face, sound, effect]
+const REACT = {
+  hello: ["wave", "happy"], win: ["clap", "happy", "win", "confetti"], lose: ["cheer", "smug", "lose", "shake"], draw: ["shrug", "shrug", "draw"],
+  think: ["think", "think"], chess_you_take: ["surprised", "sad", "good"], chess_she_takes: ["laugh", "smug", "bad"],
+  chess_check: ["point", "smug", "bad"], chess_in_check: ["surprised", "surprised", "good"], uno_forgot: ["point", "laugh", "bad"],
+  uno_her: ["cheer", "happy", "card"], fish: ["shake", "smug"], trivia_right_both: ["nod", "happy", "good"],
+  trivia_you_only: ["surprised", "surprised", "good", "sparkle"], trivia_her_only: ["laugh", "smug", "bad"], trivia_neither: ["shrug", "shrug", "bad"],
+  word_win: ["clap", "happy", "win", "confetti"], word_lose: ["sad", "sad", "lose"], draw_good: ["cheer", "happy", "win", "confetti"],
+  draw_bad: ["shrug", "think", "bad"], puzzle: ["nod", "happy"], typing: ["nod", "smug", "start"], escape: ["look_around", "smug", "start"],
+};
+let her = { react() {}, talk() {} };          // the 3D close-up, once it's ready
+let typer = null;
 function say(key, extra) {
   const pool = typeof key === "string" ? (LINES[key] ?? [key]) : key;
   const text = (Array.isArray(pool) ? pick(pool) : pool) + (extra ? ` ${extra}` : "");
+  const [clip = "talk", face = "", snd = "pop", fx = ""] = (typeof key === "string" && REACT[key]) || [];
   const p = $("gnSay");
-  p.textContent = text;
+  $("gnSayLive").textContent = text;
+  clearInterval(typer);
+  let n = 0;
+  p.textContent = "";
+  typer = setInterval(() => { p.textContent = text.slice(0, ++n); if (n >= text.length) clearInterval(typer); }, 22);
+  her.talk(text.length * 22 + 250);
+  her.react(clip, face);
+  sound(snd);
+  if (fx === "confetti") { confetti(); flash("#f5c542"); }
+  if (fx === "sparkle") burst(["✨", "⭐"], $("vmView"), 8);
+  if (fx === "shake") shake(stage);
   $("gnHer").classList.remove("pop"); void $("gnHer").offsetWidth; $("gnHer").classList.add("pop");
+}
+const POKES = ["Hey! That tickles~", "Eyes on the game!", "Hehe, hi.", "Are you trying to distract me?", "Poke me again and I win.", "💜"];
+function poke() {
+  sound("poke");
+  burst(["💜", "✨"], $("vmView"), 6);
+  say([pick(POKES)]);
+  her.react(pick(["laugh", "shy", "happy", "wave"]), "laugh");
 }
 
 // ---------------- play time + results (the library and the tournament) ----------------
@@ -95,7 +130,7 @@ async function endSession(result = null, detail = "") {
   if (r?.tournament) paintCup(r.tournament);
 }
 function finish(result, detail = "") {
-  say(result === "win" ? "win" : result === "loss" ? "lose" : "draw");
+  say(result === "win" ? "win" : result === "loss" ? "lose" : "draw");          // with confetti / a shake and a sound
   endSession(result, detail);
 }
 window.addEventListener("beforeunload", () => endSession());
@@ -106,6 +141,23 @@ function paintCup(t) {
 
 // ---------------- tabs ----------------
 const stage = $("gnStage");
+startWaves();
+her = closeUp($("vmView"), { onPoke: poke });
+$("vmView").addEventListener("click", (e) => { if ($("gnHer").classList.contains("vm-flat") || e.target.closest(".vm-flat-face")) poke(); });
+const paintMute = () => { $("gnMute").textContent = isMuted() ? "🔇" : "🔊"; };
+$("gnMute").onclick = () => { setMuted(!isMuted()); paintMute(); };
+paintMute();
+// a tick when you point at a button and a click when you press one (like the Games hub)
+let hovered = null;
+document.addEventListener("pointerover", (e) => {
+  const b = e.target.closest?.("button:not(.sq):not(.nc):not(.sd), .lib-game");
+  if (b && b !== hovered && !b.disabled) uiSfx("hover");
+  hovered = b;
+});
+document.addEventListener("click", (e) => {
+  const b = e.target.closest?.("button");
+  if (b && !b.disabled && !b.matches(".sq, .nc, .kb button, .uc")) uiSfx(b.id === "gnBack" ? "back" : "click");
+}, true);
 let tab = "library", keyHandler = null, stopTab = null;
 const TABS = { library, chess, cards, trivia, words, draw, puzzles, typing, rhythm, escape, tournament };
 function open(name, opt) {
@@ -114,7 +166,7 @@ function open(name, opt) {
   tab = name;
   for (const b of document.querySelectorAll("#gnTabs button")) b.classList.toggle("on", b.dataset.tab === name);
   stage.innerHTML = "";
-  stage.className = `gn-stage tab-${name}`;
+  stage.className = `gn-stage tab-${name} gn-in`;
   TABS[name](opt);
 }
 $("gnTabs").onclick = (e) => { const b = e.target.closest("button[data-tab]"); if (b) open(b.dataset.tab); };
@@ -138,8 +190,8 @@ async function library() {
 }
 function paintLibrary(r) {
   $("libTotal").textContent = `${r.total_hours} hours played in all. ★ = favourite (they stay at the top).`;
-  $("libGrid").innerHTML = r.games.map((g) => `
-    <div class="lib-game${g.fav ? " fav" : ""}" data-id="${esc(g.id)}">
+  $("libGrid").innerHTML = r.games.map((g, k) => `
+    <div style="--k:${k}" class="lib-game${g.fav ? " fav" : ""}" data-id="${esc(g.id)}">
       <button class="lib-star" type="button" title="Favourite" aria-label="Favourite">${g.fav ? "★" : "☆"}</button>
       <span class="lib-icon">${esc(g.icon)}</span>
       <b>${esc(g.name)}</b>
@@ -153,9 +205,7 @@ function paintLibrary(r) {
     if (e.target.closest(".lib-star")) { const r2 = await call("gn_fav", card.dataset.id); if (!r2.error) paintLibrary(r2); return; }
     if (e.target.closest("[data-play]")) {
       const id = card.dataset.id;
-      if (id === "adventure") location.href = `../game/index.html${keep}`;
-      else if (id === "retro") location.href = `index.html${keep ? keep + "&" : "?"}retro`;
-      else if (PLAY[id]) open(PLAY[id][0], PLAY[id][1]);
+      if (PLAY[id]) open(PLAY[id][0], PLAY[id][1]);
     }
   };
 }
@@ -328,7 +378,7 @@ function chess() {
     $("chBoard").innerHTML = s.b.map((p, i) => {
       const dark = ((i >> 3) + (i & 7)) % 2 === 1;
       const cls = ["sq", dark ? "d" : "l", i === sel ? "sel" : "", targets.some((m) => m.to === i) ? (p === "." ? "dot" : "hit") : "",
-        last && (i === last.from || i === last.to) ? "last" : "", i === check ? "check" : ""].join(" ");
+        last && (i === last.from || i === last.to) ? "last" : "", last && i === last.to ? "to" : "", i === check ? "check" : ""].join(" ");
       return `<button type="button" class="${cls}" data-i="${i}" aria-label="${sqName(i)}">${p === "." ? "" : `<span class="pc ${side(p)}">${GL[p.toLowerCase()]}</span>`}</button>`;
     }).join("");
     $("chTaken").innerHTML = `<span>You took: ${taken.w.map((p) => GL[p]).join(" ") || "—"}</span><span>She took: ${taken.b.map((p) => GL[p]).join(" ") || "—"}</span>`;
@@ -338,6 +388,7 @@ function chess() {
   function play(m) {
     const cap = s.b[m.to] !== "." ? s.b[m.to].toLowerCase() : m.ep ? "p" : null;
     if (cap) taken[s.turn].push(cap);
+    sound(cap ? "capture" : "move");
     moves.push(`${GL[s.b[m.from].toLowerCase()]}${sqName(m.to)}`);
     const mover = s.turn;
     s = make(s, m);
@@ -458,7 +509,7 @@ function uno() {
       opts.sort((a, b) => (actionFirst ? ["skip", "rev", "+2", "+4"].includes(b.v) - ["skip", "rev", "+2", "+4"].includes(a.v) : 0) || (a.c === "w") - (b.c === "w"));
       const x = opts[0];
       her.splice(her.indexOf(x), 1);
-      pile.push(x);
+      pile.push(x); sound("card");
       if (x.c === "w") {
         const counts = { r: 0, g: 0, b: 0, y: 0 };
         for (const h of her) if (h.c !== "w") counts[h.c]++;
@@ -474,7 +525,7 @@ function uno() {
   }
   function youPlay(x) {
     you.splice(you.indexOf(x), 1);
-    pile.push(x);
+    pile.push(x); sound("card");
     if (x.c !== "w") color = x.c;
     let forgot = false;
     if (you.length === 1 && !unoCalled) { forgot = true; draw(you, 2); say("uno_forgot"); }
@@ -645,6 +696,7 @@ async function trivia() {
           btn.classList.toggle("wrong", bk === k && !youRight);
           if (bk === herK) btn.insertAdjacentHTML("beforeend", " <span class='her-pick'>💜</span>");
         }
+        if (youRight) burst(["✨", "⭐"], b, 8); else shake(b);
         say(youRight && herRight ? "trivia_right_both" : youRight ? "trivia_you_only" : herRight ? "trivia_her_only" : "trivia_neither");
         $("tvFact").textContent = q.fact || "";
         await wait(q.fact ? 2600 : 1600);
@@ -686,13 +738,15 @@ function wordle(data) {
     return res;
   };
   const keyState = {};
+  let reveal = -1;                                        // the row that was just guessed flips in
   function paint(msg = "") {
     const all = [...rows.map((r) => ({ g: r.g, s: r.s })), ...(over ? [] : [{ g: cur.padEnd(5), s: null }])];
     while (all.length < 6) all.push({ g: "     ", s: null });
-    box.innerHTML = `<div class="wd-grid">${all.slice(0, 6).map((r) => `<div class="wd-row">${[...r.g].map((ch, k) => `<span class="wd-cell ${r.s ? r.s[k] : ""}">${esc(ch.trim())}</span>`).join("")}</div>`).join("")}</div>
+    box.innerHTML = `<div class="wd-grid">${all.slice(0, 6).map((r, ri) => `<div class="wd-row${ri === reveal ? " reveal" : ""}">${[...r.g].map((ch, k) => `<span class="wd-cell ${r.s ? r.s[k] : ""}">${esc(ch.trim())}</span>`).join("")}</div>`).join("")}</div>
       <p class="msg">${esc(msg)}</p>
       <div class="kb">${["qwertyuiop", "asdfghjkl", "↵zxcvbnm⌫"].map((row) => `<div>${[...row].map((k) => `<button type="button" data-k="${k}" class="${keyState[k] || ""}">${k}</button>`).join("")}</div>`).join("")}</div>
       ${over ? `<button class="btn primary" id="wdAgain" type="button">New word</button>` : ""}`;
+    reveal = -1;
   }
   function key(k) {
     if (over) return;
@@ -703,7 +757,8 @@ function wordle(data) {
       rows.push({ g: cur, s });
       [...cur].forEach((ch, k2) => { const rank = { yes: 3, near: 2, no: 1 }; if ((rank[s[k2]] || 0) > (rank[keyState[ch]] || 0)) keyState[ch] = s[k2]; });
       const won = cur === target;
-      cur = "";
+      cur = ""; reveal = rows.length - 1;
+      [0, 1, 2, 3, 4].forEach((k2) => setTimeout(() => sound("flip"), k2 * 120));
       if (won || rows.length === 6) {
         over = true;
         say(won ? "word_win" : "word_lose");
@@ -740,7 +795,7 @@ function hangman(data) {
   function key(k) {
     if (over || guessed.has(k)) return;
     guessed.add(k);
-    if (!W.includes(k)) wrong++;
+    if (!W.includes(k)) { wrong++; sound("bad"); setTimeout(() => shake(box.querySelector(".hang-pic")), 0); } else sound("good");
     const won = [...W].every((ch) => guessed.has(ch));
     if (won || wrong >= 7) {
       over = true; say(won ? "word_win" : "word_lose");
@@ -805,8 +860,9 @@ async function youDraw() {
     if (!$("dwDone")) return;
     $("dwDone").disabled = false;
     if (r.error) { $("dwGuess").innerHTML = `<p class="err">${esc(r.error)}</p>`; return; }
-    $("dwGuess").innerHTML = `<p>She guesses: <b>${r.guesses.map(esc).join("</b>, <b>") || "?"}</b></p><p class="muted">${esc(r.comment)}</p>`;
+    $("dwGuess").innerHTML = `<p>She guesses: <b>${r.guesses.map(esc).join("</b>, <b>") || "?"}</b></p>`;
     say(r.right ? "draw_good" : "draw_bad");
+    if (r.comment) setTimeout(() => say([r.comment]), 1800);
     endSession(r.right ? "win" : "loss", `drew ${word}`);
   };
 }
@@ -844,7 +900,7 @@ async function herDraw() {
     const r = await call("gn_doodle_check", d.id, $("dwIn").value);
     tries++;
     if (r.right) end(true);
-    else { $("dwGuess").innerHTML = `<p class="muted">Nope! (${tries} tr${tries === 1 ? "y" : "ies"})</p>`; $("dwIn").select(); }
+    else { $("dwGuess").innerHTML = `<p class="muted">Nope! (${tries} tr${tries === 1 ? "y" : "ies"})</p>`; $("dwIn").select(); sound("bad"); shake($("dwIn")); }
   };
   $("dwIn").onkeydown = (e) => { if (e.key === "Enter") $("dwTry").click(); };
   $("dwGive").onclick = () => { if (!over) end(false); };
@@ -886,7 +942,8 @@ async function sudoku() {
   $("sdCheck").onclick = async () => {
     const r = await call("gn_puzzle_check", "sudoku", grid(), Math.round((Date.now() - (session?.t0 || Date.now())) / 1000));
     for (const i of r.wrong || []) $("pzBox").querySelector(`[data-i="${i}"]`)?.classList.add("bad");
-    if (r.solved) { $("sdMsg").textContent = `Solved! Streak: ${r.streak} 🔥`; say("You solved it! See you tomorrow for the next one~"); session = null; }
+    if (r.wrong?.length) sound("bad");
+    if (r.solved) { $("sdMsg").textContent = `Solved! Streak: ${r.streak} 🔥`; say("You solved it! See you tomorrow for the next one~"); session = null; sound("solve"); confetti(); her.react("cheer", "happy"); }
     else $("sdMsg").textContent = r.wrong?.length ? `${r.wrong.length} wrong (in red).` : "Not finished yet — no mistakes so far!";
   };
 }
@@ -902,14 +959,14 @@ async function nonogram() {
     ${p.rows.map((r, y) => `<span class="clue row">${r.join(" ")}</span>${Array.from({ length: n }, (_, x) => `<button type="button" class="nc" data-x="${x}" data-y="${y}"></button>`).join("")}`).join("")}
   </div><div class="row"><button class="btn primary" id="nnCheck" type="button">Check</button><button class="btn ghost" id="nnClear" type="button">Clear</button><span class="msg" id="nnMsg"></span></div>`;
   const nono = box.querySelector(".nono");
-  const set = (b, v) => { cells[b.dataset.y][b.dataset.x] = v; b.className = `nc${v === 1 ? " on" : v === 2 ? " x" : ""}`; };
+  const set = (b, v) => { cells[b.dataset.y][b.dataset.x] = v; b.className = `nc${v === 1 ? " on" : v === 2 ? " x" : ""}`; sound("tick"); };
   nono.onclick = (e) => { const b = e.target.closest(".nc"); if (b) set(b, cells[b.dataset.y][b.dataset.x] === 1 ? 0 : 1); };
   nono.oncontextmenu = (e) => { const b = e.target.closest(".nc"); if (!b) return; e.preventDefault(); set(b, cells[b.dataset.y][b.dataset.x] === 2 ? 0 : 2); };
   $("nnClear").onclick = () => { for (const b of nono.querySelectorAll(".nc")) set(b, 0); };
   $("nnCheck").onclick = async () => {
     const r = await call("gn_puzzle_check", "nonogram", cells.map((row) => row.map((v) => (v === 1 ? 1 : 0))), Math.round((Date.now() - (session?.t0 || Date.now())) / 1000));
-    if (r.solved) { $("nnMsg").textContent = `Solved! Streak: ${r.streak} 🔥`; say("A perfect picture! Same time tomorrow?"); session = null; }
-    else $("nnMsg").textContent = "Not yet — some rows or columns don't match their numbers.";
+    if (r.solved) { $("nnMsg").textContent = `Solved! Streak: ${r.streak} 🔥`; say("A perfect picture! Same time tomorrow?"); session = null; sound("solve"); confetti(); her.react("cheer", "happy"); }
+    else { $("nnMsg").textContent = "Not yet — some rows or columns don't match their numbers."; sound("bad"); shake(nono); }
   };
 }
 
@@ -1110,8 +1167,8 @@ async function escape() {
       $("erAns").focus();
       $("erTry").onclick = async () => {
         const c = await call("gn_escape_check", $("erAns").value, room);
-        if (c.right) { say(["Click! The door opens.", "Correct~ next room!"]); i++; show(); }
-        else { wrong++; $("erMsg").textContent = "The lock doesn't move."; $("erAns").select(); }
+        if (c.right) { burst(["🔑", "✨"], $("erTry"), 8); say(["Click! The door opens.", "Correct~ next room!"]); sound("good"); her.react("clap", "happy"); i++; show(); }
+        else { wrong++; $("erMsg").textContent = "The lock doesn't move."; $("erAns").select(); sound("bad"); shake($("erAns")); }
       };
       $("erAns").onkeydown = (e) => { if (e.key === "Enter") $("erTry").click(); };
       $("erHint").onclick = () => { hints++; $("erMsg").textContent = `Hint: ${room.hint || "think about the topic!"}`; };

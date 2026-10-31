@@ -21,6 +21,7 @@ GAMES = {
     "typing": ("⌨️", "Typing race"), "rhythm": ("🥁", "Rhythm"), "escape": ("🗝️", "Escape room"),
     "adventure": ("⚔️", "Adventure"), "retro": ("🕹️", "Retro games"),
 }
+SEPARATE = {"adventure", "retro"}      # their own games in the Games hub: time is kept (yearly recap) but not listed here
 WIN, DRAW = 3, 1                       # tournament points
 
 
@@ -107,9 +108,11 @@ def record(game, seconds=0, result=None, today=None, detail=""):
     return {"library": _library(d), "tournament": _tournament_public(d, today)}
 
 
-def _library(d):
+def _library(d, everything=False):
     rows = []
     for gid in list(GAMES) + [g for g in d["plays"] if g not in GAMES]:
+        if gid in SEPARATE and not everything:
+            continue
         p = d["plays"].get(gid, {})
         icon, name = GAMES.get(gid, ("🎮", gid.split(":", 1)[-1].replace("-", " ").title()))
         rows.append({"id": gid, "icon": icon, "name": name, "hours": round(p.get("seconds", 0) / 3600, 1),
@@ -117,11 +120,12 @@ def _library(d):
                      "win": p.get("win", 0), "loss": p.get("loss", 0), "draw": p.get("draw", 0),
                      "last": p.get("last", ""), "fav": gid in d["favs"]})
     rows.sort(key=lambda r: (not r["fav"], -r["minutes"], r["name"]))
-    return {"games": rows, "total_hours": round(sum(p.get("seconds", 0) for p in d["plays"].values()) / 3600, 1)}
+    return {"games": rows, "total_hours": round(sum(r["minutes"] for r in rows) / 60, 1)}
 
 
-def library():
-    return _library(_load())
+def library(everything=False):
+    """Game Night's games; everything=True also lists Adventure and Retro (for the yearly recap)"""
+    return _library(_load(), everything)
 
 
 def toggle_fav(game):

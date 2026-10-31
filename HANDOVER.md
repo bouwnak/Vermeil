@@ -86,7 +86,34 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **Music & life round (31 Oct 2026, newest)**: the owner asked for "all of the rest" of the picked ideas: 142, 146, 147, 150, 151, 155, 156, 198 and 200 from FEATURE_IDEAS.md. GodsWar was left out on purpose, because the owner wants to change something there first.
+- **Fixes & Game Night polish round (31 Oct 2026, newest)**: the owner sent screenshots from another PC with 11 asks.
+  - **UniMate "stage 4 produced no cond"** (`skills/animate.py`):
+    - `skip_reason(asset)` reads UniMate's reason from `work/features/filtered_clips.json`, and `explain(reason)` puts it in plain words with what to do (too few/many joints, no skeleton, zero-length bones).
+    - `_read_skeleton` runs `rig_preprocess`. When the reason is "horizontal separation" (a model lying down), it tries again with each `--rest_rotation` in `TURNS`.
+  - **Study** (`ui/study.js`, `ui/studylife.js`, `ui/studyplay.js`, `skills/studylife.py`, `app.py`):
+    - The Play tab is gone. Flashcards and Ask my library are parts of My study (`initPlay(api, ids).open(mode, into)`).
+    - `citationBox` moved to Research.
+    - `courses(files, ask)` has the AI name each file's general course once, then saves it; offline it falls back to the subject or a guess. `course_list` feeds the Formulas buttons, and `formula_for_subject` matches by course.
+    - `study_save_score` gives XP only on the first attempt of the day and only when score > 0. "Check my answers" waits for an answer and is disabled after a check.
+  - **Planner** (`ui/planner.js`): the "Before my…" situation reminder was removed.
+  - **Tabs** (`ui/style.css`): `.tabs` stay on one line with a thin scroll bar. Tab and primary buttons no longer move on hover/press, so one click always lands. The Settings red dot (`has-update`) was removed from `ui/app.js` and the CSS.
+  - **Runs on the phone only**:
+    - The Runs tab and its code left `ui/gym.js` and `ui/gymlife.js`.
+    - `app.py` `_phone_handlers` gains `gym_runs`, `gym_run_save` and `gym_run_remove`.
+    - `ui/phone/index.html`, `phone.js` and `phone.css` add a 🏃 Run tab (watchPosition, wake lock `runLock`, live route). `sw.js` cache is `vermeil-phone-4`.
+  - **Game Night**:
+    - `skills/gamenight.py`: `SEPARATE = {"adventure", "retro"}` stay out of `library()` unless `everything=True`; `skills/recap.py` uses `everything=True`.
+    - `ui/games/closeup.js` (new): her `anime_girl.glb` framed on the head in a right-hand panel styled like the hub preview. Mouse look, blinks, face moods, mouth while talking, clips on `react(clip, face)`, poke. With no WebGL it shows a big 💜.
+    - `ui/games/gnfx.js` (new): WebAudio synth `sound(kind)`, confetti, emoji `burst`, `shake`, `flash`. It follows the hub mute and reduced motion.
+    - `ui/games/night.html/js/css`: the old line above the game is gone (she talks in her panel with typed text). There is a 🔊 mute, and every game has sounds and animations (chess drop/check, card deal and pile, Words flip, hangman lines, puzzle solve, escape key burst). Library cards rise in turn.
+  - `ui/mock.js`: `study_subjects` returns courses.
+  - Tests:
+    - `tests/test_gamenight.py` (separate games), `tests/test_studylife.py` (`CourseTests`, 2), `tests/test_app.py` (phone run handlers; review XP guard), `tests/test_kitchen_unimate.py` (`UnimateSkipTests`, 2).
+    - Full suite: 707 tests, OK (3 skipped).
+    - Browser (dev server 8770): Game Night close-up and poke, resign reaction, narrow layout, Words reveal; Gym tabs; Study tabs, Formulas course buttons, Citations in Research; phone Run tab.
+    - Not tried: a real GPS run on a phone, and UniMate on the other PC.
+  - No new pip packages.
+- **Music & life round (31 Oct 2026)**: the owner asked for "all of the rest" of the picked ideas: 142, 146, 147, 150, 151, 155, 156, 198 and 200 from FEATURE_IDEAS.md. GodsWar was left out on purpose, because the owner wants to change something there first.
   - **Music extras** (`skills/medialife.py`, new; saves to `data/medialife.json`; the web, AI and mic calls take `fetch=`/`ask=`/`rec=`/`recognize=` so tests fake them):
     - Synced lyrics from LRCLIB (`/api/get`, then `/api/search`) or lyrics.ovh (words only). They are cached and work with `parse_lrc`, `line_at` and `clean` (strips "(Official Video)" and similar).
     - "More like this": the AI picks about 12 songs. `like_this_youtube` queues them in Vermeil Music, and `like_this_spotify` uses the new `spotify.play_uris`.

@@ -507,7 +507,7 @@ export const mockApi = {
   study_merge_notes: async () => { const n = st.notebook || []; const merged = n.length > 1 ? 1 : 0; if (merged) { n[0].text += "\n- Lag time"; n[0].sources.push(...n[1].sources); n.splice(1, 1); } return { merged, notes: n }; },
   study_note_remove: async (id) => (st.notebook = (st.notebook || []).filter((n) => n.id !== id)),
   study_chapters: async () => ({ chapters: [{ time: "0:00", seconds: 0, title: "Intro", url: "#" }, { time: "4:10", seconds: 250, title: "Bending moment diagrams", url: "#" }, { time: "12:34", seconds: 754, title: "Deflection", url: "#" }] }),
-  study_subjects: async () => ({ subjects: ["Hydrology", "RCD", "Steel"], sheets: st.sheets ||= {} }),
+  study_subjects: async () => ({ subjects: [{ name: "Engineering Economics", files: 4 }, { name: "Hydrology", files: 3 }, { name: "Steel Design", files: 2 }, { name: "Other", files: 1 }], sheets: st.sheets ||= {} }),
   study_subject_formulas: async (s) => (s === "Steel" ? { error: "No Steel files yet. In Library, set a file's subject to Steel (or add handwritten notes)." }
     : (st.sheets[s] = { title: `${s} formula sheet`, subject: s, count: 2, topics: [{ topic: "Runoff", formulas: [{ name: "Rational method", formula: "Q = CiA", symbols: "C = runoff coeff., i = intensity, A = area", source: "Hydro.pdf, p. 4" }] },
       { topic: "From your handwritten notes", formulas: [{ name: "", formula: "h = kQ^n", symbols: "", source: "Notebook" }] }] })),

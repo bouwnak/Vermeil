@@ -2,7 +2,7 @@
 import { $, el, toast } from "./util.js";
 import { sparks as fxSparks, play as fxPlay, alarm, stopAlarm } from "./fx.js";
 import { muscleMap, muscleLegend } from "./muscles.js";
-import { coachBanner, demoKey, drawCoach, drawHealth, drawRuns, proteinBar } from "./gymlife.js";
+import { coachBanner, demoKey, drawCoach, drawHealth, proteinBar } from "./gymlife.js";
 
 const STAT_LABELS = { weight: "Weight (kg)", biceps_r: "Biceps R (cm)", biceps_l: "Biceps L (cm)", thigh_r: "Thigh R (cm)",
   thigh_l: "Thigh L (cm)", chest: "Chest (cm)", waist: "Waist (cm)" };
@@ -127,7 +127,7 @@ export function initGym(api) {
   const view = el("div");
   root.replaceChildren(timerBox, tabs, view);
   function drawTabs() {
-    tabs.replaceChildren(...[["workout", "Workout"], ["alts", "Alternatives"], ["history", "History"], ["progress", "Progress"], ["stats", "Body stats"], ["calories", "Calories"], ["coach", "Coach & PRs"], ["health", "Sleep & health"], ["runs", "Runs"]].map(([k, l]) =>
+    tabs.replaceChildren(...[["workout", "Workout"], ["alts", "Alternatives"], ["history", "History"], ["progress", "Progress"], ["stats", "Body stats"], ["calories", "Calories"], ["coach", "Coach & PRs"], ["health", "Sleep & health"]].map(([k, l]) =>
       el("button", { role: "tab", "aria-selected": String(k === tab), onclick: () => { tab = k; load(); } }, l)));
   }
 
@@ -141,7 +141,6 @@ export function initGym(api) {
     if (tab === "progress") return drawProgress();
     if (tab === "coach") return drawCoach(view, api);
     if (tab === "health") return drawHealth(view, api);
-    if (tab === "runs") return drawRuns(view, api);
     state = await api.gym_state(day || state?.day || null);
     drawWorkout();
   }

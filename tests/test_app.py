@@ -296,6 +296,22 @@ class AppTests(unittest.TestCase):
         self.assertIn("restaurant", sensei.SCENES)                                 # Talk live: ordering food abroad
         h = self.api._phone_handlers()
         self.assertTrue({"retro_library", "retro_prepare", "retro_progress", "retro_save", "retro_load"} <= set(h))
+        self.assertTrue({"gym_runs", "gym_run_save", "gym_run_remove"} <= set(h))           # runs live on the phone now
+
+    def test_review_xp_needs_right_answers_once_a_day(self):
+        today = __import__("time").strftime("%Y-%m-%d")
+        with mock.patch.object(app.academic, "save_score", return_value={"ok": True}), \
+                mock.patch.object(app.academic, "get_review", return_value={"attempts": []}), \
+                mock.patch.object(self.api, "_xp") as xp:
+            self.api.study_save_score("r1", 0, 5)                                # nothing right: no XP
+            xp.assert_not_called()
+            self.api.study_save_score("r1", 3, 5)
+            xp.assert_called_once()
+        with mock.patch.object(app.academic, "save_score", return_value={"ok": True}), \
+                mock.patch.object(app.academic, "get_review", return_value={"attempts": [{"at": today + "T10:00"}]}), \
+                mock.patch.object(self.api, "_xp") as xp:
+            self.api.study_save_score("r1", 5, 5)                                # pressing Check again today: no XP
+            xp.assert_not_called()
 
     def test_planner(self):
         with mock.patch.object(app.f1, "user_data", {"events": [{"title": "Old", "date": "2000-01-01"},

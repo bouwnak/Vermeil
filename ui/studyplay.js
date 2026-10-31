@@ -1,5 +1,5 @@
-// studyplay.js - Study -> Play: spaced flashcards with combos and XP, "watch where this was said" (video lectures),
-// Ask my library (answers with file/page sources), the printable formula sheet and the 25-minute study timer.
+// studyplay.js - spaced flashcards with combos and XP, "watch where this was said" (video lectures) and
+// Ask my library (answers with file/page sources). Shown inside Study → My study.
 import { el, toast, setMd, busy, loadingCard } from "./util.js";
 import { play } from "./fx.js";
 
@@ -35,13 +35,8 @@ export function watchButton(api, source, text = "") {
   } }, "▶ Watch where this was said");
 }
 
-export function initPlay(api, pane, selectedIds) {
-  const area = el("div");
-  const modes = [["cards", "🃏 Flashcards"], ["ask", "🔎 Ask my library"], ["formulas", "📐 Formula sheet"], ["timer", "⏱ Study timer"]];
-  let mode = "cards";
-  const bar = el("div", { class: "row play-modes" });
-  const drawBar = () => bar.replaceChildren(...modes.map(([k, l]) => el("button", { class: k === mode ? "chip on" : "chip", onclick: () => { mode = k; load(); } }, l)));
-  pane.append(bar, area);
+export function initPlay(api, selectedIds) {
+  let area = el("div");
 
   // ---------- flashcards: Leitner boxes, combo, XP ----------
   async function cards() {
@@ -115,57 +110,10 @@ export function initPlay(api, pane, selectedIds) {
       out);
   }
 
-  // ---------- formula sheet ----------
-  function formulas() {
-    const out = el("div");
-    area.replaceChildren(
-      el("p", { class: "note" }, "Tick lecture files in the Library tab, then make one page with every formula in them — ready to print."),
-      el("button", { class: "primary", onclick: async (e) => {
-        const ids = selectedIds();
-        if (!ids.length) return toast("Tick some files in the Library tab first.");
-        busy(e.target, true, "Collecting formulas…");
-        out.replaceChildren(loadingCard("Finding every formula… (~10-20 s)"));
-        try {
-          const r = await api.study_formulas(ids);
-          if (r.error) { out.replaceChildren(); return toast(r.error, 7000); }
-          const sheet = el("div", { class: "formula-sheet" }, el("h3", {}, r.title),
-            r.topics.map((t) => el("section", {}, el("h4", {}, t.topic), el("table", {}, el("tbody", {}, t.formulas.map((f) =>
-              el("tr", {}, el("td", {}, el("b", {}, f.name)), el("td", { class: "fx" }, f.formula),
-                el("td", {}, el("small", {}, f.symbols), f.source ? el("small", { class: "src" }, ` · ${f.source}`) : null))))))));
-          out.replaceChildren(el("div", { class: "row" }, el("span", { class: "note" }, `${r.count} formulas`),
-            el("button", { class: "ghost", onclick: () => printSheet(sheet) }, "🖨 Print")), sheet);
-        } finally { busy(e.target, false); }
-      } }, "Make my formula sheet"),
-      out);
+  /** draw "cards" or "ask" into `into` */
+  function open(mode, into) {
+    area = into;
+    ({ cards, ask })[mode]();
   }
-  function printSheet(sheet) {
-    const w = window.open("", "_blank");
-    if (!w) return toast("Couldn't open the print window.");
-    w.document.write(`<!doctype html><meta charset="utf-8"><title>Formula sheet</title><style>body{font:13px/1.4 Arial,sans-serif;margin:24px}
-      h3{margin:0 0 8px}h4{margin:14px 0 4px;border-bottom:1px solid #999}table{border-collapse:collapse;width:100%}
-      td{border-bottom:1px solid #ddd;padding:4px 6px;vertical-align:top}.fx{font-family:Consolas,monospace;font-size:14px}small{color:#444}</style>${sheet.outerHTML}`);
-    w.document.close();
-    w.focus();
-    w.print();
-  }
-
-  // ---------- study timer ----------
-  function timer() {
-    const task = el("input", { placeholder: "What are you studying?", "aria-label": "What are you studying" });
-    area.replaceChildren(
-      el("p", { class: "note" }, "25 minutes of work, 5 minutes of break, 4 rounds. She stays quiet while you work, cheers you on at each break, and distracting sites/apps get minimized (Settings → Focus). Each block gives 30 XP."),
-      task,
-      el("button", { class: "primary", onclick: async () => {
-        const t = task.value.trim() || "Studying";
-        await api.focus_start(t, 25, 5, 4);
-        window.onPyEvent?.({ type: "focus_started", task: t, work: 25, brk: 5, rounds: 4 });
-        document.querySelector('[data-panel="focus"]')?.click();
-      } }, "Start 25-minute blocks"));
-  }
-
-  function load() {
-    drawBar();
-    ({ cards, ask, formulas, timer })[mode]();
-  }
-  return { load };
+  return { open };
 }

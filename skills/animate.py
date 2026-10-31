@@ -237,6 +237,63 @@ def _run(args, log, cwd=UNIMATE_DIR, env=None):
     return out
 
 
+# models drawn lying down or on their side: UniMate can't tell which way they face, so these turns stand them up
+TURNS = ["z90", "z-90", "x90", "x-90", "x180"]
+
+
+def skip_reason(asset):
+    """why UniMate's feature step dropped the model (from asset/work/features/filtered_clips.json), or ''"""
+    try:
+        with open(os.path.join(asset, "work", "features", "filtered_clips.json"), encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return ""
+    for clips in (data.values() if isinstance(data, dict) else []):
+        for c in clips or []:
+            if isinstance(c, dict) and c.get("reason"):
+                return str(c["reason"])
+    return ""
+
+
+def explain(reason):
+    """UniMate's reason in plain words, with what to do"""
+    r = reason or ""
+    m = re.search(r"(\d+) joints outside \[(\d+), (\d+)\]", r)
+    if m:
+        n, lo, hi = (int(x) for x in m.groups())
+        if n < lo:
+            return (f"this model has only {n} bones; UniMate needs at least {lo}. "
+                    "Press Rig it first, then Make the animations again.")
+        return (f"this model has {n} bones; UniMate takes at most {hi}. If the file holds two characters, "
+                "save each one on its own (one character per .glb), or use a model with a simpler skeleton.")
+    if "no motion NPZ" in r:
+        return "UniMate found no skeleton in this model. Press Rig it first, then Make the animations again."
+    if "zero-length bones" in r or "degenerate skeleton" in r:
+        return ("the skeleton has bones of zero length, so UniMate can't measure it. "
+                "Rig the model again (Rig it), then Make the animations again.")
+    if "horizontal separation" in r:
+        return ("UniMate couldn't tell which way the model faces, even after standing it up. "
+                "Try a model standing upright in a T-pose or A-pose.")
+    return f"UniMate skipped this model ({r})." if r else ""
+
+
+def _read_skeleton(model_path, asset, log, progress=lambda pct, text: None):
+    """step 1 (rig_preprocess). A model drawn lying down is tried again stood up; other skips get a plain message."""
+    base = ["python", "-m", "data_process.rig_preprocess", "run", "--input", model_path,
+            "--output_dir", asset, "--no_review"]
+    for turn in [None] + TURNS:
+        try:
+            return _run(base + (["--rest_rotation", turn] if turn else []), log)
+        except RuntimeError as e:
+            if "produced no cond" not in str(e):
+                raise
+            reason = skip_reason(asset)
+            if "horizontal separation" not in reason or turn == TURNS[-1]:
+                raise RuntimeError(explain(reason) or str(e)) from None
+            progress(0.08, "The model seems to lie down; standing it up and trying again…")
+            shutil.rmtree(asset, ignore_errors=True)
+
+
 def animate(model_path, motions, progress=lambda pct, text: None):
     """Animate one rigged .glb. motions: keys of PROMPTS (or your own sentences).
     Returns [{"clip": "walk", "path": ".../walk.glb"}, ...]."""
@@ -254,8 +311,7 @@ def animate(model_path, motions, progress=lambda pct, text: None):
     animated = os.path.join(work, "animated")
 
     progress(0.05, "Reading the skeleton…")
-    _run(["python", "-m", "data_process.rig_preprocess", "run", "--input", model_path,
-          "--output_dir", asset, "--no_review"], log)
+    _read_skeleton(model_path, asset, log, progress)
 
     clips = [(m, PROMPTS.get(m, m)) for m in motions]
     for i, (clip, prompt) in enumerate(clips):

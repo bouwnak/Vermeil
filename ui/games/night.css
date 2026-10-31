@@ -7,12 +7,40 @@ body.night { padding: 0 0 40px; }
 .gn-tabs { display: flex; gap: 6px; padding: 6px 24px; overflow-x: auto; scrollbar-width: thin; }
 .gn-tabs button { flex: none; border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 7px 14px; font: 700 14px var(--font); cursor: pointer; }
 .gn-tabs button.on { background: var(--blue); border-color: var(--blue); color: #fff; }
-.gn-her { display: flex; align-items: center; gap: 10px; margin: 10px 24px; padding: 10px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-l); max-width: 760px; }
-.gn-her p { margin: 0; }
-.gn-her.pop { animation: gnPop .35s ease; }
-@keyframes gnPop { 0% { transform: scale(.97); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
-.gn-face { font-size: 26px; }
-.gn-stage { padding: 0 24px; }
+.gn-mute { padding: 6px 12px; font-size: 18px; }
+
+/* the games on the left, Vermeil up close on the right (like the Games hub's preview) */
+.gn-body { display: grid; grid-template-columns: minmax(0, 1fr) clamp(260px, 26vw, 360px); gap: 20px; align-items: start; padding: 10px 24px 0; }
+.gn-stage { min-width: 0; }
+.gn-stage.gn-in > * { animation: rise .35s ease both; }
+.gn-vermeil {
+  position: sticky; top: 16px; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: var(--radius-l); border: 1px solid var(--line);
+  background: radial-gradient(ellipse at 50% 18%, rgba(var(--accent-rgb), .38), #0b0d11 75%);
+  box-shadow: 0 30px 70px -30px rgba(0,0,0,.8), 0 0 0 1px rgba(var(--accent-rgb), .12) inset;
+  animation: rise .45s ease .1s both;
+}
+.vm-view { position: relative; aspect-ratio: 4 / 5; cursor: pointer; }
+.vm-view::after { content: ""; position: absolute; inset: auto 0 0 0; height: 30%; pointer-events: none; background: linear-gradient(transparent, rgba(11,13,17,.9)); }
+.vm-canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; opacity: 0; transition: opacity .6s ease; }
+.vm-ready .vm-canvas { opacity: 1; }
+.vm-flat-face { position: absolute; inset: 0; display: none; place-items: center; font-size: 110px; animation: vmBob 3s ease-in-out infinite; }
+.vm-flat .vm-flat-face { display: grid; }
+.vm-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-weight: 800; animation: vmPulse 1.4s ease-in-out infinite; }
+.vm-ready .vm-loading, .vm-flat .vm-loading { display: none; }
+@keyframes vmBob { 50% { transform: translateY(-8px) scale(1.04); } }
+@keyframes vmPulse { 50% { opacity: .4; } }
+.vm-talk { position: relative; margin: -34px 12px 12px; padding: 12px 14px; min-height: 76px; z-index: 1;
+  background: rgba(22, 25, 30, .92); border: 1px solid rgba(var(--accent-rgb), .45); border-radius: 14px;
+  box-shadow: 0 10px 30px -12px rgba(var(--accent-rgb), .6); }
+.vm-talk::before { content: ""; position: absolute; top: -8px; left: 28px; width: 14px; height: 14px; transform: rotate(45deg);
+  background: inherit; border-left: 1px solid rgba(var(--accent-rgb), .45); border-top: 1px solid rgba(var(--accent-rgb), .45); }
+.vm-name { display: block; color: var(--blue); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.vm-talk p { margin: 2px 0 0; color: var(--strong); font-size: 16px; line-height: 1.4; }
+.gn-vermeil.pop .vm-talk { animation: gnPop .35s ease; }
+@keyframes gnPop { 0% { transform: scale(.96); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 .gn-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-l); padding: 18px; }
 .gn-card h2 { margin-bottom: 6px; }
 .gn-card h3 { margin: 14px 0 6px; }
@@ -25,7 +53,10 @@ select, .input { background: var(--raised); color: var(--ink); border: 1px solid
 
 /* library */
 .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-top: 12px; }
-.lib-game { position: relative; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; background: var(--raised); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.lib-game { position: relative; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; background: var(--raised); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+  animation: rise .4s ease both; animation-delay: calc(var(--k, 0) * 40ms); transition: border-color .2s ease, box-shadow .2s ease; }
+.lib-game:hover { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue), 0 10px 28px -10px rgba(var(--accent-rgb), .7); }
+.lib-game:hover .lib-icon { animation: vmBob .9s ease-in-out infinite; }
 .lib-game.fav { border-color: #f5c542; }
 .lib-icon { font-size: 30px; }
 .lib-game small { color: var(--muted); }
@@ -150,11 +181,72 @@ select, .input { background: var(--raised); color: var(--ink); border: 1px solid
 .trophy small { font-size: 11px; color: var(--muted); }
 
 @media (max-width: 640px) {
-  .gn-head, .gn-tabs, .gn-stage { padding-left: 16px; padding-right: 16px; }
-  .gn-her { margin-left: 16px; margin-right: 16px; }
+  .gn-head, .gn-tabs, .gn-body { padding-left: 16px; padding-right: 16px; }
   .tv-choices { grid-template-columns: 1fr; }
   .sudoku { grid-template-columns: repeat(9, 34px); grid-auto-rows: 34px; }
   .sd { width: 34px; height: 34px; font-size: 16px; }
   .nono { grid-template-columns: auto repeat(var(--n), 26px); }
   .nc { width: 26px; height: 26px; }
+}
+
+/* ---------- effects: confetti layer, flash, shake, and little animations in every game ---------- */
+.gn-fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+.gn-flash { position: fixed; inset: 0; pointer-events: none; z-index: 49; background: radial-gradient(ellipse at center, transparent 40%, var(--c)); opacity: 0; animation: gnFlash .7s ease; }
+@keyframes gnFlash { 20% { opacity: .35; } }
+.fx-shake { animation: gnShake .45s ease; }
+@keyframes gnShake { 15%, 55% { transform: translateX(-7px); } 35%, 75% { transform: translateX(7px); } 90% { transform: translateX(-2px); } }
+.gn-cup.lead { animation: gnGlow 2.4s ease-in-out infinite; }
+@keyframes gnGlow { 50% { box-shadow: 0 0 0 3px rgba(245, 197, 66, .18), 0 0 22px rgba(245, 197, 66, .55); } }
+.gn-tabs button { transition: background .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.gn-tabs button:hover { border-color: var(--blue); }
+.gn-tabs button.on { box-shadow: 0 4px 18px -4px rgba(var(--accent-rgb), .8); }
+/* chess: the piece that just moved drops in, check pulses */
+.sq.to .pc { display: inline-block; animation: pcDrop .28s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes pcDrop { from { transform: translateY(-14px) scale(1.25); opacity: .4; } }
+.sq.check { animation: gnCheck .9s ease-in-out infinite; }
+@keyframes gnCheck { 50% { filter: brightness(1.35); } }
+.sq:hover { filter: brightness(1.08); }
+/* cards: your hand deals in, the top of the pile spins in, playable cards float */
+.my-hand .uc { animation: deal .35s ease both; transition: transform .15s ease, box-shadow .15s ease; }
+.my-hand .uc:nth-child(2) { animation-delay: .03s; } .my-hand .uc:nth-child(3) { animation-delay: .06s; } .my-hand .uc:nth-child(4) { animation-delay: .09s; }
+.my-hand .uc:nth-child(5) { animation-delay: .12s; } .my-hand .uc:nth-child(6) { animation-delay: .15s; } .my-hand .uc:nth-child(n + 7) { animation-delay: .18s; }
+@keyframes deal { from { opacity: 0; transform: translateY(30px) rotate(-6deg); } }
+.my-hand .uc.ok:hover { transform: translateY(-14px) rotate(-2deg); box-shadow: 0 12px 22px #000a; }
+.mid > .uc:not(.back) { animation: pileIn .35s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes pileIn { from { transform: scale(.6) rotate(-25deg); opacity: 0; } }
+/* trivia: the right answer glows, a wrong one shakes */
+.btn.right { animation: gnRight .6s ease; box-shadow: 0 0 22px rgba(48, 164, 108, .7); }
+@keyframes gnRight { 40% { transform: scale(1.04); } }
+.tv-q { animation: rise .35s ease both; }
+/* five letters: the guessed row flips one letter at a time; a typed letter pops */
+.wd-row.reveal .wd-cell { animation: flip .5s ease both; }
+.wd-row.reveal .wd-cell:nth-child(2) { animation-delay: .12s; } .wd-row.reveal .wd-cell:nth-child(3) { animation-delay: .24s; }
+.wd-row.reveal .wd-cell:nth-child(4) { animation-delay: .36s; } .wd-row.reveal .wd-cell:nth-child(5) { animation-delay: .48s; }
+@keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); filter: brightness(.6); } 100% { transform: rotateX(0); } }
+@keyframes typed { 50% { transform: scale(1.1); } }
+.kb button { transition: transform .1s ease, filter .15s ease; }
+.kb button:hover:not(:disabled) { filter: brightness(1.2); }
+/* puzzles */
+.nc.on { animation: typed .15s ease; }
+.sd.bad { animation: gnShake .45s ease; }
+.sd:focus { outline: 2px solid var(--blue); outline-offset: -2px; }
+/* hangman: each new line draws itself */
+.hang-pic > :last-child { stroke-dasharray: 200; animation: drawLine .5s ease both; }
+@keyframes drawLine { from { stroke-dashoffset: 200; } to { stroke-dashoffset: 0; } }
+/* tournament */
+.tn-score b { animation: typed .5s ease; }
+.trophy { animation: rise .4s ease both; transition: transform .2s ease; }
+.trophy:hover { transform: translateY(-4px) rotate(-4deg); }
+
+@media (max-width: 900px) {
+  .gn-body { grid-template-columns: 1fr; }
+  .gn-vermeil { position: static; order: -1; flex-direction: row; align-items: stretch; }
+  .vm-view { width: 130px; flex: none; aspect-ratio: auto; min-height: 150px; }
+  .vm-view::after { display: none; }
+  .vm-talk { margin: 10px; flex: 1; }
+  .vm-talk::before { top: 22px; left: -8px; transform: rotate(-45deg); }
+  .vm-flat-face { font-size: 60px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gn-body *, .gn-vermeil { animation: none !important; }
 }

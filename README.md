@@ -14,7 +14,29 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (31 Oct 2026, latest): Music, media and wrap-up round
+## New (31 Oct 2026, latest): Fixes and a livelier Game Night
+
+- **Game Night** has Vermeil up close on the right, like the Games hub's preview. She moves her head after your
+  mouse, blinks, talks while her line types out, and reacts to the game (cheers, claps, laughs, thinks). Click her
+  for a giggle. Her old line above the game is gone; she talks in her panel now.
+- Every game has **sounds and effects**: chess moves and captures, cards dealt and played, letters flipping in Words,
+  confetti when you win, a shake when you're wrong. **🔊** at the top turns the sounds off.
+- **Adventure** and **Retro Games** are only in the Games hub now, not in the Game Night library.
+- **Runs (GPS) are on the phone only:** open the phone app → **🏃 Run** → **Start**. Keep the screen on while you run.
+- **Study:**
+  - The **Play** tab is gone. **Flashcards** and **Ask my library** are now in **My study**.
+  - **Citations** moved to **Research**.
+  - **Formulas** shows a button for each course in your library (for example **Engineering Economics**). Vermeil
+    groups the lessons into courses for you.
+  - **Check my answers** gives XP only once a day per review, and only when you got something right. It does
+    nothing until you answer.
+- **Planner:** the "Before my…" reminder option was removed.
+- When a page has many tabs, they stay on one line with a scroll bar. Every tab and button needs only one click.
+- The red dot on **Settings** is gone.
+- **UniMate:** when a model can't be animated, you now get a plain reason and what to do. A model that lies down is
+  stood up and tried again.
+
+## New (31 Oct 2026): Music, media and wrap-up round
 
 In **Music** (Vermeil's own player), under the player:
 
@@ -116,10 +138,10 @@ Open **Study**. The first tab is now **My study**:
   the final blank and it tells you the score you need on it.
 - **📸 Notes** - pick photos of your handwritten notes. She reads them, cleans them up, and a note on a topic you
   already have is joined to it. **🔗 Merge duplicates** joins old ones.
-- **📐 Formulas** - one formula sheet per subject (Hydrology, RCD, Steel...). It uses the library files with that
-  subject (set it in Library) and the formulas in your handwritten notes.
+- **📐 Formulas** - one formula sheet per course (Engineering Economics, Hydrology, RCD...). Vermeil sorts your
+  library files into courses, and adds the formulas in your handwritten notes.
 - **🎬 Chapters** - a video lecture split into chapters; click a time to jump there.
-- **📚 Citations** - paste a link or type a book title: APA 7 and MLA 9 to copy.
+- **📚 Citations** (in **Research**) - paste a link or type a book title: APA 7 and MLA 9 to copy.
 - **✍️ Essay** - an outline (thesis, points, evidence), then paste your draft for feedback.
 - **🎯 Exam week** - add your exams and a bedtime. You get a plan for each day, a bedtime reminder, and Vermeil keeps
   chat short and calm.
@@ -235,11 +257,10 @@ All of these are in **Settings → Her little life** unless it says otherwise.
 ## New (30 Oct 2026): Battle Pass, study games, language trainers, gym coach, phone Study tab, backups
 Everything you do now gives **XP**. Open **Battle Pass** in the menu to see your level, streak, 3 daily quests, badges and
 the rewards you unlock (room decorations, wallpapers and titles; locked ones show a 🔒 in the room's Add furniture list).
-- **Study → Play:**
+- **Study → My study:**
   - **🃏 Flashcards:** your Flashcards reviews and your language word bank. They come back on a schedule (1, 2, 4, 8 and 16 days). Right answers in a row build a 🔥 combo for more XP.
   - **🔎 Ask my library:** answers only from your files, with the file and page. For a video it gives the time, with a ▶ button.
-  - **📐 Formula sheet:** tick files in Library, then **Make my formula sheet**, then **🖨 Print**.
-  - **⏱ Study timer:** 25-minute blocks. She stays quiet while you work and cheers you on at each break.
+  - **📐 Formulas:** pick a course, then **🖨 Print**.
 - **Video lectures:** a review question from a video has **▶ Watch where this was said**. The video opens at that moment.
 - **Study → Language:**
   - **Pronunciation:** green and red words. Tap a red word to hear it.

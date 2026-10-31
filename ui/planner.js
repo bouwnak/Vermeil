@@ -48,13 +48,11 @@ export function initPlanner(api) {
         ["normal", "high", "low"].map((p) => el("option", { value: p }, `${p[0].toUpperCase() + p.slice(1)} priority`))),
       el("button", { class: "primary", type: "submit" }, "Add")),
     el("h3", {}, "Reminders for a situation"),
-    el("p", { class: "note" }, "Not at a clock time: when you get back to the computer, or before a class/event today. You can also just say \"remind me to … when I get home\"."),
+    el("p", { class: "note" }, "Not at a clock time: when you get back to the computer. You can also just say \"remind me to … when I get home\"."),
     el("ul", { class: "day-list", id: "smartList" }),
     el("form", { class: "add-form", id: "smartAdd" },
       el("input", { name: "event", placeholder: "e.g. take out the trash", "aria-label": "What to remind", required: true }),
-      el("select", { name: "on", "aria-label": "When" }, el("option", { value: "home" }, "When I get back"), el("option", { value: "before" }, "Before my…")),
-      el("input", { name: "match", placeholder: "e.g. 2 pm class", "aria-label": "Which event", hidden: true }),
-      el("select", { name: "minutes", "aria-label": "How long before", hidden: true }, [10, 15, 30, 60, 120].map((m) => el("option", { value: m, selected: m === 30 }, `${m} min before`))),
+      el("span", { class: "note" }, "when I get back"),
       el("button", { class: "primary", type: "submit" }, "Add")),
     el("h3", {}, "Tasks without a date"),
     el("ul", { class: "day-list", id: "anytimeList" }),
@@ -66,18 +64,16 @@ export function initPlanner(api) {
 
   // ---------- situation reminders ----------
   const smart = $("smartAdd");
-  smart.on.addEventListener("change", () => { smart.match.hidden = smart.minutes.hidden = smart.on.value !== "before"; });
   const drawSmart = (items) => $("smartList").replaceChildren(...(items.length ? items.map((r) => el("li", {},
     el("span", { class: "what" }, r.event), el("small", {}, r.on === "home" ? "when you get back" : `${r.minutes} min before ${r.match || "your next event"}`),
     el("button", { class: "x", "aria-label": `Remove ${r.event}`, onclick: async () => drawSmart(await api.smart_reminder_remove(r.event)) }, "×")))
     : [el("li", { class: "none" }, "None.")]));
   smart.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (smart.on.value === "before" && !smart.match.value.trim()) return toast("Which class or event? e.g. \"2 pm class\"");
-    const r = await api.smart_reminder_add(smart.event.value, smart.on.value, smart.match.value, Number(smart.minutes.value));
+    const r = await api.smart_reminder_add(smart.event.value, "home", "", 0);
     toast(r.message, 5000);
     drawSmart(r.items);
-    smart.event.value = ""; smart.match.value = "";
+    smart.event.value = "";
   });
   api.smart_reminders().then(drawSmart).catch(() => {});
 

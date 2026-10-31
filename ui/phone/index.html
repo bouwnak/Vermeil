@@ -116,6 +116,21 @@
     <div class="retro-frame" id="retroFrame"></div>
   </div>
 
+  <!-- Run: GPS run / walk / ride, saved on the computer (Gym) -->
+  <section class="tab" id="tab-run" hidden>
+    <h2>Run</h2>
+    <p class="muted" id="runWeek"></p>
+    <div class="run-go">
+      <select id="runKind" aria-label="Activity"><option value="run">🏃 Run</option><option value="walk">🚶 Walk</option><option value="ride">🚴 Ride</option></select>
+      <button class="btn primary big" id="runBtn">▶ Start</button>
+    </div>
+    <div class="run-stats" id="runStats"></div>
+    <div class="route" id="runMap"></div>
+    <p class="muted">Allow location when asked. Keep this app open (the screen can stay on) while you move.</p>
+    <h3>Past activities</h3>
+    <div class="list" id="runList"></div>
+  </section>
+
   <!-- Characters -->
   <section class="tab" id="tab-chars" hidden>
     <h2>Characters</h2>
@@ -185,6 +200,7 @@
     <button role="tab" data-tab="practice"><span>🗣</span>Practice</button>
     <button role="tab" data-tab="study"><span>🃏</span>Study</button>
     <button role="tab" data-tab="games"><span>🕹</span>Games</button>
+    <button role="tab" data-tab="run"><span>🏃</span>Run</button>
     <button role="tab" data-tab="chars"><span>👥</span>Characters</button>
     <button role="tab" data-tab="settings"><span>⚙️</span>Settings</button>
   </nav>

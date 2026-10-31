@@ -2,7 +2,7 @@
 import { $, el, toast, setMd, busy, loadingCard, setupDropZone } from "./util.js";
 import { initPlay, watchButton } from "./studyplay.js";
 import { initLangExtras, accentWords } from "./langplay.js";
-import { initStudyLife, coachTips, examReport } from "./studylife.js";
+import { initStudyLife, coachTips, examReport, citationBox } from "./studylife.js";
 
 const KIND_LABEL = { lecture: "Lecture", problems: "Problems", solutions: "Solutions", other: "Other" };
 
@@ -12,7 +12,7 @@ export function initStudy(api) {
   const root = $("studyBody");
 
   // ---------- layout: tabs ----------
-  const tabs = ["My study", "Library", "Review", "Play", "Language", "Research", "Assignment"];
+  const tabs = ["My study", "Library", "Review", "Language", "Research", "Assignment"];
   const tabBar = el("div", { class: "tabs", role: "tablist" }, tabs.map((t) =>
     el("button", { role: "tab", id: `tab-${t.replace(" ", "-")}`, "aria-controls": `pane-${t.replace(" ", "-")}`, onclick: () => show(t) }, t)));
   const panes = Object.fromEntries(tabs.map((t) => [t, el("div", { class: "pane", id: `pane-${t.replace(" ", "-")}`, role: "tabpanel", hidden: true })]));
@@ -22,13 +22,12 @@ export function initStudy(api) {
     api.save_ui({ study_tab: t });
     if (t === "Review") renderReviewPane();
     if (t === "Language") renderLanguage();
-    if (t === "Play") playPane.load();
     if (t === "My study") myStudy.load();
   }
+  const playPane = initPlay(api, () => [...selectedFiles]);
   const myStudy = initStudyLife(api, panes["My study"], {
-    showTab: (t) => show(t), files: () => data.files,
+    showTab: (t) => show(t), files: () => data.files, play: playPane,
     openReview: async (id) => { show("Review"); openReview(await api.study_review(id)); } });
-  const playPane = initPlay(api, panes.Play, () => [...selectedFiles]);
   window.showStudyTab = (t) => tabs.includes(t) && show(t);
 
   // ---------- Library ----------
@@ -409,7 +408,11 @@ export function initStudy(api) {
       body = el("div", {}, (r.sections || []).map((s) => el("section", {}, el("h4", {}, s.heading),
         el("ul", {}, s.points.map((p) => el("li", {}, p))), src(s.source, s))));
     }
-    const actions = check ? el("div", { class: "row" }, el("button", { class: "primary", onclick: async () => {
+    const answered = () => (r.type === "fill_blanks" ? [...body.querySelectorAll("input.blank")].some((x) => x.value.trim())
+      : !!body.querySelector(".choice.picked"));
+    const actions = check ? el("div", { class: "row" }, el("button", { class: "primary", onclick: async (e) => {
+      if (!answered()) return toast("Answer at least one question first.");
+      e.currentTarget.disabled = true;                     // again only after you change an answer
       const right = await check();
       score.hidden = false;
       const pct = Math.round(100 * right / items.length);
@@ -420,6 +423,7 @@ export function initStudy(api) {
       else if (right < items.length) score.append(el("small", { class: "muted" }, " The ones you missed are saved in My study → Mistakes."));
       data = await api.study_files(); renderReviewPane();
     } }, "Check my answers")) : null;
+    if (actions) body.addEventListener(r.type === "fill_blanks" ? "input" : "click", () => { actions.firstChild.disabled = false; });
     // timed mock exam: countdown, then answers are checked automatically
     let timerId = null;
     const timerEl = r.time_limit && check ? el("p", { class: "exam-timer" }) : null;
@@ -1059,6 +1063,7 @@ export function initStudy(api) {
     aiSection,
     paraSection,
     gramSection,
+    citationBox(api),
     rOut);
 
   // ---------- Assignment ----------
@@ -1089,7 +1094,7 @@ export function initStudy(api) {
     data = await api.study_files();
     renderFiles();
     renderReviewPane();
-    show(tab || "My study");
+    show(tabs.includes(tab) ? tab : "My study");
   }
   return { load };
 }
