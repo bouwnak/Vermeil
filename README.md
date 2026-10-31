@@ -35,6 +35,8 @@ background.
 - The red dot on **Settings** is gone.
 - **UniMate:** when a model can't be animated, you now get a plain reason and what to do. A model that lies down is
   stood up and tried again. A model with no bones is caught right away: press **Rig it** first.
+  Game models with too many bones (over 70, like Invincible's 249) are slimmed automatically: the face, cape
+  and helper bones go, and the body still moves.
 
 ## New (31 Oct 2026): Music, media and wrap-up round
 

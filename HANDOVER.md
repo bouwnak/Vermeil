@@ -86,7 +86,16 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **UniMate check on this PC (31 Oct 2026, newest)**: the owner asked to fix the UniMate error ("stage 4 produced no cond" for `invincible_vs_omniman.glb` on the other PC, in `D:\THIS PC\Downloads\...`).
+- **UniMate: big game rigs slimmed (31 Oct 2026, newest)**: the owner put the same `invincible_vs_omniman.glb` in Downloads, so the real error showed up: "248 joints outside [4, 180]". The rig has 249 bones (Source/SFM: arm and leg driver bones, lips, brows, eyes, tongue, cape). UniMate's model takes at most 71 (`max_joints` in its config).
+  - New `skills/slimrig.py`: makes a copy of the .glb with at most 70 bones.
+    - It removes end bones one at a time: helper and face bones first, then the ones that move the least skin.
+    - A removed bone's skin weights go to its parent, keeping the best 4 per vertex, summing to 1. Inverse bind matrices stay with their bones.
+    - Removed bones also leave the node tree and the animation channels. Meshes, materials and textures are untouched.
+  - `skills/animate.py`: before "Reading the skeleton", a rig over 70 bones is slimmed into `work/slim/`. The progress line says "This rig has 249 bones; UniMate takes 70…".
+  - Checked with the real UniMate on this PC: Invincible 249 → 70 bones in about 2 s, then a walk was made. It was viewed in three.js and the body and cape move without tearing.
+  - Tests: `tests/test_slimrig.py` (new, 3). Full suite: 712 tests OK (3 skipped).
+  - Still to do: pull this on the other PC and animate Invincible again.
+- **UniMate check on this PC (31 Oct 2026)**: the owner asked to fix the UniMate error ("stage 4 produced no cond" for `invincible_vs_omniman.glb` on the other PC, in `D:\THIS PC\Downloads\...`).
   - Tried here with the real UniMate: two characters merged into one .glb (Pikachu + Greninja) and a path with spaces (`THIS PC\work dir`). Both made a walk without errors, so neither is the cause.
   - A model with no bones fails differently ("No armature found"). The Invincible model has bones, so its real reason is only in that PC's `asset/work/features/extract_errors.log`. The model file isn't on this PC.
   - `skills/animate.py`:

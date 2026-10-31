@@ -294,7 +294,7 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 | 📚 Citations | Study → Research | Moved from My study |
 | 🧾 Fair review XP | Study → Review | XP once a day per review, only for right answers |
 | ↔️ Scrolling tab bars | Every page with tabs | One line with a scroll bar; one click is enough |
-| 🦴 Clear UniMate errors | Kitchen → UniMate | Says why a model was skipped; stands up a lying model and tries again; no bones → "Rig it first" |
+| 🦴 Clear UniMate errors | Kitchen → UniMate | Says why a model was skipped; stands up a lying model and tries again; no bones → "Rig it first"; rigs over 70 bones slimmed automatically |
 
 ## 🆕 31 Oct 2026: Music, media and wrap-up round
 

@@ -332,6 +332,14 @@ def animate(model_path, motions, progress=lambda pct, text: None):
     samples = os.path.join(work, "samples")
     animated = os.path.join(work, "animated")
 
+    import slimrig
+    if slimrig.bone_count(model_path) > slimrig.MAX_BONES:   # game rigs: too many helper / face bones for UniMate
+        os.makedirs(os.path.join(work, "slim"), exist_ok=True)
+        slim = os.path.join(work, "slim", os.path.basename(model_path))
+        before, after = slimrig.slim(model_path, slim)
+        progress(0.04, f"This rig has {before} bones; UniMate takes {slimrig.MAX_BONES}. Keeping the {after} body bones…")
+        model_path = slim
+
     progress(0.05, "Reading the skeleton…")
     _read_skeleton(model_path, asset, log, progress)
 
