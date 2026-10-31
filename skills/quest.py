@@ -19,6 +19,10 @@ from paths import data_file
 STATE_FILE = data_file("quest.json")
 TIER_XP = 300                       # XP for each battle-pass tier
 SEASON = "Season 1: Cozy Scholar"
+# a new themed season every month: its furniture set is in the VCash shop (ui/shop.js THEMES) that month
+SEASONS = [("space", "🚀 Space Season"), ("ocean", "🌊 Ocean Season"), ("fantasy", "🐉 Fantasy Season")]
+VCASH_PER_XP = 0.5                  # VCash, the app's money: half of every XP you earn
+SHOP_WEEKLY = 6                     # how many shop items are on sale each week (the season's set is always on sale)
 _lock = threading.Lock()
 
 # what each thing is worth (n = how many)
@@ -103,8 +107,52 @@ def _save(s):
     os.replace(tmp, STATE_FILE)
 
 
+def season(today=None):
+    """this month's season: {"theme", "name", "month"}"""
+    today = today or date.today()
+    key, name = SEASONS[(today.year * 12 + today.month) % len(SEASONS)]
+    return {"theme": key, "name": f"{name} · {today.strftime('%B %Y')}", "month": today.strftime("%Y-%m")}
+
+
+def weekly_pick(keys, today=None):
+    """the shop items on sale this week (the same list all week, a new one every Monday)"""
+    today = today or date.today()
+    y, w, _ = today.isocalendar()
+    keys = sorted(keys)
+    return sorted(random.Random(f"{y}-{w}").sample(keys, min(SHOP_WEEKLY, len(keys))))
+
+
+def buy(key, price, name=""):
+    """spend VCash on a shop item; you keep it forever"""
+    price = int(price)
+    if price < 0 or not key:
+        return {"error": "That isn't for sale."}
+    with _lock:
+        s = _fill(_load())
+        if key in s["owned"]:
+            return {"ok": True, "vcash": s["vcash"], "owned": s["owned"], "already": True}
+        if s["vcash"] < price:
+            return {"error": f"You need {price - s['vcash']} more VCash.", "vcash": s["vcash"]}
+        s["vcash"] -= price
+        s["owned"].append(key)
+        s.setdefault("spent", []).append({"key": key, "name": name, "price": price, "day": date.today().isoformat()})
+        _save(s)
+    return {"ok": True, "vcash": s["vcash"], "owned": s["owned"]}
+
+
+def give_vcash(n, why=""):
+    """add (or with a negative n, take) VCash directly - gifts and the adventure's rewards"""
+    with _lock:
+        s = _fill(_load())
+        s["vcash"] = max(0, s["vcash"] + int(n))
+        _save(s)
+    return s["vcash"]
+
+
 def _fill(s):
     s.setdefault("xp", 0)
+    s.setdefault("vcash", int(s.get("xp", 0) * VCASH_PER_XP))     # older saves: VCash for the XP already earned
+    s.setdefault("owned", [])
     s.setdefault("totals", {})
     s.setdefault("days", {})
     s.setdefault("streak", 0)
@@ -167,10 +215,12 @@ def award(kind, n=1, xp=None, today=None):
                     d["xp"] += q["xp"]
                     done.append(q["text"])
         s["xp"] += gained
+        cash = int(gained * VCASH_PER_XP)
+        s["vcash"] += cash
         lvl, tier = level_of(s["xp"])[0], tier_of(s["xp"])
         _save(s)
     new = [_reward(r) for r in PASS if before_tier < r[0] <= tier]
-    return {"xp": gained, "total": s["xp"], "level": lvl, "level_up": lvl > before_lvl, "tier": tier,
+    return {"xp": gained, "vcash": cash, "vcash_total": s["vcash"], "total": s["xp"], "level": lvl, "level_up": lvl > before_lvl, "tier": tier,
             "rewards": new, "quests_done": done, "streak": s["streak"]}
 
 
@@ -199,7 +249,8 @@ def state(today=None):
             "pass": [{**_reward(r), "got": r[0] <= tier} for r in PASS],
             "items": [r[2] for r in got if r[1] == "item"], "wallpapers": [r[2] for r in got if r[1] == "wallpaper"],
             "badges": [{"id": b, "name": name, "got": bool(test(s))} for b, name, test in BADGES],
-            "today_xp": s["days"].get((today or date.today()).isoformat(), {}).get("xp", 0)}
+            "today_xp": s["days"].get((today or date.today()).isoformat(), {}).get("xp", 0),
+            "vcash": s["vcash"], "owned": s["owned"], "season_now": season(today)}
 
 
 def week(kind=None, today=None):

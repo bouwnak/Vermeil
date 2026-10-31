@@ -1717,3 +1717,42 @@ input.tiny { width: 56px; }
   box-shadow: 0 0 0 3px color-mix(in srgb, #ff5a7a 30%, transparent); vertical-align: middle; }
 .menu .item.has-update { position: relative; }
 .menu .item.has-update::after { content: ""; position: absolute; top: 10px; right: 12px; }
+
+/* ---------- living room: boot tip, VCash shop, designs, TV and forecast popups (livingroom.js) ---------- */
+.boot-tip { margin-top: 10px; max-width: 340px; font-size: 13px; color: var(--muted, #b9a9c9); text-align: center; line-height: 1.4; min-height: 2.8em; }
+.shop-head { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 13px; color: var(--muted); }
+.shop-head .vcash { font-weight: 800; color: #7fe0ff; font-size: 15px; }
+.shop-head .achv summary { cursor: pointer; }
+.shop-head .achv div { font-size: 12px; padding: 2px 0; }
+.edit-drawer .edit-card:disabled { opacity: .5; cursor: not-allowed; }
+.edit-card.design { display: flex; gap: 8px; align-items: center; cursor: default; }
+.live-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.live-row input { flex: 1 1 220px; }
+.live-pop { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(0,0,0,.5); }
+.live-pop[hidden] { display: none; }
+.live-pop-card { width: min(860px, calc(100vw - 32px)); max-height: 90vh; overflow: auto; padding: 14px; border-radius: 16px;
+  background: var(--panel, #1d1726); border: 1.5px solid var(--line-2); display: flex; flex-direction: column; gap: 10px; color: var(--ink); }
+.live-pop-head { display: flex; justify-content: space-between; align-items: center; }
+.tv-screen { aspect-ratio: 16 / 9; background: #000; border-radius: 10px; overflow: hidden; }
+.tv-screen:empty { display: none; }
+.tv-screen iframe, .tv-screen video { width: 100%; height: 100%; border: 0; }
+.forecast { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.fc-day { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px; border-radius: 12px; border: 1px solid var(--line-2); }
+.fc-icon { font-size: 30px; }
+.note.warn { color: #ffb36b; }
+
+/* ---------- herlife.js: phone-call reminders, birthday confetti, wardrobe ---------- */
+.her-call { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; background: rgba(8, 6, 20, .55); backdrop-filter: blur(4px); }
+.her-call[hidden] { display: none; }
+.her-call-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 26px 30px; border-radius: 22px;
+  background: var(--panel, #1c1830); color: var(--text, #fff); box-shadow: 0 20px 60px rgba(0,0,0,.45); min-width: 260px; }
+.her-call-avatar { font-size: 46px; width: 84px; height: 84px; display: grid; place-items: center; border-radius: 50%;
+  background: radial-gradient(circle, #8f6bff55, transparent 70%); animation: herRing 1s ease-in-out infinite; }
+.her-call-btns { display: flex; gap: 12px; margin-top: 10px; }
+@keyframes herRing { 0%, 100% { transform: rotate(0) scale(1); } 25% { transform: rotate(-8deg) scale(1.05); } 75% { transform: rotate(8deg) scale(1.05); } }
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 8000; overflow: hidden; }
+.confetti i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation: confettiFall 3s linear forwards; }
+@keyframes confettiFall { to { transform: translateY(105vh) rotate(720deg); } }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: middle; border: 1px solid #0003; }
+.wardrobe summary { cursor: pointer; margin: 6px 0; }
+@media (prefers-reduced-motion: reduce) { .her-call-avatar, .confetti i { animation: none; } }

@@ -2,6 +2,8 @@
 # On a Mac / Linux use INSTALL Mac.command / INSTALL Linux.sh: keyboard, winotify, pycaw and comtypes are Windows-only and skipped there.
 # The phone app, low power mode, character sharing and the live language partner (30 Oct 2026) need nothing new from pip
 # (the phone link downloads cloudflared by itself into tools/cloudflared).
+# The VCash shop and living room (31 Oct 2026) need nothing new either (photo frames use pillow, already below).
+# Vermeil's little life (31 Oct 2026) needs nothing new (the double clap uses sounddevice + numpy, already below).
 #
 #   python -m pip install -r requirements.txt
 #

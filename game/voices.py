@@ -12,6 +12,7 @@ While the AI is online (Groq) and Kokoro is running on this PC, everyone speaks 
   uses the fast offline Piper voices, so their lines are ready almost at once.
 """
 import base64
+import sys
 import hashlib
 import threading
 
@@ -176,6 +177,62 @@ def _cloned(text, voice, rate, pitch, clone):
     return samples, sr
 
 
+def _main():
+    """the assistant's speech module, only when the app is running (tests and the bare game never load it)"""
+    pm = sys.modules.get("pinakamain")
+    return pm if pm is not None and getattr(pm, "tts_ready", False) else None
+
+
+def main_room_key():
+    """what the companion's main-room voice depends on (so a changed voice/clone/setting isn't served from cache)"""
+    pm = _main()
+    if pm is None: return None
+    return (pm.active_voice(), pm.VOICE_RATE, pm.VOICE_PITCH, (pm.VOICE_RVC or {}).get("model"), pm.VOICE_EMOTION,
+            pm.VOICE_NATURAL, pm.VOICE_CHATTER, pm.LOW_POWER)
+
+
+def main_room_voice(text):
+    """The companion speaks exactly like in the main room: her current voice (Kokoro online / Piper offline), the
+    RVC clone, the Emotional voice (Chatterbox), feelings in the voice, breaths and melody, and your pronunciations.
+    -> (samples, sr), or None when the app's voice isn't running (then the game's own voices are used)."""
+    pm = _main()
+    if pm is None: return None
+    rate, pitch, style = pm.VOICE_RATE, pm.VOICE_PITCH, None
+    if pm._use_chatter(text):                  # Chatterbox acts *laughs* / *sighs* out itself
+        import chatter
+        text = chatter.tagged(text)
+    if pm.VOICE_EMOTION > 0 or pm.VOICE_NATURAL:
+        import voice_emotion, expressive
+        emo, strength = voice_emotion.detect(text, pm.analyzer) if pm.VOICE_EMOTION > 0 else ("neutral", 0.0)
+        if pm.VOICE_EMOTION > 0 and pm._use_chatter(text):
+            import chatter
+            text = chatter.with_mood(text, emo, min(1.0, strength * pm.VOICE_EMOTION))
+        sound = None
+        if pm.VOICE_EMOTION > 0:
+            d_rate = voice_emotion.prosody(emo, strength, pm.VOICE_EMOTION)[0]
+            rate = pm._shift(rate, d_rate, "%")
+            text, sound = expressive.vocalize(text)
+        style = expressive.plan(text, emo, strength, pm.VOICE_EMOTION, natural=pm.VOICE_NATURAL, first=True, sound=sound)
+    text = pm.clean_endearments(pm.clean_text(text))
+    if style and text:
+        import expressive
+        text = expressive.pronounce(text, pm.persona.get("language") or "auto")
+    if not text.strip(): return None
+    return pm.synth_voice(text, pm.active_voice(), rate, pitch, pm.VOICE, pm.VOICE_RVC, style)
+
+
+def natural_voice(text, synth):
+    """the Dungeon Master and NPCs keep their own voices but get the main room's breaths, pauses and melody
+    (when "natural voice" is on there). -> (samples, sr) or None"""
+    pm = _main()
+    if pm is None or pm.LOW_POWER or not pm.VOICE_NATURAL: return None
+    import voice_emotion, expressive
+    emo, strength = voice_emotion.detect(text, pm.analyzer)
+    style = expressive.plan(text, emo, strength, min(pm.VOICE_EMOTION, 0.8), natural=True, first=True, sound=None)
+    samples, sr = expressive.speak_parts(text, style, synth)
+    return expressive.finish(samples, sr, style), sr
+
+
 _cache = {}                     # (voice, rate, pitch, clone, text) -> result: repeated lines (greetings, tests) play instantly
 
 
@@ -196,12 +253,27 @@ def speak(camp, speaker, text):
         voice = online
         if voice == VERMEIL_ONLINE:
             rate_s, pitch_s = "+0%", "+0Hz"
-    key = (voice, rate_s, pitch_s, (clone or {}).get("model"), text[:3000])
+    main = main_room_key() if speaker == "vermeil" else None
+    key = (voice, rate_s, pitch_s, (clone or {}).get("model"), text[:3000], main)
     if key in _cache:
         return _cache[key]
     try:
         _unload_extra(voice)
-        if clone:
+        got = None
+        if main:                                 # the companion: the same voice as in the main room
+            try:
+                got = main_room_voice(text[:3000])
+                if got: voice = main[0]
+            except Exception as e:
+                print(f"[game voice] main-room voice: {e} - using the game voice.")
+        elif speaker != "vermeil":
+            try:
+                got = natural_voice(text[:3000], lambda part: T.synth(part, voice, rate_s, pitch_s))
+            except Exception as e:
+                print(f"[game voice] natural voice: {e}")
+        if got:
+            samples, rate = got
+        elif clone:
             samples, rate = _cloned(text[:3000], voice, rate_s, pitch_s, clone)
         else:
             samples, rate = T.synth(text[:3000], voice, rate_s, pitch_s, v["voice"]) if online else T.synth(text[:3000], voice, rate_s, pitch_s)

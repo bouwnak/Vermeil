@@ -14,7 +14,57 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (31 Oct 2026, latest): Loading screen, gym room switch, 200 ideas
+## New (31 Oct 2026, latest): Vermeil's little life
+All of these are in **Settings → Her little life** unless it says otherwise.
+- **She remembers small things:** say "I have an exam tomorrow" or "I'm feeling sick" and a day or two later she asks
+  "How did your exam go?" or "Are you feeling better today?". Works for exams, interviews, presentations, appointments,
+  trips, games, deadlines, workouts and feeling unwell.
+- **👗 Dress her for the day:** her hat and colour change by themselves: a witch hat at Halloween, a Santa hat at Christmas,
+  a beanie when it's cold or raining, a cap on sunny days, headphones late at night, a party hat on your birthday. Turn it
+  off to go back to no hats.
+- **👗 Wardrobe:** make your own outfits (hat, glasses, colour; she tries it on while you pick), save them, and choose one
+  to wear, or "Auto".
+- **More idle moves:** more little moves when she's just standing (twirls, waves, pointing, yawning late at night), and she
+  daydreams at the window or hums a song in the afternoon.
+- **She sleeps in bed late at night** (11 pm to 5 am) when you're not talking. You can turn it off.
+- **🎂 Birthday mode:** type your birthday (like 03-21). On the day: confetti, a party hat, the party lights and a birthday
+  greeting.
+- **📞 Reminders ring like a phone call:** a reminder shows "Vermeil is calling…" with a ringtone. **Answer** and she says
+  it; **Snooze** calls again in 10 minutes. Turn it off to get the old pop-up.
+- **Good morning / good night:** say "good morning" and she tells you the weather, today's events and your top tasks. Say
+  "good night" and she sums up your day (tasks done, focus minutes) and what's tomorrow.
+- **Holiday greetings:** the first time you open the app on a holiday (Christmas, New Year, Halloween, Valentine's...).
+- **Her mouth follows the sounds** she makes (ah / ee / oo / closed), not just how loud she is.
+- **👏👏 Double clap** (Settings → My wake word): two claps wake her up, like saying her name.
+- Her voice already changes with what she says (happy, sad, surprised...) - that's Settings → Voice → Emotion.
+
+## New (31 Oct 2026): VCash shop, living room, same voice in the Adventure
+- **VCash:** the app's money. Every XP you earn also gives you half as much VCash (older saves get VCash for the XP they
+  already have).
+- **Edit room → 🛒 Shop:** themed furniture sets made for the app. A new theme comes every month (🚀 Space, 🌊 Ocean,
+  🐉 Fantasy), and its whole set is on sale all month, plus 6 other pieces each week. Examples: a **levitating moon chair**
+  that floats up and down, a UFO ceiling light, a floating jellyfish lamp, a bubble column, floating candles, floating
+  spellbooks and a dragon egg that wobbles. Things you buy stay yours.
+- **🖼️ Photo frames:** 6 styles (wooden, gold ornate, black modern, white gallery, polaroid, neon glow) in 3 sizes. Click a
+  frame to show the next picture. The first time, it asks you for a folder of pictures.
+- **Smart TV:** click it, paste a YouTube link (or a video link), and it plays inside the app.
+- **Weather clock** on the wall: the time, today's weather and temperature. Click it for the 5-day forecast. Uses your home
+  city from Settings → Productivity.
+- **Real weather on the window:** rain streaks, snow or a storm when it's like that outside. The sky already follows your
+  real time of day.
+- **Focus plant:** grows with your focus sessions (seed → blooming) and wilts if you skip 2 or more days.
+- **Top-3 tasks board** (optional to place, under Wall decor): your 3 most important unfinished tasks. Click it to open the
+  planner.
+- **Seasonal decorations** turn on by themselves: Halloween pumpkins and bats, a Christmas tree with twinkling lights,
+  Valentine hearts, spring/summer/autumn flowers. They aren't saved in your layout and hide in the gym.
+- **💾 Designs:** save several room designs and switch between them.
+- **🔊 Sounds:** a quiet ambient sound for each room (rain, fireplace, café, forest, ocean, gym) with a volume slider. Made
+  on your computer, no internet needed.
+- **Room achievements** (in the Shop tab) and **loading-screen tips** or one of Vermeil's lines while she starts.
+- **Adventure voice:** your companion in the Adventure now speaks with the exact same voice as in the main room (Kokoro +
+  your clone, her tone, natural pauses). The DM and other characters keep their own voices.
+
+## New (31 Oct 2026): Loading screen, gym room switch, 200 ideas
 - **Loading screen:** while Vermeil starts, a full-screen loading screen shows what she's doing ("Building your room…",
   "Waking up Vermeil…") with a progress bar, then fades away when she's ready.
 - **Edit room → 🏋 Gym room:** while editing, press **🏋 Gym room** to switch to the gym and edit it; press **🏠 My room** to go

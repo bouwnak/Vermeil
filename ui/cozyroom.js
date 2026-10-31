@@ -7,6 +7,7 @@ import { GYM_CATALOG } from "./gymroom.js";
 import { DND_FURNITURE_CATALOG } from "./dnd_furniture.js";
 import { PET_CATALOG } from "./pets.js";
 import { REWARD_CATALOG } from "./rewards.js";
+import { SHOP_CATALOG, LIVING_CATALOG, buildDecor } from "./shop.js";
 import { House } from "./house.js";
 
 const W = 5, BACK = -4, FRONT = 4.5, H = 3.2;     // room: x -5..5, z -4..4.5, height 3.2 m
@@ -924,6 +925,27 @@ CATALOG.bigWindow = { label: "Big window (time of day)", mount: "wall", defaultY
   const glow = new THREE.PointLight(0xa88cff, 6, 6, 2);           // the sky's light coming in (follows the time of day)
   glow.position.set(0, 0.05, 0.77); g.add(glow);
   ctx.glow = glow; room._lightWindow(glow);
+  // real weather on the glass: rain streaks or snowflakes (room.setWeather)
+  const drops = new THREE.Group(), dropMat = new THREE.MeshBasicMaterial({ color: 0xcfe6ff, transparent: true, opacity: 0.55 });
+  const streak = new THREE.PlaneGeometry(0.008, 0.12), flake = new THREE.CircleGeometry(0.014, 6);
+  for (let i = 0; i < 90; i++) {
+    const d = new THREE.Mesh(streak, dropMat);
+    d.position.set((Math.random() - 0.5) * 3.5, (Math.random() - 0.5) * 2.3, 0.0);
+    d.userData.v = 0.6 + Math.random() * 0.6; drops.add(d);
+  }
+  drops.visible = false; g.add(drops);
+  ctx.update = (t, dt) => {
+    const kind = room.weather;
+    drops.visible = kind === "rain" || kind === "storm" || kind === "snow";
+    if (!drops.visible) return;
+    const snow = kind === "snow", fall = (snow ? 0.25 : 2.6) * (kind === "storm" ? 1.5 : 1) * (dt || 0.016);
+    for (const d of drops.children) {
+      if (d.geometry !== (snow ? flake : streak)) d.geometry = snow ? flake : streak;
+      d.position.y -= fall * d.userData.v;
+      if (snow) d.position.x += Math.sin(t + d.userData.v * 9) * 0.002;
+      if (d.position.y < -1.15) { d.position.y = 1.15; d.position.x = (Math.random() - 0.5) * 3.5; }
+    }
+  };
   return { group: g, interact: { label: "Window: next time of day", onClick: () => {
     const order = ["dawn", "morning", "day", "golden", "sunset", "dusk", "night"];
     const next = order[(order.indexOf(room.sky) + 1) % order.length];
@@ -932,7 +954,7 @@ CATALOG.bigWindow = { label: "Big window (time of day)", mount: "wall", defaultY
   } } };
 } };
 
-Object.assign(CATALOG, DEN_CATALOG, GYM_CATALOG, DND_FURNITURE_CATALOG, PET_CATALOG, REWARD_CATALOG);
+Object.assign(CATALOG, DEN_CATALOG, GYM_CATALOG, DND_FURNITURE_CATALOG, PET_CATALOG, REWARD_CATALOG, SHOP_CATALOG, LIVING_CATALOG);
 
 // ======================================================================
 // The room
@@ -1053,6 +1075,21 @@ export class CozyRoom {
   }
 
   _clockHour() { const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
+
+  /** Real weather outside the window: "rain" | "snow" | "storm" | "fog" | "cloudy" | "clear". */
+  setWeather(kind) {
+    this.weather = kind || "clear";
+    const dim = { rain: 0.8, storm: 0.65, snow: 0.95, fog: 0.85, cloudy: 0.88 }[this.weather] || 1;
+    this.moonlight.intensity = (this._skyState?.sunI ?? this.moonlight.intensity) * dim;
+  }
+
+  /** Seasonal decorations that turn on by themselves ("halloween", "christmas", ... or "none"). Not saved in the layout. */
+  setDecor(kind) {
+    if (this.decor) { this.scene.remove(this.decor); this.decor = null; }
+    if (!kind || kind === "none") return;
+    this.decor = buildDecor(kind);
+    this.scene.add(this.decor);
+  }
 
   /** Light the room for a time of day (0-24). */
   applyHour(hour, force = false) {
@@ -1371,5 +1408,6 @@ export class CozyRoom {
       this._lastClock = 0; this.applyHour(this._clockHour());
     }
     for (const item of this.items.values()) item.ctx.update?.(t, dt);
+    this.decor?.userData.tick?.(t);
   }
 }

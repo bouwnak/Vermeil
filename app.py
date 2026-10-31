@@ -9,6 +9,7 @@ import os
 import json
 import re
 import time
+from datetime import date, datetime
 import queue
 import shutil
 import sys
@@ -123,7 +124,8 @@ DEFAULT_SETTINGS = {"always_look": False, "speak_replies": True, "greet_on_sight
                     "keep_screens": True, "stream_speech": True, "noise_filter": True, "wake_sensitivity": 2,
                     "watch_objects": True, "code_auto_write": True, "music_source": "youtube", "duck_audio": True,
                     "performance": "auto", "phone_access": False,
-                    "focus_block": True, "focus_allow_words": ""}
+                    "focus_block": True, "focus_allow_words": "", "photo_folder": "",
+                    "clap_wake": False, "my_birthday": "", "outfit_auto": True, "sleep_at_night": True, "call_reminders": True}
 
 
 def _read_json(path, default):
@@ -539,6 +541,8 @@ class Api:
             if self._settings["desktop_notifications"]:
                 import pc
                 pc.notify("Vermeil reminder", alert)
+            if self._settings.get("call_reminders", True):
+                continue                                   # the window rings like a phone call; Answer says it (her_say)
             line = pm.quick_line(f"Tell the user this right now, warmly and briefly: {alert}") or alert
             self.emit({"type": "reply", "text": line})
             if self._settings["speak_replies"]:
@@ -2615,6 +2619,153 @@ class Api:
             return True
         return False
 
+    # ---------- the living room (skills/roomlife.py): designs, photos, weather, plant, tasks, shop ----------
+    def room_presets(self):
+        import roomlife
+        return roomlife.presets()
+
+    def room_preset_save(self, name, layout):
+        import roomlife
+        return roomlife.save_preset(name, layout)
+
+    def room_preset_load(self, name):
+        import roomlife
+        return roomlife.load_preset(name)
+
+    def room_preset_delete(self, name):
+        import roomlife
+        return roomlife.delete_preset(name)
+
+    def photo_folder_pick(self):
+        picked = self._window.create_file_dialog(_FOLDER_DIALOG)
+        if not picked:
+            return {"cancelled": True}
+        self._settings["photo_folder"] = picked[0] if isinstance(picked, (list, tuple)) else picked
+        self._save_settings()
+        return self.photo_list()
+
+    def photo_list(self):
+        import roomlife
+        return roomlife.photos(self._settings.get("photo_folder") or None)
+
+    def photo_data(self, path):
+        import roomlife
+        return roomlife.photo_data(path)
+
+    def room_weather(self):
+        import productivity as prod, roomlife
+        return roomlife.weather_widget(prod._state().get("home_city"))
+
+    def room_plant(self):
+        import focus, roomlife
+        return roomlife.plant(focus.progress(14)["focus"])
+
+    def room_tasks(self):
+        import roomlife
+        return {"tasks": roomlife.top_tasks(f1.user_data.get("tasks", []))}
+
+    def room_extras(self, sets=None):
+        """what the room changes by itself today + room achievements + a loading tip"""
+        import quest, roomlife
+        q = quest.state()
+        try:
+            stage = self.room_plant()["stage"]
+        except Exception:  # noqa: BLE001
+            stage = 0
+        return {"decor": roomlife.decor(), "holiday": roomlife.holiday(), "tip": roomlife.tip(),
+                "season": q["season_now"], "vcash": q["vcash"], "owned": q["owned"],
+                "achievements": roomlife.achievements(self.load_room(), q["owned"], sets, stage)}
+
+    def quest_buy(self, key, price, name=""):
+        import quest
+        res = quest.buy(key, price, name)
+        if res.get("ok") and not res.get("already"):
+            self.emit({"type": "toast", "text": f"Bought {name or key} for {int(price)} VCash 🛒"})
+        return res
+
+    # ---------- her little life (skills/herlife.py): small things, outfits, birthday, routines, holidays ----------
+    def her_today(self):
+        """what the room shows of her today: the outfit, birthday mode, a holiday greeting, a question she wants to ask"""
+        import herlife, productivity as prod, roomlife
+        kind = "clear"
+        try:
+            w = roomlife.weather_widget(prod._state().get("home_city"))
+            kind = w.get("kind", "clear") if not w.get("error") else "clear"
+        except Exception:  # noqa: BLE001
+            pass
+        bday = self._settings.get("my_birthday", "")
+        hour = datetime.now().hour
+        outfit = herlife.current_outfit(hour, kind, birthday=bday) if self._settings.get("outfit_auto", True) else None
+        due = herlife.followups_due()
+        return {"outfit": outfit, "birthday": herlife.is_birthday(bday), "hour": hour,
+                "sleep": bool(self._settings.get("sleep_at_night", True)) and (hour >= 23 or hour < 5),
+                "greeting": herlife.holiday_greeting(), "ask": due[0] if due else None}
+
+    def her_say(self, text):
+        """she says this out loud (a reminder call you answered, a question about your day, a greeting)"""
+        text = str(text or "").strip()[:400]
+        if not text:
+            return False
+        self.emit({"type": "reply", "text": text})
+        if self._settings["speak_replies"] and not self._settings.get("quiet_mode"):
+            threading.Thread(target=pm.speak, args=(text,), daemon=True).start()
+        return True
+
+    def her_asked(self, fid):
+        import herlife
+        herlife.asked(fid)
+        return True
+
+    def wardrobe(self):
+        import herlife
+        return herlife.wardrobe()
+
+    def wardrobe_save(self, outfit):
+        import herlife
+        return herlife.wardrobe_save(outfit)
+
+    def wardrobe_remove(self, name):
+        import herlife
+        return herlife.wardrobe_remove(name)
+
+    def wardrobe_wear(self, name):
+        import herlife
+        r = herlife.wardrobe_wear(name)
+        self.emit({"type": "outfit", "outfit": self.her_today()["outfit"]})
+        return r
+
+    def _routine(self, kind):
+        """'good morning' / 'good night': her routine, said in her own words"""
+        import herlife, roomlife
+        import productivity as prod
+        try:
+            tasks = [t["task"] for t in roomlife.top_tasks(f1.user_data.get("tasks", []))]
+        except Exception:  # noqa: BLE001
+            tasks = []
+        if kind == "morning":
+            w = {}
+            try:
+                w = roomlife.weather_widget(prod._state().get("home_city"))
+            except Exception:  # noqa: BLE001
+                pass
+            events = []
+            try:
+                events = [ln.strip("-• ").strip() for ln in f1.daily_agenda().splitlines() if ln.strip()][:3]
+            except Exception:  # noqa: BLE001
+                pass
+            base = herlife.morning({"weather": {} if w.get("error") else w, "events": events, "tasks": tasks})
+        else:
+            import focus
+            mins = 0
+            try:
+                mins = int(focus.progress(1)["focus"][-1])
+            except Exception:  # noqa: BLE001
+                pass
+            done = sum(1 for t in f1.user_data.get("tasks", []) if t.get("done") and str(t.get("done_on", "")) == date.today().isoformat())
+            base = herlife.night({"done": done, "focus_minutes": mins, "tomorrow": tasks})
+        self.emit({"type": "routine", "kind": kind})
+        return pm.quick_line(f"Say this to the user in your own words, warm, under 70 words: {base}") or base
+
     # ---------- settings ----------
     def _privacy_changed(self):
         if self._settings["privacy_mode"]:
@@ -2649,6 +2800,11 @@ class Api:
                         self._settings[k] = data[k]
                 elif k == "phone_access":
                     self.phone_set(bool(data[k]))
+                elif k == "photo_folder":
+                    self._settings[k] = str(data[k])[:400]
+                elif k == "my_birthday":
+                    m = re.match(r"^\s*(?:\d{4}-)?(\d{1,2})-(\d{1,2})\s*$", str(data[k] or ""))
+                    self._settings[k] = f"{int(m[1]):02d}-{int(m[2]):02d}" if m and 1 <= int(m[1]) <= 12 and 1 <= int(m[2]) <= 31 else ""
                 elif k in ("focus_block_words", "focus_allow_words"):
                     self._settings[k] = ", ".join(w.strip().lower() for w in str(data[k]).split(",") if w.strip())[:600]
                 else:
@@ -2679,6 +2835,7 @@ class Api:
             self._coder.auto_write_own = self._settings["code_auto_write"]
         pm.noise_filter = self._settings["noise_filter"]
         pm.wake_sensitivity = self._settings["wake_sensitivity"]
+        pm.clap_wake = self._settings["clap_wake"]
         import ducking
         ducking.enabled = self._settings["duck_audio"]
         if not ducking.enabled:
@@ -3395,6 +3552,15 @@ class Api:
 
     def _quick_command(self, text):
         t = (text or "").lower().strip(" .!?")
+        try:
+            import herlife
+            herlife.notice(text)                           # "I have an exam tomorrow" -> she asks how it went later
+        except Exception as e:  # noqa: BLE001
+            print(f"[herlife] {e}")
+        if re.fullmatch(r"(good ?morning|morning)( vermi| vermeil)?", t):
+            return self._routine("morning")
+        if re.fullmatch(r"(good ?night|goodnight|nighty? night|i'?m going to (sleep|bed))( vermi| vermeil)?", t):
+            return self._routine("night")
         called, rest = self._called_character(t)
         if called:
             switched = called["id"] != self._characters["active"]

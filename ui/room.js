@@ -710,8 +710,8 @@ export class Room {
     if (F) this._fidget = null;
     if (t < (this._nextFidget ??= t + 10)) return null;
     this._nextFidget = t + 14 + Math.random() * 16;
-    const MOODS = { happy: ["dance_sway", "happy", "clap", "laugh", "look_around"], sad: ["sad", "shrug", "look_around"],
-      angry: ["angry", "shake", "shrug"], sleepy: ["yawn", "stretch", "sleepy"], calm: ["look_around", "stretch", "nod", "shy"] };
+    const MOODS = { happy: ["dance_sway", "dance_twirl", "happy", "clap", "laugh", "look_around", "wave", "jump", "cheer"], sad: ["sad", "shrug", "look_around", "sleepy"],
+      angry: ["angry", "shake", "shrug", "think"], sleepy: ["yawn", "stretch", "sleepy", "sit"], calm: ["look_around", "stretch", "nod", "shy", "think", "point", "yawn", "dance_sway"] };
     const pick = MOODS[this.idleMood()].filter((n) => a[n]);
     if (!pick.length) return null;
     const clip = pick[Math.floor(Math.random() * pick.length)];
@@ -1347,7 +1347,13 @@ export class Room {
   // ---------------- behaviour ----------------
   setSpeaking(on) { this.speaking = !!on; if (!on) this.lip = null; }
   /** Lip-sync: the loudness of the sentence she's saying now (0-9 every 50 ms), sent just before it plays. */
-  setLip(levels, step = 0.05) { this.lip = { levels, step, t0: performance.now() }; }
+  setLip(levels, step = 0.05, shapes = "") { this.lip = { levels, step, shapes: shapes || "", t0: performance.now() }; }
+  /** The mouth shape for the sound she's making right now: "a" open, "e" wide, "o" round, "m" closed (null = unknown). */
+  _lipShape() {
+    const L = this.lip;
+    if (!L?.shapes) return null;
+    return L.shapes[Math.floor((performance.now() - L.t0) / 1000 / L.step)] || null;
+  }
   _lipLevel() {
     const L = this.lip;
     if (!L) return null;
@@ -1553,7 +1559,9 @@ export class Room {
       if (F.mouthT <= 0) {                                           // a new mouth shape ~10 times a second
         F.mouthT = 0.07 + Math.random() * 0.06;
         const open = ex === "happy" ? "mouth_open_smile_02" : ex === "angry" ? "mouth_angry" : ex === "sad" ? "mouth_basic_sad" : "mouth_open_smile_01";
-        F.mouth = talk < 0.18 ? mood : talk < 0.45 ? (Math.random() < 0.5 ? "mouth_eek" : "mouth_ooo") : open;
+        const shape = this._lipShape();                              // visemes from her real voice, when we have them
+        F.mouth = shape ? ({ m: mood, e: "mouth_eek", o: "mouth_ooo" }[shape] || (talk < 0.18 ? mood : open))
+          : talk < 0.18 ? mood : talk < 0.45 ? (Math.random() < 0.5 ? "mouth_eek" : "mouth_ooo") : open;
       }
       this._setFace(c, "mouth", F.mouth || mood);
     } else this._setFace(c, "mouth", mood);
@@ -1952,7 +1960,10 @@ export class Room {
         const blink = c.blinkIn < 0.12 ? 1 : 0;
         if (c.blinkIn < 0) c.blinkIn = 2 + Math.random() * 4;
         c.vrm.expressionManager?.setValue("blink", blink);
-        c.vrm.expressionManager?.setValue("aa", talk * 0.8);
+        const shape = this.speaking ? this._lipShape() : null, E = c.vrm.expressionManager;
+        E?.setValue("aa", shape && shape !== "a" ? talk * 0.25 : talk * 0.8);
+        E?.setValue("ee", shape === "e" ? talk * 0.8 : 0);
+        E?.setValue("ou", shape === "o" ? talk * 0.8 : 0);
         if (c.head) { c.head.rotation.y = lookX; c.head.rotation.x = lookY; }
         c.vrm.update(dt);
       } else if (c.kind === "gltf") {

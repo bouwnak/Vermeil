@@ -825,7 +825,8 @@ class SpeechStream:
                         started = True
                     if face:                          # her face shows the feeling while she says it
                         emit("expression", name=face, seconds=round(len(data) / samplerate + 0.8, 1))
-                    emit("lip", levels=_lip_levels(data, samplerate), step=0.05)   # her mouth follows the real voice
+                    emit("lip", levels=_lip_levels(data, samplerate), step=0.05,   # her mouth follows the real voice
+                         shapes=_lip_shapes(data, samplerate))                       # ...and its sounds (aa / ee / oo / mm)
                     sd.play(np.asarray(data, dtype="float32") * min(1.6, max(0.1, VOICE_VOLUME * self.vol_x * gain)), samplerate)
                     end = time.time() + len(data) / samplerate + self.pause
                     while time.time() < end and not stop_flag:
@@ -855,6 +856,38 @@ def _lip_levels(data, samplerate, step=0.05):
     rms = np.sqrt((a[: k * n].reshape(k, n) ** 2).mean(axis=1))
     top = float(np.percentile(rms, 95)) or 1.0
     return [int(v) for v in np.clip(np.round(rms / top * 9), 0, 9)]
+
+
+def _lip_shapes(data, samplerate, step=0.05):
+    """Mouth shape (viseme) every 50 ms from the sound itself: "a" open (aa), "e" wide (ee, s, t),
+    "o" round (oo, oh, w), "m" closed (m, b, p, pauses). One letter per step, same length as _lip_levels."""
+    import numpy as np
+    a = np.asarray(data, dtype="float32").ravel()
+    n = max(1, int(samplerate * step))
+    k = len(a) // n
+    if not k:
+        return ""
+    frames = a[: k * n].reshape(k, n)
+    rms = np.sqrt((frames ** 2).mean(axis=1))
+    top = float(np.percentile(rms, 95)) or 1.0
+    spec = np.abs(np.fft.rfft(frames * np.hanning(n), axis=1))
+    freqs = np.fft.rfftfreq(n, 1.0 / samplerate)
+    power = spec.sum(axis=1) + 1e-9
+    centroid = (spec * freqs).sum(axis=1) / power
+    zcr = (np.abs(np.diff(np.sign(frames), axis=1)) > 0).mean(axis=1)
+    low = spec[:, freqs < 900].sum(axis=1) / power                     # strong low formants: rounded lips
+    out = []
+    for i in range(k):
+        loud = rms[i] / top
+        if loud < 0.12:
+            out.append("m")
+        elif zcr[i] > 0.18 or centroid[i] > 2600:
+            out.append("e")
+        elif low[i] > 0.62 and centroid[i] < 1100:
+            out.append("o")
+        else:
+            out.append("a")
+    return "".join(out)
 
 
 def _duck(reason):
@@ -1497,6 +1530,7 @@ def _is_wake_word(text):
 
 noise_filter = True           # clean background noise before Whisper (Settings)
 wake_sensitivity = 2          # trained wake word: 1 strict, 2 normal, 3 easy
+clap_wake = False             # a double clap wakes her too (Settings)
 
 
 on_wake = None                # app.py: called when the wake word is heard (switches back to Vermeil)
@@ -1522,15 +1556,28 @@ def listen_for_wake_word():
     try:
         import wakeword
         if wakeword.trained():                    # your own recorded "vermi": fast, offline, no Whisper
-            if wakeword.listen(lambda: voice_mode, wake_sensitivity, MIC_INDEX):
+            if wakeword.listen(lambda: voice_mode, wake_sensitivity, MIC_INDEX, claps=clap_wake):
                 return _wake_up()
             return False
     except Exception as e:
         print(f"[wake word] {e} - using speech recognition instead")
-    while voice_mode:
-        text = listen_for_input(timeout=5, phrase_time_limit=6)
-        if text and _is_wake_word(text):
-            return _wake_up()
+    clapped = threading.Event()
+    if clap_wake:                                 # a double clap, listened for next to speech recognition
+        def _claps():
+            try:
+                import wakeword
+                if wakeword.listen_claps(lambda: voice_mode and not clapped.is_set(), MIC_INDEX):
+                    clapped.set()
+            except Exception as e:
+                print(f"[clap] {e}")
+        threading.Thread(target=_claps, daemon=True).start()
+    try:
+        while voice_mode:
+            text = listen_for_input(timeout=2 if clap_wake else 5, phrase_time_limit=6)
+            if clapped.is_set() or (text and _is_wake_word(text)):
+                return _wake_up()
+    finally:
+        clapped.set()
     return False
 
 

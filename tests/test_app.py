@@ -200,10 +200,14 @@ class AppTests(unittest.TestCase):
         with mock.patch.object(app.f1, "due_alerts", return_value=["Reminder: Call mom"]), \
                 mock.patch("pc.notify") as notify, \
                 mock.patch.object(pm, "quick_line", return_value="Darling, time to call your mom!"):
+            self.api._settings["call_reminders"] = True     # the window rings like a phone call; Answer says it
             self.api.check_alerts()
-        self.assertIn({"type": "alert", "text": "Reminder: Call mom"}, self.events)
+            self.assertIn({"type": "alert", "text": "Reminder: Call mom"}, self.events)
+            self.assertNotIn({"type": "reply", "text": "Darling, time to call your mom!"}, self.events)
+            self.api._settings["call_reminders"] = False    # old way: she says it right away
+            self.api.check_alerts()
         self.assertIn({"type": "reply", "text": "Darling, time to call your mom!"}, self.events)
-        notify.assert_called_once()                     # a real Windows pop-up during tests would be confusing
+        self.assertEqual(notify.call_count, 2)          # a real Windows pop-up during tests would be confusing
 
     def test_planner(self):
         with mock.patch.object(app.f1, "user_data", {"events": [{"title": "Old", "date": "2000-01-01"},

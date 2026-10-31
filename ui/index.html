@@ -28,6 +28,7 @@
       <div class="boot-name">Vermeil</div>
       <div class="boot-bar"><i></i></div>
       <div class="boot-step" id="bootStep">Starting up…</div>
+      <div class="boot-tip" id="bootTip"></div>
     </div>
   </div>
   <aside class="sidebar" aria-label="Menu">
@@ -150,6 +151,8 @@
           <p class="note" id="clockNote"></p>
         </div>
         <div class="edit-pane house-pane" data-pane="house" hidden id="housePane"></div>
+        <div class="edit-pane" data-pane="designs" hidden id="designsPane"></div>
+        <div class="edit-pane" data-pane="sounds" hidden id="soundsPane"></div>
         <div class="edit-pane" data-pane="reset" hidden>
           <p class="note">Puts every piece of furniture back where it started (you can undo it).</p>
           <button class="danger" id="resetRoom">Reset the room</button>
@@ -417,6 +420,11 @@
 
       <h3>Her little life</h3>
       <label class="check"><input type="checkbox" data-setting="idle_activities"> Let her wander and do little things when we're not talking</label>
+      <label class="check"><input type="checkbox" data-setting="sleep_at_night"> She sleeps in bed late at night (11 pm – 5 am)</label>
+      <label class="check"><input type="checkbox" data-setting="outfit_auto"> 👗 Dress her for the day (time, weather, season, holidays)</label>
+      <label class="check"><input type="checkbox" data-setting="call_reminders"> 📞 Reminders ring like a phone call</label>
+      <label class="inline">🎂 My birthday (month-day) <input id="myBirthday" placeholder="03-21" maxlength="10" size="7"></label>
+      <details class="wardrobe"><summary>👗 Wardrobe</summary><div id="wardrobeBox"></div></details>
       <label class="check"><input type="checkbox" data-setting="scene_transitions"> Change the room lighting for study, focus and story time</label>
       <label class="check"><input type="checkbox" data-setting="gym_room"> Switch to the gym room while a workout is running</label>
       <label class="check"><input type="checkbox" data-setting="gesture_mode"> Hand gestures through the camera (👍 = yes, ✋ = stop talking/pause music, 👋 = wave) — uses the vision AI every few seconds</label>
@@ -583,6 +591,7 @@
       <label>How easily she wakes up
         <select id="wakeSens"><option value="1">Strict (fewer mistakes)</option><option value="2">Normal</option><option value="3">Easy (noisy room / far away)</option></select>
       </label>
+      <label class="check"><input type="checkbox" data-setting="clap_wake"> 👏👏 A double clap wakes her up too</label>
       <label class="check"><input type="checkbox" data-setting="barge_in"> Let me interrupt her by talking (works best with headphones)</label>
       <label class="check"><input type="checkbox" data-setting="self_check"> Double-check answers before replying (slower, fewer mistakes)</label>
       <label class="check"><input type="checkbox" data-setting="quiet_mode"> Quiet mode: don't talk unless I talk first (reminders still come)</label>

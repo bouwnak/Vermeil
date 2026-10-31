@@ -2,6 +2,8 @@
 import { Room } from "./room.js";
 import { CATALOG, CozyRoom, THEMES, TIME_PRESETS, WALLPAPERS, REWARD_WALLPAPERS } from "./cozyroom.js";
 import { initQuest, passLock } from "./quest.js";
+import { initLivingRoom, TIPS } from "./livingroom.js";
+import { initHerLife } from "./herlife.js";
 import { initGym } from "./gym.js";
 import { initStudy } from "./study.js";
 
@@ -454,8 +456,9 @@ document.addEventListener("keydown", (e) => {
 // ---------------- events from Python ----------------
 window.onPyEvent = async (e) => {
   life?.onEvent(e);
+  herLife?.onEvent(e);
   switch (e.type) {
-    case "lip": room.setLip(e.levels, e.step); break;
+    case "lip": room.setLip(e.levels, e.step, e.shapes); break;
     case "speaking": fx.speaking(e.on); room.setSpeaking(e.on); bgm.speaking = !!e.on; updateBgm(); if (e.on && e.text) say(e.text); break;
     case "heard": addLog("you", e.text); break;
     case "partial": say(e.text); break;
@@ -557,7 +560,7 @@ window.onPyEvent = async (e) => {
       state = await api.get_state();
       renderCharacters(); renderStatus(); await loadCharacter();
       break;
-    case "alert": fx.play("notify"); toast(`⏰ ${e.text}`, 10000); renderPlanner(); break;
+    case "alert": fx.play("notify"); renderPlanner(); break;           // herlife.js rings like a phone call
     case "group_line": say(`${e.speaker}: ${e.text}`); addLog("her", `${e.speaker}: ${e.text}`); break;
     case "mission": missionsPanel?.update(e.mission); renderHud(); break;
     case "approval": showApproval(e); break;
@@ -913,10 +916,14 @@ $("personEnroll").addEventListener("click", async () => {
 });
 
 // ---------------- outfit ----------------
-function outfit() { return { auto: false, hat: "none", glasses: false }; }   // no hats or glasses
+function outfit() {          // skills/herlife.py picks it (Settings → Her → Dress her for the day); off = no hats or glasses
+  const o = herLife?.her.outfit;
+  return o && state?.settings?.outfit_auto !== false ? { auto: true, base: o } : { auto: false, hat: "none", glasses: false };
+}
 function renderOutfit() {}                                    // (hats & glasses were removed)
 // ---------------- living character ----------------
 let life = null;
+let herLife = null;
 let seenObjects = [];
 let birthdayToday = false;
 async function checkBirthday() {
@@ -934,7 +941,7 @@ function lifeContext() {
   const f = focusPanel?.status?.();
   return {
     date: new Date(), idle: s.idle_activities !== false, scenes: s.scene_transitions !== false, editing: room.editMode,
-    outfit: outfit(), birthday: birthdayToday,
+    outfit: outfit(), birthday: birthdayToday || !!herLife?.her.birthday, sleep: s.sleep_at_night !== false,
     gym: !$("panel-gym").hidden || g?.workout != null, study: !$("panel-study").hidden,
     focus: !!f && f.phase === "work", music: (!!music.playing && !music.paused) || !!spotifyPanel?.status()?.playing,
     style: s.style, voiceStyle: s.voice_style,
@@ -1188,7 +1195,9 @@ $("editGym").addEventListener("click", () => {
 
 // ---------- furniture catalog, sorted into categories ----------
 const CATEGORIES = [
+  ["shop", "🛒 Shop", null],
   ["rewards", "🏆 Battle Pass", null],
+  ["frames", "🖼️ Photo frames", null],
   ["tables", "🪑 Tables & desks", /table|desk/i],
   ["seating", "🛋️ Chairs & sofas", /chair|sofa|couch|bean|stool|ottoman|armchair/i],
   ["beds", "🛏️ Beds", /bed/i],
@@ -1203,12 +1212,13 @@ const CATEGORIES = [
   ["decor", "✨ Decor", /./],
   ["pets", "🐾 Pets", null],
 ];
-const ROOM_PANES = [["house", "🏠 Rooms"], ["style", "🎨 Room style"], ["wallcolour", "🧱 Wall colour"], ["floor", "🟫 Floor"], ["time", "🌙 Time of day"], ["reset", "↺ Reset"]];
+const ROOM_PANES = [["designs", "💾 Designs"], ["sounds", "🔊 Sounds"], ["house", "🏠 Rooms"], ["style", "🎨 Room style"], ["wallcolour", "🧱 Wall colour"], ["floor", "🟫 Floor"], ["time", "🌙 Time of day"], ["reset", "↺ Reset"]];
 function categoryOf(type, def) {
   if (def.category) return def.category;
   const text = `${type} ${def.label}`;
   return CATEGORIES.find(([, , re]) => re?.test(text))[0];
 }
+let living = null;              // livingroom.js: shop, designs, sounds, decorations, weather
 let catalogTab = "tables";
 try { catalogTab = localStorage.getItem("catalogTab") || catalogTab; } catch { /* ignore */ }
 function renderCatalog() {
@@ -1231,6 +1241,8 @@ function renderCatalog() {
   for (const p of document.querySelectorAll(".edit-pane")) p.hidden = p.dataset.pane !== pane;
   $("catalog").hidden = !!pane;
   if (pane === "house") renderHousePane();
+  if (pane === "designs") living?.renderDesigns($("designsPane"));
+  if (pane === "sounds") living?.renderSounds($("soundsPane"));
   if (pane) return;
   const wallpapers = catalogTab === "walls" ? [Object.assign(document.createElement("p"), { className: "edit-sub", textContent: "Wallpaper (the wall colour tints it)" }),
     ...Object.entries(WALLPAPERS).map(([k, label]) => {
@@ -1242,10 +1254,13 @@ function renderCatalog() {
       b.addEventListener("click", () => { room.setWallpaper(k); renderCatalog(); toast(k === "none" ? "Plain painted walls." : `Wallpaper: ${label}`); });
       return b;
     }), Object.assign(document.createElement("p"), { className: "edit-sub", textContent: "Things for the walls" })] : [];
-  $("catalog").replaceChildren(...wallpapers, ...items.filter((i) => i.cat === catalogTab).sort((a, b) => a.def.label.localeCompare(b.def.label)).map(({ type, def }, n) => {
+  const shopping = catalogTab === "shop" && living;
+  const order = shopping ? living.shopOrder : (a, b) => a.def.label.localeCompare(b.def.label);
+  $("catalog").replaceChildren(...wallpapers, ...(shopping ? [living.shopHeader()] : []), ...items.filter((i) => i.cat === catalogTab).sort(order).map(({ type, def }, n) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "edit-card"; b.textContent = def.label;
     b.style.animationDelay = `${Math.min(n, 14) * 22}ms`;
+    if (def.shop && living && living.shopCard(type, def, b)) return b;          // not bought yet: the card buys it
     const lock = def.reward && passLock(type);
     if (lock) {
       b.classList.add("locked"); b.textContent = `🔒 ${def.label} · tier ${lock}`;
@@ -1387,7 +1402,7 @@ function bootStep(text, frac) {
 }
 function bootDone() {
   const b = $("boot");
-  if (b.classList.contains("done")) return;
+  if (!b || b.classList.contains("done")) return;            // already gone (the 60 s fallback after a normal start)
   bootStep("Ready", 1);
   b.classList.add("done");
   setTimeout(() => b.remove(), 700);
@@ -1396,7 +1411,9 @@ setTimeout(bootDone, 60000);   // never stay stuck on the loading screen
 
 (async () => {
   bootStep("Connecting…", 0.1);
+  $("bootTip").textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
   api = await getApi();
+  api.room_extras?.().then((x) => { if (x?.tip) $("bootTip").textContent = x.tip; }).catch(() => {});
   bootStep("Reading your settings…", 0.25);
   state = await api.get_state();
   renderStatus();
@@ -1441,6 +1458,11 @@ setTimeout(bootDone, 60000);   // never stay stuck on the loading screen
     }
   } catch (e) { console.warn("room layout", e); }
   syncRoomControls();
+  living = initLivingRoom({ api, room, toast, openPanel, rerender: () => { if (room.editMode) renderCatalog(); } });
+  herLife = initHerLife({ api, room, toast, getName: () => activeChar().name });
+  herLife.renderWardrobe($("wardrobeBox"));
+  $("myBirthday").value = state.settings.my_birthday || "";
+  $("myBirthday").addEventListener("change", async (e) => { state.settings = await api.save_settings({ my_birthday: e.target.value }); e.target.value = state.settings.my_birthday; herLife.redress(); toast(state.settings.my_birthday ? "Got it! I'll remember your birthday 🎂" : "Type it like 03-21 (month-day)."); });
   bootStep("Opening your apps…", 0.55);
   planner = initPlanner(api);
   study = initStudy(api);

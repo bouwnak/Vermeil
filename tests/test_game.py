@@ -492,3 +492,29 @@ class SoundAndModelTests(unittest.TestCase):
                     if (fix_materials.fix_glb(path, True) if n.endswith(".glb") else fix_materials.fix_gltf(path, True)):
                         bad.append(n)
         self.assertEqual(bad, [])
+
+
+class MainRoomVoiceTests(unittest.TestCase):
+    """the companion in the adventure speaks with the main room's voice pipeline when the app is running"""
+    def test_companion_uses_main_room_voice_and_others_keep_theirs(self):
+        from game import voices
+        import types
+        calls = []
+        fake = types.SimpleNamespace(
+            tts_ready=True, VOICE_RATE="+0%", VOICE_PITCH="+0Hz", VOICE="piper:x", VOICE_RVC={"model": "clone.pth"},
+            VOICE_EMOTION=0, VOICE_NATURAL=False, VOICE_CHATTER=False, LOW_POWER=False, persona={"language": "auto"},
+            active_voice=lambda: "kokoro:af_heart", _use_chatter=lambda t: False,
+            clean_text=lambda t: t, clean_endearments=lambda t: t,
+            synth_voice=lambda text, voice, rate, pitch, fb, rvc, style: calls.append((text, voice, rvc)) or ([0.0] * 2400, 24000))
+        T = mock.MagicMock()
+        T.synth.return_value = ([0.0] * 2200, 22050)
+        T.to_wav_bytes.return_value = b"RIFF"
+        camp = {"voices": {"vermeil": {"voice": "piper:game"}, "dm": {"voice": "piper:dm"}}}
+        with mock.patch.dict(sys.modules, {"pinakamain": fake}), mock.patch.object(voices, "_tts", return_value=T):
+            out = voices.speak(camp, "vermeil", "Hello from the camp.")
+            self.assertEqual(out["voice"], "kokoro:af_heart")
+            self.assertEqual(calls, [("Hello from the camp.", "kokoro:af_heart", {"model": "clone.pth"})])
+            dm_out = voices.speak(camp, "dm", "The door creaks.")
+            self.assertEqual(dm_out["voice"], "piper:dm")
+            self.assertEqual(len(calls), 1)
+        voices._cache.clear()

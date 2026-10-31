@@ -32,7 +32,8 @@ export function idlePlan(hour) {
   if (hour < 11) return [["window", "looking outside ☀", "happy", 2, 1], ["plant", "watering the plant 🌱", "happy", 2, 1],
     ["desk", "planning the day 📝", "thinking", 3, 2], ["books", "reading 📚", "thinking", 2, 1.5], ["couch", "resting a bit 🛋", "neutral", 1, 1.5]];
   if (hour < 18) return [["desk", "working 💻", "thinking", 4, 2.5], ["books", "reading 📚", "thinking", 3, 1.5],
-    ["plant", "checking the plant 🌱", "happy", 1, 1], ["couch", "taking a break 🛋", "neutral", 2, 2], ["bed", "a little nap 😪", "sleepy", 0.5, 2]];
+    ["plant", "checking the plant 🌱", "happy", 1, 1], ["couch", "taking a break 🛋", "neutral", 2, 2], ["bed", "a little nap 😪", "sleepy", 0.5, 2],
+    ["window", "daydreaming at the window ☁", "neutral", 1, 1], ["music", "humming a song 🎶", "happy", 1, 1]];
   return [["couch", "relaxing 🛋", "happy", 5, 3], ["bed", "resting in bed 🛌", "sleepy", 2.5, 3], ["books", "reading 📚", "thinking", 2, 1.5],
     ["music", "picking a song 🎵", "happy", 1, 1], ["window", "watching the night 🌙", "neutral", 1, 1]];
 }
@@ -51,6 +52,7 @@ export function autoOutfit(ctx) {
   if (ctx.gym) return { hat: "headband", glasses: false, color: "#3e8eff", why: "Gym mode" };
   if (ctx.study || ctx.focus) return { hat: m === 12 ? "santa" : "none", glasses: true, color: "#3e8eff", why: "Study mode" };
   if (ctx.music) return { hat: "headphones", glasses: false, color: "#3e8eff", why: "Music" };
+  if (ctx.outfit?.base) return ctx.outfit.base;           // skills/herlife.py: weather, time of day, your wardrobe pick
   if (m === 10 && day >= 24) return { hat: "witch", glasses: false, color: "#9a7bff", why: "Halloween" };
   if (m === 12 && day >= 1) return { hat: "santa", glasses: false, color: "#d62839", why: "Christmas season" };
   if ((m === 12 && day === 31) || (m === 1 && day === 1)) return { hat: "party", glasses: false, color: "#f5c542", why: "New Year" };
@@ -99,14 +101,17 @@ export function initLife(room, { getContext, onActivity = () => {} }) {
   // ---------- idle activities ----------
   function idleStep(ctx) {
     if (!ctx.idle || ctx.editing || room.speaking || room.walkTarget || room.emote) return;
+    const late = (ctx.date || new Date()).getHours();
     if (performance.now() < nextIdle) return;
     nextIdle = performance.now() + 40000 + Math.random() * 40000;
     const spots = room.spots?.() || [];
     const hour = (ctx.date || new Date()).getHours();
     const plan = spots.some((s) => s.kind === "gym") ? [["gym", "working out 💪", "happy", 1, 1]]          // in the gym room
-      : idlePlan((ctx.date || new Date()).getHours()).filter(([kind]) => spots.some((s) => s.kind === kind));
-    if (!plan.length) {                                                  // no matching furniture: stretch in place
-      room.playEmote(Math.random() < 0.5 ? "think" : "nod");
+      : idlePlan((ctx.date || new Date()).getHours()).filter(([kind]) => spots.some((s) => s.kind === kind))
+        .filter(([kind]) => !(ctx.sleep === false && kind === "bed" && (late >= 23 || late < 6)));   // Settings: no sleeping in bed
+    if (!plan.length) {                                                  // no matching furniture: a little move in place
+      const moves = ["think", "nod", "stretch", "look around", "shy", "shrug", ...(late >= 22 || late < 6 ? ["yawn", "yawn"] : ["clap", "point"])];
+      room.playEmote(moves[Math.floor(Math.random() * moves.length)]);
       return;
     }
     const [kind, label, mood, , stay] = pickWeighted(plan);

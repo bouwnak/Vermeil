@@ -155,8 +155,50 @@ def record(seconds=2.0, device=None):
     return audio[:, 0]
 
 
-def listen(keep_going, sensitivity=2, device=None, on_level=None):
-    """Block until your wake word is heard (True) or keep_going() becomes False (False)."""
+class ClapDetector:
+    """Two sharp claps 0.15-0.8 s apart = wake up. Feed it 0.1 s blocks of the microphone."""
+    def __init__(self, block_s=0.1):
+        self.block_s, self.floor, self.t, self.loud, self.claps = block_s, 0.01, 0.0, False, []
+
+    def feed(self, b):
+        self.t += self.block_s
+        peak = float(np.max(np.abs(b))) if b.size else 0.0
+        rms = float(np.sqrt(np.mean(b ** 2))) if b.size else 0.0
+        sharp = peak > max(0.25, self.floor * 12) and peak / max(rms, 1e-6) > 4.0   # a clap: loud, short and spiky
+        if not sharp and not self.loud:
+            self.floor = 0.95 * self.floor + 0.05 * rms
+        onset, self.loud = sharp and not self.loud, sharp
+        if not onset:
+            return False
+        self.claps = [c for c in self.claps if self.t - c <= 0.8] + [self.t]
+        if len(self.claps) >= 2 and self.t - self.claps[-2] >= 0.15:
+            self.claps = []
+            return True
+        return False
+
+
+def listen_claps(keep_going, device=None):
+    """Block until a double clap (True) or keep_going() becomes False."""
+    import queue
+    import sounddevice as sd
+    blocks, det = queue.Queue(), ClapDetector()
+    cb = lambda indata, *_: blocks.put(indata[:, 0].copy())
+    try:
+        stream = sd.InputStream(samplerate=SR, channels=1, dtype="float32", blocksize=1600, device=device, callback=cb)
+    except Exception:
+        stream = sd.InputStream(samplerate=SR, channels=1, dtype="float32", blocksize=1600, callback=cb)
+    with stream:
+        while keep_going():
+            try:
+                if det.feed(blocks.get(timeout=0.5)):
+                    return True
+            except queue.Empty:
+                continue
+    return False
+
+
+def listen(keep_going, sensitivity=2, device=None, on_level=None, claps=False):
+    """Block until your wake word (or a double clap, with claps=True) is heard (True) or keep_going() becomes False."""
     import queue
     import sounddevice as sd
     data = _load()
@@ -167,6 +209,7 @@ def listen(keep_going, sensitivity=2, device=None, on_level=None):
     except Exception:
         stream = sd.InputStream(samplerate=SR, channels=1, dtype="float32", blocksize=1600, callback=cb)
     floor, seg, quiet = 0.01, [], 0
+    det = ClapDetector() if claps else None
     with stream:
         while keep_going():
             try:
@@ -176,6 +219,8 @@ def listen(keep_going, sensitivity=2, device=None, on_level=None):
             level = float(np.sqrt(np.mean(b ** 2)))
             if on_level:
                 on_level(level)
+            if det and det.feed(b):
+                return True
             voiced = level > max(0.012, floor * 3)
             if not seg:
                 floor = 0.95 * floor + 0.05 * level if not voiced else floor

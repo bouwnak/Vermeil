@@ -282,6 +282,39 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## ➕ Extra features you asked for in chat
 ✅ 3D cozy room (themes, furniture editor, day/night by your clock, brightness) · ✅ characters (Vermeil, Pip, Robo, your own GLB/VRM) · ✅ planner (calendar, tasks, reminders, birthdays, shopping, notes) · ✅ study (library, review sets, research, assignment help) · ✅ coding helper · ✅ gym mode (your routine, timer, editor, history, best reps, +2.5 kg upgrade, sessions) · ✅ journal & think · ✅ voice commands · ✅ top-left status pills · ✅ night theme with sounds and effects · ✅ Groq → Ollama automatic switch · ✅ saved preferences · ✅ package cleanup script · ✅ smaller AI requests: only the tools that fit each message are sent (~1–2k tokens instead of ~9k), so Groq lasts longer and the local AI isn't overloaded
 
+## 🆕 31 Oct 2026: Vermeil's little life
+| Feature | Status | Where |
+|---|---|---|
+| She remembers small things you mention and asks about them later | ✅ | Chat / voice |
+| Outfit changes by time of day, weather, season, holidays, birthday | ✅ | Settings → Her little life |
+| Wardrobe of saved outfits (hat, glasses, colour) | ✅ | Settings → Her little life → 👗 Wardrobe |
+| More idle moves | ✅ | Room |
+| Sleeps in bed late at night (can turn off) | ✅ | Settings → Her little life |
+| Birthday mode: confetti, party hat, greeting | ✅ | Settings → Her little life → 🎂 |
+| Reminders ring like a phone call (Answer / Snooze) | ✅ | Settings → Her little life |
+| Good-morning and good-night routines | ✅ | Say "good morning" / "good night" |
+| Holiday greetings once a year | ✅ | App start |
+| Mouth shapes follow the sounds (visemes) | ✅ | Room |
+| Double clap wakes her | ✅ | Settings → My wake word |
+| Voice tone matches the message | ✅ (already) | Settings → Voice → Emotion |
+
+## 🆕 31 Oct 2026: VCash shop and the living room
+| Feature | Status | Where |
+|---|---|---|
+| VCash money (half of every XP) and a furniture shop with monthly themed sets | ✅ | Edit room → 🛒 Shop |
+| Themed furniture: levitating moon chair, UFO light, jellyfish lamp, floating candles, dragon egg... (18 pieces) | ✅ | Edit room → 🛒 Shop |
+| Photo frames: 6 styles × 3 sizes, pictures from your folder | ✅ | Edit room → 🖼️ Photo frames |
+| Smart TV that plays YouTube or video links inside the app | ✅ | Edit room → 🖥️ Tech |
+| Weather clock on the wall, click for the 5-day forecast | ✅ | Edit room → 🖼️ Wall decor |
+| Rain, snow and storms on the window from the real weather | ✅ | Big window |
+| Focus plant that grows with focus and wilts when you skip | ✅ | Edit room → 🪴 Plants |
+| Optional top-3 tasks board | ✅ | Edit room → 🖼️ Wall decor |
+| Seasonal decorations that turn on by themselves | ✅ | Room |
+| Several saved room designs | ✅ | Edit room → 💾 Designs |
+| Ambient sounds per room with a volume | ✅ | Edit room → 🔊 Sounds |
+| Room achievements and loading-screen tips | ✅ | Shop tab, start-up |
+| Adventure companion uses the main-room voice pipeline | ✅ | Adventure |
+
 ## 🆕 31 Oct 2026: Loading screen and gym room switch
 | Feature | Status | Where |
 |---|---|---|
