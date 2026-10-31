@@ -180,6 +180,30 @@ class UnimateSkipTests(unittest.TestCase):
         self.assertIn("Rig it", animate.explain("5 joints outside [10, 100]"))
         self.assertEqual(animate.skip_reason(os.path.join(d, "nope")), "")
 
+    def test_error_log_is_read_when_no_reason_is_saved(self):
+        d = self._asset("")
+        with open(os.path.join(d, "work", "features", "extract_errors.log"), "w", encoding="utf-8") as f:
+            f.write("old\tfirst try\nm\tValueError: bad weights\n")
+        self.assertEqual(animate.skip_reason(d), "processing failed: ValueError: bad weights")
+
+    def test_model_without_bones_is_told_to_rig_first(self):
+        import json, struct, tempfile
+        def glb(js):
+            j = json.dumps(js).encode()
+            j += b" " * (-len(j) % 4)
+            p = os.path.join(tempfile.mkdtemp(prefix="vermeil-glb-"), "m.glb")
+            with open(p, "wb") as f:
+                f.write(struct.pack("<III", 0x46546C67, 2, 20 + len(j)) + struct.pack("<I", len(j)) + b"JSON" + j)
+            self.addCleanup(__import__("shutil").rmtree, os.path.dirname(p), True)
+            return p
+        bare, rigged = glb({"asset": {"version": "2.0"}}), glb({"asset": {"version": "2.0"}, "skins": [{"joints": [0]}]})
+        self.assertFalse(animate.has_skeleton(bare))
+        self.assertTrue(animate.has_skeleton(rigged))
+        with mock.patch.object(animate, "_run") as run:
+            with self.assertRaisesRegex(RuntimeError, "Rig it"):
+                animate._read_skeleton(bare, os.path.dirname(bare), print)
+            run.assert_not_called()                                              # no slow UniMate start for nothing
+
     def test_lying_model_is_stood_up_then_explained(self):
         d = self._asset("bad horizontal separation")
         calls = []

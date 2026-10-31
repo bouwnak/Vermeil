@@ -34,7 +34,7 @@ background.
 - When a page has many tabs, they stay on one line with a scroll bar. Every tab and button needs only one click.
 - The red dot on **Settings** is gone.
 - **UniMate:** when a model can't be animated, you now get a plain reason and what to do. A model that lies down is
-  stood up and tried again.
+  stood up and tried again. A model with no bones is caught right away: press **Rig it** first.
 
 ## New (31 Oct 2026): Music, media and wrap-up round
 

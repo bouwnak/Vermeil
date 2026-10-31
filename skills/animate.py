@@ -252,7 +252,25 @@ def skip_reason(asset):
         for c in clips or []:
             if isinstance(c, dict) and c.get("reason"):
                 return str(c["reason"])
-    return ""
+    try:                                                    # "<name>\t<error>" lines, the last one is this run's
+        with open(os.path.join(asset, "work", "features", "extract_errors.log"), encoding="utf-8", errors="replace") as f:
+            lines = [ln.strip() for ln in f if ln.strip()]
+        return "processing failed: " + lines[-1].split("\t", 1)[-1] if lines else ""
+    except OSError:
+        return ""
+
+
+def has_skeleton(model_path):
+    """False for a .glb with no skin (bones) in it; anything else is left to UniMate"""
+    if not model_path.lower().endswith(".glb"):
+        return True
+    try:
+        with open(model_path, "rb") as f:
+            head = f.read(20)
+            n = int.from_bytes(head[12:16], "little")
+            return bool(json.loads(f.read(n)).get("skins"))
+    except (OSError, ValueError):
+        return True
 
 
 def explain(reason):
@@ -266,7 +284,7 @@ def explain(reason):
                     "Press Rig it first, then Make the animations again.")
         return (f"this model has {n} bones; UniMate takes at most {hi}. If the file holds two characters, "
                 "save each one on its own (one character per .glb), or use a model with a simpler skeleton.")
-    if "no motion NPZ" in r:
+    if "no motion NPZ" in r or "No armature found" in r:
         return "UniMate found no skeleton in this model. Press Rig it first, then Make the animations again."
     if "zero-length bones" in r or "degenerate skeleton" in r:
         return ("the skeleton has bones of zero length, so UniMate can't measure it. "
@@ -279,12 +297,16 @@ def explain(reason):
 
 def _read_skeleton(model_path, asset, log, progress=lambda pct, text: None):
     """step 1 (rig_preprocess). A model drawn lying down is tried again stood up; other skips get a plain message."""
+    if not has_skeleton(model_path):
+        raise RuntimeError(explain("No armature found"))
     base = ["python", "-m", "data_process.rig_preprocess", "run", "--input", model_path,
             "--output_dir", asset, "--no_review"]
     for turn in [None] + TURNS:
         try:
             return _run(base + (["--rest_rotation", turn] if turn else []), log)
         except RuntimeError as e:
+            if "No armature found" in str(e):
+                raise RuntimeError(explain("No armature found")) from None
             if "produced no cond" not in str(e):
                 raise
             reason = skip_reason(asset)

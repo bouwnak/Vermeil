@@ -86,7 +86,15 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **Fixes & Game Night polish round (31 Oct 2026, newest)**: the owner sent screenshots from another PC with 11 asks.
+- **UniMate check on this PC (31 Oct 2026, newest)**: the owner asked to fix the UniMate error ("stage 4 produced no cond" for `invincible_vs_omniman.glb` on the other PC, in `D:\THIS PC\Downloads\...`).
+  - Tried here with the real UniMate: two characters merged into one .glb (Pikachu + Greninja) and a path with spaces (`THIS PC\work dir`). Both made a walk without errors, so neither is the cause.
+  - A model with no bones fails differently ("No armature found"). The Invincible model has bones, so its real reason is only in that PC's `asset/work/features/extract_errors.log`. The model file isn't on this PC.
+  - `skills/animate.py`:
+    - `has_skeleton(path)` reads the .glb header. `_read_skeleton` stops at once with "Press Rig it first" when there are no skins (no slow conda start), and also turns UniMate's "No armature found" into that message.
+    - `skip_reason` falls back to the last line of `extract_errors.log`. The popup now shows the real error instead of "produced no cond".
+  - Tests: `tests/test_kitchen_unimate.py` (+2). Full suite: 709 tests, OK (3 skipped).
+  - Still to do: pull this on the other PC and try Invincible again. The popup will then name the real error.
+- **Fixes & Game Night polish round (31 Oct 2026)**: the owner sent screenshots from another PC with 11 asks.
   - **UniMate "stage 4 produced no cond"** (`skills/animate.py`):
     - `skip_reason(asset)` reads UniMate's reason from `work/features/filtered_clips.json`, and `explain(reason)` puts it in plain words with what to do (too few/many joints, no skeleton, zero-length bones).
     - `_read_skeleton` runs `rig_preprocess`. When the reason is "horizontal separation" (a model lying down), it tries again with each `--rest_rotation` in `TURNS`.
