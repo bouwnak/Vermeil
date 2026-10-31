@@ -14,7 +14,38 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (31 Oct 2026, latest): Focus & planning
+## New (31 Oct 2026, latest): Study round
+
+Open **Study**. The first tab is now **My study**:
+
+- **💡 Curiosity corner** - one interesting fact a day about your subjects.
+- **Today** - exactly what to do today: reviews that are due (spaced repetition), flashcards, past mistakes and weak
+  topics, with minutes. Press **Start** on a line to open it.
+- **📕 Mistakes** - every wrong answer from your reviews is saved here with the right answer. Tick **✓ Got it now**
+  when you know it.
+- **🎓 Grades** - put in each part's weight (quizzes 20%, midterm 30%, final 50%...) and the scores you have. Leave
+  the final blank and it tells you the score you need on it.
+- **📸 Notes** - pick photos of your handwritten notes. She reads them, cleans them up, and a note on a topic you
+  already have is joined to it. **🔗 Merge duplicates** joins old ones.
+- **📐 Formulas** - one formula sheet per subject (Hydrology, RCD, Steel...). It uses the library files with that
+  subject (set it in Library) and the formulas in your handwritten notes.
+- **🎬 Chapters** - a video lecture split into chapters; click a time to jump there.
+- **📚 Citations** - paste a link or type a book title: APA 7 and MLA 9 to copy.
+- **✍️ Essay** - an outline (thesis, points, evidence), then paste your draft for feedback.
+- **🎯 Exam week** - add your exams and a bedtime. You get a plan for each day, a bedtime reminder, and Vermeil keeps
+  chat short and calm.
+
+Also new:
+
+- A **timed review** (practice exam) now ends with a score report by file and a grade.
+- **USB drives**: when you plug one in, new lecture files are listed with the subject she guessed from the
+  file and folder names. **Import & sort by subject** adds them all.
+- **Language → Pronunciation**: when a word is wrong she explains how to say it (syllables, the tricky sound, and an
+  English "sounds like").
+
+Nothing new to install.
+
+## New (31 Oct 2026): Focus & planning
 
 Open **Focus & Progress**. There are new tabs next to *Focus session*:
 

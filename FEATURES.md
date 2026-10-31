@@ -282,6 +282,24 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## ➕ Extra features you asked for in chat
 ✅ 3D cozy room (themes, furniture editor, day/night by your clock, brightness) · ✅ characters (Vermeil, Pip, Robo, your own GLB/VRM) · ✅ planner (calendar, tasks, reminders, birthdays, shopping, notes) · ✅ study (library, review sets, research, assignment help) · ✅ coding helper · ✅ gym mode (your routine, timer, editor, history, best reps, +2.5 kg upgrade, sessions) · ✅ journal & think · ✅ voice commands · ✅ top-left status pills · ✅ night theme with sounds and effects · ✅ Groq → Ollama automatic switch · ✅ saved preferences · ✅ package cleanup script · ✅ smaller AI requests: only the tools that fit each message are sent (~1–2k tokens instead of ~9k), so Groq lasts longer and the local AI isn't overloaded
 
+## 🆕 31 Oct 2026: Study round
+
+| Feature | Where | How |
+|---|---|---|
+| 📋 What to review today | Study → My study → Today | Due reviews (spaced repetition), flashcards, mistakes and weak topics, with minutes |
+| 📝 Practice exam report | Study → Review (timed) | Score by file, grade, and what to study again |
+| 📐 Formula sheet by subject | Study → My study → Formulas | Hydrology, RCD, Steel... from that subject's files plus your handwritten notes |
+| 📸 Handwriting to notes | Study → My study → Notes | Photo → clean notes; the same topic is merged, not duplicated |
+| 🎬 Lecture chapters | Study → My study → Chapters | Video lectures split into chapters with times |
+| 📕 Mistake notebook | Study → My study → Mistakes | Every wrong answer saved with the right answer |
+| 🎓 Grade tracker | Study → My study → Grades | "What do I need on the final?" |
+| 🗣 Pronunciation coach | Study → Language → Say it | How to say the words you got wrong |
+| 📚 Citation helper | Study → My study → Citations | APA 7 / MLA 9 from a link or a book title |
+| ✍️ Essay coach | Study → My study → Essay | Outline, then feedback on your draft |
+| 🔌 USB auto-import | Study → Library (plug in a drive) | New files sorted by subject |
+| 🎯 Exam-week mode | Study → My study → Exam week | Daily plan, bedtime reminder, lighter chat |
+| 💡 Curiosity corner | Study → My study | One fact a day about your subjects |
+
 ## 🆕 31 Oct 2026: Focus & planning
 
 | Feature | Where | How |

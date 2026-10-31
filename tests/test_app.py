@@ -233,6 +233,31 @@ class AppTests(unittest.TestCase):
         win.assert_not_called()
         self.assertIn("error", self.api.browse_inside("  "))
 
+    def test_study_round_wiring(self):
+        import studylife, tempfile
+        from datetime import date
+        tmp = tempfile.mkdtemp(prefix="vermeil-sl-")
+        self.addCleanup(lambda: __import__("shutil").rmtree(tmp, True))
+        review = {"title": "Quiz", "files": ["f1"], "items": [{"statement": "Steel is brittle.", "answer": False}]}
+        with mock.patch.object(studylife, "STATE_FILE", os.path.join(tmp, "s.json")), \
+                mock.patch.object(app.academic, "save_score", return_value=0), \
+                mock.patch.object(app.academic, "get_review", return_value=review), \
+                mock.patch.object(app.academic, "list_files", return_value=[{"id": "f1", "name": "Steel.pdf", "subject": "Steel"}]):
+            self.api.study_save_score("r1", 0, 1, [False])                     # wrong answers -> mistake notebook
+            self.assertEqual(studylife.mistakes()[0]["subject"], "Steel")
+            self.assertEqual(self.api.study_exam_report("r1", [False])["grade"], "F")
+            studylife.exam_save({"on": True, "exams": [{"subject": "RCD", "date": date.today().isoformat()}]})
+            self.api._apply_settings()
+            self.assertIn(studylife.EXAM_CHAT_NOTE, pm._extra_notes("hi"))     # lighter chat in exam week
+            with mock.patch.object(self.api, "study_files", return_value={}):
+                seen = []
+                with mock.patch.object(app.academic, "is_media", return_value=False), \
+                        mock.patch.object(app.academic, "add_file", side_effect=lambda p, k, s: seen.append(s) or {}), \
+                        mock.patch("os.path.isfile", return_value=True):
+                    self.api.study_add_paths([r"E:\Hydrology\w9.pdf", r"E:\RCD flexure.pptx"], "lecture", "auto")
+            self.assertEqual(seen, ["Hydrology", "RCD"])                     # USB files sorted by subject
+        pm.exam_week = None
+
     def test_planner(self):
         with mock.patch.object(app.f1, "user_data", {"events": [{"title": "Old", "date": "2000-01-01"},
                                                                 {"title": "Soon", "date": "2999-01-01"}],

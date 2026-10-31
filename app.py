@@ -338,7 +338,25 @@ class Api:
             if not briefed and self._settings["morning_briefing"]:
                 briefed = True
                 threading.Thread(target=self._maybe_brief, daemon=True).start()
+            try:
+                self._exam_bedtime()
+            except Exception as e:  # noqa: BLE001
+                print(f"[exam week] {e}")
             time.sleep(20)
+
+    def _exam_bedtime(self):
+        """exam week: one reminder 30 minutes before bedtime"""
+        import studylife
+        ex = studylife.exam_state()
+        if not studylife.exam_active(ex):
+            return
+        h, m = (int(x) for x in ex["sleep"].split(":"))
+        bed = datetime.now().replace(hour=h, minute=m, second=0, microsecond=0)
+        mins = (bed - datetime.now()).total_seconds() / 60
+        today = date.today().isoformat()
+        if 0 <= mins <= 30 and getattr(self, "_bedtime_told", "") != today:
+            self._bedtime_told = today
+            self.emit({"type": "alert", "text": f"🛌 Exam week: bed by {ex['sleep']}. Sleep is when your brain saves what you studied."})
 
     def _scan_moments(self):
         key = pm.persona.get("memory_key", "user")
@@ -636,6 +654,12 @@ class Api:
     def study_add_paths(self, paths, kind="lecture", subject=""):
         """documents are read now; video / audio lectures are written down in the background ({"type": "study_media"})"""
         added, errors, queued = [], [], []
+        if subject == "auto":
+            import studylife
+            known = studylife.subjects(academic.list_files())
+            for p in paths or []:
+                self.study_add_paths([p], kind, studylife.guess_subject(p, known))
+            return {"added": [], "errors": [], "videos": [], "sorted": True, **self.study_files()}
         for p in paths or []:
             if not os.path.isfile(p):
                 errors.append(f"{os.path.basename(p)}: not found (was the USB drive taken out?)")
@@ -784,6 +808,13 @@ class Api:
             self.emit({"type": "toast", "text": f"🎙 Say it now… ({int(seconds)} s)"})
             res = sensei.pronunciation(expected, language, seconds)
             self._xp("pronounce", xp=int(2 + res.get("score", 0) / 15), why="Pronunciation practice")
+            if res.get("missed") and res.get("score", 100) < 90:
+                import studylife
+                try:
+                    res["coach"] = studylife.pron_coach(expected, res.get("heard", ""), res["missed"],
+                                                        language or sensei._state()["language"])
+                except Exception:  # noqa: BLE001 - the score still shows without tips
+                    pass
             return res
         except Exception as e:
             return {"error": f"Couldn't use the microphone: {e}"}
@@ -1404,7 +1435,23 @@ class Api:
             self._xp("review", xp=int(10 + 20 * pct), why=f"Review finished: {score}/{total}")
         except (TypeError, ValueError):
             pass
+        if isinstance(results, list):
+            import studylife
+            review = academic.get_review(review_id) or {}
+            subject = ", ".join(sorted({f.get("subject") or "" for f in academic.list_files()
+                                        if f["id"] in review.get("files", [])} - {""}))
+            try:
+                studylife.add_mistakes(review, results, subject)
+            except OSError:
+                pass
         return res
+
+    def study_exam_report(self, review_id, results):
+        import studylife
+        review = academic.get_review(review_id)
+        if not review:
+            return {"error": "That review is gone."}
+        return studylife.exam_report(review, results or [])
 
     def study_research(self, question, fact_check=False):
         try:
@@ -2604,6 +2651,174 @@ class Api:
         self._xp("formula_sheet", why="Formula sheet made")
         return res
 
+    # ---------- Study round (skills/studylife.py) ----------
+    def study_today(self):
+        """62: exactly what to review today"""
+        import studylife
+        import studygame
+        try:
+            cards = studygame.deck(200)["total"]
+        except Exception:  # noqa: BLE001
+            cards = 0
+        ex = studylife.exam_state()
+        exam = None
+        if studylife.exam_active(ex):
+            plan = studylife.exam_plan(ex["exams"], sleep=ex["sleep"])
+            exam = plan[0] if plan else None
+        return studylife.today_list(academic.due_reviews(), cards, len(studylife.mistakes()), academic.weak_topics(), exam)
+
+    def study_fact(self):
+        """80: one interesting fact a day about your subjects"""
+        import studylife
+        subs = [s for s in studylife.subjects(academic.list_files())]
+        try:
+            return studylife.fact_of_day(subs)
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+
+    def study_mistakes(self, subject=None):
+        import studylife
+        return studylife.mistakes(subject)
+
+    def study_mistake_done(self, mid):
+        import studylife
+        self._xp("mistake_fixed", xp=3, why="Fixed a past mistake")
+        return studylife.mistake_done(mid)
+
+    def study_grades(self):
+        import studylife
+        return studylife.grades()
+
+    def study_grade_save(self, course):
+        import studylife
+        return studylife.grade_save(course or {})
+
+    def study_grade_remove(self, cid):
+        import studylife
+        return studylife.grade_remove(cid)
+
+    def study_cite(self, text):
+        import studylife
+        try:
+            return studylife.cite_lookup(text)
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+
+    def study_cite_fields(self, fields):
+        import studylife
+        return {"fields": fields, "apa": studylife.cite(fields, "apa"), "mla": studylife.cite(fields, "mla")}
+
+    def study_essay_outline(self, topic, kind="argumentative"):
+        import studylife
+        try:
+            return studylife.essay_outline(topic, kind)
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+
+    def study_essay_feedback(self, outline, draft):
+        import studylife
+        try:
+            res = studylife.essay_feedback(outline, draft)
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+        if "score" in res:
+            self._xp("essay_feedback", why="Essay draft checked")
+        return res
+
+    def study_photo_notes(self, subject=""):
+        """67: pick photos of handwritten notes -> clean notes; same topic = merged into one note"""
+        import studylife
+        paths = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True,
+                                                file_types=("Photos (*.jpg;*.jpeg;*.png;*.webp;*.bmp)",))
+        out, errors = [], []
+        for p in paths or []:
+            try:
+                res = studylife.photo_notes(p, subject)
+            except Exception as e:  # noqa: BLE001
+                res = {"error": str(e)}
+            if res.get("error"):
+                errors.append(f"{os.path.basename(p)}: {res['error']}")
+            else:
+                out.append({"topic": res["note"]["topic"], "merged": res["merged"]})
+        if out:
+            self._xp("photo_notes", why="Notes from a photo")
+        return {"done": out, "errors": errors, "notes": studylife.notebook()}
+
+    def study_notebook(self, subject=None):
+        import studylife
+        return studylife.notebook(subject)
+
+    def study_merge_notes(self):
+        import studylife
+        return studylife.merge_duplicates()
+
+    def study_note_remove(self, nid):
+        import studylife
+        return studylife.note_remove(nid)
+
+    def study_chapters(self, file_id):
+        """70: a video lecture split into chapters; each one opens the video at that time"""
+        import studylife
+        import mediaserve
+        try:
+            res = studylife.chapters(file_id)
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+        for c in res.get("chapters", []):
+            c["url"] = mediaserve.url(file_id, c["seconds"])
+        return res
+
+    def study_subjects(self):
+        import studylife
+        return {"subjects": studylife.subjects(academic.list_files()), "sheets": studylife.formula_saved()}
+
+    def study_subject_formulas(self, subject):
+        """65: one formula sheet per subject (Hydrology, RCD, Steel...)"""
+        import studylife
+        try:
+            res = studylife.formula_for_subject(subject, academic.list_files())
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+        if not res.get("error"):
+            self._xp("formula_sheet", why=f"{subject} formula sheet")
+        return res
+
+    def study_usb_new(self, path):
+        """78: new lecture files on a USB drive, each with the subject it'll be filed under"""
+        import studylife
+        if not os.path.isdir(path or ""):
+            return {"files": []}
+        known = studylife.subjects(academic.list_files())
+        new = studylife.usb_new(academic.scan_folder(path), [f["name"] for f in academic.list_files()])
+        return {"files": [{**f, "subject": studylife.guess_subject(os.path.join(f["folder"], f["name"]), known)} for f in new]}
+
+    def study_usb_import(self, files, kind="lecture"):
+        import studylife
+        groups = {}
+        for f in files or []:
+            groups.setdefault(f.get("subject") or "", []).append(f["path"])
+        res = {}
+        for subject, paths in groups.items():
+            res = self.study_add_paths(paths, kind, subject)
+        studylife.usb_mark([{"name": os.path.basename(f["path"]), "size": f.get("size", 0)} for f in files or []])
+        return res or self.study_files()
+
+    def study_usb_skip(self, files):
+        import studylife
+        studylife.usb_mark(files or [])
+        return {"ok": True}
+
+    def study_exam(self):
+        """79: exam week settings + the daily plan"""
+        import studylife
+        ex = studylife.exam_state()
+        return {**ex, "active": studylife.exam_active(ex), "plan": studylife.exam_plan(ex["exams"], sleep=ex["sleep"])}
+
+    def study_exam_save(self, state):
+        import studylife
+        studylife.exam_save(state)
+        return self.study_exam()
+
     # ---------- Study -> Language extras (skills/sensei.py) ----------
     def sensei_scenes(self):
         import sensei
@@ -2996,6 +3211,8 @@ class Api:
             self._gesture_thread.start()
         pm.barge_in = self._settings["barge_in"]
         pm.keep_screens = self._settings["keep_screens"] and not self._settings["privacy_mode"]
+        import studylife
+        pm.exam_week = lambda: studylife.exam_active(studylife.exam_state())
         pm.stream_speech = self._settings["stream_speech"]
         import spotify
         f1.external_player = spotify.control

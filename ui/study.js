@@ -2,6 +2,7 @@
 import { $, el, toast, setMd, busy, loadingCard, setupDropZone } from "./util.js";
 import { initPlay, watchButton } from "./studyplay.js";
 import { initLangExtras, accentWords } from "./langplay.js";
+import { initStudyLife, coachTips, examReport } from "./studylife.js";
 
 const KIND_LABEL = { lecture: "Lecture", problems: "Problems", solutions: "Solutions", other: "Other" };
 
@@ -11,18 +12,22 @@ export function initStudy(api) {
   const root = $("studyBody");
 
   // ---------- layout: tabs ----------
-  const tabs = ["Library", "Review", "Play", "Language", "Research", "Assignment"];
+  const tabs = ["My study", "Library", "Review", "Play", "Language", "Research", "Assignment"];
   const tabBar = el("div", { class: "tabs", role: "tablist" }, tabs.map((t) =>
-    el("button", { role: "tab", id: `tab-${t}`, "aria-controls": `pane-${t}`, onclick: () => show(t) }, t)));
-  const panes = Object.fromEntries(tabs.map((t) => [t, el("div", { class: "pane", id: `pane-${t}`, role: "tabpanel", hidden: true })]));
+    el("button", { role: "tab", id: `tab-${t.replace(" ", "-")}`, "aria-controls": `pane-${t.replace(" ", "-")}`, onclick: () => show(t) }, t)));
+  const panes = Object.fromEntries(tabs.map((t) => [t, el("div", { class: "pane", id: `pane-${t.replace(" ", "-")}`, role: "tabpanel", hidden: true })]));
   root.replaceChildren(tabBar, ...Object.values(panes));
   function show(t) {
-    for (const x of tabs) { panes[x].hidden = x !== t; $(`tab-${x}`).setAttribute("aria-selected", x === t); }
+    for (const x of tabs) { panes[x].hidden = x !== t; $(`tab-${x.replace(" ", "-")}`).setAttribute("aria-selected", x === t); }
     api.save_ui({ study_tab: t });
     if (t === "Review") renderReviewPane();
     if (t === "Language") renderLanguage();
     if (t === "Play") playPane.load();
+    if (t === "My study") myStudy.load();
   }
+  const myStudy = initStudyLife(api, panes["My study"], {
+    showTab: (t) => show(t), files: () => data.files,
+    openReview: async (id) => { show("Review"); openReview(await api.study_review(id)); } });
   const playPane = initPlay(api, panes.Play, () => [...selectedFiles]);
   window.showStudyTab = (t) => tabs.includes(t) && show(t);
 
@@ -150,6 +155,19 @@ export function initStudy(api) {
       usbBanner.replaceChildren(el("span", {}, `🔌 ${d.label} is plugged in.`),
         el("button", { class: "primary small", onclick: () => { usbBanner.hidden = true; openUsb(false, d.path, d.label); } }, "Show its study files"),
         el("button", { class: "x", "aria-label": "Hide", onclick: () => { usbBanner.hidden = true; } }, "×"));
+      const { files: fresh2 = [] } = (await api.study_usb_new?.(d.path)) || {};
+      if (fresh2.length) {
+        const bySubject = {};
+        fresh2.forEach((f) => { const s = f.subject || "No subject"; bySubject[s] = (bySubject[s] || 0) + 1; });
+        usbBanner.append(el("div", { class: "usb-new" },
+          el("span", {}, `📥 ${fresh2.length} new file${fresh2.length > 1 ? "s" : ""}: ${Object.entries(bySubject).map(([s, n]) => `${n} ${s}`).join(", ")}`),
+          el("button", { class: "primary small", onclick: async (e) => {
+            busy(e.target, true, "Importing…");
+            try { data = await api.study_usb_import(fresh2, kindSel.value); renderFiles(); toast(`Imported and sorted ${fresh2.length} file${fresh2.length > 1 ? "s" : ""} by subject.`); usbBanner.hidden = true; }
+            finally { busy(e.target, false); }
+          } }, "Import & sort by subject"),
+          el("button", { class: "ghost small", onclick: async () => { await api.study_usb_skip(fresh2.map((f) => ({ name: f.name, size: f.size }))); usbBanner.hidden = true; } }, "Not these")));
+      }
     } else if (!paths.length) usbBanner.hidden = true;
   }
   setInterval(() => watchDrives().catch(() => {}), 4000);
@@ -398,6 +416,8 @@ export function initStudy(api) {
       score.textContent = `Score: ${right} / ${items.length} (${pct}%)${pct === 100 ? " Perfect!" : pct >= 75 ? " Nice work." : " Review the ones you missed and try again."}`;
       clearInterval(timerId);
       await api.study_save_score(r.id, right, items.length, results);
+      if (r.time_limit && results) score.after(examReport(await api.study_exam_report(r.id, results)) || "");
+      else if (right < items.length) score.append(el("small", { class: "muted" }, " The ones you missed are saved in My study → Mistakes."));
       data = await api.study_files(); renderReviewPane();
     } }, "Check my answers")) : null;
     // timed mock exam: countdown, then answers are checked automatically
@@ -540,7 +560,7 @@ export function initStudy(api) {
           if (r.error) return toast(r.error, 7000);
           langOut.replaceChildren(el("div", { class: `pron ${r.score >= 90 ? "good" : r.score >= 70 ? "ok" : "low"}` },
             el("b", {}, `${r.score}% — ${r.verdict}`), accentWords(api, r.words, langSel.value), el("p", {}, `You said: ${r.heard}`), el("p", {}, `Target: ${r.expected}`),
-            r.tip ? el("p", { class: "note" }, r.tip) : null));
+            r.tip ? el("p", { class: "note" }, r.tip) : null, coachTips(r.coach)));
         } finally { busy(e.target, false); }
       } }, "🎙 Say it")),
     partnerBox,
@@ -1069,7 +1089,7 @@ export function initStudy(api) {
     data = await api.study_files();
     renderFiles();
     renderReviewPane();
-    show(tab || "Library");
+    show(tab || "My study");
   }
   return { load };
 }

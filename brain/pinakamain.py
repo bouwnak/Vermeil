@@ -411,6 +411,7 @@ humor_level = 2              # 0 none - 3 sarcastic (Settings)
 self_check = False           # double-check answers before replying (Settings)
 objects_seen = None           # app.py: () -> "a cup and a cell phone" from the camera's object detector
 keep_screens = True          # keep screenshots she looked at, searchable later (Settings)
+exam_week = None             # app.py: () -> True during exam week (lighter, shorter chat)
 
 
 def _extra_notes(user_input, emotion="neutral"):
@@ -435,6 +436,9 @@ def _extra_notes(user_input, emotion="neutral"):
     style_line = VOICE_STYLES.get(VOICE_STYLE, VOICE_STYLES["normal"])[4]
     if style_line:
         notes.append(f"Voice acting: {style_line}")
+    if exam_week and exam_week():
+        import studylife
+        notes.append(studylife.EXAM_CHAT_NOTE)
     if VOICE_CHATTER:
         notes.append("Your voice can really laugh, chuckle, sigh and gasp: write *laughs*, *chuckles*, *sighs* or "
                      "*gasps* right where you'd make that sound (at most one or two per reply), '...' for a pause.")

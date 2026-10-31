@@ -86,7 +86,49 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **Focus & planning (31 Oct 2026, newest)**: owner picked ideas 41, 42 ("integrate a browser inside the app"), 47, 48, 50 (with a travel planner), 52, 55, 56, 57 ("should mute all notifications") and 58 from FEATURE_IDEAS.md.
+- **Study round (31 Oct 2026, newest)**: the owner picked ideas 62, 63, 65 ("grouped by subject (hydrology, RCD, steel)"), 67 ("plus merging duplicate topics"), 70, 72, 73, 74, 76, 77, 78, 79 and 80 from FEATURE_IDEAS.md.
+  - `skills/studylife.py` (new). It saves to `data/studylife.json`. Every AI call takes `ask=` so tests can fake it.
+    - Today's list: `today_list(due, cards_due, mistakes_n, weak, exam)`.
+    - Practice exams: `exam_report(review, results)` scores each source file and gives a grade.
+    - Mistake notebook: `add_mistakes` (deduped by question), `mistakes` and `mistake_done`.
+    - Grades: `grade_calc`, which works out "what do I need on the final", plus `grade_save` (weights must add to 100) and `grade_remove`.
+    - Citations:
+      - `cite(fields, style)` writes APA 7 / MLA 9 itself, without the AI.
+      - `cite_lookup` reads a link's `<meta>` tags, or asks the AI for a book's details. Unknown books are refused.
+    - Essay coach: `essay_outline` and `essay_feedback`.
+    - Handwritten notes:
+      - `photo_notes`: `academic.read_image_text`, then the AI, then `save_note`, which joins a note on the same topic and subject (subset, or ≥ 60% word overlap) and drops repeated lines.
+      - `merge_duplicates` joins duplicates afterwards.
+    - Video chapters: `chapters(file_id)` uses the `[mm:ss]` transcript lines and is cached per file.
+    - Formula sheets: `formula_for_subject(subject, files)` runs `studygame.formula_sheet` on that subject's files and adds the notebook's formulas. `subjects()` always includes Hydrology, RCD and Steel.
+    - USB: `guess_subject(path, known)` (your own subject names come first, then `KEYWORDS`), plus `usb_new` and `usb_mark`.
+    - Exam week: `exam_state`, `exam_save`, `exam_active` (on, and the last exam is ≤ 14 days away), `exam_plan` and `EXAM_CHAT_NOTE`.
+    - `fact_of_day` is cached by date.
+    - `pron_coach(expected, heard, missed, language)`.
+  - `app.py`:
+    - New API methods: `study_today`, `study_fact`, `study_mistakes`/`_done`, `study_grades`/`_save`/`_remove`, `study_cite`/`_fields`, `study_essay_*`, `study_photo_notes`, `study_notebook`, `study_merge_notes`, `study_note_remove`, `study_chapters`, `study_subjects`, `study_subject_formulas`, `study_usb_new`/`_import`/`_skip`, `study_exam`/`_save` and `study_exam_report`.
+    - `study_save_score` now saves wrong answers to the mistake notebook. The subject comes from the review's files.
+    - `sensei_pronounce` adds `coach` when the score is below 90.
+    - `study_add_paths(..., subject="auto")` guesses each file's subject.
+    - `_exam_bedtime()` in `_alert_loop` gives one alert 30 minutes before bedtime during exam week.
+    - `_apply_settings` sets `pm.exam_week`.
+  - `brain/pinakamain.py`: `exam_week` hook, and `_extra_notes` adds `EXAM_CHAT_NOTE` during exam week.
+  - UI:
+    - `ui/studylife.js` (new) is the "My study" tab: Today, Mistakes, Grades, Notes, Formulas, Chapters, Citations, Essay and Exam week, plus the curiosity card. It also exports `coachTips` and `examReport`.
+    - `ui/study.js`:
+      - "My study" is the first and default tab. Pane and tab ids use `-` instead of spaces.
+      - The exam report shows after timed reviews.
+      - Pronunciation tips show.
+      - The USB banner has "Import & sort by subject".
+    - Also changed: `ui/mock.js` and `ui/style.css`.
+  - Tests:
+    - `tests/test_studylife.py` (18).
+    - `tests/test_app.py` +1 (`test_study_round_wiring`): a mistake is saved after a review, the exam report, the exam-week chat note, and USB auto-subject.
+    - Full suite: 641 tests OK (3 skipped).
+    - Browser (`ui-dev` ?mock): every My study section works. Tried there: a grade is saved with the needed final, notes merged, a formula sheet, a citation, the essay outline and feedback, exam-week rows, a USB plug-in → import, the timed review report, and the pronunciation tips.
+    - Not tried: real photo OCR, a real AI, or a real USB drive.
+  - No new pip packages.
+- **Focus & planning (31 Oct 2026)**: owner picked ideas 41, 42 ("integrate a browser inside the app"), 47, 48, 50 (with a travel planner), 52, 55, 56, 57 ("should mute all notifications") and 58 from FEATURE_IDEAS.md.
   - `skills/planlife.py` (new). It saves to `data/goaltree.json`, `data/screentime.json` and `data/travel.json`.
     - Hard lock: `UNLOCK_SENTENCE` and `unlock_ok`.
     - Site blocking: `BLOCK_SITES` and `site_blocked(title, sites)`. Only browser window titles count.

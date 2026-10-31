@@ -54,7 +54,7 @@ export const mockApi = {
   sensei_quiz: async () => ({ error: "Demo only." }),
   sensei_talk_start: async (t) => ({ id: "s1", kind: "sensei", topic: t, created: "2026-10-21", score: "", messages: [{ role: "assistant", content: "こんにちは！(konnichiwa) お名前は？ (What's your name?)" }] }),
   sensei_talks: async () => [],
-  sensei_pronounce: async (x) => ({ expected: x, heard: "はじめまして", score: 92, verdict: "Excellent!", tip: "", words: [...x].map((c, i) => ({ text: c, ok: i !== 1 })) }),
+  sensei_pronounce: async (x) => ({ expected: x, heard: "はじめまして", score: 92, verdict: "Nice try", tip: "", coach: { tips: [{ word: "じめ", syllables: "ji-me", how: "Short, flat vowels; don't stretch the e.", sounds_like: "gee-meh" }], encourage: "Almost there!" }, words: [...x].map((c, i) => ({ text: c, ok: i !== 1 })) }),
   sensei_say: async (t) => ({ ok: true, said: t }),
   focus_state: async () => ({ current: focusCur, week: { sessions: 3, minutes: 140, distractions: 2 } }),
   focus_start: async (task, w, b, r) => (focusCur = { task, work: w, break: b, rounds: r }),
@@ -450,6 +450,63 @@ export const mockApi = {
     { name: "Max moment (UDL)", formula: "M = w*L^2/8", symbols: "w = load (kN/m), L = span (m)", source: "Beams.pdf, p. 3" },
     { name: "Bending stress", formula: "sigma = M*c/I", symbols: "c = distance to fibre (mm), I = inertia (mm^4)", source: "Beams.pdf, p. 5" }] },
     { topic: "Deflection", formulas: [{ name: "Max deflection (UDL)", formula: "d = 5*w*L^4/(384*E*I)", symbols: "E = modulus (MPa)", source: "Beams.pdf, p. 8" }] }] }),
+  // ---- Study -> My study (skills/studylife.py)
+  study_today: async () => ({ minutes: 43, items: [
+    { icon: "🔁", text: "Review: Multiple choice: Beams.pdf (2 days late)", minutes: 10, action: "review", id: "r1" },
+    { icon: "🃏", text: "12 flashcards", minutes: 4, action: "cards" },
+    { icon: "📕", text: `Redo ${Math.min(10, (st.mistakes ||= mockMistakes()).length)} past mistakes`, minutes: 8, action: "mistakes" },
+    { icon: "💪", text: "Weak topic: Hardy Cross (45%)", minutes: 15, action: "weak" }] }),
+  study_fact: async () => ({ date: "2026-10-31", subject: "Hydrology", fact: "The Rational Method (Q = CiA) was first published by Thomas Mulvaney in 1851, and engineers still use it to size storm drains." }),
+  study_mistakes: async () => (st.mistakes ||= mockMistakes()),
+  study_mistake_done: async (id) => (st.mistakes = (st.mistakes || []).filter((m) => m.id !== id)),
+  study_exam_report: async (id, results) => {
+    const parts = [["Beams.pdf", results.slice(0, 2)], ["Hydrology notes.pdf", results.slice(2)]].filter(([, r]) => r.length)
+      .map(([part, r]) => ({ part, right: r.filter(Boolean).length, total: r.length, pct: Math.round(100 * r.filter(Boolean).length / r.length) }));
+    const right = results.filter(Boolean).length, pct = Math.round(100 * right / results.length);
+    return { pct, grade: pct >= 90 ? "A" : pct >= 80 ? "B" : pct >= 70 ? "C" : pct >= 60 ? "D" : "F", right, total: results.length, parts, redo: parts.filter((p) => p.pct < 70).map((p) => p.part) };
+  },
+  study_grades: async () => (st.grades ||= [{ id: "g1", name: "Hydrology", target: 75, parts: [{ name: "Quizzes", weight: 20, score: 82 }, { name: "Midterm", weight: 30, score: 70 }, { name: "Final exam", weight: 50, score: null }],
+    current: 74.4, needed: 76.2, message: "You need an average of 76.2% on Final exam to finish with 75%." }]),
+  study_grade_save: async (c) => {
+    const parts = c.parts.map((p) => ({ name: p.name, weight: +p.weight || 0, score: p.score === "" || p.score == null ? null : +p.score }));
+    const w = parts.reduce((a, p) => a + p.weight, 0);
+    if (Math.abs(w - 100) > 0.5) return { error: `The weights add up to ${w}%, they should add up to 100%.` };
+    const done = parts.filter((p) => p.score != null), left = parts.filter((p) => p.score == null);
+    const earned = done.reduce((a, p) => a + p.weight * p.score / 100, 0), wl = left.reduce((a, p) => a + p.weight, 0);
+    const target = +c.target || 75, needed = wl ? Math.round(1000 * (target - earned) / wl) / 10 : null;
+    const g = { id: c.id || "g" + Date.now(), name: c.name, target, parts, current: done.length ? Math.round(1000 * earned / done.reduce((a, p) => a + p.weight, 0)) / 10 : null, needed,
+      message: !wl ? `Final grade: ${earned.toFixed(1)}%.` : needed > 100 ? `Even 100% gets you ${(earned + wl).toFixed(1)}%.` : `You need an average of ${needed}% on ${left.map((p) => p.name).join(", ")} to finish with ${target}%.` };
+    st.grades = [...(st.grades || []).filter((x) => x.id !== g.id), g];
+    return { grades: st.grades };
+  },
+  study_grade_remove: async (id) => ({ grades: (st.grades = (st.grades || []).filter((g) => g.id !== id)) }),
+  study_cite: async (t) => (/^https?:/.test(t)
+    ? { apa: "Chow, V. T. (2024, May 3). *Unit hydrographs explained*. Water Journal. " + t, mla: `Chow, Ven Te. "Unit Hydrographs Explained." *Water Journal*, 2024-05-03, ${t.replace(/^https?:\/\//, "")}. Accessed 31 Oct. 2026.` }
+    : { apa: "Chow, V. T., Maidment, D. R., & Mays, L. W. (1988). *Applied hydrology*. McGraw-Hill.", mla: "Chow, Ven Te, et al. *Applied Hydrology*. McGraw-Hill, 1988." }),
+  study_essay_outline: async (topic) => (topic.trim() ? { thesis: `${topic} should be a priority because it saves lives and money.`,
+    points: [{ point: "Flood damage costs", evidence: ["Government disaster reports", "Insurance data"] }, { point: "Health effects", evidence: ["WHO reports", "Local hospital data"] }, { point: "Cheaper than rebuilding", evidence: ["Cost-benefit studies", "Case study: Marikina"] }],
+    counter: { argument: "It's too expensive up front.", reply: "Prevention costs less than repeated repairs." }, conclusion: "Tie it back to your city." } : { error: "Type the essay topic or question." }),
+  study_essay_feedback: async (o, d) => (d.trim().split(/\s+/).length < 40 ? { error: "Paste at least a paragraph of your draft (40+ words)." }
+    : { score: 7, thesis_clear: true, strengths: ["Clear thesis.", "Good use of a local example."], fixes: [{ quote: d.split(".")[0], why: "Too general for an opening line.", better: "Every rainy season, Marikina loses millions to floods that drainage could prevent." }], next_step: "Add a source for your second point." }),
+  study_photo_notes: async () => { (st.notebook ||= []).push({ id: "n" + Date.now(), topic: "Hardy Cross method", subject: "Hydrology", text: "- Assume flows in each loop\n- Correct: dQ = -Σh / (n Σ h/Q)", formulas: ["h = kQ^n"], sources: ["IMG_2041.jpg"], updated: "2026-10-31" });
+    return { done: [{ topic: "Hardy Cross method", merged: false }], errors: [], notes: st.notebook }; },
+  study_notebook: async () => (st.notebook ||= [{ id: "n1", topic: "Unit hydrograph", subject: "Hydrology", text: "- Runoff from 1 unit of rain\n- S-curve method", formulas: ["Q = CiA"], sources: ["IMG_2001.jpg", "IMG_2002.jpg"], updated: "2026-10-30" },
+    { id: "n2", topic: "Unit hydrographs", subject: "Hydrology", text: "- S-curve method\n- Lag time", formulas: [], sources: ["IMG_2010.jpg"], updated: "2026-10-31" }]),
+  study_merge_notes: async () => { const n = st.notebook || []; const merged = n.length > 1 ? 1 : 0; if (merged) { n[0].text += "\n- Lag time"; n[0].sources.push(...n[1].sources); n.splice(1, 1); } return { merged, notes: n }; },
+  study_note_remove: async (id) => (st.notebook = (st.notebook || []).filter((n) => n.id !== id)),
+  study_chapters: async () => ({ chapters: [{ time: "0:00", seconds: 0, title: "Intro", url: "#" }, { time: "4:10", seconds: 250, title: "Bending moment diagrams", url: "#" }, { time: "12:34", seconds: 754, title: "Deflection", url: "#" }] }),
+  study_subjects: async () => ({ subjects: ["Hydrology", "RCD", "Steel"], sheets: st.sheets ||= {} }),
+  study_subject_formulas: async (s) => (s === "Steel" ? { error: "No Steel files yet. In Library, set a file's subject to Steel (or add handwritten notes)." }
+    : (st.sheets[s] = { title: `${s} formula sheet`, subject: s, count: 2, topics: [{ topic: "Runoff", formulas: [{ name: "Rational method", formula: "Q = CiA", symbols: "C = runoff coeff., i = intensity, A = area", source: "Hydro.pdf, p. 4" }] },
+      { topic: "From your handwritten notes", formulas: [{ name: "", formula: "h = kQ^n", symbols: "", source: "Notebook" }] }] })),
+  study_usb_new: async () => (st.usbDone ? { files: [] } : { files: [{ path: "E:\\Hydrology\\Week 9.pdf", name: "Week 9.pdf", folder: "Hydrology", size: 2e6, subject: "Hydrology" },
+    { path: "E:\\RCD lecture 4.pptx", name: "RCD lecture 4.pptx", folder: ".", size: 5e6, subject: "RCD" }] }),
+  study_usb_import: async () => { st.usbDone = true; return mockApi.study_files(); },
+  study_usb_skip: async () => { st.usbDone = true; return { ok: true }; },
+  study_exam: async () => { const ex = st.exam ||= { on: true, sleep: "22:30", exams: [{ subject: "Hydrology", date: "2026-11-03" }, { subject: "RCD", date: "2026-11-05" }] };
+    return { ...ex, active: ex.on, plan: ex.exams.length ? [{ date: "2026-10-31", weekday: "Sat", focus: "Hydrology in 3 days", blocks: ["📖 Morning: Hydrology, hardest topics first", "📝 Afternoon: Hydrology practice exam (timed)", "🃏 Evening: flashcards + mistakes", `🛌 Bed by ${ex.sleep}`] },
+      { date: "2026-11-02", weekday: "Mon", focus: "Hydrology tomorrow, so light review and early sleep", blocks: ["📐 Hydrology: formula sheet + mistake notebook", `🛌 Bed by ${ex.sleep}`] }] : [] }; },
+  study_exam_save: async (s) => { st.exam = s; return mockApi.study_exam(); },
   sensei_scenes: async () => [{ id: "cafe", label: "☕ Ordering at a café" }, { id: "hotel", label: "🏨 Hotel check-in" }],
   sensei_speed: async (v) => (v ? (st.speed = v) : st.speed || "normal"),
   sensei_shadow: async () => ({ language: "ja", lines: [{ text: "おはようございます", roman: "ohayou gozaimasu", meaning: "Good morning" }, { text: "駅はどこですか", roman: "eki wa doko desu ka", meaning: "Where is the station?" }] }),
@@ -552,3 +609,8 @@ export const mockApi = {
   habit_tick: async (id, n) => { const h = st.habits.find((x) => x.id === id); h.today = Math.max(0, h.today + n); h.done = h.today >= h.goal;
     if (n > 0) ev({ type: "quest", xp: 2, why: `${h.icon} ${h.name}`, rewards: [], quests_done: [] }); return h; },
 };
+
+function mockMistakes() {
+  return [{ id: "m1", q: "What does C stand for in Q = CiA?", right: "The runoff coefficient", why: "C is the fraction of rain that runs off.", source: "Hydro.pdf, p. 4", subject: "Hydrology", added: "2026-10-30" },
+    { id: "m2", q: "Minimum concrete cover for beams (ACI)?", right: "40 mm", why: "", source: "RCD lecture 2.pptx", subject: "RCD", added: "2026-10-31" }];
+}

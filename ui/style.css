@@ -1800,3 +1800,29 @@ input.tiny { width: 56px; }
 .trip-day h5 { margin: 0 0 6px; }
 .trip-day li { margin: 4px 0; }
 .trip-day li.commute { color: var(--muted); }
+/* Study -> My study (ui/studylife.js) */
+.fact-card { border: 1.5px solid var(--blue); border-radius: 12px; padding: 8px 12px; margin: 8px 0; background: var(--blue-soft); }
+.fact-card p { margin: 4px 0 0; }
+.studylife { margin-top: 10px; }
+.today-list li { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.today-list li > span { flex: 1; }
+.mistakes .mistake { border-bottom: 1px solid var(--line); padding: 6px 0; }
+.mistake-answer { border-left: 3px solid var(--blue); padding-left: 8px; }
+.grade-card, .exam-day, .note-card, .cite { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
+.grade-form { border: 1.5px dashed var(--line); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
+.grade-form input.num, .grade-card input.num { width: 9em; }
+.grade-parts .row input:first-child { flex: 1 1 120px; }
+.note-text { white-space: pre-wrap; font-family: inherit; margin: 6px 0; }
+.note-card summary { cursor: pointer; }
+.formula-topic h5 { margin: 8px 0 4px; }
+.chapters a { font-weight: 800; }
+.outline, .essay-fb { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
+.studylife textarea { width: 100%; box-sizing: border-box; margin: 8px 0; }
+.exam-report { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
+.exam-report table { border-collapse: collapse; width: 100%; }
+.exam-report td, .exam-report th { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--line); }
+.exam-report tr.low td { color: var(--danger); }
+.pron-coach { margin-top: 8px; }
+.usb-banner { flex-wrap: wrap; }
+.usb-new { display: flex; align-items: center; gap: 8px; flex-basis: 100%; }
+.usb-new span { flex: 1; }
