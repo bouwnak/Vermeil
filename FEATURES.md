@@ -282,6 +282,22 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 ## ➕ Extra features you asked for in chat
 ✅ 3D cozy room (themes, furniture editor, day/night by your clock, brightness) · ✅ characters (Vermeil, Pip, Robo, your own GLB/VRM) · ✅ planner (calendar, tasks, reminders, birthdays, shopping, notes) · ✅ study (library, review sets, research, assignment help) · ✅ coding helper · ✅ gym mode (your routine, timer, editor, history, best reps, +2.5 kg upgrade, sessions) · ✅ journal & think · ✅ voice commands · ✅ top-left status pills · ✅ night theme with sounds and effects · ✅ Groq → Ollama automatic switch · ✅ saved preferences · ✅ package cleanup script · ✅ smaller AI requests: only the tools that fit each message are sent (~1–2k tokens instead of ~9k), so Groq lasts longer and the local AI isn't overloaded
 
+## 🆕 31 Oct 2026: Focus & planning
+
+| Feature | Where | How |
+|---|---|---|
+| 🔒 Hard lock | Focus → Lock to Vermeil | No pause or skip. To stop early you type a long sentence (no pasting) |
+| 🚫 Website blocking | Focus → Lock to Vermeil | YouTube, TikTok and similar windows are hidden during work rounds; you can edit the list |
+| 🔕 Mute all notifications | Focus → Lock to Vermeil | Windows pop-ups are off while you focus and turned back on afterwards; her reminders wait for the break |
+| 🌐 Her own browser | Focus → Open inside, or say "search inside for …" | Opens a window inside the app instead of Chrome |
+| 🧘 Break ideas | Focus breaks | Stretch, water, 20-20-20, box breathing… |
+| 📅 Week calendar | Focus → Week | Drag tasks between days to change their deadline |
+| ⏳ Countdowns | Focus session tab | Days left until each deadline or event |
+| 🟩 Habit heatmap | Focus → Habits | 12 weeks, one row per habit |
+| 🌳 Goal tree | Focus → Goals | Goal → sub-goals → steps, with progress bars |
+| ⏱️ Screen time | Focus → Screen time | Minutes per app, today and this week (not counted while you're away) |
+| ✈️ Travel planner | Focus → Travel | Airfare, stays, and day-by-day commute → spot → food with fares; a 1–5 price slider; swap or edit any stop |
+
 ## 🆕 31 Oct 2026: Vermeil's little life
 | Feature | Status | Where |
 |---|---|---|

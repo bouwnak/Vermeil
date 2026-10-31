@@ -86,7 +86,49 @@ Last updated: 2026-10-28.
 
 ## 4. What was done in the last sessions (newest first)
 
-- **Vermeil's little life (31 Oct 2026, newest)**: owner picked ideas 22-28, 31 ("add a double clap"), 33, 34, 36, 37, 40 from FEATURE_IDEAS.md.
+- **Focus & planning (31 Oct 2026, newest)**: owner picked ideas 41, 42 ("integrate a browser inside the app"), 47, 48, 50 (with a travel planner), 52, 55, 56, 57 ("should mute all notifications") and 58 from FEATURE_IDEAS.md.
+  - `skills/planlife.py` (new). It saves to `data/goaltree.json`, `data/screentime.json` and `data/travel.json`.
+    - Hard lock: `UNLOCK_SENTENCE` and `unlock_ok`.
+    - Site blocking: `BLOCK_SITES` and `site_blocked(title, sites)`. Only browser window titles count.
+    - `break_idea`, `week`, `move_item` and `countdowns`.
+    - `heatmap(habits)`.
+    - Goal tree: `goals`, `goal_add`, `goal_toggle` and `goal_remove`. Removing a goal also removes its sub-goals.
+    - Screen time: `screen_sample`, `screen_today` and `screen_week`. It keeps 5 weeks.
+    - Travel planner: `travel_plan(req, ask)`, `travel_swap`, `travel_edit`, `travel_saved` and `travel_links`.
+      - The 1-5 price level is turned into words in the prompt.
+      - A swapped stop goes into `request.avoid`, so it is never suggested again.
+      - Totals are recalculated after every change.
+  - `app.py` settings: `focus_hard_lock`, `focus_sites`, `focus_sites_list`, `focus_mute`, `screen_time`, and `focus_mute_restore`, which is internal and skipped by save_settings.
+  - Muting Windows notifications:
+    - `_windows_toasts(on)` turns off HKCU …\Notifications\Settings `NOC_GLOBAL_SETTING_TOASTS_ENABLED` during focus and restores the old value afterwards.
+    - On startup it restores the old value if the app closed during a session.
+  - Holding her reminders: `check_alerts` keeps alerts in `_held_alerts` while `_focus_working()` is true (a work round) and focus_mute is on.
+  - Site blocking:
+    - `_focus_block_loop` also runs when only focus_sites is on.
+    - `_focus_other_window(..., sites_only)` always hides a blocked site.
+  - New API methods: `focus_extras`, `focus_unlock`, `week_view`, `week_move`, `habit_heatmap`, `goal_*` and `travel_*`.
+  - `browse_inside(text)` opens a pywebview window.
+    - Plain text becomes a duckduckgo search.
+    - Blocked hosts are refused during focus.
+    - Voice: "search inside for X" and "open X inside" in `_quick_command`.
+  - `_screen_loop` samples the app in front every 30 s. It skips samples when you have been idle for 5+ minutes.
+  - `ui/planlife.js` (new) has the Week (drag and drop), Goals, Habits, Travel and Screen time tabs.
+  - `ui/focus.js` changes:
+    - the new tabs;
+    - the hard-lock sentence box (pasting is blocked, the `st.locking` flag stops the timer from redrawing over it, and Pause/Skip are hidden in work rounds);
+    - break ideas;
+    - ⏳ countdowns;
+    - 🌐 Open inside;
+    - 3 new switches under Lock to Vermeil.
+  - Other UI files: `ui/index.html` (screen_time checkbox), `ui/mock.js` and `ui/style.css`.
+  - Tests:
+    - `tests/test_planlife.py` (12).
+    - `tests/test_app.py` +2: alerts held during focus, and browse_inside plus the voice command.
+    - Full suite: 622 (one phone-upload test is flaky in the full run and passes alone).
+    - Browser (`ui-dev` ?mock): all tabs render, a drag moves a task, a travel plan works and the 🔄 swap works, and the hard lock refuses a wrong sentence and accepts the right one.
+    - Not tried: the real Windows registry mute, or a real pywebview browser window.
+  - No new pip packages.
+- **Vermeil's little life (31 Oct 2026)**: owner picked ideas 22-28, 31 ("add a double clap"), 33, 34, 36, 37, 40 from FEATURE_IDEAS.md.
   - `skills/herlife.py` (new, `data/herlife.json`): `notice(text)` regex-finds exams/interviews/trips/appointments/feeling sick + when (today/tomorrow/weekday/next week) and stores a follow-up for the day after; `followups_due()`, `asked(id)`. `outfit_for(hour, weather, today, birthday)` (party on birthday, witch Oct 25-Nov 1, santa Dec 15-26, beanie cold/snow/rain, headphones 22-6, cap sunny spring/summer midday, headband morning). Wardrobe: `wardrobe()`, `wardrobe_save/remove/wear`, `current_outfit()` (a worn pick beats auto). `morning(facts)` / `night(facts)` routine texts, `holiday_greeting()` once per holiday per year (uses `roomlife.holiday`).
   - `app.py`: settings `clap_wake`, `my_birthday` ("MM-DD", validated), `outfit_auto`, `sleep_at_night`, `call_reminders` (all on except clap). New API `her_today()` (outfit with the real weather kind, birthday, greeting, a due question), `her_say(text)` (reply + speak), `her_asked`, `wardrobe*`. `_quick_command` calls `herlife.notice` on every message and answers "good morning"/"good night" with `_routine()` (weather, agenda, top tasks / tasks done, focus minutes) through `pm.quick_line`. `check_alerts` no longer speaks the alert itself when `call_reminders` is on (the window's Answer does).
   - `senses/wakeword.py`: `ClapDetector` (0.1 s blocks; sharp = peak > max(0.25, 12×floor) and crest > 4; two onsets 0.15-0.8 s apart) + `listen_claps()`; `listen(..., claps=True)` checks claps in the same stream. `brain/pinakamain.py`: `clap_wake` flag; with the trained wake word it passes `claps`, otherwise a clap thread runs next to speech recognition.

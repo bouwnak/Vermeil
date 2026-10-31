@@ -492,6 +492,40 @@ export const mockApi = {
   wardrobe_save: async (o) => { if (!o.name) return { error: "Name the outfit." }; st.wardrobe = [...(st.wardrobe || []).filter((w) => w.name !== o.name), o]; return mockApi.wardrobe(); },
   wardrobe_remove: async (n) => { st.wardrobe = (st.wardrobe || []).filter((w) => w.name !== n); return mockApi.wardrobe(); },
   wardrobe_wear: async (n) => { st.wearing = n; return mockApi.wardrobe(); },
+  focus_extras: async () => ({ break: { icon: "👀", text: "20-20-20: look at something 20 feet away for 20 seconds." },
+    countdowns: [{ title: "Hydrology exam", kind: "event", date: "2026-11-02", days: 2 }, { title: "Steel design plate", kind: "task", date: "2026-11-09", days: 9 }],
+    unlock_sentence: "I am choosing to give up on this focus session even though I promised myself I would finish it", sites: ["youtube", "tiktok"],
+    screen: { date: "2026-10-31", total: 214, apps: [{ app: "VS Code", minutes: 96 }, { app: "Chrome", minutes: 71 }, { app: "Vermeil", minutes: 47 }] },
+    screen_week: [180, 240, 95, 300, 210, 120, 214].map((m, i) => ({ date: `2026-10-${25 + i}`, minutes: m })) }),
+  focus_unlock: async (t) => ({ ok: t.trim().toLowerCase().startsWith("i am choosing to give up") }),
+  week_view: async (start) => {
+    const s = start || "2026-10-26";
+    st.week ||= { "2026-10-27": [{ title: "RCD beam problems", priority: "high" }], "2026-10-30": [{ title: "Read hydrology ch. 4", priority: "normal" }], none: [{ title: "Clean desk", priority: "low" }] };
+    const days = [...Array(7)].map((_, i) => { const d = new Date(s); d.setDate(d.getDate() + i); const k = d.toISOString().slice(0, 10);
+      return { date: k, weekday: d.toLocaleDateString("en", { weekday: "short" }), tasks: st.week[k] || [], events: k === "2026-11-01" ? [{ title: "Gym", time: "17:00" }] : [] }; });
+    return { start: s, days, undated: st.week.none };
+  },
+  week_move: async (kind, title, old, nw) => { const from = st.week[old || "none"] || []; const i = from.findIndex((t) => t.title === title);
+    if (i < 0) return { ok: false }; (st.week[nw || "none"] ||= []).push(from.splice(i, 1)[0]); return { ok: true }; },
+  habit_heatmap: async () => ({ days: [...Array(84)].map((_, i) => `d${i}`), habits: [{ name: "Water", icon: "💧", cells: [...Array(84)].map((_, i) => ((i * 37) % 10) / 10) },
+    { name: "Read", icon: "📖", cells: [...Array(84)].map((_, i) => (i % 3 ? 1 : 0)) }] }),
+  goal_tree: async () => { st.goals ||= [{ id: "g1", title: "Pass the CE board exam", parent: null, done: false }, { id: "g2", title: "Finish hydrology review", parent: "g1", done: true }, { id: "g3", title: "Steel design problems", parent: "g1", done: false }];
+    const node = (g) => { const ch = st.goals.filter((c) => c.parent === g.id).map(node); return { ...g, children: ch, progress: ch.length ? ch.reduce((a, c) => a + c.progress, 0) / ch.length : g.done ? 1 : 0 }; };
+    return { goals: st.goals.filter((g) => !g.parent).map(node) }; },
+  goal_add: async (title, parent) => { if (!title.trim()) return { error: "Type the goal first." }; st.goals.push({ id: "g" + Date.now(), title, parent, done: false }); return mockApi.goal_tree(); },
+  goal_toggle: async (id) => { const g = st.goals.find((x) => x.id === id); if (g) g.done = !g.done; return mockApi.goal_tree(); },
+  goal_remove: async (id) => { st.goals = st.goals.filter((g) => g.id !== id && g.parent !== id); return mockApi.goal_tree(); },
+  travel_plan: async (req) => ({ request: { ...req, days: +req.days, stars: +req.stars, currency: req.currency || "PHP" }, summary: `${req.days} easy days in ${req.place}.`, estimate: 8450,
+    airfare: { route: "MNL → CEB", low: 1800, high: 3500, airlines: "Cebu Pacific, PAL", tip: "Book 3–6 weeks ahead." },
+    stays: [{ name: "Sample Inn", type: "hotel", area: "IT Park", per_night: 1600, why: "Near the food spots" }],
+    links: { flights: "https://www.google.com/travel/flights", maps: "https://www.google.com/maps" }, tips: ["Carry small bills for jeepneys."],
+    days: [...Array(+req.days || 1)].map((_, i) => ({ day: i + 1, title: "Around the city", total: 900, stops: [
+      { time: "08:00", kind: "commute", name: "Jeepney to the city centre", cost: 15 }, { time: "09:00", kind: "spot", name: "Magellan's Cross", area: "Downtown", cost: 0 },
+      { time: "12:00", kind: "food", name: "Local lechon place", area: "Downtown", cost: 350, note: "Try the lechon." }] })) }),
+  travel_swap: async (plan, day, i) => { plan.days[day - 1].stops[i] = { ...plan.days[day - 1].stops[i], name: "A different place", note: "New suggestion" }; return plan; },
+  travel_edit: async (plan, day, i, stop) => { plan.days[day - 1].stops[i] = { ...stop, cost: +stop.cost || 0 }; return plan; },
+  travel_saved: async () => [],
+  browse_inside: async (t) => (t ? { ok: true, url: t } : { error: "Type what to search or a link." }),
   quest_buy: async (key, price, name) => { const q = st.quest; if (q.owned.includes(key)) return { ok: true, already: true, vcash: q.vcash, owned: q.owned };
     if (q.vcash < price) return { error: `You need ${price - q.vcash} more VCash.`, vcash: q.vcash };
     q.vcash -= price; q.owned.push(key); ev({ type: "toast", text: `Bought ${name} for ${price} VCash 🛒` }); return { ok: true, vcash: q.vcash, owned: q.owned }; },

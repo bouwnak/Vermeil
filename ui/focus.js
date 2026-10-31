@@ -1,6 +1,7 @@
 // focus.js - Focus Session Director (work/break rounds, distraction log, summary) + Progress charts.
 import { $, el, toast, setMd, busy } from "./util.js";
 import { play, alarm } from "./fx.js";
+import { drawWeek, drawGoals, drawHabits, drawTravel, drawScreen } from "./planlife.js";
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart(2, "0")}`;
 
@@ -13,7 +14,9 @@ export function initFocus(api) {
   const tabs = el("div", { class: "tabs", role: "tablist" });
   const view = el("div");
   root.replaceChildren(tabs, view);
-  const drawTabs = () => tabs.replaceChildren(...[["focus", "Focus session"], ["progress", "My progress"]].map(([k, l]) =>
+  const TABS = [["focus", "Focus session"], ["week", "📅 Week"], ["goals", "🌳 Goals"], ["habits", "🟩 Habits"], ["travel", "✈️ Travel"],
+    ["screen", "⏱️ Screen time"], ["progress", "My progress"]];
+  const drawTabs = () => tabs.replaceChildren(...TABS.map(([k, l]) =>
     el("button", { role: "tab", "aria-selected": String(k === tab), onclick: () => { tab = k; load(); } }, l)));
 
   // ---------------- timer ----------------
@@ -22,14 +25,15 @@ export function initFocus(api) {
     st.left -= 1;
     if (st.phase === "work") st.focused += 1;
     if (st.left <= 0) nextPhase();
-    if (tab === "focus") drawTimer();
+    if (tab === "focus" && !st.locking) drawTimer();          // not over the hard-lock sentence box
   }
   async function nextPhase() {
     if (st.phase === "work") {
       await api.focus_round();
       if (st.round >= st.rounds) return finish();
       st.phase = "break"; st.left = st.brk * 60;
-      alarm({ bursts: 2 }); toast(`Round ${st.round} done — take a ${st.brk}-minute break. Stand up, drink water.`, 8000);
+      try { st.idea = (await api.focus_extras()).break; } catch { st.idea = null; }
+      alarm({ bursts: 2 }); toast(`Round ${st.round} done — ${st.brk}-minute break. ${st.idea ? st.idea.icon + " " + st.idea.text : "Stand up, drink water."}`, 9000);
     } else {
       st.phase = "work"; st.round += 1; st.left = st.work * 60;
       alarm({ bursts: 3 }); toast(`Break's over — round ${st.round} of ${st.rounds}: ${st.task}`, 6000);
@@ -38,17 +42,38 @@ export function initFocus(api) {
   async function begin(task, work, brk, rounds, alreadyStarted = false) {
     if (!alreadyStarted) await api.focus_start(task, work, brk, rounds);
     Object.assign(st, { on: true, phase: "work", round: 1, rounds, work, brk, left: work * 60, focused: 0, task, paused: false });
+    try { st.hard = !!(await api.save_settings({})).focus_hard_lock; } catch { st.hard = false; }
     clearInterval(st.id); st.id = setInterval(tick, 1000);
     play("on");
     load();
   }
   async function finish() {
-    clearInterval(st.id); st.on = false;
+    clearInterval(st.id); st.on = false; st.locking = false;
     const r = await api.focus_finish(Math.round(st.focused / 60));
     play("success");
     view.replaceChildren(el("div", { class: "focus-done" }, el("h3", {}, "Session complete"), el("p", {}, r.summary || r.error || ""),
       r.tips ? (() => { const d = el("div", { class: "msg assistant" }); setMd(d, r.tips, api); return d; })() : null,
       el("button", { class: "primary", onclick: () => load() }, "New session")));
+  }
+
+  /** hard lock: stopping early means typing the give-up sentence exactly */
+  async function tryEnd() {
+    if (!st.hard || st.round >= st.rounds && st.phase === "break") return finish();
+    st.locking = true;
+    const x = await api.focus_extras();
+    const typed = el("textarea", { rows: 3, "aria-label": "Type the sentence to stop", spellcheck: "false" });
+    typed.addEventListener("paste", (e) => e.preventDefault());
+    const box = el("form", { class: "hard-lock", onsubmit: async (e) => {
+      e.preventDefault();
+      if (!(await api.focus_unlock(typed.value)).ok) return toast("Not quite. Type it exactly, or keep going 💪");
+      finish();
+    } },
+      el("h4", {}, "🔒 Hard lock is on"), el("p", {}, "To stop early, type this sentence exactly (no pasting):"),
+      el("blockquote", {}, x.unlock_sentence), typed,
+      el("div", { class: "row" }, el("button", { type: "button", class: "primary", onclick: () => { st.locking = false; drawTimer(); } }, "Keep focusing"),
+        el("button", { class: "ghost danger" }, "Give up")));
+    view.replaceChildren(box);
+    typed.focus();
   }
 
   function drawTimer() {
@@ -60,9 +85,10 @@ export function initFocus(api) {
       el("p", { class: "focus-task" }, st.phase === "work" ? `Focusing on: ${st.task}` : "Break — rest your eyes"),
       ring,
       el("div", { class: "row center" },
-        el("button", { class: "ghost", onclick: () => { st.paused = !st.paused; drawTimer(); } }, st.paused ? "▶ Resume" : "❚❚ Pause"),
-        el("button", { class: "ghost", onclick: () => { st.left = 1; } }, st.phase === "work" ? "Skip to break" : "Skip break"),
-        el("button", { class: "ghost", onclick: finish }, "End session")),
+        st.hard && st.phase === "work" ? null : el("button", { class: "ghost", onclick: () => { st.paused = !st.paused; drawTimer(); } }, st.paused ? "▶ Resume" : "❚❚ Pause"),
+        st.hard && st.phase === "work" ? null : el("button", { class: "ghost", onclick: () => { st.left = 1; } }, st.phase === "work" ? "Skip to break" : "Skip break"),
+        el("button", { class: "ghost", onclick: tryEnd }, st.hard ? "🔒 End session" : "End session")),
+      st.phase === "break" && st.idea ? el("p", { class: "break-idea" }, `${st.idea.icon} ${st.idea.text}`) : null,
       el("form", { class: "row", onsubmit: async (e) => { e.preventDefault(); const n = await api.focus_distraction(distract.value || "distracted");
         distract.value = ""; toast(`Noted (${n}). Back to it — you've got this.`); } },
         distract, el("button", { class: "ghost small" }, "I got distracted")),
@@ -83,7 +109,30 @@ export function initFocus(api) {
         const [, w, b, r] = presets[Number(preset.value)]; begin(task.value.trim(), w, b, r); } },
         task, preset, el("button", { class: "primary", type: "submit" }, "Start focusing")),
       el("p", { class: "note" }, `This week: ${s.week.sessions} sessions · ${s.week.minutes} focused minutes · ${s.week.distractions} distractions.`),
+      await countdownBox(),
+      browserBox(),
       await blockBox());
+  }
+
+  /** ⏳ deadlines and events, soonest first */
+  async function countdownBox() {
+    const x = await api.focus_extras();
+    if (!x.countdowns.length) return null;
+    const when = (d) => (d < 0 ? "yesterday" : d === 0 ? "today!" : d === 1 ? "tomorrow" : `in ${d} days`);
+    return el("div", { class: "countdowns" }, el("h5", {}, "⏳ Coming up"),
+      ...x.countdowns.map((c) => el("span", { class: `cd ${c.days <= 1 ? "soon" : c.days <= 7 ? "week" : ""}` },
+        `${c.kind === "event" ? "📌" : "📝"} ${c.title} · `, el("b", {}, when(c.days)))));
+  }
+
+  /** 🌐 her own browser window ("search inside for ..." by voice does the same) */
+  function browserBox() {
+    const q = el("input", { placeholder: "Search or a link (opens in Vermeil's browser)", "aria-label": "Search inside" });
+    return el("form", { class: "row", onsubmit: async (e) => {
+      e.preventDefault();
+      const r = await api.browse_inside(q.value);
+      if (r.error) return toast(r.error);
+      q.value = "";
+    } }, q, el("button", { class: "ghost small" }, "🌐 Open inside"));
   }
 
   /** Focus mode: the PC is locked to Vermeil - every other window is minimized while you work */
@@ -92,13 +141,21 @@ export function initFocus(api) {
     const on = el("input", { type: "checkbox", id: "focusBlockOn", checked: set.focus_block !== false });
     const words = el("input", { type: "text", "aria-label": "Apps that may stay open", placeholder: "nothing else (e.g. word, acrobat)" });
     words.value = set.focus_allow_words || "";
-    const save = async () => { await api.save_settings({ focus_block: on.checked, focus_allow_words: words.value }); toast("Saved."); };
-    on.addEventListener("change", save);
-    words.addEventListener("change", save);
+    const hard = el("input", { type: "checkbox", id: "focusHard", checked: !!set.focus_hard_lock });
+    const sitesOn = el("input", { type: "checkbox", id: "focusSitesOn", checked: set.focus_sites !== false });
+    const sites = el("input", { type: "text", "aria-label": "Websites to block", placeholder: "youtube, tiktok, facebook, reddit… (empty = the usual ones)" });
+    sites.value = set.focus_sites_list || "";
+    const mute = el("input", { type: "checkbox", id: "focusMute", checked: set.focus_mute !== false });
+    const save = async () => { await api.save_settings({ focus_block: on.checked, focus_allow_words: words.value, focus_hard_lock: hard.checked,
+      focus_sites: sitesOn.checked, focus_sites_list: sites.value, focus_mute: mute.checked }); toast("Saved."); };
+    [on, words, hard, sitesOn, sites, mute].forEach((x) => x.addEventListener("change", save));
     return el("details", { class: "focus-block" }, el("summary", {}, "🔒 Lock to Vermeil"),
       el("label", { class: "check", for: "focusBlockOn" }, on, "While I work, lock the PC to Vermeil: every other window (browser, games, chat, other apps) gets minimized"),
       el("small", { class: "note" }, "Also allow (optional, words in the window title, separated by commas):"), words,
-      el("small", { class: "note" }, "The taskbar still works. Breaks and the end of the session unlock everything."));
+      el("small", { class: "note" }, "The taskbar still works. Breaks and the end of the session unlock everything."),
+      el("label", { class: "check", for: "focusSitesOn" }, sitesOn, "Block distracting websites (closes the tab's window even in an allowed browser)"), sites,
+      el("label", { class: "check", for: "focusMute" }, mute, "Mute all notifications while I work (Windows pop-ups and her reminders wait for the break)"),
+      el("label", { class: "check", for: "focusHard" }, hard, "Hard lock: no pause or skip, and stopping early means typing a long sentence"));
   }
 
   // ---------------- progress ----------------
@@ -130,6 +187,8 @@ export function initFocus(api) {
   async function load() {
     drawTabs();
     if (tab === "progress") return drawProgress();
+    const extra = { week: drawWeek, goals: drawGoals, habits: drawHabits, travel: drawTravel, screen: drawScreen }[tab];
+    if (extra) return extra(view, api);
     if (st.on) return drawTimer();
     return drawSetup();
   }

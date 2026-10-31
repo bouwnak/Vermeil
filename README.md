@@ -14,7 +14,33 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (31 Oct 2026, latest): Vermeil's little life
+## New (31 Oct 2026, latest): Focus & planning
+
+Open **Focus & Progress**. There are new tabs next to *Focus session*:
+
+- **📅 Week** - your tasks and events for 7 days. Drag a task onto another day to move its deadline.
+- **🌳 Goals** - a big goal, broken into smaller steps. Tick a step and the bar fills up.
+- **🟩 Habits** - a heatmap of the last 12 weeks for each habit (darker = more done).
+- **✈️ Travel** - type the place and the number of days, pick a price level with the slider (1 = super cheap,
+  3 = average, 5 = expensive), then **Plan my trip**. You get the airfare, 3 places to stay, and a plan for each
+  day (commute → spot → food) with fares. 🔄 asks for a different place, ✏️ lets you type your own, and the
+  links (Google Flights, Booking, Airbnb, Maps) open in her own browser. Prices are AI estimates, so check them.
+- **⏱️ Screen time** - how long each app was in front today and this week. Turn it off in Settings → Her little life.
+
+On the *Focus session* tab:
+
+- **⏳ Coming up** shows how many days are left until each deadline and event.
+- **🌐 Open inside** opens a search or a link in Vermeil's own browser window, not Chrome. You can also say
+  "search inside for steel beam formulas" or "open youtube.com inside".
+- Under **🔒 Lock to Vermeil** there are three new switches:
+  - **Block distracting websites**: YouTube, TikTok, Facebook and so on get hidden even in an allowed browser.
+  - **Mute all notifications**: Windows pop-ups and her reminders wait for the break.
+  - **Hard lock**: no pause or skip. To stop early you must type a long sentence, and pasting does not work.
+- On a break she suggests something to do (stretch, water, 20-20-20 for your eyes...).
+
+Nothing new to install.
+
+## New (31 Oct 2026): Vermeil's little life
 All of these are in **Settings → Her little life** unless it says otherwise.
 - **She remembers small things:** say "I have an exam tomorrow" or "I'm feeling sick" and a day or two later she asks
   "How did your exam go?" or "Are you feeling better today?". Works for exams, interviews, presentations, appointments,

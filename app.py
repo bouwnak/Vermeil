@@ -13,6 +13,7 @@ from datetime import date, datetime
 import queue
 import shutil
 import sys
+from urllib.parse import quote_plus
 import threading
 import uuid
 
@@ -125,7 +126,9 @@ DEFAULT_SETTINGS = {"always_look": False, "speak_replies": True, "greet_on_sight
                     "watch_objects": True, "code_auto_write": True, "music_source": "youtube", "duck_audio": True,
                     "performance": "auto", "phone_access": False,
                     "focus_block": True, "focus_allow_words": "", "photo_folder": "",
-                    "clap_wake": False, "my_birthday": "", "outfit_auto": True, "sleep_at_night": True, "call_reminders": True}
+                    "clap_wake": False, "my_birthday": "", "outfit_auto": True, "sleep_at_night": True, "call_reminders": True,
+                    "focus_hard_lock": False, "focus_sites": True, "focus_sites_list": "", "focus_mute": True,
+                    "focus_mute_restore": None, "screen_time": True}
 
 
 def _read_json(path, default):
@@ -535,7 +538,12 @@ class Api:
             self._was_away = True
         elif getattr(self, "_was_away", True) and idle < 1:     # opening Vermeil counts as coming home too
             came_back, self._was_away = True, False
-        for alert in f1.due_alerts() + smartremind.due(came_back=came_back):
+        due = list(getattr(self, "_held_alerts", [])) + f1.due_alerts() + smartremind.due(came_back=came_back)
+        self._held_alerts = []
+        if due and self._settings.get("focus_mute", True) and self._focus_working():
+            self._held_alerts = due                            # focus mutes notifications: they wait for the break
+            return
+        for alert in due:
             self.emit({"type": "alert", "text": alert})
             self._phone_note("Vermeil reminder", alert)
             if self._settings["desktop_notifications"]:
@@ -1081,16 +1089,43 @@ class Api:
         self._settings["quiet_mode"] = True                 # no chatter while you focus
         cur = focus.start(task, work, brk, rounds)
         threading.Thread(target=self._focus_watch, daemon=True).start()
-        if self._settings.get("focus_block"):
+        if self._settings.get("focus_block") or self._settings.get("focus_sites", True):
             threading.Thread(target=self._focus_block_loop, daemon=True).start()
+        if self._settings.get("focus_mute", True):
+            self._windows_toasts(False)
         return cur
+
+    def _windows_toasts(self, on):
+        """Focus mutes Windows notifications (other apps' pop-ups) and puts them back as they were afterwards."""
+        if sys.platform != "win32":
+            return
+        import winreg
+        key = r"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings"
+        name = "NOC_GLOBAL_SETTING_TOASTS_ENABLED"
+        try:
+            with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, key, 0, winreg.KEY_READ | winreg.KEY_SET_VALUE) as k:
+                if not on:
+                    if self._settings.get("focus_mute_restore") is None:
+                        try:
+                            prev = winreg.QueryValueEx(k, name)[0]
+                        except OSError:
+                            prev = 1                                   # not set = notifications on
+                        self._settings["focus_mute_restore"] = int(prev)
+                        self._save_settings()
+                    winreg.SetValueEx(k, name, 0, winreg.REG_DWORD, 0)
+                elif self._settings.get("focus_mute_restore") is not None:
+                    winreg.SetValueEx(k, name, 0, winreg.REG_DWORD, int(self._settings["focus_mute_restore"]))
+                    self._settings["focus_mute_restore"] = None
+                    self._save_settings()
+        except OSError as e:
+            print(f"[focus mute] {e}")
 
     # windows that are part of Windows itself (taskbar, desktop, Start menu, tray) are never minimized
     _FOCUS_SHELL = {"Shell_TrayWnd", "Shell_SecondaryTrayWnd", "Progman", "WorkerW", "Windows.UI.Core.CoreWindow",
                     "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland", "XamlExplorerHostIslandWindow",
                     "ForegroundStaging", "MultitaskingViewFrame", "TaskSwitcherWnd"}
 
-    def _focus_other_window(self, hwnd, allow):
+    def _focus_other_window(self, hwnd, allow, sites_only=False):
         """the title of a window that isn't Vermeil (or an app you allowed), or None if it may stay"""
         import ctypes
         u = ctypes.windll.user32
@@ -1111,7 +1146,13 @@ class Api:
         u.GetWindowTextW(hwnd, buf, n + 1)
         title = buf.value.strip()
         low = title.lower()
-        if not title or "vermeil" in low or any(w in low for w in allow):
+        if not title:
+            return None
+        if self._settings.get("focus_sites", True):
+            import planlife
+            if planlife.site_blocked(title, self._focus_sites()):
+                return title                                  # YouTube in an allowed browser is still blocked
+        if sites_only or "vermeil" in low or any(w in low for w in allow):
             return None
         return title
 
@@ -1124,10 +1165,11 @@ class Api:
         import ctypes
         u = ctypes.windll.user32
         allow = [w.strip() for w in self._settings.get("focus_allow_words", "").split(",") if w.strip()]
+        only = not self._settings.get("focus_block")              # just the blocked websites, not the whole PC
         try:                                                      # 1. hide everything else right away
             found = []
             each = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)(
-                lambda h, _: (found.append(h) if self._focus_other_window(h, allow) else None) or True)
+                lambda h, _: (found.append(h) if self._focus_other_window(h, allow, only) else None) or True)
             u.EnumWindows(each, 0)
             for h in found:
                 u.ShowWindow(h, 6)                                # SW_MINIMIZE
@@ -1144,7 +1186,7 @@ class Api:
                     time.sleep(5)
                     continue
                 h = u.GetForegroundWindow()
-                title = self._focus_other_window(h, allow)
+                title = self._focus_other_window(h, allow, only)
                 if title:
                     u.ShowWindow(h, 6)
                     if title != last:
@@ -1192,6 +1234,14 @@ class Api:
                 last = act
             time.sleep(15)
 
+    def _focus_working(self):
+        import focus
+        cur = focus.current()
+        if not cur:
+            return False
+        mins = (datetime.now() - datetime.fromisoformat(cur["started"])).total_seconds() / 60
+        return mins % max(1, cur["work"] + cur["break"]) < cur["work"]
+
     def focus_state(self):
         import focus
         return {"current": focus.current(), "week": focus.stats(7)}
@@ -1217,7 +1267,121 @@ class Api:
     def focus_finish(self, minutes=None):
         import focus
         self._settings["quiet_mode"] = getattr(self, "_focus_quiet", self._settings["quiet_mode"])
+        self._windows_toasts(True)
         return focus.finish(minutes)
+
+    # ---------- focus & planning extras (skills/planlife.py) ----------
+    def focus_extras(self):
+        import planlife
+        d = f1.user_data
+        n = getattr(self, "_break_n", 0)
+        self._break_n = n + 1
+        return {"break": planlife.break_idea(n), "countdowns": planlife.countdowns(d["tasks"], d["events"]),
+                "unlock_sentence": planlife.UNLOCK_SENTENCE, "sites": self._focus_sites(),
+                "screen": planlife.screen_today(), "screen_week": planlife.screen_week()}
+
+    def _focus_sites(self):
+        import planlife
+        own = [w.strip().lower() for w in self._settings.get("focus_sites_list", "").split(",") if w.strip()]
+        return own or planlife.BLOCK_SITES
+
+    def focus_unlock(self, typed):
+        import planlife
+        return {"ok": planlife.unlock_ok(typed)}
+
+    def week_view(self, start=None):
+        import planlife
+        return planlife.week(f1.user_data["tasks"], f1.user_data["events"], start or None)
+
+    def week_move(self, kind, title, old, new):
+        import planlife
+        try:
+            ok = planlife.move_item(f1.user_data, kind, title, old, new)
+        except ValueError:
+            return {"error": "That isn't a date."}
+        if ok:
+            f1.save_data(f1.user_data)
+        return {"ok": ok}
+
+    def habit_heatmap(self, days=84):
+        import habits, planlife
+        return planlife.heatmap(habits._load()["habits"], days)
+
+    def goal_tree(self):
+        import planlife
+        return {"goals": planlife.goals()}
+
+    def goal_add(self, title, parent=None):
+        import planlife
+        return planlife.goal_add(title, parent)
+
+    def goal_toggle(self, gid):
+        import planlife
+        return planlife.goal_toggle(gid)
+
+    def goal_remove(self, gid):
+        import planlife
+        return planlife.goal_remove(gid)
+
+    def travel_plan(self, req):
+        import planlife
+        return planlife.travel_plan(req)
+
+    def travel_swap(self, plan, day, index, why=""):
+        import planlife
+        return planlife.travel_swap(plan, day, index, why)
+
+    def travel_edit(self, plan, day, index, stop):
+        import planlife
+        return planlife.travel_edit(plan, day, index, stop)
+
+    def travel_saved(self):
+        import planlife
+        return planlife.travel_saved()
+
+    def browse_inside(self, text):
+        """her own browser window inside the app ("search inside for ...", "open youtube.com inside")"""
+        import focus
+        t = str(text or "").strip()
+        if not t:
+            return {"error": "Type what to search or a link."}
+        if re.match(r"https?://", t):
+            url = t
+        elif re.fullmatch(r"[\w-]+(\.[\w-]+)+(/\S*)?", t):
+            url = f"https://{t}"
+        else:
+            url = f"https://duckduckgo.com/?q={quote_plus(t)}"
+        if focus.current() and self._settings.get("focus_sites", True):
+            host = re.sub(r"^www\.", "", url.split("/")[2].lower())
+            site = next((s for s in self._focus_sites() if s.split(".")[0] and s.split(".")[0] in host.split(".")), None)
+            if site:
+                return {"error": f"🔒 {site} is blocked until your focus session ends."}
+        try:
+            import webview
+            webview.create_window(f"Vermeil Browser - {t[:40]}", url, width=1100, height=760)
+        except Exception as e:  # noqa: BLE001
+            return {"error": f"Couldn't open the browser window: {e}"}
+        return {"ok": True, "url": url}
+
+    def _screen_loop(self):
+        """Settings -> Screen time: which app is in front, every 30 s (not while you're away)"""
+        if sys.platform != "win32":
+            return
+        import ctypes, planlife, smartremind
+        u = ctypes.windll.user32
+        while True:
+            time.sleep(30)
+            if not self._settings.get("screen_time", True):
+                continue
+            try:
+                if smartremind.idle_minutes() >= 5:
+                    continue
+                import psutil
+                pid = ctypes.c_ulong()
+                u.GetWindowThreadProcessId(u.GetForegroundWindow(), ctypes.byref(pid))
+                planlife.screen_sample(planlife.app_name(psutil.Process(pid.value).name()))
+            except Exception:  # noqa: BLE001
+                pass
 
     def progress(self, days=30):
         import focus
@@ -1439,6 +1603,9 @@ class Api:
         if self._settings["hotkeys"]:
             self._register_hotkeys()
         threading.Thread(target=self._alert_loop, daemon=True).start()
+        threading.Thread(target=self._screen_loop, daemon=True).start()
+        if self._settings.get("focus_mute_restore") is not None and not __import__("focus").current():
+            self._windows_toasts(True)                    # the app closed during a focus session: notifications back on
         threading.Thread(target=self._battery_loop, daemon=True).start()
         if self._settings["phone_access"]:
             threading.Thread(target=self.phone_set, args=(True,), daemon=True).start()
@@ -2805,7 +2972,9 @@ class Api:
                 elif k == "my_birthday":
                     m = re.match(r"^\s*(?:\d{4}-)?(\d{1,2})-(\d{1,2})\s*$", str(data[k] or ""))
                     self._settings[k] = f"{int(m[1]):02d}-{int(m[2]):02d}" if m and 1 <= int(m[1]) <= 12 and 1 <= int(m[2]) <= 31 else ""
-                elif k in ("focus_block_words", "focus_allow_words"):
+                elif k == "focus_mute_restore":
+                    continue
+                elif k in ("focus_block_words", "focus_allow_words", "focus_sites_list"):
                     self._settings[k] = ", ".join(w.strip().lower() for w in str(data[k]).split(",") if w.strip())[:600]
                 else:
                     self._settings[k] = bool(data[k])
@@ -3561,6 +3730,10 @@ class Api:
             return self._routine("morning")
         if re.fullmatch(r"(good ?night|goodnight|nighty? night|i'?m going to (sleep|bed))( vermi| vermeil)?", t):
             return self._routine("night")
+        m = re.fullmatch(r"(?:search inside (?:for )?|look up inside |(?:open|go to) )(.+?)(?: inside| in your browser)?", t)
+        if m and (t.startswith(("search inside", "look up inside")) or t.endswith((" inside", " in your browser"))):
+            r = self.browse_inside(m.group(1))             # her own browser window, not Chrome
+            return r.get("error") or f"Opening {m.group(1)} in my browser."
         called, rest = self._called_character(t)
         if called:
             switched = called["id"] != self._characters["active"]

@@ -209,6 +209,30 @@ class AppTests(unittest.TestCase):
         self.assertIn({"type": "reply", "text": "Darling, time to call your mom!"}, self.events)
         self.assertEqual(notify.call_count, 2)          # a real Windows pop-up during tests would be confusing
 
+    def test_focus_holds_alerts_until_the_break(self):
+        with mock.patch.object(app.f1, "due_alerts", side_effect=[["Reminder: Call mom"], []]), \
+                mock.patch("pc.notify"), mock.patch.object(pm, "quick_line", return_value="Call mom!"):
+            self.api._settings.update(focus_mute=True, call_reminders=True)
+            with mock.patch.object(self.api, "_focus_working", return_value=True):
+                self.api.check_alerts()
+            self.assertNotIn({"type": "alert", "text": "Reminder: Call mom"}, self.events)
+            with mock.patch.object(self.api, "_focus_working", return_value=False):
+                self.api.check_alerts()                 # the break: it comes now
+        self.assertIn({"type": "alert", "text": "Reminder: Call mom"}, self.events)
+
+    def test_browse_inside(self):
+        import webview, focus
+        with mock.patch.object(webview, "create_window") as win, mock.patch.object(focus, "current", return_value=None):
+            self.assertEqual(self.api.browse_inside("hydrology formulas")["url"], "https://duckduckgo.com/?q=hydrology+formulas")
+            self.assertEqual(self.api.browse_inside("youtube.com")["url"], "https://youtube.com")
+            self.assertIn("my browser", self.api._quick_command("search inside for steel beams"))
+        self.assertEqual(win.call_count, 3)
+        with mock.patch.object(webview, "create_window") as win, mock.patch.object(focus, "current", return_value={"task": "x"}):
+            self.api._settings["focus_sites"] = True
+            self.assertIn("blocked", self.api.browse_inside("youtube.com")["error"])
+        win.assert_not_called()
+        self.assertIn("error", self.api.browse_inside("  "))
+
     def test_planner(self):
         with mock.patch.object(app.f1, "user_data", {"events": [{"title": "Old", "date": "2000-01-01"},
                                                                 {"title": "Soon", "date": "2999-01-01"}],
