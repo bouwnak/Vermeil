@@ -765,18 +765,52 @@ export class Room {
     this._dressUp();
   }
 
+  /** The head as the mesh shows it (world space): the vertices that mostly follow the head bone or a bone under it
+   *  (not hair or ears hanging far down: the top and width come from the head bone's own vertices). Null if unknown. */
+  _measureHead(c) {
+    if (!c.head) return null;
+    c.root.updateMatrixWorld(true);
+    const under = new Set();
+    c.head.traverse((o) => { if (o.isBone) under.add(o); });
+    const own = [], all = [], v = new THREE.Vector3();
+    c.root.traverse((m) => {
+      if (!m.isSkinnedMesh || c.outfitGroup?.getObjectById(m.id)) return;
+      let vis = true; for (let o = m; o && o !== c.root; o = o.parent) if (!o.visible) vis = false;
+      if (!vis) return;
+      const pos = m.geometry.attributes.position, si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+      if (!pos || !si || !sw) return;
+      m.skeleton.update();
+      const step = Math.max(1, Math.floor(pos.count / 6000));
+      for (let i = 0; i < pos.count; i += step) {
+        let best = -1, bw = 0;
+        for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; best = si.getComponent(i, k); } }
+        const bone = m.skeleton.bones[best];
+        if (!under.has(bone)) continue;
+        m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld);
+        (bone === c.head ? own : all).push(v.clone());
+      }
+    });
+    const pts = own.length >= 20 ? own : own.concat(all);
+    if (pts.length < 20) return null;
+    const box = new THREE.Box3().setFromPoints(pts);
+    const center = box.getCenter(new THREE.Vector3());
+    const radius = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) / 2;
+    // the top: the head's own top, or a little higher when hair on top of it sits above (hats go on the hair)
+    const hairTop = all.length ? Math.max(...all.filter((p) => Math.hypot(p.x - center.x, p.z - center.z) < radius).map((p) => p.y), -Infinity) : -Infinity;
+    return { center, radius: Math.max(radius, 1e-4), top: Math.max(box.max.y, Math.min(hairTop, box.max.y + radius * 0.35)) };
+  }
+
   _dressUp() {
     const c = this.char;
     if (!c?.head) return;
     if (c.outfitGroup) { c.outfitGroup.parent?.remove(c.outfitGroup); c.outfitGroup.traverse((x) => { x.geometry?.dispose(); x.material?.dispose?.(); }); }
     const o = this.outfit || { hat: "none" };
     const g = new THREE.Group();
-    // head radius in the head's own units (built-ins are known; models are measured)
+    // head radius in the head's own units (built-ins are known; models are measured from their own head vertices)
     let r = c.kind === "penguin" ? 0.34 : c.kind === "sketch" ? 0.27 : 0;
-    if (!r) {
-      const ws = c.head.getWorldScale(new THREE.Vector3()).y || 1;
-      r = (CHAR_HEIGHT * 0.075) / ws;
-    }
+    const ws = c.head.getWorldScale(new THREE.Vector3()).y || 1;
+    const head = c.kind === "gltf" ? this._measureHead(c) : null;
+    if (!r) r = head ? head.radius / ws : (CHAR_HEIGHT * 0.075) / ws;
     const mat = (color, rough = 0.6) => new THREE.MeshStandardMaterial({ color, roughness: rough });
     const top = r * 0.92, col = new THREE.Color(o.color);
     const add = (mesh, y, z = 0) => { mesh.position.set(0, y, z); g.add(mesh); return mesh; };
@@ -849,14 +883,22 @@ export class Room {
     }
     g.traverse((x) => { if (x.isMesh) { x.castShadow = true; x.userData.character = true; } });
     if (c.kind === "gltf") {
-      // the head bone of many rigs starts at the neck, so measure where the top of the head really is
+      // sit on the real top of the head (measured from the vertices that follow the head bone - not the whole model's
+      // top, which a crest or a raised arm can be), upright and facing where she faces, whatever way the head bone's
+      // own axes point. As a child of the head bone it still follows every nod.
       c.root.updateMatrixWorld(true);
-      const box = new THREE.Box3();
-      const shown = (o) => { for (; o && o !== c.root; o = o.parent) if (!o.visible) return false; return true; };
-      c.root.traverse((m) => { if (m.isMesh && shown(m) && !c.outfitGroup?.getObjectById(m.id)) box.expandByObject(m); });
-      const hp = c.head.getWorldPosition(new THREE.Vector3());
-      const ws = c.head.getWorldScale(new THREE.Vector3()).y || 1;
-      if (isFinite(box.max.y)) g.position.y = (box.max.y - hp.y) / ws - top * 1.02;
+      let at;
+      if (head) at = head.center.clone().setY(head.top - top * ws * 1.02);
+      else {
+        const box = new THREE.Box3();
+        const shown = (o) => { for (; o && o !== c.root; o = o.parent) if (!o.visible) return false; return true; };
+        c.root.traverse((m) => { if (m.isMesh && shown(m) && !c.outfitGroup?.getObjectById(m.id)) box.expandByObject(m); });
+        at = c.head.getWorldPosition(new THREE.Vector3());
+        if (isFinite(box.max.y)) at.y = box.max.y - top * ws * 1.02;
+      }
+      g.position.copy(c.head.worldToLocal(at.clone()));
+      const facing = c.root.getWorldQuaternion(new THREE.Quaternion());
+      g.quaternion.copy(c.head.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(facing));
     }
     c.head.add(g);
     c.outfitGroup = g;
@@ -1806,7 +1848,13 @@ export class Room {
 
   _bindPointer() {
     let down = null, last = 0;
+    const decorOf = (hit) => { for (let o = hit?.object; o; o = o.parent) if (o.userData?.decorPiece != null) return o; return null; };
     this.canvas.addEventListener("pointermove", (e) => {
+      if (this._decorDrag) {                                   // dragging a seasonal decoration in edit mode
+        const hit = this._dragPoint(e, "floor");
+        if (hit) { this.cozy.moveDecor(this._decorDrag.piece, hit.point); this._decorDrag.moved = true; }
+        return;
+      }
       if (this._drag) {                                        // dragging furniture in edit mode
         const hit = this._dragPoint(e, this._drag.mount);
         if (hit) {
@@ -1820,7 +1868,8 @@ export class Room {
       last = performance.now();
       const hit = this._pick(e);
       const label = this.editMode
-        ? (hit?.object.userData.itemId != null ? `Drag to move: ${this.cozy.items.get(hit.object.userData.itemId)?.def.label}` : null)
+        ? (hit?.object.userData.itemId != null ? `Drag to move: ${this.cozy.items.get(hit.object.userData.itemId)?.def.label}`
+          : decorOf(hit) ? "Drag to move: seasonal decoration" : null)
         : hit?.object.userData.interactive?.label || (hit?.object.userData.character ? "Poke" : null);
       this.canvas.style.cursor = label ? "pointer" : hit?.object.userData.floor ? "crosshair" : "grab";
       this.onHover?.(label, e.clientX, e.clientY);
@@ -1844,9 +1893,23 @@ export class Room {
         this._drag = { id, mount: it.def.mount, moved: false, snap: JSON.stringify(this.cozy.serialize()) };
         this.controls.enabled = false;
         this.canvas.setPointerCapture(e.pointerId);
+      } else if (decorOf(hit)) {                               // a pumpkin, the tree, presents...: they move too
+        this._decorDrag = { piece: decorOf(hit), moved: false, snap: JSON.stringify(this.cozy.serialize()) };
+        this.controls.enabled = false;
+        this.canvas.setPointerCapture(e.pointerId);
       }
     });
     this.canvas.addEventListener("pointerup", (e) => {
+      if (this._decorDrag) {
+        const { moved, snap } = this._decorDrag;
+        this._decorDrag = null;
+        this.controls.enabled = true;
+        if (moved) {
+          this.undoStack.push(snap); if (this.undoStack.length > 40) this.undoStack.shift(); this.onUndoChange?.(this.undoStack.length);
+          this.onLayoutChange?.();                               // saved with the room
+        }
+        return;
+      }
       if (this._drag) {
         const { moved, snap, id } = this._drag;
         this._drag = null;

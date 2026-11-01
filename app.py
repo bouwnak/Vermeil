@@ -287,6 +287,18 @@ class Api:
                 print(f"[ui emit] {e}")
 
     # ---------- startup ----------
+    def log_ui_error(self, where, text):
+        """the window's JavaScript errors -> data/ui_errors.log (kept under ~200 KB), to find problems later"""
+        try:
+            path = data_file("ui_errors.log")
+            if os.path.exists(path) and os.path.getsize(path) > 200_000:
+                os.replace(path, path + ".old")
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {str(where)[:80]}: {str(text)[:2000]}\n")
+        except OSError:
+            pass
+        return True
+
     def get_state(self):
         return {
             "characters": self._characters["characters"],
@@ -872,10 +884,18 @@ class Api:
             v = f"piper:{options[0]}"
         old = pm.VOICE_STYLE
         pm.VOICE_STYLE = "normal"
+        t0 = time.time()
         try:
+            pm.stop_speaking()                        # a lesson phrase you pressed for comes now, not after her reply
             pm.speak(say, v, "-35%" if sensei.speed() == "slow" else "-10%", plain=True)   # Study -> Language: 🐢 slow
+        except Exception as e:  # noqa: BLE001 - shown and kept, so a silent speaker can be found
+            self.log_ui_error("language voice", f"{v}: {e}")
+            self.emit({"type": "toast", "text": f"Couldn't play it: {e}"})
         finally:
             pm.VOICE_STYLE = old
+        if time.time() - t0 < 0.3:                    # nothing was played (no voice output, or it was cut off)
+            self.log_ui_error("language voice", f"{v}: finished in {time.time() - t0:.2f}s without playing '{say[:40]}' "
+                                                f"(tts_ready={pm.tts_ready})")
 
     # ---------- language practice partner: a spoken conversation in the language you learn (brain/partner.py) ----------
     def _partner_obj(self):
@@ -1456,6 +1476,13 @@ class Api:
 
     def browser_nav(self, tab, action):
         return self._browser().nav(int(tab), action)
+
+    def browser_place(self, rect=None, active=None):
+        """the Browser panel's page area (window pixels) - the active tab is shown right there; None hides the tabs"""
+        b = self._browser()
+        if active is not None:
+            b.active = int(active) if int(active) in b.tabs else None
+        return b.place(rect)
 
     def browser_dial(self, action, name="", url=""):
         b = self._browser()

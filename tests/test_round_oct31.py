@@ -69,6 +69,27 @@ class BrowserTests(unittest.TestCase):
             self.assertEqual([h["title"] for h in b.state()["history"]], ["A again"])
 
 
+class BrowserPanelTests(unittest.TestCase):
+    """tabs show inside the Browser panel: Python keeps which tab is active and where the panel's page area is"""
+    def test_active_tab_and_place(self):
+        import webview
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(vbrowser, "FILE", os.path.join(d, "b.json")), \
+                mock.patch.object(webview, "create_window") as win:
+            b = vbrowser.Browser(lambda e: None)
+            t1 = b.open("youtube.com")["id"]
+            t2 = b.open("steel beams")["id"]
+            self.assertEqual(b.active, t2)                                      # a new tab is the one shown
+            self.assertTrue(win.call_args.kwargs["frameless"])                 # put inside Vermeil's window, no frame
+            self.assertEqual(b.nav(t1, "focus"), {"ok": True})
+            self.assertEqual(b.state()["active"], t1)
+            self.assertTrue(b.place({"x": 10.4, "y": 20, "w": 600, "h": 400}))
+            self.assertEqual(b.rect, {"x": 10, "y": 20, "w": 600, "h": 400})
+            b.place(None)                                                       # the panel closed: nothing shows
+            self.assertIsNone(b.rect)
+            b._closed(t1)
+            self.assertEqual(b.active, t2)
+
+
 class SlimTests(unittest.TestCase):
     """UniMate gets the body only: no fingers, hair, dress, face or helper bones"""
     def test_names(self):
@@ -111,6 +132,12 @@ class AppTests(unittest.TestCase):
         self.assertEqual([(a[0], a[1]) for a in added], [("✈️ Tokyo · Day 1: Shibuya", "2026-11-20"), ("✈️ Tokyo · Day 2", "2026-11-21")])
         self.assertIn("Hachiko", added[0][4])                                 # the day's itinerary is its notes
         self.assertIn("error", self.api.travel_to_calendar(plan, ""))
+
+    def test_window_errors_are_logged(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(self.app, "data_file", lambda n: os.path.join(d, n)):
+            self.assertTrue(self.api.log_ui_error("window", "TypeError: api.get_state is not a function"))
+            with open(os.path.join(d, "ui_errors.log"), encoding="utf-8") as f:
+                self.assertIn("window: TypeError: api.get_state is not a function", f.read())
 
     def test_previous_unimate_clips(self):
         import animate

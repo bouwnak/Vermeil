@@ -1087,9 +1087,20 @@ export class CozyRoom {
   /** Seasonal decorations that turn on by themselves ("halloween", "christmas", ... or "none"). Not saved in the layout. */
   setDecor(kind) {
     if (this.decor) { this.scene.remove(this.decor); this.decor = null; }
+    this.decorKind = kind;
     if (!kind || kind === "none") return;
-    this.decor = buildDecor(kind);
+    this.decor = buildDecor(kind, this.decorPos?.[kind] || {});
     this.scene.add(this.decor);
+  }
+
+  /** Edit room moved a seasonal piece: remember where (saved with the layout, per season) */
+  moveDecor(piece, point) {
+    const kind = this.decor?.userData.decor;
+    if (!kind) return;
+    piece.position.x = point.x; piece.position.z = point.z;
+    const i = piece.userData.decorPiece;
+    ((this.decorPos ||= {})[kind] ||= {})[i] = [Math.round(point.x * 1000) / 1000, Math.round(point.z * 1000) / 1000];
+    if (i === 0) for (const l of this.decor.children) if (l.isLight) { l.position.x = point.x; l.position.z = point.z; }   // its glow follows
   }
 
   /** Light the room for a time of day (0-24). */
@@ -1374,6 +1385,8 @@ export class CozyRoom {
   load(layout) {
     const L = layout && Array.isArray(layout.items) ? layout : DEFAULT_LAYOUT;
     this.clear();
+    this.decorPos = L.decor && typeof L.decor === "object" ? JSON.parse(JSON.stringify(L.decor)) : {};
+    if (this.decorKind) this.setDecor(this.decorKind);    // the season's pieces go where you left them
     this.setWallColor(L.shell?.wall || DEFAULT_LAYOUT.shell.wall);
     this.setFloor(L.shell?.floor || DEFAULT_LAYOUT.shell.floor);
     this.setWallpaper(L.shell?.wallpaper || "none");
@@ -1395,6 +1408,7 @@ export class CozyRoom {
       shell: { wall: this.wallColor, floor: this.floorStyle, sky: this.sky, brightness: round(this.brightness), wallpaper: this.wallpaper || "none",
                windowItem: true, house: JSON.parse(JSON.stringify(this.house.cfg)) },
       items: [...this.items.values()].map(({ spec }) => Object.fromEntries(Object.entries(spec).map(([k, v]) => [k, round(v)]))),
+      decor: this.decorPos || {},                      // where you moved the seasonal decorations, per season
     };
   }
 

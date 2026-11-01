@@ -809,12 +809,21 @@ class Rigger {
       <p class="note rig-gym-note" hidden>In Gym, press 👯 Demo on an exercise and she does it next to you.</p>
       <p class="note">UniMate only moves the body. Hands (their poses fit the finger count: 5, 4, 3 fingers or a paw), hair, clothes, tails and ears are moved by the app itself, so they swing naturally.</p>
       <button type="button" class="primary rig-make">Make the animations</button>`;
-    // one press is enough: the button greys out at once and a second press while it works does nothing
-    const once = (btn, fn) => btn.addEventListener("click", async () => {
-      if (btn.disabled) return;
-      btn.disabled = true;
-      try { await fn(); } finally { btn.disabled = false; }
-    });
+    // one press is enough: the button greys out at once and a second press while it works does nothing. It acts on
+    // the pointer coming up over it (not only "click"): the button used to slide a little on hover, and a press that
+    // ended a pixel off the moved button was no click at all - so it took two presses
+    const once = (btn, fn) => {
+      const run = async () => {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        try { await fn(); } finally { btn.disabled = false; }
+      };
+      let down = false;
+      btn.addEventListener("pointerdown", () => { down = true; });
+      btn.addEventListener("pointerup", (e) => { if (down && e.button === 0) { down = false; run(); } });
+      btn.addEventListener("pointerleave", () => { down = false; });
+      btn.addEventListener("click", (e) => { if (e.detail === 0) run(); });        // keyboard (Enter / Space)
+    };
     const fix = side.querySelector(".rig-fix");
     if (fix) once(fix, async () => {
       this.busy("Putting the animations back on the model, cleaned…", 0.5);

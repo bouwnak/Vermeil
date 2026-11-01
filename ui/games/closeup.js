@@ -119,7 +119,8 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     size();
     return true;
   }).catch((e) => {
-    console.warn("[game night] Vermeil close-up:", e);
+    console.warn("[mini games] close-up:", e);
+    try { window.pywebview?.api?.log_ui_error?.(`minigames close-up (${model})`, String(e?.stack || e)); } catch { /* not in the app */ }
     box.classList.add("vm-flat");
     renderer.domElement.remove();
     return false;

@@ -35,7 +35,8 @@ PORTABLE_GIT = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser
 # UniMate was trained on short sentences that start "An object ...". Saying where the arms and feet are matters: a
 # vague prompt ("breathes calmly") keeps the T-pose arms of the model, and "in place" stops it drifting away.
 PROMPTS = {
-    "idle": "An object stands still in place with its arms relaxed down at its sides, breathing slowly and shifting its weight a little.",
+    # no "shifting its weight": UniMate turned that into stepping, so the idle looked like walking on the spot
+    "idle": "An object stands still in place with both feet planted and its arms relaxed down at its sides, breathing slowly.",
     "walk": "An object walks forward at a steady pace, swinging its arms naturally.",
     "wave": "An object stands in place and waves hello with its right hand raised, its left arm relaxed at its side.",
     "talk": "An object stands in place and talks, gesturing gently with its hands in front of its chest.",

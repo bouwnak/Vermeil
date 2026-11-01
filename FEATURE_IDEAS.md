@@ -1,9 +1,10 @@
-# Vermeil — 200 feature ideas (31 Oct 2026)
+# Vermeil — 500 feature ideas (1 Nov 2026)
 
 Ideas to pick from, not promises. **New** = something Vermeil doesn't have yet. **Upgrade** = makes an existing feature better.
 Each one is a single line so you can say "do 14, 52 and 130" and it's clear what you mean.
 
 Ideas that are already built were swapped for new ones (31 Oct 2026), so every number here is still to do.
+Ideas 201–500 were added on 1 Nov 2026.
 
 ## 🏠 Room and home screen (1–20)
 1. **Upgrade** – More rooms in the Edit room switch: kitchen, study room, garden, rooftop, and switch between them like the gym.
@@ -226,3 +227,341 @@ Ideas that are already built were swapped for new ones (31 Oct 2026), so every n
 198. **Upgrade** – Monthly mini recap so you don't wait a whole year.
 199. **New** – Badges shown on your phone profile and in the room.
 200. **New** – Thank-you notes: send Vermeil a gift back with VCash and see her react.
+
+## 🗓 Planner and calendar (201–220)
+201. **Upgrade** – Drag an event's bottom edge in a day view to make it longer, like Google Calendar.
+202. **New** – Day view with an hour-by-hour timeline next to the month grid.
+203. **New** – Colour labels for events (school, work, family) with a filter per label.
+204. **Upgrade** – Recurring events that skip holidays and school breaks automatically.
+205. **New** – "Plan my week" button: she spreads your undated tasks over your free time.
+206. **New** – Travel time warnings: "leave at 2:35 to make your 3 pm" from your saved places.
+207. **New** – Shared family calendar on the phone app (each person adds their own events).
+208. **Upgrade** – Birthday reminders a week before, with a gift idea and a card she drafts.
+209. **New** – Deadline risk meter: tasks turn orange/red when there isn't enough free time left to finish them.
+210. **New** – Subtasks under a task with their own checkboxes and a progress bar.
+211. **Upgrade** – Shopping list grouped by store, with prices you paid last time.
+212. **New** – Bill reminders with the amount and a "paid" button that logs it.
+213. **New** – Meeting notes attached to the calendar event they belong to.
+214. **New** – Holidays for the Philippines (and other countries) shown on the calendar.
+215. **Upgrade** – "Find free time" for two people by comparing your calendar with a friend's (phone app).
+216. **New** – Packing list that builds itself from a trip's days, weather and activities.
+217. **New** – Year view heatmap of how busy each day was.
+218. **Upgrade** – Notes can be pinned, coloured and searched.
+219. **New** – Energy-aware planning: hard tasks go in the hours you usually focus best.
+220. **New** – Print or export a week as a neat one-page PDF.
+
+## ✈️ Travel (221–235)
+221. **Upgrade** – Trip budget tracker: log what you really spend each day against the plan.
+222. **New** – Offline trip pack: the itinerary, maps and phrases saved for when there's no signal.
+223. **New** – Weather forecast for each trip day next to its itinerary.
+224. **New** – Local phrase cards for the trip's country, with her voice saying them.
+225. **Upgrade** – Swap a whole trip day for a "rainy day" version with indoor places.
+226. **New** – Trip photo album: drop photos and she sorts them by day and place.
+227. **New** – Currency converter that remembers the trip's currency.
+228. **New** – Visa and passport expiry reminders before a trip abroad.
+229. **New** – Trip story: after you come home she writes a short travel diary from the plan and photos.
+230. **Upgrade** – Group trips: split costs between friends and see who owes whom.
+231. **New** – "Near me now" during a trip: the next stop and how to get there.
+232. **New** – Flight check-in reminder 24 hours before departure.
+233. **Upgrade** – Saved trips list with a cover picture and the dates.
+234. **New** – Trip wishlist: places you want to visit someday, ranked by budget.
+235. **New** – Jet-lag helper: a sleep plan for the days around a long flight.
+
+## 🌐 Browser (236–250)
+236. **Upgrade** – Pinned tabs that stay open every time you start Vermeil.
+237. **New** – Ad and tracker blocker for the in-app browser.
+238. **New** – "Summarise this page" button on any tab.
+239. **New** – Reader mode: just the article text, in your theme and font size.
+240. **Upgrade** – Tab groups with names and colours (School, Shopping, Games).
+241. **New** – Downloads list inside the Browser panel.
+242. **New** – Bookmarks bar under the address bar.
+243. **New** – Picture-in-picture for videos while you use other panels.
+244. **Upgrade** – Speed dial tiles show a small preview of the site.
+245. **New** – Ask about the page: chat with Vermeil about what's on the open tab.
+246. **New** – Translate the whole page into your language.
+247. **New** – Private tab that keeps no history.
+248. **Upgrade** – Search suggestions while you type in the address bar.
+249. **New** – Workspaces: save a set of tabs and open them all again later.
+250. **New** – Built-in music player sidebar like Opera GX (YouTube Music / Spotify web).
+
+## 🎭 Characters and animation (251–275)
+251. **New** – Character creator: build a new companion from body, hair and outfit parts.
+252. **Upgrade** – Animation editor: trim, slow down or loop part of a UniMate clip.
+253. **New** – Blend two animations (walk + wave) so she waves while walking.
+254. **New** – Facial animation from text: brows and mouth move with the feeling of each sentence.
+255. **Upgrade** – Accessory editor: move, rotate and resize hats and glasses on any model.
+256. **New** – Pose mode: pose the character with handles and take a picture.
+257. **New** – Lip-sync from the voice for models with mouth shapes (visemes).
+258. **Upgrade** – Ground contact: feet that adjust to stairs and uneven floors (foot IK).
+259. **New** – Eye contact: the character's eyes follow the camera and your face.
+260. **New** – Character outfits for every season, switched automatically.
+261. **New** – Import Mixamo animations straight onto any rigged character.
+262. **Upgrade** – Retarget an animation from one character to another with one click.
+263. **New** – Idle variety: small random fidgets (stretch, look around, check phone) between idles.
+264. **New** – Emote wheel: hold a key to pick an emote for her to play.
+265. **Upgrade** – Hair and cloth settings per character (stiffness, gravity, wind).
+266. **New** – Character voice designer: mix pitch, speed and warmth with live preview.
+267. **New** – Share a character with all its animations as one file.
+268. **New** – Turntable preview of a character before you switch to it.
+269. **Upgrade** – Physics on tails and ears that react to her walking speed.
+270. **New** – Characters sit on any chair or sofa you place, not just the built-in ones.
+271. **New** – Camera presets for the room: close-up, wide, top-down, cinematic orbit.
+272. **New** – Shadow and lighting quality slider for slower PCs.
+273. **New** – Character relationship map when you have several companions.
+274. **Upgrade** – UniMate queue: make many animations overnight and wake up to them.
+275. **New** – Animation library browser with previews of every clip a character has.
+
+## 🗣 Languages (276–295)
+276. **New** – Daily 5-minute lesson that fits between other tasks.
+277. **Upgrade** – Kanji/hanzi stroke-order animations for every character.
+278. **New** – Listening practice: she speaks at real speed, you type what you heard.
+279. **New** – Conversation scenarios graded by level (A1 to C1).
+280. **Upgrade** – Pronunciation heat map: which sounds you get wrong most.
+281. **New** – Grammar notes that pop up when you make the same mistake twice.
+282. **New** – Dual subtitles for videos (your language + the one you learn).
+283. **New** – JLPT / TOPIK / DELE practice tests.
+284. **New** – Word of the day on the phone lock-screen widget.
+285. **Upgrade** – Spaced-repetition for whole sentences, not only words.
+286. **New** – Pitch accent guide for Japanese words.
+287. **New** – Story mode: graded short stories with her narrating.
+288. **New** – Language exchange: practise with a friend who learns your language (phone app).
+289. **Upgrade** – Shadowing records you and plays both voices together to compare.
+290. **New** – Song lyrics lessons: learn words from a song you like.
+291. **New** – Handwriting recognition for practising characters with the mouse or pen.
+292. **New** – Immersion day: she talks to you only in your target language for a whole day.
+293. **New** – Vocabulary from your life: words for things the camera sees in your room.
+294. **Upgrade** – Progress levels per skill: reading, writing, listening, speaking.
+295. **New** – Accent reduction drills for English with minimal pairs.
+
+## 🍳 Cooking and food (296–310)
+296. **New** – Pantry tracker with expiry dates and "use these first" suggestions.
+297. **Upgrade** – Recipe scaling with unit conversion (cups ↔ grams).
+298. **New** – Step-by-step cooking mode with voice: "next step" hands-free.
+299. **New** – Meal plan for the week with one shopping list.
+300. **New** – Calories and protein for each recipe, linked to the Gym panel.
+301. **New** – Leftover ideas: tell her what's left and get a recipe.
+302. **Upgrade** – Multiple kitchen timers at once with names.
+303. **New** – Baking ratio helper (bread, cookies, cakes) with fixes for common mistakes.
+304. **New** – Filipino recipe collection with local ingredient names.
+305. **New** – Recipe from a photo of a dish.
+306. **New** – Budget meals: recipes under a price you set.
+307. **Upgrade** – Favourite recipes in a printable cookbook PDF.
+308. **New** – Allergy and diet filters (no nuts, vegetarian, halal).
+309. **New** – Cooking skill tree: learn knife skills, sauces, baking basics.
+310. **New** – Restaurant diary with ratings and photos.
+
+## 🎨 Generator (311–325)
+311. **Upgrade** – Slide decks with speaker notes and a rehearsal timer.
+312. **New** – Poster maker with templates for events and school projects.
+313. **New** – Comic strip maker with her as a character.
+314. **Upgrade** – Pictures in a chosen art style (watercolour, pixel art, anime).
+315. **New** – Infographic from a table of numbers.
+316. **New** – Resume and cover letter builder.
+317. **New** – Birthday and greeting card maker.
+318. **New** – Short video from photos with music and captions.
+319. **Upgrade** – Edit a generated picture by describing what to change.
+320. **New** – Logo maker for small projects.
+321. **New** – Sticker pack from your own photos.
+322. **New** – Mood board for a project or a room makeover.
+323. **New** – Flowchart and diagram maker from a description.
+324. **Upgrade** – Brand kit: your colours and fonts used in every slide and poster.
+325. **New** – Thumbnail maker for YouTube videos.
+
+## 💭 Journal and thinking (326–340)
+326. **New** – Gratitude prompts every evening with a streak.
+327. **Upgrade** – Journal search by feeling ("show days I felt proud").
+328. **New** – Dream journal with patterns over time.
+329. **New** – Decision log: what you decided and how it turned out months later.
+330. **New** – Goal letters: write to yourself in a year; she delivers it then.
+331. **Upgrade** – Journal entries with photos and voice notes.
+332. **New** – Worry box: write a worry, she helps you plan or let it go.
+333. **New** – Values check: which of your values you lived by this week.
+334. **New** – Brainstorm board with sticky notes you can drag.
+335. **New** – Mood calendar coloured by your daily check-in.
+336. **Upgrade** – Private journal lock with a PIN.
+337. **New** – "On this day" from your journal one year ago.
+338. **New** – Book notes: highlights and thoughts from books you read.
+339. **New** – Life timeline of big moments you can scroll through.
+340. **New** – Reflection questions after big events (exams, trips, games).
+
+## 💰 Money (341–355)
+341. **New** – Expense tracker with categories and a monthly chart.
+342. **New** – Savings goals with a jar that fills up in the room.
+343. **New** – Subscription tracker that warns before renewals.
+344. **New** – Allowance/salary planner: split money into needs, wants and savings.
+345. **New** – Receipt scanner: take a photo and the expense is logged.
+346. **Upgrade** – Price watcher alerts when an item drops below your price.
+347. **New** – Debt tracker between friends ("you owe me ₱200").
+348. **New** – Monthly money recap with tips.
+349. **New** – Wishlist with "can I afford it?" check against your budget.
+350. **New** – Coin change counter for cash expenses.
+351. **New** – Bills split for housemates.
+352. **New** – Student budget templates.
+353. **Upgrade** – Spending by place on a map.
+354. **New** – No-spend challenge with streaks.
+355. **New** – Export expenses to a spreadsheet.
+
+## 🔧 Electronics and making (356–370)
+356. **New** – Arduino code helper that knows your board and parts.
+357. **Upgrade** – Circuit lab simulates and shows current flow with animation.
+358. **New** – Breadboard view: place real parts and wires on a virtual breadboard.
+359. **New** – Part identifier from a photo (resistor colours, IC numbers).
+360. **New** – 3D printing helper: slice settings and print time estimates.
+361. **New** – Project log with photos and steps for each build.
+362. **Upgrade** – Robot planner exports a parts list with links.
+363. **New** – Soldering practice guide with a checklist.
+364. **New** – Battery life calculator for projects.
+365. **New** – Serial monitor for connected boards inside Vermeil.
+366. **New** – PCB design tips checker.
+367. **New** – Repair log for phones and laptops you fixed.
+368. **New** – Datasheet summariser: the important pins and limits in one card.
+369. **Upgrade** – Ohm's law and LED resistor calculators on voice command.
+370. **New** – Smart home dashboard for lights and plugs (Tuya/Home Assistant).
+
+## 💻 Coding (371–385)
+371. **New** – Code review of a whole folder with a list of issues.
+372. **Upgrade** – Run Python snippets safely and see the output inside Vermeil.
+373. **New** – Explain an error message from a screenshot of the terminal.
+374. **New** – Git helper: what changed, write the commit message, push.
+375. **New** – Learning paths: Python, JavaScript, C with daily exercises.
+376. **New** – Regex tester with plain-English explanation.
+377. **New** – Unity helper: C# scripts for your game with explanations.
+378. **New** – Project templates (website, bot, game) she sets up for you.
+379. **Upgrade** – Code panel remembers each project's files and context.
+380. **New** – Bug diary: problems you solved, searchable for next time.
+381. **New** – API tester for web requests.
+382. **New** – Coding challenges with a timer and difficulty levels.
+383. **New** – Diagram of how a project's files connect.
+384. **New** – Pair programming mode: she watches your editor and gives tips.
+385. **New** – Documentation writer for your functions.
+
+## 🏠 More room ideas (386–400)
+386. **Upgrade** – Keep last season's decorations: a box in Edit room with every seasonal item you've had.
+387. **Upgrade** – Day and night outside the window match your real local time and weather.
+388. **New** – Plants that grow when you water them daily and wilt if you forget.
+389. **New** – Photo frames on the wall that show your favourite photos.
+390. **New** – A TV in the room that plays your watchlist trailers.
+391. **New** – Room achievements (fully furnished, 50 items, cozy score).
+392. **Upgrade** – Furniture colour picker with saved palettes.
+393. **New** – A balcony with a view that changes by season.
+394. **New** – Room screenshots with a frame and date, for sharing.
+395. **New** – Wallpaper patterns and floor materials from a picture you choose.
+396. **Upgrade** – Item search in the Edit room catalogue.
+397. **New** – Cozy score that rises with lights, plants and soft things.
+398. **New** – Rain on the window with sound when it rains outside.
+399. **New** – Neon sign maker with your own words.
+400. **New** – Room tour mode: she walks you around her room and talks about each item.
+
+## 🧸 More of Vermeil (401–420)
+401. **New** – She texts you a good-morning message on the phone with the weather.
+402. **New** – Inside jokes she remembers and brings back at the right time.
+403. **New** – Her own hobbies (drawing, gaming, gardening) she talks about and shows.
+404. **Upgrade** – She notices when you're tired from your voice and suggests a break.
+405. **New** – She celebrates your wins with a little dance and confetti.
+406. **New** – Gift exchange on holidays.
+407. **New** – Her own room makeover requests ("can we get a bigger plant?").
+408. **New** – Storytelling nights: she tells a bedtime story with sound effects.
+409. **Upgrade** – Memory manager: see and delete what she remembers about you.
+410. **New** – She asks your opinion on her outfit and remembers what you liked.
+411. **New** – Compliment jar: she saves kind things you say and replays them on bad days.
+412. **New** – Pep talk button before exams or games.
+413. **New** – Her birthday, which she celebrates with you.
+414. **Upgrade** – Conversation topics she brings up from your interests.
+415. **New** – She plays her own games when you're idle and shows her score.
+416. **New** – Letter mode: write her a long letter and she writes one back.
+417. **New** – Seasonal moods (cozy in rainy season, energetic in summer).
+418. **New** – She keeps a scrapbook of your shared moments.
+419. **New** – Morning routine with stretching together and a plan for the day.
+420. **New** – "Just sit with me" mode: no talking, just company and soft music.
+
+## 📚 More study (421–435)
+421. **New** – Syllabus importer that builds a semester plan.
+422. **New** – Citation manager with APA/MLA export.
+423. **Upgrade** – Flashcards with pictures and audio.
+424. **New** – Problem sets with step-by-step hints instead of answers.
+425. **New** – Study timer per subject with weekly totals.
+426. **New** – Thesis helper: outline, chapter checklist, deadlines.
+427. **New** – Engineering units checker for calculations.
+428. **New** – Concept connections: how topics across subjects link.
+429. **New** – Exam simulator with the real time limit and allowed formulas.
+430. **Upgrade** – Notes from handwritten pages with diagrams kept as pictures.
+431. **New** – Board exam countdown with a daily review plan.
+432. **New** – Group study notes shared through the phone app.
+433. **New** – Lab report template filler.
+434. **New** – Quiz from a YouTube lecture.
+435. **New** – Study music that fades when she asks you a question.
+
+## 🏋 More gym and health (436–450)
+436. **New** – Workout split builder (push/pull/legs, upper/lower) by your schedule.
+437. **New** – Meal photo calorie estimate.
+438. **New** – Step counter from the phone shown in the room.
+439. **Upgrade** – Exercise library with short animated demos by your character.
+440. **New** – Warm-up generator for each workout.
+441. **New** – Gym buddy challenges through the phone app.
+442. **New** – Heart-rate zones from a smartwatch.
+443. **New** – Weight trend with a smoothed line and goal date.
+444. **New** – Breathing exercises with a calming animation.
+445. **New** – Meditation timer with bells.
+446. **New** – Period and cycle tracker (private, optional).
+447. **New** – Medicine reminders with stock count.
+448. **Upgrade** – Sleep sounds that fade out when you fall asleep.
+449. **New** – Doctor visit notes and questions list.
+450. **New** – Sports practice tracker (basketball, swimming, running drills).
+
+## 🎲 More mini games (451–465)
+451. **New** – Checkers and Connect Four against her.
+452. **New** – Pictionary with friends on the phone.
+453. **New** – Memory card match with your photos.
+454. **New** – Word chain game in the language you learn.
+455. **New** – 2048 and Tetris-style puzzles with her commentary.
+456. **New** – Rock-paper-scissors with camera hand detection.
+457. **New** – Guess the song from a short clip of your music.
+458. **New** – Would-you-rather with her answers.
+459. **New** – Trivia about your own life from your journal (only you know the answers).
+460. **New** – Card battles with characters from your adventure game.
+461. **New** – Spot the difference in pictures of your room.
+462. **New** – Reaction time game with a leaderboard.
+463. **New** – Daily riddle.
+464. **New** – Bingo for game nights with friends.
+465. **New** – Story dice: roll and build a story together.
+
+## 🔒 Privacy, settings and safety (466–480)
+466. **New** – Privacy dashboard: what's stored, where, and a delete button for each part.
+467. **New** – Guest mode: a friend can use Vermeil without seeing your data.
+468. **Upgrade** – Encrypted backups with a password you choose.
+469. **New** – Camera and mic light in the sidebar when either is in use.
+470. **New** – Parental controls for younger users.
+471. **New** – Export everything as one zip and import it on another PC.
+472. **New** – Settings search box.
+473. **Upgrade** – Plugin updates with changelogs.
+474. **New** – Safe mode start that skips plugins when something breaks.
+475. **New** – Error report button that collects logs (you choose what to send).
+476. **New** – Two-device sync for the same account without the cloud (local Wi-Fi).
+477. **New** – Auto-update check with a "remind me later".
+478. **New** – Data retention: auto-delete chats older than a time you pick.
+479. **New** – Lock Vermeil with Windows Hello or a PIN.
+480. **New** – Performance overlay (FPS, memory) for checking slow PCs.
+
+## ♿ Accessibility (481–490)
+481. **New** – Dyslexia-friendly font option and line spacing.
+482. **New** – High-contrast theme.
+483. **Upgrade** – Everything usable with the keyboard only, with visible focus.
+484. **New** – Screen reader labels for every button and panel.
+485. **New** – Captions for everything she says, in a big readable box.
+486. **New** – Reduced motion option (no camera swings or bouncing UI).
+487. **New** – Colour-blind friendly charts.
+488. **New** – Voice-only mode: the whole app controlled by voice commands.
+489. **New** – Bigger click targets option for touch screens.
+490. **New** – Slow speech option for all her replies, not only lessons.
+
+## 👥 Friends and sharing (491–500)
+491. **New** – Friend list on the phone app to share progress and send messages.
+492. **New** – Visit a friend's room (read-only) and leave a sticker.
+493. **New** – Shared playlists with friends.
+494. **New** – Co-op focus sessions with friends ("study together").
+495. **New** – Share a trip plan with friends to edit together.
+496. **New** – Send a character to a friend with a personal message.
+497. **New** – Weekly friend leaderboard for habits and study time (opt-in).
+498. **New** – Group chat with friends where Vermeil can join to help.
+499. **New** – Share a recipe card or workout plan as a picture.
+500. **New** – Community idea board: vote on which of these ideas get built next.

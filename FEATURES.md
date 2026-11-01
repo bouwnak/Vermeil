@@ -420,7 +420,7 @@ Everything Vermeil runs or talks to besides her own Python code. "Local" = runs 
 |---|---|---|
 | Full-screen loading screen with steps and a progress bar while she starts | ✅ | App start |
 | Switch between your room and the gym room while editing | ✅ | Edit room → 🏋 Gym room / 🏠 My room |
-| 200 numbered feature ideas to pick from | 📝 | FEATURE_IDEAS.md |
+| 500 numbered feature ideas to pick from | 📝 | FEATURE_IDEAS.md |
 
 ## 🆕 30 Oct 2026: Adventure camp and black-hole portal
 | Feature | Status | Where |

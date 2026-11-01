@@ -140,8 +140,7 @@ function calendarAsk(api, plan, onCalendar) {
         const r = await api.travel_to_calendar(plan, start.value);
         if (r.error) { busy(e.currentTarget, false); return toast(r.error); }
         toast(r.message, 7000);
-        box.replaceChildren(el("b", {}, "✅ On your calendar"), el("p", { class: "note" }, r.message));
-        onCalendar?.(r.start);
+        onCalendar?.(r.start);                                     // the planner shows the trip and starts the form over
       } }, "Yes, add it"),
       el("button", { class: "ghost small", onclick: () => box.remove() }, "Not now")));
   return box;
@@ -151,7 +150,6 @@ function showPlan(out, api, plan, onCalendar = null) {
   const cur = plan.request.currency;
   const redraw = (p) => { if (p.error) return toast(p.error); plan = p; showPlan(out, api, p, onCalendar); };
   const a = plan.airfare || {};
-  const links = plan.links || {};
   out.replaceChildren(
     el("h4", {}, `${plan.request.place} · ${plan.request.days} days · ${"★".repeat(plan.request.stars)}`),
     calendarAsk(api, plan, onCalendar),
@@ -163,8 +161,6 @@ function showPlan(out, api, plan, onCalendar = null) {
       el("div", { class: "stay-top" }, el("b", {}, s.name), el("span", { class: "stay-price" }, `${peso(s.per_night, cur)}/night`)),
       el("small", { class: "note" }, [s.type, s.area].filter(Boolean).join(" · ")),
       s.why ? el("p", {}, s.why) : null))),
-    el("div", { class: "row" }, ...[["flights", "Google Flights"], ["skyscanner", "Skyscanner"], ["hotels", "Booking.com"], ["airbnb", "Airbnb"], ["maps", "Map"]]
-      .filter(([k]) => links[k]).map(([k, l]) => el("button", { class: "ghost small", onclick: () => api.browse_inside(links[k]) }, `🔗 ${l}`))),
     ...(plan.days || []).map((d) => el("div", { class: "trip-day" },
       el("h5", {}, `Day ${d.day}: ${d.title || ""} · ${peso(d.total, cur)}`),
       el("ol", {}, d.stops.map((s, i) => el("li", { class: `stop ${s.kind}` },

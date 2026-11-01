@@ -394,10 +394,22 @@ export const LIVING_CATALOG = {
 };
 
 // ---------------------------------------------------------------- seasonal decorations (turn on by themselves)
-export function buildDecor(kind) {
+// Pieces standing on the floor (pumpkins, the tree, presents, flowers) can be dragged in Edit room: each gets
+// userData.decorPiece = its number, and `moved` ({number: [x, z]}, saved with your room) puts them where you left them.
+export function buildDecor(kind, moved = {}) {
   const g = new THREE.Group();
   g.userData.decor = kind;
-  const at = (obj, x, y, z) => { obj.position.set(x, y, z); g.add(obj); return obj; };
+  let pieces = 0;
+  const at = (obj, x, y, z, movable = y === 0) => {
+    obj.position.set(x, y, z);
+    if (movable) {
+      const n = pieces++;
+      obj.userData.decorPiece = n;
+      if (Array.isArray(moved[n])) obj.position.set(moved[n][0], y, moved[n][1]);
+    }
+    g.add(obj);
+    return obj;
+  };
   if (kind === "halloween") {
     for (const [x, z, s] of [[-3.2, 1.6, 1], [-2.8, 2.0, 0.7], [3.4, 1.8, 0.85]]) {
       const p = group(ball(0.22 * s, std(0xff7a1a), 0, 0.2 * s, 0), cyl(0.02, 0.03, 0.08, std(0x3f7a2e), 0, 0.42 * s, 0),
@@ -407,7 +419,7 @@ export function buildDecor(kind) {
     const bats = [];
     for (let i = 0; i < 5; i++) { const b = group(ball(0.04, std(0x1a1020), 0, 0, 0), ...[-1, 1].map((s) => { const w = cube(0.12, 0.01, 0.06, std(0x1a1020), s * 0.08, 0, 0); w.rotation.z = s * 0.3; return w; })); bats.push(at(b, -2 + i, 2.6, -1 + (i % 2))); }
     g.userData.tick = (t) => bats.forEach((b, i) => { b.position.y = 2.5 + Math.sin(t * 2 + i) * 0.15; b.position.x = -2 + i + Math.sin(t * 0.5 + i) * 0.4; b.children[1].rotation.z = Math.sin(t * 15) * 0.6; b.children[2].rotation.z = -Math.sin(t * 15) * 0.6; });
-    lightOn(g, 0xff7a1a, 2, 0.5).position.set(-3, 0.5, 1.8);
+    lightOn(g, 0xff7a1a, 2, 0.5).position.copy(g.children[0].position).setY(0.5);       // glows by the first pumpkin
   } else if (kind === "christmas") {
     const tree = group(cyl(0.06, 0.08, 0.3, std(0x5a3a26), 0, 0.15, 0),
       ...[0, 1, 2].map((i) => mesh(new THREE.ConeGeometry(0.7 - i * 0.18, 0.7, 24), std(0x1f6b3a), 0, 0.6 + i * 0.4, 0)),
@@ -417,7 +429,7 @@ export function buildDecor(kind) {
     tree.add(...bulbs);
     at(tree, -3.3, 0, 1.6);
     at(group(cube(0.25, 0.2, 0.25, std(0xd83a3a), 0, 0.1, 0), cube(0.27, 0.04, 0.05, std(0xffd24d), 0, 0.2, 0)), -2.8, 0, 2.1);
-    lightOn(g, 0xffc070, 2.5, 1).position.set(-3.3, 1.2, 1.6);
+    lightOn(g, 0xffc070, 2.5, 1).position.copy(tree.position).setY(1.2);               // the tree's glow goes with it
     g.userData.tick = (t) => bulbs.forEach((b, i) => { b.material.emissiveIntensity = 1 + Math.max(0, Math.sin(t * 3 + i)) * 2; });
   } else if (kind === "valentine") {
     const hearts = [];

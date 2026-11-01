@@ -1353,7 +1353,10 @@ body.editing .sidebar { animation: none; }
 .rig-side { position: absolute; top: 76px; left: 12px; width: min(330px, calc(100% - 24px)); max-height: calc(100% - 150px); overflow: auto; background: rgba(22,25,30,.92); border: 1px solid var(--line); border-radius: var(--radius-l); padding: 14px; display: flex; flex-direction: column; gap: 8px; animation: cardIn .3s ease both; }
 .rig-side h3 { margin: 0 0 4px; color: var(--strong); }
 .rig-side > button { text-align: left; border-radius: 12px; padding: 10px 12px; background: var(--raised); border: 1px solid var(--line); color: var(--ink); cursor: pointer; font: inherit; transition: border-color .15s, transform .15s; }
-.rig-side > button:hover:not(:disabled) { border-color: var(--blue); transform: translateX(3px); }
+.rig-side > button:hover:not(:disabled) { border-color: var(--blue); }
+/* the main button stays in view at the bottom of the box (it was cut in half when the list was long) */
+.rig-side > button.rig-make { position: sticky; bottom: -14px; margin-bottom: -14px; z-index: 1; padding: 12px; text-align: center; font-weight: 800;
+  box-shadow: 0 -10px 18px rgba(22,25,30,.95); background: var(--blue); color: #fff; }
 .rig-side > button.primary { border-color: var(--blue); background: var(--blue-soft); }
 .rig-side > button small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .rig-motions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
@@ -1997,3 +2000,11 @@ input.tiny { width: 56px; }
 
 /* Settings > Test: gym exercises this character doesn't have yet */
 .anim-group button.missing { opacity: .5; border-style: dashed; }
+
+/* Focus & Progress -> My progress: every part on one page */
+.prog-head { margin: 22px 0 8px; padding-top: 12px; border-top: 1.5px solid var(--line); font-size: 16px; }
+.prog-head:first-child { margin-top: 4px; padding-top: 0; border-top: 0; }
+
+/* the page area: the tab's web view is put right over this box (skills/vbrowser.py) */
+.br-view { min-height: 240px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff1; display: grid; place-items: center; }
+.br-view[hidden], .br-start[hidden] { display: none; }

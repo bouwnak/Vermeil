@@ -251,12 +251,62 @@ function relaxArms(root, info, clip) {
   return changed;
 }
 
+/** how far the feet move sideways in a clip, compared with the body's size (hips to head): ~0 standing, ~0.5 walking */
+function footTravel(root, info, clip) {
+  const feet = info.feet.filter((f) => /foot|ankle/.test(clean(f.name)));
+  if (!feet.length || !info.head || !info.hips) return 0;
+  root.updateMatrixWorld(true);
+  const size = info.head.getWorldPosition(new THREE.Vector3()).distanceTo(info.hips.getWorldPosition(new THREE.Vector3())) || 1;
+  const saved = info.bones.map((b) => [b.position.clone(), b.quaternion.clone(), b.scale.clone()]);
+  const mixer = new THREE.AnimationMixer(root);
+  const act = mixer.clipAction(clip).play();
+  const pts = feet.map(() => []);
+  for (let i = 0; i <= 16; i++) {
+    act.time = clip.duration * i / 16; mixer.update(0); root.updateMatrixWorld(true);
+    feet.forEach((f, k) => pts[k].push(f.getWorldPosition(new THREE.Vector3())));
+  }
+  act.stop(); mixer.uncacheRoot(root);
+  info.bones.forEach((b, i) => { b.position.copy(saved[i][0]); b.quaternion.copy(saved[i][1]); b.scale.copy(saved[i][2]); });
+  root.updateMatrixWorld(true);
+  let most = 0;
+  for (const p of pts) for (const a of p) for (const b of p) most = Math.max(most, Math.hypot(a.x - b.x, a.z - b.z));
+  return most / size;
+}
+
+/** A calm standing idle made here: feet planted, slow breathing in the chest, the head drifting a little.
+ *  (relaxArms then lowers the arms.) Used when UniMate's idle steps around. */
+export function makeCalmIdle(root, info = analyzeRig(root), name = "idle") {
+  const LEN = 6, FPS = 15, n = LEN * FPS + 1;
+  const times = Float32Array.from({ length: n }, (_, i) => i / FPS);
+  const moves = [[info.chest, { x: [0.025, 2, 0] }], [info.neck, { x: [0.015, 2, 0.6], y: [0.02, 1, 1.3] }],
+    [info.head, { x: [0.02, 1, 2.1], y: [0.04, 1, 0.4], z: [0.015, 2, 1.7] }],
+    [info.hips, { z: [0.01, 1, 0.9] }]].filter(([b]) => b);
+  const tracks = [];
+  for (const [bone, m] of moves) {
+    const rest = bone.quaternion.clone(), vals = new Float32Array(n * 4), e = new THREE.Euler(), q = new THREE.Quaternion();
+    for (let i = 0; i < n; i++) {
+      const t = (i / (n - 1)) * Math.PI * 2;
+      const ang = (k) => (m[k] ? m[k][0] * Math.sin(t * m[k][1] + m[k][2]) : 0);
+      e.set(ang("x"), ang("y"), ang("z"));
+      q.setFromEuler(e).premultiply(rest).toArray(vals, i * 4);
+    }
+    tracks.push(new THREE.QuaternionKeyframeTrack(`${bone.name}.quaternion`, times, vals));
+  }
+  return new THREE.AnimationClip(name, LEN, tracks);
+}
+
 /** Make UniMate's clips behave: body bones only, smooth, feet on the floor, seamless loops. Returns a short report. */
 export function cleanClips(root, clips, info = analyzeRig(root)) {
   const bodyNames = new Set([...info.body].map((b) => b.name));
-  const report = { dropped: 0, smoothed: 0, grounded: 0, arms: 0 };
+  const report = { dropped: 0, smoothed: 0, grounded: 0, arms: 0, calmed: 0 };
   for (const clip of clips || []) {
     if (/^talk$/i.test(clip.name) && clip.userData?.made === "app") continue;
+    // standing clips that step around (UniMate sometimes walks on the spot): a calm idle instead
+    if (/^(idle|sad)$/i.test(clip.name) && footTravel(root, info, clip) > 0.15) {
+      const calm = makeCalmIdle(root, info, clip.name);
+      clip.tracks = calm.tracks; clip.duration = calm.duration; clip.resetDuration?.();
+      report.calmed++;
+    }
     const loop = !ONCE.test(clip.name);
     const before = clip.tracks.length;
     clip.tracks = clip.tracks.filter((t) => bodyNames.has(t.name.split(".")[0]) && !t.name.endsWith(".scale"));
@@ -427,7 +477,8 @@ function makeColliders(info, root) {
   const segs = new Map();
   for (const b of info.body) {
     const fam = family(b);
-    if (!["spine", "arm", "leg"].includes(fam) || /root|origin/.test(clean(b.name))) continue;
+    // feet and toes are left out: a long hem or a train sweeps right past them on the floor and got hooked on them
+    if (!["spine", "arm", "leg"].includes(fam) || /root|origin|foot|toe|ankle|heel|ball/.test(clean(b.name))) continue;
     const same = b.children.filter((c) => c.isBone && info.body.has(c) && family(c) === fam && (fam !== "spine" || !side(c.name)));
     if (same.length === 1) segs.set(b, same[0]);
   }
@@ -454,7 +505,7 @@ function makeColliders(info, root) {
     const d = dists.get(b).sort((x, y) => x - y);
     const len = b.getWorldPosition(a).distanceTo(e.getWorldPosition(c));
     const r = d.length > 8 ? d[Math.floor(d.length * 0.8)] : len * 0.18;    // no skin found: a guess from the bone length
-    if (r > 0) caps.push({ a: b, b: e, r: Math.min(r, len * 0.9) });
+    if (r > 0) caps.push({ a: b, b: e, r: Math.min(r, len * 0.9), leg: family(b) === "leg" });
   }
   const s = new THREE.Vector3(), t2 = new THREE.Vector3(), near = new THREE.Vector3();
   return {
@@ -463,8 +514,12 @@ function makeColliders(info, root) {
     /** how close `pt` may come to each capsule's middle line: its radius (+ pad), but never more than 90% of how far
      *  it is at rest. Cloth bones sit INSIDE the cloth (the surface is further out), often closer to a leg than the
      *  leg is thick: they must not cross the leg, but pushing them a full leg-width away would balloon the skirt. */
-    limits(pt, pad = 0) {
-      return caps.map((cap) => { cap.a.getWorldPosition(s); cap.b.getWorldPosition(t2); return Math.min(cap.r + pad, pt.distanceTo(closest(pt, s, t2, near)) * 0.9); });
+    limits(pt, pad = 0, noLegs = false) {
+      return caps.map((cap) => {
+        if (noLegs && cap.leg) return 0;          // a skirt the legs carry along: pushing it off them opened it
+        cap.a.getWorldPosition(s); cap.b.getWorldPosition(t2);
+        return Math.min(cap.r + pad, pt.distanceTo(closest(pt, s, t2, near)) * 0.75);
+      });
     },
     /** move `pt` out to each capsule's limit; returns true when it had to move */
     push(pt, limits) {
@@ -507,12 +562,43 @@ function makeSprings(info, root) {
       stiff: P[0] * Math.pow(0.95, depth), keep: P[1], grav: P[2], limits: null });
   }
   const colliders = springs.length ? makeColliders(info, root) : null;
+  // skirts and capes near a leg turn partly WITH that thigh (like in games), so a stride carries the cloth along
+  // instead of the leg going through it. Weight: up to 0.75 when the panel hangs right by the thigh, 0 far away.
+  root.updateMatrixWorld(true);
+  // the upper leg = the first leg bone under the body ("LThigh", "L_leg", "upperleg"...), whatever it's called
+  const thighs = info.bones.filter((b) => info.kind.get(b) === "leg" && info.kind.get(b.parent) !== "leg"
+    && b.children.some((c) => c.isBone && info.kind.get(c) === "leg"));
+  const wpos = (o) => o.getWorldPosition(new THREE.Vector3()), wquat = (o) => o.getWorldQuaternion(new THREE.Quaternion());
+  for (const s of springs) {
+    if (s.kind !== "cloth" || s.depth > 1 || !thighs.length) continue;
+    const child = s.bone.children.find((c) => c.isBone);
+    const tip = child ? wpos(child) : wpos(s.bone);
+    let best = null, bd = Infinity;
+    for (const th of thighs) {
+      const knee = th.children.find((c) => c.isBone && info.body.has(c));
+      const a = wpos(th), b = wpos(knee), d = b.clone().sub(a);
+      const t = Math.max(0, Math.min(1, tip.clone().sub(a).dot(d) / (d.lengthSq() || 1)));
+      const dist = tip.distanceTo(a.clone().addScaledVector(d, t)) / (d.length() || 1);
+      if (dist < bd) { bd = dist; best = th; }
+    }
+    const w = Math.max(0, Math.min(0.75, 1 - bd / 0.8)) * (s.depth ? 0.5 : 1);
+    // every thigh may push it: whichever leg pushes this panel OUT the most wins (the front follows the leg that steps
+    // forward, the back the one behind) - one panel per leg made the skirt split open and show the legs
+    if (w > 0.02) s.legs = { w, list: thighs.filter((th) => th.parent).map((th) => ({ thigh: th, hips: th.parent, rest: wquat(th.parent).invert().multiply(wquat(th)) })) };
+  }
+  const legQ = new THREE.Quaternion(), hipQ = new THREE.Quaternion(), ID = new THREE.Quaternion();
+  // the floor, in the model's own space (its lowest point at rest): cloth settles on it instead of sinking through.
+  // Kept in local space so it follows when the room scales and places the model afterwards.
+  root.updateMatrixWorld(true);
+  const floorLocal = springs.length ? root.worldToLocal(new THREE.Vector3(0, new THREE.Box3().setFromObject(root).min.y, 0)).y : 0;
+  const floorPt = new THREE.Vector3();
   const head = new THREE.Vector3(), want = new THREE.Vector3(), cur = new THREE.Vector3(), next = new THREE.Vector3();
   const wq = new THREE.Quaternion(), pq = new THREE.Quaternion(), rot = new THREE.Quaternion();
   const side = new THREE.Vector3(), radial = new THREE.Vector3(), center = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
   const scaleOf = (o) => o.getWorldScale(new THREE.Vector3()).y || 1;
   return {
     count: springs.length,
+    list: springs,
     colliders: colliders?.count || 0,
     capsules: colliders?.caps || [],
     reset() { for (const s of springs) s.tip = null; },
@@ -522,6 +608,7 @@ function makeSprings(info, root) {
       const f = dt * 60;                                                 // the same feel at any frame rate
       root.updateMatrixWorld(true);                                      // the body as the animation left it this frame
       (info.hips || root).getWorldPosition(center);
+      const floor = root.localToWorld(floorPt.set(0, floorLocal, 0)).y;
       for (const s of springs) {
         const b = s.bone;
         b.quaternion.copy(s.rest);                                      // where the bone would point by itself
@@ -530,9 +617,24 @@ function makeSprings(info, root) {
         b.getWorldQuaternion(wq);
         want.copy(s.local).multiplyScalar(scaleOf(b)).applyQuaternion(wq).add(head);
         s.len = want.distanceTo(head);
+        if (s.legs) {                                                    // carried by the legs' swing (in the hips' frame)
+          const dir = want.clone().sub(head);
+          const out = head.clone().sub(center).setY(0).normalize();    // which way is "out" for this panel
+          let bestDir = dir, bestOut = -Infinity;
+          for (const L of s.legs.list) {
+            L.hips.getWorldQuaternion(hipQ); L.thigh.getWorldQuaternion(legQ);
+            const rel = hipQ.clone().invert().multiply(legQ).multiply(L.rest.clone().invert());
+            const swing = hipQ.clone().multiply(rel).multiply(hipQ.clone().invert());
+            const d = dir.clone().applyQuaternion(ID.clone().slerp(swing, s.legs.w));
+            const o = d.dot(out);
+            if (o > bestOut) { bestOut = o; bestDir = d; }
+          }
+          if (bestOut > dir.dot(out)) want.copy(head).add(bestDir);    // only ever pushed out, never pulled in
+        }
         if (!s.tip) {
           s.tip = want.clone(); s.prev = want.clone();
-          s.limits = colliders.limits(want, s.len * 0.05);                 // how close it may come to each body part
+          // how close it may come to each body part (a skirt panel the legs carry, or one under it, skips the legs)
+          s.limits = colliders.limits(want, s.len * 0.05, !!s.legs || (s.depth > 0 && s.kind === "cloth"));
           continue;
         }
         // cloth and hair: a slow wave runs down the chain (air moving through it), stronger toward the hem. It moves
@@ -563,6 +665,19 @@ function makeSprings(info, root) {
         if (colliders.push(next, s.limits)) {                              // keeping the length can pull it back in
           cur.copy(next).sub(head).setLength(s.len);
           next.copy(head).add(cur);
+        }
+        // the floor: cloth that reaches it spreads out flat along it (same length, outward) - pushing the tip straight
+        // up instead folded a hem into hooks
+        const ground = floor + s.len * 0.02;
+        if (next.y < ground) {
+          const dy = ground - head.y;
+          if (Math.abs(dy) < s.len) {
+            side.set(next.x - head.x, 0, next.z - head.z);
+            if (side.lengthSq() < 1e-10) side.set(want.x - head.x, 0, want.z - head.z);
+            side.setLength(Math.sqrt(s.len * s.len - dy * dy));
+            next.set(head.x + side.x, ground, head.z + side.z);
+          } else next.y = ground;
+          cur.copy(next).sub(head);
         }
         s.prev.copy(s.tip); s.tip.copy(next);
         // turn the bone toward the new tip

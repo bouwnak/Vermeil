@@ -225,16 +225,30 @@ $("rvcDelete").addEventListener("click", async () => {
 });
 
 // ---------------- Python connection ----------------
+/** Python's api, once it's really there. Coming back from Games the page starts so fast (everything cached) that
+ *  window.pywebview.api can exist while its functions are still being added - using it then stopped the start at
+ *  "Starting up…". So: wait until get_state is a function (checking again every 50 ms, and on pywebviewready). */
 function getApi() {
   return new Promise((resolve) => {
-    if (window.pywebview?.api) return resolve(window.pywebview.api);
-    window.addEventListener("pywebviewready", () => resolve(window.pywebview.api), { once: true });
+    let done = false;
+    const ready = () => typeof window.pywebview?.api?.get_state === "function";
+    const finish = (x) => { if (!done) { done = true; clearInterval(poll); resolve(x); } };
+    const poll = setInterval(() => { if (ready()) finish(window.pywebview.api); }, 50);
+    if (ready()) return finish(window.pywebview.api);
+    window.addEventListener("pywebviewready", () => { if (ready()) finish(window.pywebview.api); });
     if (new URLSearchParams(location.search).has("mock")) {
-      import("./mock.js").then((m) => resolve(m.mockApi));          // browser preview without Python
+      import("./mock.js").then((m) => finish(m.mockApi));           // browser preview without Python
       window.__room = room;                                            // handy for checking things in the preview
     }
   });
 }
+
+// any error in the window goes to data/ui_errors.log, so a problem on your PC can be found later
+function reportError(where, err) {
+  try { window.pywebview?.api?.log_ui_error?.(where, String(err?.stack || err?.message || err).slice(0, 2000)); } catch { /* not in the app */ }
+}
+window.addEventListener("error", (e) => reportError("window", e.error || e.message));
+window.addEventListener("unhandledrejection", (e) => reportError("promise", e.reason));
 
 // ---------------- small helpers ----------------
 function toast(text, ms = 3500) {
@@ -443,6 +457,7 @@ function openPanel(name) {
   if (name === "kitchen" && open) kitchenTab(state.ui?.kitchen_tab);
   if (name === "focus" && open) focusPanel.load();
   if (name === "browser" && open) browserPanel.load();
+  else browserPanel?.hide();                                     // the page inside the panel goes away with it
   if (name === "chat" && open) chat.load();
   if (name === "missions" && open) missionsPanel.load();
   if (name === "spotify" && open) spotifyPanel.load();
@@ -1487,7 +1502,7 @@ setTimeout(bootDone, 60000);   // never stay stuck on the loading screen
     if (kind) { kitchenTab(kind); api.save_ui({ kitchen_tab: kind }).then((u) => { if (u) state.ui = u; }); }
   });
   focusPanel = initFocus(api);
-  browserPanel = initBrowser(api);
+  browserPanel = initBrowser(api, { show: () => { if ($("panel-browser").hidden) openPanel("browser"); } });
   chat = initChat(api, () => activeChar()?.name);
   refreshGuide();
   missionsPanel = initMissions(api);

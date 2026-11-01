@@ -815,7 +815,9 @@ class SpeechStream:
         with _speak_lock:                             # never play two voices at once
             stop_flag = False
             started = False
-            listener = _start_barge_in() if (barge_in and voice_mode) else None
+            # talking over her stops her - but not for a lesson phrase you asked to hear (plain): the mic hears the
+            # speakers, and a short phrase was cut off before it was heard
+            listener = _start_barge_in() if (barge_in and voice_mode and not self.plain) else None
             try:
                 while True:
                     item = self.q.get()

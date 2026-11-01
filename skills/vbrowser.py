@@ -2,12 +2,16 @@
 vbrowser.py - Vermeil's own browser (the 🌐 Browser panel in the sidebar, like Opera GX's side panel).
 
 The panel is the browser's "chrome": the tabs, the address bar, back / forward / reload, a Google-style start page
-with speed dial and your recent pages. Each tab is a Vermeil browser window (a pywebview window), because most
-websites (Google, YouTube...) refuse to be shown inside another page. Speed dial and history are kept in
-data/browser.json.
+with speed dial and your recent pages. Most websites (Google, YouTube...) refuse to be shown inside another page, so
+each tab is its own borderless web view that is put INSIDE Vermeil's window (Windows SetParent), exactly over the
+panel's page area: it moves with the window and looks like part of the panel. The panel tells Python where that
+area is (place()); only the active tab is shown. Speed dial and history are kept in data/browser.json.
 """
+import ctypes
 import json
+import os
 import re
+import sys
 import threading
 import time
 from urllib.parse import quote_plus, urlparse
@@ -39,12 +43,59 @@ def host(url):
     return re.sub(r"^www\.", "", urlparse(url).netloc.lower())
 
 
+# ---------- Windows: put a tab's window inside Vermeil's window ----------
+GWL_STYLE, WS_CHILD, WS_POPUP, WS_CAPTION, WS_THICKFRAME = -16, 0x40000000, 0x80000000, 0x00C00000, 0x00040000
+SW_HIDE, SW_SHOW, SWP_NOZORDER, SWP_NOACTIVATE, SWP_SHOWWINDOW = 0, 5, 0x0004, 0x0010, 0x0040
+
+
+def _user32():
+    return ctypes.windll.user32 if sys.platform == "win32" else None
+
+
+def find_window(title):
+    """this program's top-level window with exactly this title (0 if none)"""
+    u = _user32()
+    if not u:
+        return 0
+    found = []
+    pid = os.getpid()
+
+    def each(h, _):
+        n = u.GetWindowTextLengthW(h)
+        if n:
+            buf = ctypes.create_unicode_buffer(n + 1)
+            u.GetWindowTextW(h, buf, n + 1)
+            owner = ctypes.c_ulong()
+            u.GetWindowThreadProcessId(h, ctypes.byref(owner))
+            if buf.value == title and owner.value == pid:
+                found.append(h)
+        return True
+    u.EnumWindows(ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)(each), 0)
+    return found[0] if found else 0
+
+
+def embed(child, parent):
+    """make `child` a borderless child window of `parent` (it then moves with it)"""
+    u = _user32()
+    if not (u and child and parent):
+        return False
+    get = getattr(u, "GetWindowLongPtrW", u.GetWindowLongW)
+    put = getattr(u, "SetWindowLongPtrW", u.SetWindowLongW)
+    style = get(child, GWL_STYLE)
+    put(child, GWL_STYLE, (style & ~(WS_POPUP | WS_CAPTION | WS_THICKFRAME)) | WS_CHILD)
+    u.SetParent(child, parent)
+    return True
+
+
 class Browser:
-    def __init__(self, emit):
+    def __init__(self, emit, main_title="Vermeil"):
         self.emit = emit                         # emit({"type": "browser", ...}) -> the panel redraws
-        self.tabs = {}                           # id -> {"win", "url", "title"}
+        self.tabs = {}                           # id -> {"win", "url", "title", "hwnd"}
         self.next_id = 1
         self.lock = threading.Lock()
+        self.main_title = main_title
+        self.active = None                       # the tab shown in the panel
+        self.rect = None                         # the panel's page area in Vermeil's window (pixels), or None = hidden
 
     # ---------- saved: speed dial + history ----------
     def _load(self):
@@ -98,7 +149,46 @@ class Browser:
         with self.lock:
             tabs = [{"id": i, "url": t["url"], "title": t["title"] or host(t["url"]), "host": host(t["url"])}
                     for i, t in self.tabs.items()]
-        return {"tabs": tabs, "dial": d["dial"], "history": d["history"][:20]}
+        return {"tabs": tabs, "dial": d["dial"], "history": d["history"][:20], "active": self.active}
+
+    # ---------- where the tab shows: inside the panel ----------
+    def place(self, rect):
+        """rect: {x, y, w, h} in Vermeil's window pixels (the panel's page area), or None to hide every tab"""
+        self.rect = {k: int(round(float(rect[k]))) for k in ("x", "y", "w", "h")} if rect else None
+        self._layout()
+        return True
+
+    def _layout(self):
+        u = _user32()
+        if not u:
+            return
+        for tid, t in list(self.tabs.items()):
+            h = t.get("hwnd")
+            if not h:
+                continue
+            if tid == self.active and self.rect and self.rect["w"] > 20 and self.rect["h"] > 20:
+                r = self.rect
+                u.ShowWindow(h, SW_SHOW)
+                # through pywebview (WinForms), so the web view inside resizes and repaints too; as a child window the
+                # position is inside Vermeil's window
+                try:
+                    t["win"].resize(r["w"], r["h"])
+                    t["win"].move(r["x"], r["y"])
+                except Exception:  # noqa: BLE001
+                    u.SetWindowPos(h, 0, r["x"], r["y"], r["w"], r["h"], SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW)
+            else:
+                u.ShowWindow(h, SW_HIDE)
+
+    def _embed(self, tid):
+        """the tab's window exists now: put it inside Vermeil's window (else it stays a normal window)"""
+        t = self.tabs.get(tid)
+        if not t:
+            return
+        child = find_window(f"VermeilTab-{tid}")
+        parent = find_window(self.main_title)
+        if child and parent and embed(child, parent):
+            t["hwnd"] = child
+            self._layout()
 
     def _changed(self):
         self.emit({"type": "browser", **self.state()})
@@ -113,18 +203,20 @@ class Browser:
         if t:
             t["url"] = url
             t["win"].load_url(url)
-            try:
-                t["win"].restore()
-            except Exception:  # noqa: BLE001 - not every backend has restore()
-                pass
+            self.active = tab
+            self._layout()
             self._changed()
             return {"ok": True, "id": tab, "url": url}
         import webview
         with self.lock:
             tid = self.next_id
             self.next_id += 1
-        win = webview.create_window(f"Vermeil Browser - {host(url) or url[:40]}", url, width=1180, height=780)
-        self.tabs[tid] = {"win": win, "url": url, "title": ""}
+        # borderless and parked off-screen until it's put inside Vermeil's window (_embed, when it's shown)
+        win = webview.create_window(f"VermeilTab-{tid}", url, frameless=True, easy_drag=False, x=-32000, y=-32000,
+                                    width=900, height=600)
+        self.tabs[tid] = {"win": win, "url": url, "title": "", "hwnd": 0}
+        self.active = tid
+        win.events.shown += lambda: self._embed(tid)
         win.events.loaded += lambda: self._loaded(tid)
         win.events.closed += lambda: self._closed(tid)
         self._changed()
@@ -137,15 +229,19 @@ class Browser:
         try:
             t["url"] = t["win"].get_current_url() or t["url"]
             t["title"] = (t["win"].evaluate_js("document.title") or "").strip()[:120]
-            t["win"].title = f"{t['title'] or host(t['url'])} - Vermeil Browser"
         except Exception:  # noqa: BLE001
             pass
+        if not t.get("hwnd"):                      # "shown" can come before the window is really there: try again
+            self._embed(tid)
         self._remember(t["url"], t["title"])
         self._changed()
 
     def _closed(self, tid):
         with self.lock:
             self.tabs.pop(tid, None)
+            if self.active == tid:
+                self.active = next(reversed(self.tabs), None)
+        self._layout()
         self._changed()
 
     def nav(self, tid, action):
@@ -161,9 +257,10 @@ class Browser:
                 w.evaluate_js("history.forward()")
             elif action == "reload":
                 w.evaluate_js("location.reload()")
-            elif action == "focus":
-                w.restore()
-                w.show()
+            elif action == "focus":                    # this tab is the one shown in the panel now
+                self.active = tid
+                self._layout()
+                self._changed()
             elif action == "close":
                 w.destroy()
             else:

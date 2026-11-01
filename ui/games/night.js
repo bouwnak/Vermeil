@@ -16,13 +16,19 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** Python's api once its functions are really there (they're added a moment after window.pywebview.api exists) */
 function pywebview() {
   return new Promise((resolve) => {
-    if (window.pywebview?.api) return resolve(window.pywebview.api);
-    window.addEventListener("pywebviewready", () => resolve(window.pywebview.api), { once: true });
-    setTimeout(() => resolve(window.pywebview?.api || null), 4000);
+    const ready = () => typeof window.pywebview?.api?.gn_library === "function";
+    if (ready()) return resolve(window.pywebview.api);
+    const poll = setInterval(() => { if (ready()) { clearInterval(poll); resolve(window.pywebview.api); } }, 50);
+    setTimeout(() => { clearInterval(poll); resolve(window.pywebview?.api || null); }, 8000);
   });
 }
+// errors go to data/ui_errors.log (the 3D companion failing to load says why there)
+const reportError = (where, err) => { try { window.pywebview?.api?.log_ui_error?.(where, String(err?.stack || err?.message || err).slice(0, 2000)); } catch { /* not in the app */ } };
+window.addEventListener("error", (e) => reportError("minigames", e.error || e.message));
+window.addEventListener("unhandledrejection", (e) => reportError("minigames", e.reason));
 let apiP = null;
 async function call(name, ...args) {
   try {

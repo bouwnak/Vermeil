@@ -62,12 +62,14 @@ export function initPlanner(api) {
   travel.addEventListener("toggle", () => {
     if (travel.open && !travel.dataset.drawn) {
       travel.dataset.drawn = "1";
-      drawTravel($("plannerTravelBody"), api, (start) => {
+      const onCalendar = (start) => {
         const d = new Date(`${start}T00:00`);
         shown = new Date(d.getFullYear(), d.getMonth(), 1); selected = start;
         render();
+        drawTravel($("plannerTravelBody"), api, onCalendar);      // the plan is in the calendar now: an empty form again
         $("calGrid").scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+      };
+      drawTravel($("plannerTravelBody"), api, onCalendar);
     }
   });
 

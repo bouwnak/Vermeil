@@ -9,7 +9,6 @@ const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart
 export function initFocus(api) {
   const root = $("focusBody");
   let tab = "focus";
-  let sub = "charts";                    // My progress: charts / week / habits / screen
   // session state (lives in the window; Python keeps the log)
   const st = { on: false, phase: "work", round: 1, rounds: 4, work: 25, brk: 5, left: 0, focused: 0, task: "", id: null, paused: false };
 
@@ -17,7 +16,7 @@ export function initFocus(api) {
   const view = el("div");
   root.replaceChildren(tabs, view);
   const TABS = [["focus", "Focus session"], ["goals", "🌳 Goals"], ["progress", "📈 My progress"]];
-  const SUBS = [["charts", "📈 Charts"], ["week", "📅 Week"], ["habits", "🟩 Habits"], ["screen", "⏱️ Screen time"]];
+  const SUBS = [["charts", "📈 Your trends"], ["week", "📅 This week"], ["habits", "🟩 Habits"], ["screen", "⏱️ Screen time"]];
   const drawTabs = () => tabs.replaceChildren(...TABS.map(([k, l]) =>
     el("button", { role: "tab", "aria-selected": String(k === tab), onclick: () => { tab = k; load(); } }, l)));
 
@@ -178,13 +177,11 @@ export function initFocus(api) {
   async function load() {
     drawTabs();
     if (tab === "goals") return drawGoals(view, api);
-    if (tab === "progress") {
-      const subs = el("div", { class: "tabs sub-tabs", role: "tablist" }, SUBS.map(([k, l]) =>
-        el("button", { role: "tab", "aria-selected": String(k === sub), onclick: () => { sub = k; load(); } }, l)));
-      const inner = el("div");
-      view.replaceChildren(subs, inner);
-      if (sub === "charts") return drawProgress(inner);
-      return { week: drawWeek, habits: drawHabits, screen: drawScreen }[sub](inner, api);
+    if (tab === "progress") {                         // everything on one page: charts, the week, habits, screen time
+      const parts = SUBS.map(([k, l]) => [k, l, el("div")]);
+      view.replaceChildren(...parts.flatMap(([, l, box]) => [el("h3", { class: "prog-head" }, l), box]));
+      const draw = { charts: (box) => drawProgress(box), week: (box) => drawWeek(box, api), habits: (box) => drawHabits(box, api), screen: (box) => drawScreen(box, api) };
+      return Promise.all(parts.map(([k, , box]) => draw[k](box).catch((e) => box.replaceChildren(el("p", { class: "none" }, String(e?.message || e))))));
     }
     if (st.on) return drawTimer();
     return drawSetup();
