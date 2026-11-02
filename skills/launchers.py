@@ -1,6 +1,7 @@
 """
-launchers.py - the games you installed with Steam, Epic Games, GOG Galaxy and Ubisoft Connect, for the Games hub
-(the "Installed games" shelf under the big cards).
+launchers.py - the games installed on this PC, for the Games hub (the "Installed games" shelf under the big cards): Steam,
+Epic Games, GOG Galaxy, Ubisoft Connect and Riot, then anything else that looks like a game: what Windows lists as installed
+(Battle.net, EA, Roblox, Minecraft...) and folders called Games on any drive.
 
 Nothing is copied or changed in the launchers: the libraries are only READ (Steam's appmanifest files, Epic's
 manifests, GOG's and Ubisoft's registry keys). Each game's cover picture is copied once into ui/games/covers/ so the
@@ -20,7 +21,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COVER_DIR = os.path.join(ROOT, "ui", "games", "covers")
 COVER_URL = "covers/"                                       # as seen from ui/games/index.html
-STORES = {"steam": "Steam", "epic": "Epic Games", "gog": "GOG", "ubisoft": "Ubisoft"}
+STORES = {"steam": "Steam", "epic": "Epic Games", "gog": "GOG", "ubisoft": "Ubisoft", "riot": "Riot Games", "pc": "On this PC"}
 # Steam "games" that aren't games
 STEAM_SKIP = {"228980"}                                     # Steamworks Common Redistributables
 STEAM_SKIP_NAME = re.compile(r"redistributable|^proton|steamvr|steam linux runtime|dedicated server|\bsdk\b", re.I)
@@ -195,16 +196,160 @@ def ubisoft_games():
     return games
 
 
-def installed():
-    """every installed launcher game, A-Z: [{store, store_name, id, name, cover, ready, size_gb}]"""
+# ---------------- what Windows lists as installed ----------------
+UNINSTALL = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+UNINSTALL_ROOTS = [("HKLM", UNINSTALL), ("HKLM", r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"), ("HKCU", UNINSTALL)]
+RIOT_DATA = os.path.join(os.environ.get("PROGRAMDATA", r"C:\ProgramData"), "Riot Games")
+# who makes games: the name alone says nothing about "Fortnite" or "Genshin Impact"
+GAME_MAKERS = re.compile(r"blizzard|electronic arts|\bea\b|rockstar|mojang|roblox|hoyoverse|mihoyo|cognosphere|garena|krafton|activision|bethesda|cd projekt|"
+                         r"capcom|\bsega\b|square enix|bandai|nexon|wargaming|gameloft|supercell|innersloth|tencent games|digital extremes|grinding gear|"
+                         r"respawn|bungie|2k games|ubisoft|smilegate|pearl abyss|gaijin|hi-rez|kuro games|game science|games?\b", re.I)
+NOT_GAMES = re.compile(r"\bstudio\b|launcher$(?<!revived launcher)|redist|runtime|\bsdk\b|vanguard|anti-?cheat|easyanticheat|battleye|riot client|^steam$|"
+                       r"epic games launcher|ubisoft connect|^ea app$|^origin$|battle\.net$|gog galaxy|driver|companion|overlay|geforce|update|tool|editor", re.I)
+SKIP_KEYS = re.compile(r"^(steam app \d+|riot game )", re.I)
+BAD_EXE = re.compile(r"unins|setup|install|crash|report|update|redist|helper|launcher_?helper|vc_|dxsetup|ue4prereq", re.I)
+SKIP_DIRS = {"windows", "program files", "program files (x86)", "programdata", "users", "$recycle.bin", "system volume information", "node_modules", "steamapps"}
+
+
+def uninstall_entries():
+    """{key: {name, publisher, folder, icon, command, kb}} of everything Windows lists as installed. Empty when not Windows."""
+    if sys.platform != "win32":
+        return {}
+    import winreg
+    out = {}
+    for hive, path in UNINSTALL_ROOTS:
+        root = getattr(winreg, "HKEY_LOCAL_MACHINE" if hive == "HKLM" else "HKEY_CURRENT_USER")
+        for key in _reg(root, path) or []:
+            sub = f"{path}\\{key}"
+            read = lambda n: _reg(root, sub, n) or ""
+            name = str(read("DisplayName")).strip()
+            if name and not read("SystemComponent"):
+                out[key] = {"name": name, "publisher": str(read("Publisher")), "folder": os.path.normpath(str(read("InstallLocation"))) if read("InstallLocation") else "",
+                            "icon": str(read("DisplayIcon")).split(",")[0].strip('"'), "command": str(read("UninstallString")), "kb": read("EstimatedSize") or 0}
+    return out
+
+
+def _main_exe(folder):
+    """the program that starts what's in a folder: the biggest .exe near its top that isn't an installer or a helper"""
+    best, size = None, 0
+    base = folder.rstrip("\\/").count(os.sep)
+    for d, subs, files in os.walk(folder):
+        if d.count(os.sep) - base >= 2:
+            subs[:] = []
+        for f in files:
+            if f.lower().endswith(".exe") and not BAD_EXE.search(f):
+                p = os.path.join(d, f)
+                try:
+                    s = os.path.getsize(p)
+                except OSError:
+                    continue
+                if s > size:
+                    best, size = p, s
+    return best
+
+
+def _size_gb(folder, limit=30000):
+    total, n = 0, 0
+    for d, _, files in os.walk(folder):
+        for f in files:
+            n += 1
+            try:
+                total += os.path.getsize(os.path.join(d, f))
+            except OSError:
+                pass
+        if n > limit:
+            break
+    return round(total / 1e9, 1)
+
+
+def riot_games():
+    """League of Legends, Valorant, TFT...: Riot's installer lists each as "Riot Game <product>.<patchline>" """
     games = []
-    for fn in (steam_games, epic_games, gog_games, ubisoft_games):
+    for key, e in uninstall_entries().items():
+        m = re.match(r"Riot Game ([\w]+)\.(\w+)$", key)
+        if not m or m.group(1) == "Riot_Client" or not e["folder"] or not os.path.isdir(e["folder"]):
+            continue
+        gid = f"{m.group(1)}.{m.group(2)}"
+        pic = os.path.join(RIOT_DATA, "Metadata", gid, f"{gid}.ico")
+        games.append({"store": "riot", "id": gid, "name": e["name"], "cover": _cover("riot", gid, pic), "ready": True, "size_gb": _size_gb(e["folder"])})
+    return games
+
+
+def _riot_client():
+    try:
+        with open(os.path.join(RIOT_DATA, "RiotClientInstalls.json"), encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return None
+    for k in ("rc_default", "rc_live"):
+        if d.get(k) and os.path.isfile(d[k]):
+            return d[k]
+    return None
+
+
+def _game_folders():
+    """folders called Games (or "... Games") near the top of each drive, skipping Windows' own: {game folder: its name}"""
+    out = {}
+    if sys.platform != "win32":
+        return out
+    import string
+    for letter in string.ascii_uppercase:
+        drive = f"{letter}:\\"
+        if not os.path.exists(drive):
+            continue
+        stack, seen = [(drive, 0)], 0
+        while stack and seen < 4000:
+            folder, depth = stack.pop()
+            seen += 1
+            try:
+                subs = [e for e in os.scandir(folder) if e.is_dir(follow_symlinks=False) and e.name.lower() not in SKIP_DIRS and not e.name.startswith(("$", "."))]
+            except OSError:
+                continue
+            if re.search(r"(^|\s)games$", os.path.basename(folder.rstrip("\\")), re.I) and "riot games" not in folder.lower():
+                out.update({e.path: e.name for e in subs})
+            elif depth < 3:
+                stack += [(e.path, depth + 1) for e in subs]
+    return out
+
+
+def pc_games():
+    """Games with no launcher of their own to read, from what Windows lists and from Games folders. Their id is a hash of the folder,
+    so play() only ever starts what this scan found."""
+    import hashlib
+    taken = {os.path.normcase(os.path.normpath(p)) for p in game_dirs()}
+    found = {}
+    for key, e in uninstall_entries().items():
+        if SKIP_KEYS.search(key) or NOT_GAMES.search(e["name"]):
+            continue
+        if GAME_MAKERS.search(e["publisher"]) or GAME_MAKERS.search(e["name"]) or "game" in e["folder"].lower():
+            folder = e["folder"] or (os.path.dirname(e["icon"]) if e["icon"].lower().endswith(".exe") else "")
+            if folder and os.path.isdir(folder):
+                found[folder] = {"name": re.sub(r" for \w+$", "", e["name"]), "exe": e["icon"] if e["icon"].lower().endswith(".exe") and not BAD_EXE.search(os.path.basename(e["icon"])) else None,
+                                 "size_gb": round(float(e["kb"] or 0) / 1e6, 1)}
+    for folder, name in _game_folders().items():
+        found.setdefault(folder, {"name": name, "exe": None, "size_gb": 0})
+    games = []
+    for folder, g in found.items():
+        if os.path.normcase(os.path.normpath(folder)) in taken:
+            continue
+        exe = g["exe"] if g["exe"] and os.path.isfile(g["exe"]) else _main_exe(folder)
+        if exe:
+            games.append({"store": "pc", "id": hashlib.md5(os.path.normcase(folder).encode("utf-8")).hexdigest()[:16], "name": g["name"], "cover": "", "ready": True,
+                          "size_gb": g["size_gb"] or _size_gb(folder), "exe": exe})
+    return games
+
+
+def installed():
+    """every game on this PC, A-Z: [{store, store_name, id, name, cover, ready, size_gb}]"""
+    games = []
+    for fn in (steam_games, epic_games, gog_games, ubisoft_games, riot_games, pc_games):
         try:
             games += fn()
         except Exception as e:  # noqa: BLE001 - one broken launcher shouldn't hide the others
             print(f"[launchers] {fn.__name__}: {e}")
     for g in games:
         g["store_name"] = STORES[g["store"]]
+        g.pop("exe", None)
     return sorted(games, key=lambda g: g["name"].lower())
 
 
@@ -238,6 +383,22 @@ def game_dirs():
 def play(store, gid):
     """start the game through its launcher (like pressing Play there)"""
     gid = str(gid)
+    if store == "riot" and re.fullmatch(r"\w+\.\w+", gid):
+        client = _riot_client()
+        if not client:
+            return {"error": "The Riot Client isn't installed any more."}
+        product, patchline = gid.split(".")
+        subprocess.Popen([client, f"--launch-product={product}", f"--launch-patchline={patchline}"], cwd=os.path.dirname(client))
+        return {"ok": True}
+    if store == "pc":
+        g = next((x for x in pc_games() if x["id"] == gid), None)
+        if not g:
+            return {"error": "That game isn't there any more."}
+        try:
+            subprocess.Popen([g["exe"]], cwd=os.path.dirname(g["exe"]))
+        except OSError as e:
+            return {"error": f"Couldn't start {g['name']}: {e}"}
+        return {"ok": True}
     if store == "steam" and gid.isdigit():
         url = f"steam://rungameid/{gid}"
     elif store == "epic" and re.fullmatch(r"[\w.-]+:[\w.-]+:[\w.-]+", gid):

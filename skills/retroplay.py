@@ -8,7 +8,7 @@ How it works (beginner version):
    refuse: then the loading screen says so. Once the site has started the download the app fetches that same link
    itself, so the loading screen shows real numbers. The site is often slow (a 200 MB game can take 20 minutes).
 3. RetroArch (the emulator) and the "core" for that console are looked for. Whatever is missing is downloaded.
-4. RetroArch opens with the game.
+4. RetroArch opens with the game, inside Vermeil's window (skills/retrobar.py).
 
 The phone can't run RetroArch: prepare() and progress() only get the file, and the phone's own player opens it.
 """
@@ -78,6 +78,14 @@ LAUNCH_SETTINGS = {
     "core_info_cache_enable": "false",           # a half-written cache file makes RetroArch crash at the start
     "quit_press_twice": "false",                 # the bar's Back closes the game at once
     "confirm_quit": "false",
+    # it runs inside Vermeil's window: no fullscreen, frame or menu, and parked off-screen for the moment before it's moved in
+    "video_fullscreen": "false",
+    "video_window_show_decorations": "false",
+    "ui_menubar_enable": "false",
+    "video_window_save_positions": "true",
+    "video_window_offset_x": -6000,
+    "video_window_offset_y": -6000,
+    "input_driver": "dinput",                    # the keyboard reaches a window that's inside another program's
 }
 
 _jobs = {}
@@ -358,29 +366,45 @@ def archive_kind(path):
     return "zip" if head[:2] == b"PK" else "7z" if head[:4] == b"7z\xbc\xaf" else "rar" if head[:4] == b"Rar!" else None
 
 
+def _seven_zips():
+    """every copy of 7-Zip on this PC, whoever put it there (the NVIDIA App brings its own)"""
+    return [t for t in (shutil.which("7z"), shutil.which("7za"), r"C:\Program Files\7-Zip\7z.exe", r"C:\Program Files (x86)\7-Zip\7z.exe",
+                        r"C:\Program Files\NVIDIA Corporation\NVIDIA App\7z.exe") if t and os.path.isfile(t)]
+
+
+def _bsdtars():
+    """newer versions of the tar in Windows, which do read .7z: Miniconda brings one"""
+    home = Path.home()
+    return [str(p) for p in (home / "miniconda3" / "Library" / "bin" / "bsdtar.exe", home / "anaconda3" / "Library" / "bin" / "bsdtar.exe") if p.is_file()]
+
+
 def _extract_archive(archive, target):
     """.7z and .rar"""
     os.makedirs(target, exist_ok=True)
-    for tool in (shutil.which("7z"), shutil.which("7za"), r"C:\Program Files\7-Zip\7z.exe", r"C:\Program Files (x86)\7-Zip\7z.exe"):
-        if tool and os.path.isfile(tool):
-            subprocess.run([tool, "x", archive, f"-o{target}", "-y"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    quiet = dict(stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    for tool in _seven_zips():
+        try:
+            subprocess.run([tool, "x", archive, f"-o{target}", "-y"], check=True, **quiet)
             return
+        except (OSError, subprocess.CalledProcessError) as e:
+            print(f"[retro play] {tool}: {type(e).__name__}")
     with open(archive, "rb") as f:
         is_7z = f.read(4) == b"7z\xbc\xaf"          # the site's ".rar" files are often really 7-Zip: the file's first bytes tell
     if is_7z:
         py7zr = _py7zr()
-        if py7zr:
-            with py7zr.SevenZipFile(archive, mode="r") as z:
-                z.extractall(path=target)
+        try:
+            if py7zr:
+                with py7zr.SevenZipFile(archive, mode="r") as z:
+                    z.extractall(path=target)
+                return
+        except Exception as e:  # noqa: BLE001 - RetroArch's own .7z uses a filter py7zr can't read (BCJ2)
+            print(f"[retro play] py7zr: {type(e).__name__}: {e}")
+    for tar in _bsdtars() + [t for t in (shutil.which("tar"),) if t]:      # Windows 10 and 11 have one built in: fine for real .rar files
+        r = subprocess.run([tar, "-xf", archive, "-C", target], **quiet)
+        if not r.returncode:
             return
-    tar = shutil.which("tar")                       # Windows 10 and 11 have this one built in: fine for real .rar files
-    if not tar:
-        raise RuntimeError("7-Zip is needed to open this game")
-    r = subprocess.run([tar, "-xf", archive, "-C", target], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    if r.returncode:
         print(f"[retro play] tar: {r.stderr.decode('utf-8', 'replace')[:300]}")
-        raise subprocess.CalledProcessError(r.returncode, "tar")
+    raise RuntimeError("7-Zip is needed to unpack this. Install it from 7-zip.org and press Play again.")
 
 
 def _py7zr():
@@ -484,7 +508,7 @@ def missing_bios(exe, system):
     return f"PlayStation 2 games need the console's BIOS file. Put your own in {folder} and press Play again."
 
 
-def launch(exe, rom, system, say=lambda *a: None, fullscreen=True, **popen):
+def launch(exe, rom, system, say=lambda *a: None, fullscreen=False, **popen):
     """open the game -> the running process. A core that can't run the game closes RetroArch within seconds: then the next
     one is tried (arcade has several), and if none can, the loading screen says so."""
     for core in [CORES[system][0]] + (ARCADE_ALSO if system == "arcade" else []):
@@ -561,16 +585,22 @@ def ensure_core(exe, system, say, core=None):
     fd, tmp = tempfile.mkstemp(suffix=".zip")
     os.close(fd)
     try:
-        for tries_left in (2, 1, 0):
+        for wait in (3, 8, 20, 40, 0):             # the build server drops connections when it's busy
             try:
                 _fetch(CORE_URL.format(core), tmp, f"Downloading the {label} core", say, 0.82, 0.94)
                 break
             except requests.RequestException:
-                if not tries_left:
+                if not wait:
                     raise
-                time.sleep(3)
-        with zipfile.ZipFile(tmp) as z:
-            z.extract(f"{core}.dll", cores)
+                time.sleep(wait)
+        with zipfile.ZipFile(tmp) as z, open(f"{dll}.part", "wb") as out:
+            shutil.copyfileobj(z.open(f"{core}.dll"), out)
+        try:
+            os.replace(f"{dll}.part", dll)
+        except PermissionError:                     # Game Boy and Game Boy Color share a core: the other one got it first
+            if not dll.is_file():
+                raise
+            os.remove(f"{dll}.part")
     except Exception as e:
         raise RuntimeError(f"Couldn't download the {label} core ({type(e).__name__}). Check your internet and try again.")
     finally:
@@ -621,6 +651,10 @@ def _run(job, game, gid, system, phone):
     def say(text, pct):
         st.update(text=text, pct=pct)
     try:
+        have = None if phone else find_retroarch()
+        needs = missing_bios(have, system) if have else ""
+        if needs:                                   # said before a big download, not after it
+            raise RuntimeError(needs)
         path = _get_game(game, gid, system, say, lambda: st.get("cancel"))
         retrogames.add_recent({**game, "id": gid})
         retrogames.trim_cache(keep={gid})
@@ -646,12 +680,12 @@ def _run(job, game, gid, system, phone):
             import retrobar
             retrobar.attach(proc, game.get("title", ""))
         except Exception as e:  # noqa: BLE001 - the game still plays without the bar
-            print(f"[retro play] bar: {type(e).__name__}: {e}")
+            print(f"[retro play] inside the app: {type(e).__name__}: {e}")
         proc.wait()
         st.update(running=False)
     except Exception as e:
         print(f"[retro play] {type(e).__name__}: {e}")
-        st.update(error=str(e) if isinstance(e, RuntimeError) else "Couldn't start the game. Try again in a moment.", done=True, running=False)
+        st.update(error=str(e) if isinstance(e, RuntimeError) else f"Couldn't start the game ({type(e).__name__}). Try again in a moment.", done=True, running=False)
 
 
 def _begin(game, gid, system, phone=False):

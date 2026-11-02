@@ -565,3 +565,7 @@ Ideas 201–500 were added on 1 Nov 2026.
 498. **New** – Group chat with friends where Vermeil can join to help.
 499. **New** – Share a recipe card or workout plan as a picture.
 500. **New** – Community idea board: vote on which of these ideas get built next.
+
+## Turtle Island next (3 Nov 2026)
+
+Done features are in `FEATURES.md`; what's left of the spec is in `ui/turtle/DEVLOG.md`. Ideas: control remapping, scored fishing tournaments, an aquarium, Vermeil's expressions in the game, bigger far towns, driving the tractors.

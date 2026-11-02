@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turtle Island</title>
+<link rel="stylesheet" href="../vendor/fonts/nunito.css">
+<link rel="stylesheet" href="turtle.css">
+<script type="importmap">{ "imports": { "three": "../vendor/three/build/three.module.js", "three/addons/": "../vendor/three/examples/jsm/" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" hidden>
+  <div class="pill clock"><span id="weatherIc">☀</span><b id="clock">6:30 am</b><small id="dayInfo">Spring 1</small></div>
+  <div class="pill money"><span class="shell">🐚</span><b id="money">0</b></div>
+  <div class="pill goal"><small>Next</small><span id="goal"></span></div>
+  <div class="stam" title="Energy"><i id="stamina"></i></div>
+  <div class="hint" id="toolInfo"></div>
+  <div class="toolbar" id="toolbar"></div>
+  <div class="pill modepill" id="mode" hidden></div>
+  <button class="pill bookbtn" id="bookBtn" type="button" title="Journal (J)" onclick="G.book.toggle()">📖</button>
+  <button class="pill bookbtn buildbtn" id="buildBtn" type="button" title="Build (B)" onclick="G.build.toggle()">🔨</button>
+</div>
+
+<section id="buildBar" class="buildbar" hidden>
+  <div class="build-top"><div id="buildTabs" class="build-tabs" role="tablist"></div><span id="buildMoney" class="build-money"></span><button type="button" class="cozy small ghost" id="undoBuild">↶ Undo</button><button type="button" class="cozy small" id="doneBuild">Done</button></div>
+  <div id="buildList" class="build-list"></div>
+  <p class="build-help">Click a piece to add it · drag to move · R turn · Q / E small turn · Delete remove · Ctrl+Z undo · WASD look around</p>
+</section>
+<div class="place-tools" id="placeTools" hidden>
+  <button type="button" class="ptool" id="toolTurn" title="Turn (R)" aria-label="Turn"><svg viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <button type="button" class="ptool danger" id="toolRemove" title="Remove (Delete)" aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+</div>
+<div class="hover-label" id="hoverLabel" hidden></div>
+
+<div id="prompt" class="prompt" hidden></div>
+<div id="pops"></div>
+
+<div id="fishBar" class="fishbar" hidden><div id="fishZone" class="fish-zone"></div><div id="fishMark" class="fish-mark"></div></div>
+
+<section id="talk" class="talk" hidden>
+  <div class="talk-name" id="talkName"></div>
+  <p id="talkText"></p>
+  <div class="talk-dots" id="talkDots" hidden><i></i><i></i><i></i></div>
+  <div class="talk-opts" id="talkOptions" hidden></div>
+</section>
+
+<section id="book" class="book" hidden>
+  <nav id="bookTabs" class="book-tabs"></nav>
+  <div class="book-body"><button class="x" id="bookClose" type="button" aria-label="Close">✕</button><div id="bookPage" class="book-page"></div></div>
+</section>
+
+<section id="shop" class="shop" hidden>
+  <div class="shop-head"><h2 id="shopTitle"></h2><span id="shopMoney"></span><button class="x" id="shopClose" type="button" aria-label="Close">✕</button></div>
+  <div id="shopRows" class="rows"></div>
+</section>
+
+<section id="creator" class="creator" hidden>
+  <h1>Who's moving in?</h1>
+  <label class="field">Your name <input id="playerName" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Type your name"></label>
+  <p class="label">You are</p>
+  <div class="choice"><button type="button" data-body="male">Male</button><button type="button" data-body="female">Female</button></div>
+  <p class="label">Outfit</p>
+  <div class="skins" id="skinRow"></div>
+  <button class="cozy big" id="startGame" type="button">Step onto the turtle</button>
+</section>
+
+<div id="titleCard" class="title-card" hidden><h1>Turtle Island</h1><p>A whole life, on the back of something alive.</p></div>
+<div id="fade" class="fade"></div>
+
+<div id="loading" class="loading"><h1>Turtle Island</h1><div class="load-bar"><i id="loadBar"></i></div><p id="loadText">Finding the turtle…</p></div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

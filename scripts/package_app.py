@@ -36,13 +36,13 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(ROOT, "dist")
 
-ALWAYS_SKIP_DIRS = {"__pycache__", ".git", ".vscode", ".idea", "dist", "_archive", "node_modules", ".pytest_cache"}
+ALWAYS_SKIP_DIRS = {"_originals", "__pycache__", ".git", ".vscode", ".idea", "dist", "_archive", "node_modules", ".pytest_cache"}
 # login tokens / secrets - never copied, sign in again on the new PC
 SECRET_FILES = ["data/spotify_token.json", "data/google_token.json", "data/google_credentials.json", "data/cookies.txt"]
 ALWAYS_SKIP_FILES = ["env", ".env", "*.pyc", "*.blend1", "*.tmp", "*.part", "*.log",
                      "data/plugins.json"] + SECRET_FILES          # (the installer writes a fresh plugins.json)
 # made as their own zips in plugin_packs/ (Settings -> Plugins installs them)
-PACKS = {"game_assets": ["ui/game/assets"], "ffmpeg": ["Packages/ffmpeg-8.0-full_build/bin/ffplay.exe"],
+PACKS = {"game_assets": ["ui/game/assets", "ui/games/asset_packs"], "ffmpeg": ["Packages/ffmpeg-8.0-full_build/bin/ffplay.exe"],
          "rvc_models": ["tools/rvc", "data/rvc_voices"], "unimate": ["tools/unimate"]}
 # your personal saved things (only with --with-my-data)
 MY_DATA = ["data/*.json", "data/*.txt", "data/game/**", "data/library/**", "data/meetings/**"]

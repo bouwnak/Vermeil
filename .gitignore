@@ -158,3 +158,6 @@ data/auto_setup.json
 # Settings -> Backup: the safety copy made before a restore
 backups/
 ui/games/covers/
+
+# --- Source files of the extracted farm packs: big, and the game doesn't load them ---
+ui/games/asset_packs/_originals/

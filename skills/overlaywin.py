@@ -1,5 +1,5 @@
 """overlaywin.py - small always-on-top windows over a game: found by title, moved and shown without taking the keyboard
-away from the game (the bar in skills/retrobar.py, her box in skills/gamebuddy.py)."""
+away from the game (her box in skills/gamebuddy.py)."""
 import ctypes
 import sys
 
@@ -91,7 +91,8 @@ def place(hwnd, x, y, w, h):
 
 def give_focus(hwnd):
     if hwnd:
-        _user32().SetForegroundWindow(hwnd)
+        u = _user32()
+        u.SetForegroundWindow(u.GetAncestor(hwnd, 2) or hwnd)      # 2 = its top window: a game inside Vermeil's window gets the keys through it
 
 
 def mouse_down():

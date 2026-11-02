@@ -1,10 +1,12 @@
 // closeup.js - your character up close, in her box over a game (buddy.html): the 3D model (the same one as in the room),
-// framed on the head and shoulders. She idles, blinks, talks while her line is shown and reacts with her animations.
+// framed so that the whole head shows, however big it is and whatever hangs off it. She idles, blinks, talks while her line is shown
+// and reacts with her animations.
 // If the 3D view can't start (no WebGL, model missing) the panel shows a big 💜 instead and everything else works.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { inPlace } from "./inplace.js";
-import { analyzeRig, cleanClips, rigExtras } from "./rigparts.js";
+import { analyzeRig, cleanClips, rigExtras, headBox, facing, useOwnClips, jawOpener, floorUnder, solidBodies, FLOATING } from "./rigparts.js";
+import { faceSheets } from "./facetex.js";
 
 // clips that play once and then go back to idling
 const ONCE = new Set(["cheer", "clap", "laugh", "bow", "nod", "shake", "shrug", "point", "surprised", "happy", "angry", "sad", "shy",
@@ -14,7 +16,7 @@ const FACES = { idle: ["eyes_open", "mouth_basic_normal"], happy: ["eyes_open", 
   cheer: ["eyes_closed", "mouth_open_smile_02"], clap: ["eyes_open", "mouth_open_smile_01"], sad: ["eyes_half", "mouth_basic_sad"],
   angry: ["eyes_angry", "mouth_angry"], surprised: ["eyes_open", "mouth_ooo"], think: ["eyes_half", "mouth_basic_neutral"],
   shy: ["eyes_half", "mouth_smile_01"], shrug: ["eyes_half", "mouth_eek"], smug: ["eyes_half", "mouth_smile_02"] };
-const MODEL = "anime_girl.glb", HEIGHT = 1.6;
+const MODEL = "anime_girl.glb", HEIGHT = 1.6, ROOM = 1.18;      // ROOM: the head takes up this much less than the whole view
 
 const stub = { react() {}, talk() {}, pause() {}, ready: Promise.resolve(false) };
 
@@ -40,7 +42,8 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
   const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(1, 2, 3); scene.add(key);
   const rim = new THREE.DirectionalLight(new THREE.Color(accent), 3.2); rim.position.set(-2, 1.5, -2); scene.add(rim);
 
-  let mixer = null, actions = {}, current = null, head = null, jaw = null, face = null, root = null, extras = null;
+  let mixer = null, actions = {}, current = null, head = null, jaw = null, face = null, sheet = null, root = null, extras = null, mouths = [];
+  let frame_ = null;                                        // the head's box around the head bone: { offset, w, h, d }
   let faceName = "idle", faceUntil = 0, talkUntil = 0, blinkIn = 2.5, mouthT = 0, mouthOpen = false;
   const look = { x: 0, y: 0, tx: 0, ty: 0 };
   const target = new THREE.Vector3(), headPos = new THREE.Vector3();
@@ -49,6 +52,14 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     const w = box.clientWidth || 300, h = box.querySelector(".vm-view")?.clientHeight || box.clientHeight || 300;
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
+    fit();
+  }
+  /** how far back the camera stands so that the whole head fits, in a wide box or a tall one */
+  let distance = 1.35;
+  function fit() {
+    if (!frame_) return;
+    const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    distance = Math.max(frame_.h / (2 * tan), frame_.w / (2 * tan * camera.aspect)) * ROOM + frame_.d / 2;
   }
   new ResizeObserver(size).observe(box);
 
@@ -77,8 +88,9 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     root = gltf.scene;
     const s = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
     root.scale.multiplyScalar(HEIGHT / Math.max(s.y, 1e-6));
-    const b = new THREE.Box3().setFromObject(root);
-    root.position.y -= b.min.y;
+    const info = analyzeRig(root);
+    root.position.y -= floorUnder(root, info);
+    if (facing(root, info) < 0) root.rotation.y += Math.PI;      // built facing away: it's the face you want to see
     const mats = {};
     root.traverse((o) => {
       const n = o.name || "";
@@ -86,24 +98,37 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
       if (m) o.visible = m[1].toLowerCase() === outfit;
       m = /^hair_(\w+)$/i.exec(n);
       if (m) o.visible = m[1].toLowerCase() === hair;
-      if (o.isBone && !head && /head/i.test(n) && !/(top|end|nub)/i.test(n)) head = o;
-      if (o.isBone && !jaw && /jaw|chin|mouth/i.test(n) && !/(end|nub)/i.test(n)) jaw = o;
       if (o.isMesh) o.frustumCulled = false;
+      if (o.morphTargetDictionary) for (const [k, i] of Object.entries(o.morphTargetDictionary)) if (/(jaw|mouth.?open|^aa$|v_aa|vrc\.v_aa)/i.test(k)) mouths.push([o, i]);
       for (const mt of [].concat(o.material || [])) if (/^(eyes|mouth)$/i.test(mt.name)) mats[mt.name.toLowerCase()] = mt;
     });
+    head = info.head;
     if (mats.eyes && mats.mouth) {
+      const dir = `models/${encodeURIComponent((model || MODEL).replace(/\.(glb|gltf)$/i, ""))}_face/`;
       const loader = new THREE.TextureLoader(), cache = {};
-      const tex = (n) => cache[n] ||= loader.load(`models/anime_girl_face/${n}.png`, (t) => { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; }, undefined, () => { cache[n] = null; });
+      const tex = (n) => cache[n] ||= loader.load(`${dir}${n}.png`, (t) => { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; }, undefined, () => { cache[n] = null; });
       for (const [e, m] of Object.values(FACES)) { tex(e); tex(m); }
       ["mouth_eek", "mouth_ooo", "mouth_open_smile_01"].forEach(tex);
       face = { mats, tex, cur: {} };
     }
     scene.add(root);
-    const info = analyzeRig(root);                        // UniMate clips cleaned, hands posed, hair/cloth swinging
+    // the head as it stands, before any clip moves it: everything that follows it, hair and ears too. A model without a head bone: its top
+    root.updateMatrixWorld(true);
+    const whole = new THREE.Box3().setFromObject(root), hb = headBox(root, info) || whole.clone().setFromCenterAndSize(
+      new THREE.Vector3(0, whole.max.y - HEIGHT * 0.09, (whole.min.z + whole.max.z) / 2), new THREE.Vector3(HEIGHT * 0.2, HEIGHT * 0.18, HEIGHT * 0.2));
+    const anchor = (head || root).getWorldPosition(new THREE.Vector3());
+    const dims = hb.getSize(new THREE.Vector3());
+    frame_ = { offset: hb.getCenter(new THREE.Vector3()).sub(anchor), w: dims.x, h: dims.y, d: dims.z };
+    solidBodies(root);
+    if (!face) sheet = faceSheets(root, info);
+    if (sheet?.mouth) mouths = [];
+    else if (!mouths.length) jaw = jawOpener(info);
+    // UniMate clips cleaned, hands posed, hair/cloth swinging
     if (/-animated\.glb$/i.test(model || "")) try { cleanClips(root, gltf.animations, info); } catch (e) { console.warn(e); }
     extras = rigExtras(root, info, { skip: new Set(gltf.animations.flatMap((a) => a.tracks.map((t) => t.name.split(".")[0]))) });
     if (gltf.animations.length) {
-      inPlace(gltf.animations);
+      useOwnClips(gltf.animations, info);
+      inPlace(gltf.animations.filter((a) => !FLOATING.test(a.name)));
       mixer = new THREE.AnimationMixer(root);
       for (const clip of gltf.animations) actions[clip.name.toLowerCase()] = mixer.clipAction(clip);
       mixer.addEventListener("finished", () => play("idle"));
@@ -112,8 +137,7 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     }
     root.updateMatrixWorld(true);
     (head || root).getWorldPosition(headPos);
-    if (!head) headPos.y = HEIGHT * 0.9;
-    target.copy(headPos).add(new THREE.Vector3(0, -0.1, 0));
+    target.copy(headPos).add(frame_.offset);
     box.classList.add("vm-ready");
     size();
     return true;
@@ -147,17 +171,19 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     look.x += (look.tx - look.x) * Math.min(1, dt * 4);
     look.y += (look.ty - look.y) * Math.min(1, dt * 4);
     const q0 = head?.quaternion.clone();                  // the look is added on top of the clip, then taken off again
-    const j0 = jaw?.quaternion.clone();
     const talking = now < talkUntil;
+    const open = talking ? 0.5 + 0.5 * Math.sin(now / 70) : 0;
     if (head) {
       head.rotation.y += look.x * 0.45; head.rotation.x += look.y * 0.25;
-      if (talking && !face) { head.rotation.x += Math.sin(now / 160) * 0.035; head.rotation.z += Math.sin(now / 410) * 0.025; }   // a model without face pictures nods as it talks
+      if (talking && !face && !sheet?.mouth && !jaw && !mouths.length) { head.rotation.x += Math.sin(now / 160) * 0.035; head.rotation.z += Math.sin(now / 410) * 0.025; }   // nothing to talk with: it nods
     }
-    if (jaw && talking && !face) jaw.rotation.x += (0.5 + 0.5 * Math.sin(now / 70)) * 0.18;
+    for (const [mesh, i] of mouths) mesh.morphTargetInfluences[i] = open;
+    jaw?.apply(open);
+    sheet?.update(dt, open, now < faceUntil ? faceName : "neutral");
     root.updateMatrixWorld(true);
     // the camera follows her head (a jump or a bow moves it)
-    if (head) { head.getWorldPosition(headPos); target.lerp(headPos.clone().add(new THREE.Vector3(0, -0.07, 0)), Math.min(1, dt * 3)); }
-    camera.position.set(target.x + look.x * 0.04, target.y + 0.02, target.z + 1.35);
+    if (head) { head.getWorldPosition(headPos); target.lerp(headPos.clone().add(frame_.offset), Math.min(1, dt * 3)); }
+    camera.position.set(target.x + look.x * 0.04, target.y + 0.02, target.z + distance);
     camera.lookAt(target);
     // face: blink, mood, and the mouth moving while her line is on screen
     if (face) {
@@ -174,7 +200,6 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     }
     renderer.render(scene, camera);
     if (head) head.quaternion.copy(q0);
-    if (jaw) jaw.quaternion.copy(j0);
   })();
 
   return {

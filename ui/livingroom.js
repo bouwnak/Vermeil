@@ -29,6 +29,7 @@ export function videoEmbed(url) {
 export function initLivingRoom({ api, room, toast, openPanel, rerender }) {
   const live = { vcash: 0, owned: [], season: null, weekly: [], achievements: [], decor: "none" };
   roomHooks.api = api;
+  roomHooks.toast = toast;
   roomHooks.open = (kind, data) => {
     if (kind === "tv") return openTv(data);
     if (kind === "forecast") return openForecast(data);

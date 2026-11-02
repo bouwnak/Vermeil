@@ -2016,6 +2016,25 @@ input.tiny { width: 56px; }
 .br-view { min-height: 240px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff1; display: grid; place-items: center; }
 .br-view[hidden], .br-start[hidden] { display: none; }
 
+/* the floating video player: the web view sits over .brf-view, so the bar and the edges around it are what the page can still catch */
+.br-float { position: fixed; z-index: 900; display: flex; flex-direction: column; padding: 0 8px 8px; box-sizing: border-box; border-radius: 12px; background: #10151e; border: 1.5px solid var(--line); box-shadow: 0 12px 34px rgba(0,0,0,.5); }
+.br-float[hidden] { display: none; }
+.brf-bar { display: flex; align-items: center; gap: 4px; height: 34px; flex: none; cursor: move; user-select: none; touch-action: none; }
+.brf-title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12.5px; font-weight: 700; color: #e8edf5; }
+.brf-btn { width: 26px; height: 26px; border: 0; border-radius: 7px; background: transparent; color: #e8edf5; cursor: pointer; }
+.brf-btn:hover { background: rgba(255,255,255,.14); }
+.brf-view { flex: 1; min-height: 0; background: #000; border-radius: 6px; }
+.brf-grip { position: absolute; touch-action: none; }
+.brf-n { top: -4px; left: 14px; right: 14px; height: 8px; cursor: ns-resize; }
+.brf-s { bottom: 0; left: 14px; right: 14px; height: 8px; cursor: ns-resize; }
+.brf-e { right: 0; top: 14px; bottom: 14px; width: 8px; cursor: ew-resize; }
+.brf-w { left: 0; top: 14px; bottom: 14px; width: 8px; cursor: ew-resize; }
+.brf-ne, .brf-nw, .brf-se, .brf-sw { width: 14px; height: 14px; }
+.brf-ne { top: -4px; right: 0; cursor: nesw-resize; }
+.brf-nw { top: -4px; left: 0; cursor: nwse-resize; }
+.brf-se { bottom: 0; right: 0; cursor: nwse-resize; }
+.brf-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+
 /* an update is ready to install */
 #panel-settings button.upd-ready { box-shadow: 0 0 0 3px rgba(255, 90, 122, .35); animation: updPulse 1.8s ease-in-out infinite; }
 @keyframes updPulse { 50% { box-shadow: 0 0 0 7px rgba(255, 90, 122, .12); } }

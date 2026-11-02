@@ -8,7 +8,9 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { CozyRoom, CATALOG } from "./cozyroom.js";
 import { inPlace } from "./inplace.js";
-import { analyzeRig, cleanClips, rigExtras, floorUnder } from "./rigparts.js";
+import { analyzeRig, cleanClips, rigExtras, floorUnder, facing, useOwnClips, jawOpener, bodyPlan, looksLikeMonster, bodyOf, solidBodies, FLOATING, MONSTER_NAMES } from "./rigparts.js";
+import { faceSheets } from "./facetex.js";
+import { monsterClips } from "./monstermoves.js";
 import { buildGymRoom, GYM_LAYOUT } from "./gymroom.js";
 
 const INK = 0x2e2135;
@@ -459,7 +461,8 @@ export class Room {
   }
 
   // ---------------- characters ----------------
-  async setModel(file, { flip = false, outfit = "", hair = "" } = {}) {
+  async setModel(file, { flip = false, outfit = "", hair = "", travel = "" } = {}) {
+    this._travelChoice = travel;
     this._clearCharacter();
     if (!file) { this._useCharacter(this._sketchFigure()); return; }
     if (file === "builtin:penguin") { this._useCharacter(this._penguin(), flip); return; }
@@ -506,7 +509,9 @@ export class Room {
     root.position.y -= c.info ? floorUnder(root, c.info) : box.min.y;   // feet on the floor, even in clothes longer than the legs
     const turn = new THREE.Group();               // fixes models that face the wall
     turn.add(root);
-    if (flip) turn.rotation.y = Math.PI;
+    // where its toes point decides, or a model built facing away walks backwards; the Flip box is for those that can't tell
+    const toes = c.info ? facing(root, c.info) : 0;
+    if (toes ? toes < 0 : flip) turn.rotation.y = Math.PI;
     const holder = new THREE.Group();             // moves & turns when walking
     holder.add(turn);
     holder.position.copy(HOME);
@@ -536,26 +541,45 @@ export class Room {
     // UniMate's clips (models saved as <name>-animated.glb) are cleaned: body bones only, smooth, feet on the floor,
     // arms hanging naturally (ui/rigparts.js). Hand-made clips (Vermeil's own) are left as they are.
     const info = analyzeRig(root);
+    solidBodies(root);
     if (/-animated\.glb$/i.test(file)) {
       try { cleanClips(root, gltf.animations, info); } catch (e) { console.warn("clean clips", e); }
+    }
+    useOwnClips(gltf.animations, info);          // the walk, roar and sleep it came with, by the names the room plays
+    // a monster's moves, made from its own body: what it came with or UniMate made stays
+    let plan = null;
+    const monster = info.bones.length && (looksLikeMonster(info) || bodyOf(root) === "monster");
+    if (monster || (info.bones.length && this._travelChoice === "hover")) {     // anyone can hover; the other moves are a monster's
+      try {
+        plan = bodyPlan(root, info);
+        gltf.animations = gltf.animations.filter((a) => !/^hover(_go)?$/i.test(a.name));   // always the calm hover made from this body
+        gltf.animations.push(...monsterClips(root, info, plan, new Set(gltf.animations.map((a) => a.name.toLowerCase())), monster ? null : ["hover", "hover_go"]));
+      } catch (e) { console.warn("monster moves", e); }
     }
     // fingers and hair/cloth the animations don't move: hand poses that fit the fingers, and swinging springs
     const animated = new Set(gltf.animations.flatMap((a) => a.tracks.map((tr) => tr.name.split(".")[0])));
     for (const e of ears) animated.add(e.bone.name);
     const extras = rigExtras(root, info, { skip: animated });
     const fingers = Object.values(extras.info.hands).flatMap((h) => h.fingers);
-    const c = { kind: "gltf", root, head, headBase: head?.rotation.clone(), mouths, mixer: null, actions: {}, ears, fingers, extras, info };
+    const c = { kind: "gltf", root, head, headBase: head?.rotation.clone(), mouths, mixer: null, actions: {}, ears, fingers, extras, info, plan };
     this._findLooks(c);
     this._findFace(c, file);
+    // how it talks: the mouth pictures in its textures if it has them, else shape keys, else its jaw bone; without any of those it just nods
+    if (!c.face) c.sheet = faceSheets(root, info);
+    if (c.sheet?.mouth) c.mouths = [];
+    else if (!mouths.length) c.jaw = jawOpener(info);
     if (gltf.animations.length) {
-      inPlace(gltf.animations);                  // a walk that moves the hips would jump back at every loop
+      inPlace(gltf.animations.filter((a) => !FLOATING.test(a.name)));    // a walk that moves the hips would jump back at every loop
       c.mixer = new THREE.AnimationMixer(root);
-      // of the clips with a matching name, the one that moves the most bones: a model can carry an old 4-track "Idle"
-      // next to the real "idle", and playing that one left the character in a T-pose
-      const find = (re) => gltf.animations.filter((a) => re.test(a.name)).sort((a, b) => b.tracks.length - a.tracks.length)[0];
-      const idle = find(/idle|breath|stand/i) || gltf.animations[0];
-      const walk = find(/walk/i);
-      const wave = find(/wave|hello|greet/i);
+      // the clip called just that; else of the clips with a matching name, the one that moves the most bones: a model can
+      // carry an old 4-track "Idle" next to the real "idle", and playing that one left the character in a T-pose
+      const find = (re, exact = "") => gltf.animations.find((a) => a.name === exact) || gltf.animations.filter((a) => re.test(a.name) && !/_unimate$/.test(a.name)).sort((a, b) => b.tracks.length - a.tracks.length)[0];
+      // how it gets around: wings and no legs fly, no legs and no wings float, wings and legs do as you pick in Characters
+      const way = plan?.travel, air = way === "fly" || (way === "both" && this._travelChoice === "fly"), hovers = this._travelChoice === "hover" && plan;
+      const named = (n) => gltf.animations.find((a) => a.name === n);
+      const idle = (hovers && named("hover")) || (air && named("hover")) || (way === "float" && named("float")) || find(/idle|breath|stand/i, "idle") || gltf.animations[0];
+      const walk = (hovers && named("hover_go")) || (air && (named("fly") || named("glide"))) || (way === "float" && named("float")) || find(/walk/i, "walk");
+      const wave = find(/wave|hello|greet/i, "wave");
       c.actions.idle = c.mixer.clipAction(idle).play();
       c._pose = "idle";
       if (walk) c.actions.walk = c.mixer.clipAction(walk);
@@ -564,7 +588,7 @@ export class Room {
       if (talk) c.actions.talk = c.mixer.clipAction(talk);                 // gestures while she speaks
       for (const name of ["happy", "sad", "surprised", "angry", "think", "sleepy", "dance", "sit", "type", "lounge", "lie", "crouch", "lookout",
         "book_take", "book_read", "book_put", "dance_hiphop", "dance_idol", "dance_twirl", "dance_sway", "cheer", "jump", "stretch", "yawn", "laugh", "shy", "clap", "shrug", "bow", "nod", "shake", "point", "look_around",
-        "squat", "lunge", "deadlift", "pushup", "curl", "row", "press", "plank", "jumping_jacks"]) {   // gym demos (UniMate "Gym exercises") + moods + furniture + reading + extras (if the model has them)
+        "squat", "lunge", "deadlift", "pushup", "curl", "row", "press", "plank", "jumping_jacks", ...MONSTER_NAMES]) {   // gym demos (UniMate "Gym exercises") + monster moves + moods + furniture + reading + extras (if the model has them)
         const clip = gltf.animations.find((a) => a.name.toLowerCase() === name);
         if (clip) c.actions[name] = c.mixer.clipAction(clip);
       }
@@ -572,7 +596,7 @@ export class Room {
         const k = clip.name.toLowerCase();
         if (!c.actions[k] && !Object.values(c.actions).some((x) => x.getClip() === clip)) c.actions[k] = c.mixer.clipAction(clip);
       }
-      for (const n of ["book_take", "book_put", "cheer", "jump", "stretch", "yawn", "shrug", "bow", "nod", "shake", "point"]) if (c.actions[n]) { c.actions[n].setLoop(THREE.LoopOnce, 1); c.actions[n].clampWhenFinished = true; }
+      for (const n of ["book_take", "book_put", "cheer", "jump", "stretch", "yawn", "shrug", "bow", "nod", "shake", "point", "roar", "claw", "bite", "tail_swing", "breathe_fire", "hurt", "faint", "attack"]) if (c.actions[n]) { c.actions[n].setLoop(THREE.LoopOnce, 1); c.actions[n].clampWhenFinished = true; }
       root.traverse((o) => { if (o.isBone && /^hand\.?R$/i.test(o.name)) c.handR = o; if (o.isBone && /^hand\.?L$/i.test(o.name)) c.handL = o;
         if (o.isBone && /^thigh\.?[LR]$/i.test(o.name)) (c.thighs ||= []).push(o); if (o.isBone && /^shin\.?[LR]$/i.test(o.name)) (c.shins ||= []).push(o);
         if (o.isBone && /^spine$/i.test(o.name)) c.hips = o;
@@ -1789,6 +1813,13 @@ export class Room {
   /** Names of the animations the current model has (for the test buttons). */
   animationNames() { return Object.keys(this.char?.actions || {}); }
 
+  /** in words, how this body gets around (Settings -> Test) */
+  travelNote() {
+    if (this._travelChoice === "hover" && this.char?.plan) return "It hovers.";
+    return { walk: "It walks.", both: "It has wings and legs: it can walk or fly (Characters → Gets around by).", fly: "It only has wings, so it flies.",
+      float: "It has no legs or wings, so it floats.", still: "This model has no bones, so it can't move until it's rigged." }[this.char?.plan?.travel] || "";
+  }
+
   /** Play one animation now (Settings > Test). One-shot clips play once; loops play for `seconds`. */
   testAnimation(name, seconds = 6) {
     const c = this.char, a = c?.actions?.[name];
@@ -2076,9 +2107,12 @@ export class Room {
         if (c.head && !c.mixer) c.head.rotation.copy(c.headBase);
         if (c.head) { c.head.rotation.y += lookX; c.head.rotation.x += lookY; }
         for (const [mesh, i] of c.mouths) mesh.morphTargetInfluences[i] = talk;
+        const feeling = this.expr?.until > t ? this.expr.name : "neutral";
         if (c.extras) this._moveFingers(c, t, dt, talk);
         if (c.face) this._faceLife(c, t, dt, this.expr?.until > t ? this.expr.name : "neutral", talk);
-        else if (!c.mouths.length && this.speaking && c.head) c.head.rotation.x += talk * 0.06;
+        c.jaw?.apply(talk);
+        c.sheet?.update(dt, talk, feeling === "neutral" ? c._pose : feeling);
+        if (!c.face && !c.mouths.length && !c.jaw && !c.sheet?.mouth && this.speaking && c.head) c.head.rotation.x += talk * 0.06;
       } else if (c.kind === "penguin") {
         c.head.rotation.y = lookX;
         c.head.rotation.x = lookY;

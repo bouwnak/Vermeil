@@ -15,7 +15,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { inPlace } from "./inplace.js";
 import { ViewAxis } from "./viewaxis.js";
 import { makeTalkClip, talkBones } from "./talkanim.js";
-import { analyzeRig, cleanClips, retargetClip, rigRegions } from "./rigparts.js";
+import { analyzeRig, cleanClips, retargetClip, rigRegions, scanSummary, looksLikeMonster, useOwnClips, bodyOf, FLOATING } from "./rigparts.js";
+import { faceReport } from "./facetex.js";
 
 // Presets, in "box" units: x and z from -0.5 to 0.5 of the model's width/depth, y from 0 (feet) to 1 (top).
 // [name, parent, x, y, z]. Joints ending in .L are mirrored to .R automatically.
@@ -72,6 +73,13 @@ export const GYM_MOTIONS = [
   ["jumping_jacks", "Jumping jacks", "An object does jumping jacks."],
 ];
 
+// Body type -> Monster (same keys as skills/animate.py PROMPTS and MONSTER_NAMES in ui/rigparts.js)
+export const MONSTER_MOTIONS = [
+  ["fly", "Flying"], ["hover", "Hovering"], ["float", "Floating"], ["glide", "Gliding"], ["roar", "Roaring"], ["stomp", "Stomping"],
+  ["claw", "Claw swipe"], ["bite", "Biting"], ["tail_swing", "Tail swing"], ["wing_flap", "Wing flap"], ["breathe_fire", "Breathing fire"],
+  ["crawl", "Crawling"], ["prowl", "Prowling"], ["charge", "Charging"], ["hurt", "Hurt"], ["faint", "Faint"],
+];
+
 // "hand.L", "hand_l", and "handL" (a rig loaded back from a .glb: three.js drops the dots)
 const SIDE = (name) => (/[._]L$/i.test(name) || /[a-z0-9]L$/.test(name) ? 1 : /[._]R$/i.test(name) || /[a-z0-9]R$/.test(name) ? -1 : 0);
 const OTHER = (name) => /[._][LR]$/i.test(name) ? name.replace(/([._])([LR])$/i, (m, d, s) => d + (s === "L" ? "R" : s === "l" ? "r" : s === "R" ? "L" : "l"))
@@ -89,7 +97,7 @@ const isUnder = (j, top) => { for (let p = j.parent; p; p = p.parent) if (p === 
 // hair and cloth chains sit right on the surface: they only take the vertices that are clearly theirs
 const CLOTH_NAME = /hair|skirt|cape|cloth|dress|coat/i;
 // the dots: hands blue, hair green, clothes red, so you can tell them apart (on any rig, made here or not)
-const COLORS = { hands: 0x3d8bff, hair: 0x3ddc6b, clothes: 0xff3b3b };
+const COLORS = { hands: 0x3d8bff, hair: 0x3ddc6b, clothes: 0xff3b3b, face: 0xff9ecb, helper: 0x76808f };
 const BODY_COLOR = 0xffc44d, TIP_COLOR = 0xfff1c9, SELECTED_COLOR = 0xff5cf0;
 const dotColor = (name, region) => COLORS[region] ?? (IS_TIP.test(name) ? TIP_COLOR : BODY_COLOR);
 // no IK handles for fingers, hair and cloth (the room moves those itself)
@@ -121,13 +129,14 @@ export async function openRigger(file, opts) {
 export function rigEvent(e) { R?.onEvent(e); }
 
 class Rigger {
-  constructor(file, { api, toast, fromImport = false, onSaved = () => {} }) {
-    Object.assign(this, { file, api, toast, fromImport, onSaved });
+  constructor(file, { api, toast, fromImport = false, onSaved = () => {}, show = false }) {
+    Object.assign(this, { file, api, toast, fromImport, onSaved, showFirst: show });
     this.joints = [];        // {name, parent (joint or null), pos (Vector3), mesh (the sphere)}
     this.mode = "look";      // look | edit | place | pose | animate
     this.mirror = true;
     this.selected = null;
     this.chainFrom = null;
+    this.snap = "";          // "" free, or the axis a dragged joint keeps to: "x", "y", "z"
     this._build();
   }
 
@@ -170,6 +179,7 @@ class Rigger {
 
     this._onKey = (e) => {
       if (/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+      if (this.mode === "edit" && /^[xyz]$/i.test(e.key) && !e.ctrlKey) { this.setSnap(e.key.toLowerCase()); return; }
       if (e.key === "Escape") { if (this.mode === "place") this.setMode("edit"); else if (this.$(".rig-ask").hidden) this.close(); }
       if ((e.key === "Delete" || e.key === "Backspace") && this.mode === "edit" && this.selected) this.deleteJoint(this.selected);
     };
@@ -273,19 +283,24 @@ class Rigger {
     this.unit = Math.max(this.size.x, this.size.y, this.size.z);
     this._frame();
     this.meshes = [];
-    this.model.traverse((o) => { if (o.isMesh) { this.meshes.push(o); o.material = [].concat(o.material).map((m) => { const c = m.clone(); c.side = THREE.DoubleSide; c.userData.side = m.side; return c; }); if (o.material.length === 1) o.material = o.material[0]; } });
+    this.model.traverse((o) => { if (o.isMesh) { this.meshes.push(o); o.material = [].concat(o.material).map((m) => { const c = m.clone(); c.side = THREE.DoubleSide; Object.assign(c.userData, { side: m.side, transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite }); return c; }); if (o.material.length === 1) o.material = o.material[0]; } });
 
     const bones = [];
     this.model.traverse((o) => { if (o.isBone) bones.push(o); });
     if (bones.length) {
       const anims = this.gltf.animations.length;
-      const go = await this.ask(`This model already has a rig inside it (${bones.length} bones${anims ? `, ${anims} animation${anims > 1 ? "s" : ""}` : ""}). Do you want to see it, or is it okay as it is?`,
-        [["view", "Show me the rig"], ["keep", "It's okay as it is"]]);
-      if (go === "keep") return this.fromImport ? this.close() : this.existingMode();
+      const info = analyzeRig(this.model);
+      const scan = `${scanSummary(info)} ${faceReport(this.model, info)}`;
+      if (!this.showFirst) {
+        const go = await this.ask(`This model already has a rig inside it (${bones.length} bones${anims ? `, ${anims} animation${anims > 1 ? "s" : ""}` : ""}). ${scan} Do you want to see it, or is it okay as it is?`,
+          [["view", "Show me the rig"], ["keep", "It's okay as it is"]]);
+        if (go === "keep") return this.fromImport ? this.close() : this.existingMode();
+      }
       this.showExisting(bones);
-      const del = await this.ask("This is the rig (the dots are its joints). Keep it, edit it (move, add or delete joints), or delete it and rig the model yourself?",
-        [["keep", "Keep this rig"], ["edit", "✏️ Edit this rig"], ["delete", "Delete it and rig it myself"]]);
+      const del = await this.ask(`This is the rig (${bones.length} bones; the dots are its joints). ${scan} Keep it, make it simpler, edit it (move, add or delete joints), or delete it and rig the model yourself?`,
+        [["keep", "Keep this rig"], ["simplify", "✂ Simplify"], ["edit", "✏️ Edit this rig"], ["delete", "Delete it and rig it myself"]]);
       if (del === "keep") return this.existingMode();
+      if (del === "simplify") return this.simplify();
       if (del === "edit") return this.editExisting();
       this.stripRig();
       this.chooseRig();
@@ -312,14 +327,15 @@ class Rigger {
     this.helper.material.depthTest = false;
     this.scene.add(this.helper);
     const r = this.unit * 0.012;
-    const regions = rigRegions(analyzeRig(this.model));
+    const info = analyzeRig(this.model), regions = rigRegions(info);
+    const region = (b) => { const k = info.kind.get(b); return regions.get(b) || (k === "helper" ? "helper" : k === "face" || k === "jaw" ? "face" : undefined); };
     for (const b of bones) {
-      const s = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), new THREE.MeshBasicMaterial({ color: dotColor(b.name, regions.get(b)), depthTest: false, transparent: true }));
+      const s = new THREE.Mesh(new THREE.SphereGeometry(region(b) === "helper" ? r * 0.55 : r, 10, 8), new THREE.MeshBasicMaterial({ color: dotColor(b.name, region(b)), depthTest: false, transparent: true }));
       s.renderOrder = 10;
       s.position.copy(b.getWorldPosition(new THREE.Vector3()));
       this.jointsGroup.add(s);
     }
-    this._legend(bones.map((b) => regions.get(b)));
+    this._legend(bones.map(region));
     this._ghost(true);
     this.hint("Drag to look around. Scroll to zoom.");
   }
@@ -330,6 +346,7 @@ class Rigger {
     const count = (k) => regions.filter((r) => r === k).length;
     const row = (hex, label, n) => `<span><i style="background:#${hex.toString(16).padStart(6, "0")}"></i>${label} <b>${n}</b></span>`;
     box.innerHTML = row(COLORS.hands, "Hands", count("hands")) + row(COLORS.hair, "Hair", count("hair")) + row(COLORS.clothes, "Clothes", count("clothes")) +
+      (count("face") ? row(COLORS.face, "Face", count("face")) : "") + (count("helper") ? row(COLORS.helper, "Helpers", count("helper")) : "") +
       row(BODY_COLOR, "Body", regions.filter((r) => !COLORS[r]).length);
     box.hidden = false;
   }
@@ -365,10 +382,24 @@ class Rigger {
     this.$(".rig-ask").hidden = true;
     this.tools([
       { label: "🎬 Animate (talking, UniMate)", click: () => this.animatePanel(this.file) },
+      { label: "✂ Simplify", title: "a copy with only the bones that matter: helpers, unused bones and face detail go, the body, jaw, tail and wings stay", click: () => this.simplify() },
       { label: "✏️ Edit this rig", title: "turn its bones into dots you can move, add to or delete", click: () => this.editExisting() },
       { label: "✓ Done", click: () => this.close() },
     ]);
     this.hint("This rig stays as it is. You can have UniMate make animations for it.");
+  }
+
+  /** Too many bones (Piccolo has 587): a copy with the ones that matter. The skin of each removed bone goes to the bone it hung from,
+   *  so the model looks the same and still moves; the new rig opens right away so you can see it. */
+  async simplify() {
+    this.busy("Taking the extra bones off…");
+    const res = await this.api.simplify_rig(this.file);
+    this.busy(null);
+    if (res?.error) { this.toast(res.error); return this.existingMode(); }
+    if (res.after >= res.before) { this.toast("This rig is as simple as it gets: nothing to take off."); return this.existingMode(); }
+    this.toast(`Simplified: ${res.before} → ${res.after} bones. Saved as ${res.name}.`, 7000);
+    this.onSaved(res.name);
+    openRigger(res.name, { api: this.api, toast: this.toast, onSaved: this.onSaved, show: true });
   }
 
   /** the rig that's there becomes joints you can drag, rename, delete or add to (+ hair, clothes, hands).
@@ -746,6 +777,13 @@ class Rigger {
     this._renderEditTools();
   }
 
+  /** the snap axis: pressing the one that's on turns it off */
+  setSnap(axis) {
+    this.snap = this.snap === axis ? "" : axis;
+    this.toast(this.snap ? `Joints move along ${this.snap.toUpperCase()} only.` : "Joints move freely.", 2000);
+    this._renderEditTools();
+  }
+
   _renderEditTools() {
     if (this.mode !== "edit") return;
     const name = document.createElement("input");
@@ -765,6 +803,7 @@ class Rigger {
       name,
       { label: "🗑 Delete joint", click: () => this.selected && this.deleteJoint(this.selected) },
       mirror,
+      ...["x", "y", "z"].map((a) => ({ label: `Snap ${a.toUpperCase()}`, on: this.snap === a, title: `drag joints along the ${a.toUpperCase()} axis only (or press ${a.toUpperCase()})`, click: () => this.setSnap(a) })),
       { label: "🦾 Test pose (IK)", title: "drag hands and feet to check the rig bends well", click: () => this.poseMode() },
       { label: "💾 Save rig", click: () => this.save() },
     ]);
@@ -976,6 +1015,10 @@ class Rigger {
     const p = new THREE.Vector3();
     if (!this.ray.ray.intersectPlane(this._drag.plane, p)) return;
     const o = this._drag.obj;
+    if (this.snap) {                                     // only along that axis: the other two stay where they were when the drag began
+      const from = this._drag.from ||= o.position.clone();
+      for (const k of ["x", "y", "z"]) if (k !== this.snap) p[k] = from[k];
+    }
     o.position.copy(p);
     const j = o.userData.joint;
     if (j) {
@@ -1075,7 +1118,7 @@ class Rigger {
     for (const m of this.meshes) {
       const geo = bake(m.geometry.clone(), m.matrixWorld);
       this._weights(geo, order, kids, index);
-      const mats = [].concat(m.material).map((x) => { const c = x.clone(); c.side = x.userData.side ?? THREE.FrontSide; c.transparent = false; c.opacity = 1; c.depthWrite = true; return c; });
+      const mats = [].concat(m.material).map((x) => { const c = x.clone(); c.side = x.userData.side ?? THREE.FrontSide; c.transparent = x.userData.transparent ?? false; c.opacity = x.userData.opacity ?? 1; c.depthWrite = x.userData.depthWrite ?? true; return c; });   // the see-through ones stay so (an iris saved solid is a black block)
       const sm = new THREE.SkinnedMesh(geo, mats.length === 1 ? mats[0] : mats);
       sm.name = m.name || "mesh";
       if (m.morphTargetDictionary) { sm.morphTargetDictionary = { ...m.morphTargetDictionary }; sm.morphTargetInfluences = m.morphTargetInfluences.map(() => 0); }
@@ -1191,9 +1234,12 @@ class Rigger {
     const st = await this.api.unimate_status();
     const prev = await this.api.unimate_previous(name).catch(() => ({ outputs: [] }));
     const side = this.$(".rig-side");
-    const bodyKey = `vermeil.body.${name.replace(/(-rigged)?(-animated)?\.(glb|gltf|vrm)$/i, "")}`;
-    let body = "neutral";
-    try { body = localStorage.getItem(bodyKey) || "neutral"; } catch {}
+    const bodyKey = `vermeil.body.${name.replace(/(-simple)?(-rigged)?(-animated)?\.(glb|gltf|vrm)$/i, "")}`;
+    // what the model can already do: its own walk beats a made one, so those aren't ticked
+    const scene = this.gltf?.scene, info = scene ? analyzeRig(scene) : null;
+    const owned = info ? useOwnClips((this.gltf.animations || []).map((a) => ({ name: a.name, tracks: a.tracks })), info) : [];
+    let body = (scene && bodyOf(scene)) || (info && looksLikeMonster(info) ? "monster" : "neutral");
+    try { body = localStorage.getItem(bodyKey) || body; } catch {}
     side.hidden = false;
     side.innerHTML = `<h3>🎬 Animate</h3>
       ${prev.outputs?.length ? `<button type="button" class="primary rig-fix">✨ Fix my animations (${prev.outputs.map((o) => o.clip).join(", ")})</button>
@@ -1201,14 +1247,18 @@ class Rigger {
       <p class="note">${st.ready ? "Tick what she should learn to do. Talking is made right away; the others are made by UniMate in the background." : st.hint}</p>
       ${(st.commands || []).map((c) => `<pre class="rig-cmd" title="Click to copy">${c.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</pre>`).join("")}
       ${st.commands?.length ? `<p class="note">Then close and open this box again.</p>` : ""}
+      ${owned.length ? `<p class="note">It came with its own animations, and they play as they are: ${owned.join(", ")}.</p>` : ""}
       <label class="rig-body">Body type
-        <select>${[["neutral", "Neutral"], ["male", "Male"], ["female", "Female"]].map(([k, l]) => `<option value="${k}" ${k === body ? "selected" : ""}>${l}</option>`).join("")}</select>
+        <select>${[["neutral", "Neutral"], ["male", "Male"], ["female", "Female"], ["monster", "Monster"]].map(([k, l]) => `<option value="${k}" ${k === body ? "selected" : ""}>${l}</option>`).join("")}</select>
       </label>
-      <p class="note">How they walk, stand and wave: a male walk is broader and heavier, a female one lighter with the hips swaying.</p>
-      <div class="rig-motions">${MOTIONS.map(([k, label], i) => `<label class="rig-check"><input type="checkbox" value="${k}" ${i < 3 ? "checked" : ""}> ${label}</label>`).join("")}</div>
+      <p class="note">How they walk, stand and wave: a male walk is broader and heavier, a female one lighter with the hips swaying, a monster's low and lumbering.</p>
+      <div class="rig-motions">${MOTIONS.map(([k, label], i) => `<label class="rig-check"><input type="checkbox" value="${k}" ${i < 3 && !owned.includes(k) ? "checked" : ""}> ${label}${owned.includes(k) ? " (has its own)" : ""}</label>`).join("")}</div>
       <button type="button" class="ghost rig-gym">🏋 Gym exercises</button>
       <div class="rig-motions rig-gym-list" hidden>${GYM_MOTIONS.map(([k, label]) => `<label class="rig-check"><input type="checkbox" value="${k}"> ${label}</label>`).join("")}</div>
       <p class="note rig-gym-note" hidden>In Gym, press 👯 Demo on an exercise and she does it next to you.</p>
+      <button type="button" class="ghost rig-monster" ${body === "monster" ? "" : "hidden"}>🐉 Monster moves</button>
+      <div class="rig-motions rig-monster-list" hidden>${MONSTER_MOTIONS.map(([k, label]) => `<label class="rig-check"><input type="checkbox" value="${k}" ${owned.includes(k) ? "disabled" : ""}> ${label}${owned.includes(k) ? " (has its own)" : ""}</label>`).join("")}</div>
+      <p class="note rig-monster-note" hidden>Wings beat and flying moves leave the ground by themselves. Try them in Settings → Test.</p>
       <p class="note">UniMate only moves the body. Hands (their poses fit the finger count: 5, 4, 3 fingers or a paw), hair, clothes, tails and ears are moved by the app itself, so they swing naturally.</p>
       <button type="button" class="primary rig-make">Make the animations</button>`;
     // one press is enough: the button greys out at once and a second press while it works does nothing. It acts on
@@ -1245,6 +1295,19 @@ class Rigger {
       side.querySelector(".rig-gym-note").hidden = false;
       side.querySelectorAll(".rig-gym-list input").forEach((x) => { x.checked = true; });
     });
+    side.querySelector(".rig-monster").addEventListener("click", () => {   // show + tick every monster move
+      side.querySelector(".rig-monster-list").hidden = false;
+      side.querySelector(".rig-monster-note").hidden = false;
+      side.querySelectorAll(".rig-monster-list input:not(:disabled)").forEach((x) => { x.checked = true; });
+    });
+    side.querySelector(".rig-body select").addEventListener("change", (e) => {
+      const on = e.target.value === "monster";
+      side.querySelector(".rig-monster").hidden = !on;
+      if (!on) {
+        side.querySelector(".rig-monster-list").hidden = side.querySelector(".rig-monster-note").hidden = true;
+        side.querySelectorAll(".rig-monster-list input").forEach((x) => { x.checked = false; });
+      }
+    });
     side.querySelectorAll(".rig-cmd").forEach((pre) => pre.addEventListener("click", () => {
       navigator.clipboard?.writeText(pre.textContent).then(() => this.toast("Copied - paste it into a Command Prompt."), () => {});
     }));
@@ -1269,6 +1332,7 @@ class Rigger {
       const res = await this.api.unimate_animate(name, forUniMate, body);
       if (res?.error) { this.busy(null); this.toast(res.error); side.hidden = false; }
       this._animName = name;
+      this._body = body;
     });
   }
 
@@ -1341,9 +1405,10 @@ class Rigger {
     }
     if (!clips.length) throw new Error("UniMate didn't make any animations");
     const info = analyzeRig(base.scene);
+    if (this._body) base.scene.userData.body = this._body;  // the cleaning goes by it, here and each time the model loads
     const r = cleanClips(base.scene, clips.concat(base.animations.filter((a) => a.name !== "talk")), info);
     this._lastReport = `${r.dropped} shaky tracks removed, ${r.grounded} put back on the floor, ${r.arms} with relaxed arms`;
-    inPlace(clips);                                   // the walk is saved in place, so it loops smoothly
+    inPlace(clips.filter((c) => !FLOATING.test(c.name)));   // the walk is saved in place, so it loops smoothly
     const keep = base.animations.filter((a) => !clips.some((c) => c.name === a.name) && (withTalk ? a.name !== "talk" : true));
     if (withTalk) { const talk = makeTalkClip(base.scene, info); if (talk) keep.push(talk); }
     const ik = this.gltf?.scene.userData?.ik;

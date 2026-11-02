@@ -365,13 +365,37 @@
           <select name="model" id="modelSelect"></select>
         </label>
         <label class="check"><input type="checkbox" name="flip"> Turn model around (if it faces the wall)</label>
+        <label>Gets around by
+          <select name="travel" id="travelSelect">
+            <option value="">What its body suits</option>
+            <option value="walk">Walking (if it has legs)</option>
+            <option value="fly">Flying (if it has wings)</option>
+            <option value="hover">Hovering</option>
+          </select>
+        </label>
+        <label>Hat
+          <select name="hat" id="hatSelect">
+            <option value="">Seasonal (changes with the day)</option>
+            <option value="none">No hat</option>
+            <option value="beanie">Beanie</option>
+            <option value="cap">Cap</option>
+            <option value="crown">Crown</option>
+            <option value="party">Party hat</option>
+            <option value="santa">Santa hat</option>
+            <option value="witch">Witch hat</option>
+            <option value="headband">Headband</option>
+            <option value="headphones">Headphones</option>
+          </select>
+        </label>
         <div class="row" id="lookRow" hidden>
           <label>Outfit <select name="outfit" id="outfitSelect"></select></label>
           <label>Hair <select name="hair" id="hairSelect"></select></label>
         </div>
         <div class="row">
-          <button type="button" class="ghost" id="importModel">Import a model (.glb, .vrm)…</button>
+          <button type="button" class="ghost" id="importModel" title="A .glb, .fbx or .vrm file, or a .zip with one inside">Import a model…</button>
+          <button type="button" class="ghost" id="importFolder" title="Searches a folder for the model and its textures">Import a folder…</button>
           <button type="button" class="ghost" id="rigModel" title="Give the model bones, then animate it with UniMate">🦴 Rig &amp; animate</button>
+          <button type="button" class="ghost" id="deleteAnimated" title="Removes every model saved with animations">🗑 Delete animated models</button>
         </div>
         <div class="row">
           <button type="submit" class="primary">Save character</button>

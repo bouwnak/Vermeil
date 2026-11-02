@@ -306,10 +306,9 @@ class Playing(unittest.TestCase):
                 time.sleep(0.01)
         self.assertIsNone(st["error"])
         cmd = popen.call_args[0][0]
-        self.assertEqual(cmd[0:2], [str(exe), "-f"])
+        self.assertEqual(cmd[0:2], [str(exe), "--appendconfig"])        # no -f: it plays inside Vermeil's window
         self.assertEqual(cmd[-3:-1], ["-L", "core.dll"])
         self.assertTrue(cmd[-1].endswith("game.gba"))
-        self.assertEqual(cmd[2], "--appendconfig")
         self.assertEqual(retrogames.library()["recent"][0]["title"], "Sonic")
 
     @unittest.skipUnless(sys.platform == "win32", "RetroArch is only set up for Windows")

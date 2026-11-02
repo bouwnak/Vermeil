@@ -14,25 +14,46 @@
 import * as THREE from "three";
 import { inPlace } from "./inplace.js";
 
-// "mixamorigLeftArm_09_27" -> "leftarm" (game rips stack several numbers on the end)
-const clean = (n) => String(n || "").replace(/^mixamorig:?/i, "").replace(/([_.]?\d+)+$/, "").toLowerCase();
-const HELPER = /drv|driver|twist|helper|corrective|roll\b|^bk[_]|_ex$|^ex_|[_]ex[_]|nub$|end$|^end|_end_|tip$|_top$|target|pole|ik[_]|[_]ik$|offset|socket|attach|weapon|prop/;
+// "mixamorigLeftArm_09_27" -> "leftarm" (game rips stack several numbers on the end); spaces count as _ ("leg left knee adj 2")
+const clean = (n) => String(n || "").replace(/^mixamorig:?/i, "").replace(/\s+/g, "_").replace(/([_.]?\d+)+$/, "").toLowerCase();
+const HELPER = /drv|driver|twist|helper|corrective|roll\b|^bk[_]|_ex$|^ex_|[_]ex[_]|nub$|end$|^end|_end_|tip$|_top$|target|pole|ik[_]|[_]ik$|offset|socket|attach|weapon|prop|^unused|_adj(_|$)|_adj[lr]$|_sub$|_mesh|^lod|lod\d|skin$|^pointlight|_def$|_mnt|^c_|ctrl|control|_(ik|fk)[lrx]?$|^deform_|scale_fix/;     // the last ones: an animator's handles (Auto-Rig Pro, Unreal), not the body
 const FACE = /brow|eye|lid|lash|lip|teeth|tooth|tongue|cheek|nose|forehead|face|mouth|chin|squint|smile|pupil/;
-const JAW = /^jaw|lowerjaw|jaw$/;
-const FINGER = /finger|thumb|index|middle|(^|_)ring|pinky|little|digit|claw|^f_|knuckle|handsub/;
+const JAW = /^jaw|lowerjaw|jaw$|lowerbeak/;
+const FINGER = /finger|thumb|index|middle|(^|_|hand)ring|pinky|little|digit|claw|^f_|knuckle|handsub/;
+const TRUNK = /spine|neck|waist|pelvis|hip|chest|torso/;     // "spine_middle" isn't a finger (Piccolo's whole body hung under it)
 const HAND = /hand|wrist|palm|paw/;
 // short words only count as whole words ("elbow" is not a bow, "forearm" has no ear)
-const SOFT = /hair|skirt|cloth|cape|cloak|dress|feeler|ribbon|tail|(^|[_ ])ears?([_ ]|[lr]?$)|coat|scarf|bust|breast|chain|string|(^|_)tie(_|$)|sleeve|hood|jiggle|phys|dyn|spring|accessor|(^|_)belt|(^|_)bag(_|$)|antenna|tentacle|(^|_)fin(_|$)|frill|(^|_)bow(_|$)|(^|_)lace(_|$)|braid|ponytail|(^|_)bangs?(_|$)|fringe|veil|wing|flap|apron|robe|gown|petal|leaf/;
+const SOFT = /hair|capillary|turban|skirt|cloth|cape|cloak|dress|feeler|ribbon|tail|(^|[_ ])ears?([_ ]|[lr]?$)|coat|scarf|bust|breast|chain|string|(^|_)tie(_|$)|sleeve|hood|jiggle|phys|dyn|spring|accessor|(^|_)belt|(^|_)bag(_|$)|antenna|tentacle|(^|_)fin(_|$)|frill|(^|_)bow(_|$)|(^|_)lace(_|$)|braid|ponytail|(^|_)bangs?(_|$)|fringe|veil|wing|flap|apron|robe|gown|petal|leaf/;
 const SPINE = /hip|pelvis|cog|waist|spine|chest|torso|abdomen|belly|root|neck|head|origin|center|centre|body|upperchest/;
-const ARM = /shoulder|collar|clavicle|upperarm|upper_arm|arm|elbow|forearm|lowerarm/;
+const ARM = /shoulder|collar|clavicle|upperarm|upper_arm|arm(?!ature)|elbow|forearm|lowerarm/;      // "armature" isn't an arm
 const LEG = /thigh|upleg|upperleg|leg|knee|shin|calf|lowerleg|ankle|foot|toe|heel/;
 
-/** "L" / "R" / "": L_arm, LThigh, upper_armL (three.js drops the dot of upper_arm.L), LeftHand, hand_l */
+// body words that "hand.l" leaves behind once three.js drops the dot: "handl", "shoulderr", "toes_01l"
+const LIMB_END = "(arm|hand|wrist|palm|leg|foot|toes?|thigh|shin|calf|knee|elbow|shoulder|clavicle|ankle|\\d)";
+/** "L" / "R" / "": L_arm, LThigh, upper_armL (three.js drops the dot of upper_arm.L), LeftHand, hand_l, handl; game rips number them on top: wristL_440 */
 function side(name) {
-  const n = String(name || "");
+  const n = String(name || "").replace(/([_.]?\d+)+$/, "");
   for (const [s, w] of [["L", "left"], ["R", "right"]]) {
     if (new RegExp(`(^|[^a-zA-Z])${s}([^a-zA-Z]|$)`, "i").test(n) || new RegExp(`^${s}(?=[A-Z])`).test(n) ||
-        new RegExp(`[a-z]${s}$`).test(n) || new RegExp(w, "i").test(n)) return s;
+        new RegExp(`[a-z]${s}$`).test(n) || new RegExp(`${LIMB_END}${s.toLowerCase()}$`).test(n) || new RegExp(w, "i").test(n)) return s;
+  }
+  return "";
+}
+
+const NAME_WORDS = ["hips", "hip", "hair", "head", "hand", "neck", "arm", "leg", "left", "right", "spine", "foot", "toe", "shoulder", "chest", "thigh", "tail", "wing", "finger", "root"];
+/** what most bone names start with, when that's a name rather than a body part: "NarutoLeftArm" -> "naruto" */
+function namePrefix(names) {
+  const first = names.filter(Boolean)[Math.floor(names.length / 2)] || "";
+  for (let n = Math.min(first.length, 16); n >= 3; n--) {
+    const pre = first.slice(0, n);
+    if (names.filter((x) => x.startsWith(pre)).length < names.length * 0.85) continue;
+    if (/^(left|right|spine|bone|joint|root|mixamo|bip|def|l_|r_)/.test(pre)) return "";
+    // "narutoHips", "narutoHair": the letter they happen to share belongs to the body part
+    for (const w of NAME_WORDS) for (let k = w.length - 1; k > 0; k--) {
+      const cut = pre.slice(0, -k);
+      if (pre.endsWith(w.slice(0, k)) && names.some((x) => x.startsWith(cut + w))) return cut;
+    }
+    return pre;
   }
   return "";
 }
@@ -42,15 +63,16 @@ export function analyzeRig(root) {
   const bones = [];
   root.traverse((o) => { if (o.isBone) bones.push(o); });
   const kind = new Map();
-  const has = (b, re) => re.test(clean(b.name));
+  const prefix = namePrefix(bones.map((b) => clean(b.name)));
+  const nameOf = (b) => { const n = clean(b.name); return prefix && n.startsWith(prefix) ? n.slice(prefix.length) : n; };
   for (const b of bones) {
-    const n = clean(b.name);
+    const n = nameOf(b);
     let k = "other";
     if (HELPER.test(n)) k = "helper";
     else if (JAW.test(n)) k = "jaw";
     else if (FACE.test(n)) k = "face";
     else if (SOFT.test(n)) k = "soft";
-    else if (FINGER.test(n)) k = "finger";
+    else if (FINGER.test(n) && !TRUNK.test(n)) k = "finger";
     else if (HAND.test(n)) k = "hand";
     else if (ARM.test(n)) k = "arm";
     else if (LEG.test(n)) k = "leg";
@@ -78,7 +100,7 @@ export function analyzeRig(root) {
 
   const body = new Set(bones.filter((b) => bodyKinds.has(kind.get(b)) || kind.get(b) === "jaw"));
   const soft = bones.filter((b) => kind.get(b) === "soft");
-  const named = (re) => bones.filter((b) => re.test(clean(b.name)));
+  const named = (re) => bones.filter((b) => re.test(nameOf(b)));
   const pick = (list, s) => list.find((b) => side(b.name) === s) || null;
   const hands = {};
   for (const s of ["L", "R"]) {
@@ -106,18 +128,31 @@ export function analyzeRig(root) {
     const count = fingers.length;
     hands[s] = { hand, fingers, count, type: count >= 5 ? "five" : count === 4 ? "four" : count === 3 ? "three" : count === 2 ? "two" : count === 1 ? "mitten" : "paw" };
   }
-  const feet = bones.filter((b) => /foot|ankle|toe|heel/.test(clean(b.name)) && body.has(b));
-  const head = named(/^head$|^head|spine\.?006/).find((b) => body.has(b)) || null;
-  const hips = bones.find((b) => body.has(b) && /hip|pelvis|cog|waist|root/.test(clean(b.name)) && !side(b.name)) || bones.find((b) => body.has(b)) || null;
+  const feet = bones.filter((b) => /foot|ankle|toe|heel/.test(nameOf(b)) && body.has(b));
+  const jawBone = bones.find((b) => /lowerjaw|lower_jaw|lowerbeak/.test(nameOf(b))) || bones.find((b) => kind.get(b) === "jaw" && !/upper|root/.test(nameOf(b))) || bones.find((b) => kind.get(b) === "jaw") || null;
+  // the head: called that, or what the jaw hangs from ("head_neck_upper" with "head_jaw" under it), or anything like it
+  let aboveJaw = jawBone?.parent;
+  while (aboveJaw?.isBone && !body.has(aboveJaw)) aboveJaw = aboveJaw.parent;
+  // last of the spine: a chain with no name for its head ("spine.005"), the highest bone with nothing of the body above it
+  const spineEnd = () => bones.filter((b) => kind.get(b) === "spine" && body.has(b) && !b.children.some((c) => c.isBone && kind.get(c) === "spine"))
+    .sort((a, b) => b.getWorldPosition(new THREE.Vector3()).y - a.getWorldPosition(new THREE.Vector3()).y)[0] || null;
+  const head = named(/^head\d*$|(^|_)head$|^head_?\d|spine\.?006/).find((b) => body.has(b)) || (aboveJaw?.isBone ? aboveJaw : null)
+    || named(/head/).find((b) => body.has(b) && !/neck|jaw/.test(nameOf(b))) || spineEnd();
+  const hipsRe = (re) => bones.find((b) => body.has(b) && re.test(nameOf(b)) && !side(b.name));
+  const hips = hipsRe(/^hips?$|pelvis/) || hipsRe(/hip/) || hipsRe(/cog|waist/) || hipsRe(/root/) || bones.find((b) => body.has(b)) || null;
   const arms = {};
   for (const s of ["L", "R"]) {
     const list = bones.filter((b) => side(b.name) === s && body.has(b));
-    const upper = list.find((b) => /upperarm|upper_arm|^arm$|^larm|^rarm|arm$/.test(clean(b.name)) && !/fore|lower/.test(clean(b.name)));
-    const lower = list.find((b) => /forearm|lowerarm|elbow/.test(clean(b.name)));
-    if (upper) arms[s] = { upper, lower, hand: hands[s]?.hand || null };
+    const upper = list.find((b) => /upperarm|upper_arm|^arm$|^larm|^rarm|arm[lr]?$/.test(nameOf(b)) && !/fore|lower/.test(nameOf(b)));
+    // the second arm bone can just be "arm_02": the arm bone under the upper arm
+    const lower = list.find((b) => /forearm|lowerarm|elbow/.test(nameOf(b))) || upper?.children.find((c) => c.isBone && kind.get(c) === "arm") || null;
+    // no bone called an arm at all ("arm_left_shoulder_2" > "arm_left_elbow"): what the elbow hangs from
+    const above = !upper && lower?.parent?.isBone && kind.get(lower.parent) === "arm" ? lower.parent : null;
+    if (upper || above) arms[s] = { upper: upper || above, lower, hand: hands[s]?.hand || null };
   }
-  return { bones, kind, body, soft, hands, feet, head, hips, arms, jaw: bones.find((b) => kind.get(b) === "jaw") || null,
-    neck: named(/neck/).find((b) => body.has(b)) || null, chest: named(/chest|spine2|spine\.?003|upperchest/).find((b) => body.has(b)) || null };
+  return { bones, kind, body, soft, hands, feet, head, hips, arms, jaw: jawBone, prefix,
+    neck: named(/neck/).find((b) => body.has(b) && b !== head) || null,
+    chest: named(/chest|spine2|spine\.?003|upperchest|spine_upper|spine_02/).find((b) => body.has(b)) || null };
 }
 
 const HAIR_NAME = /hair|bangs?(_|$)|fringe|braid|ponytail|sideburn|ahoge/;
@@ -217,7 +252,144 @@ export function floorUnder(root, info) {
 export function bodyNames(info) { return [...info.body].map((b) => b.name); }
 
 // ---------------- clips ----------------
-const ONCE = /^(sit|jump|lie|lounge|crouch|book_take|book_put|cheer|stretch|yawn|shrug|bow|nod|shake|point|pushup|plank)$/i;
+const ONCE = /^(sit|jump|lie|lounge|crouch|book_take|book_put|cheer|stretch|yawn|shrug|bow|nod|shake|point|pushup|plank|roar|claw|bite|slash|tail_swing|breathe_fire|hurt|faint|attack)$/i;
+// the moves of Body type -> Monster (the keys of MONSTER_MOTIONS in rigger.js and PROMPTS in skills/animate.py)
+export const MONSTER_NAMES = ["fly", "hover", "hover_go", "float", "glide", "roar", "stomp", "claw", "bite", "tail_swing", "wing_flap", "breathe_fire", "crawl", "prowl", "charge", "hurt", "faint"];
+// in the air: not put back on the floor, and the room doesn't take their height out
+export const FLOATING = /^(fly|hover|float|glide|levitate)/i;
+
+/** the body type picked when it was animated: kept on the model's top object, which the file saves as a node under the scene */
+export function bodyOf(root) {
+  return root.userData?.body || root.children?.find((c) => c.userData?.body)?.userData.body || "";
+}
+
+/** what the scan found, in a few words (the rigger shows it) */
+export function scanSummary(info) {
+  const count = (k) => info.bones.filter((b) => info.kind.get(b) === k).length;
+  const wings = new Set(info.soft.filter((b) => /wing/.test(clean(b.name))).map((b) => side(b.name) || "x")).size;
+  const tail = info.soft.some((b) => /tail/.test(clean(b.name)));
+  const hands = Object.values(info.hands).map((h) => (h.count ? `${h.count}-finger hand` : "paw"));
+  const parts = [info.head && "head", info.jaw && "jaw", Object.keys(info.arms).length && `${Object.keys(info.arms).length} arms`,
+    hands.length && `${hands.length === 2 && hands[0] === hands[1] ? `2 × ${hands[0]}` : hands.join(", ")}`,
+    info.feet.length && "legs and feet", tail && "tail", wings && `${wings} wing${wings > 1 ? "s" : ""}`].filter(Boolean);
+  const rest = [["swinging", info.soft.length], ["face", count("face")], ["helper", count("helper")]].filter(([, n]) => n).map(([k, n]) => `${n} ${k}`);
+  return `Found: ${parts.join(", ") || "no body parts"}${rest.length ? ` (${rest.join(", ")} bones)` : ""}.`;
+}
+
+/** how far a cloud of points spreads along its three main directions, biggest first */
+function spreads(pts) {
+  const n = pts.length, m = [0, 0, 0];
+  for (const p of pts) for (let i = 0; i < 3; i++) m[i] += p[i] / n;
+  const c = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  for (const p of pts) for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) c[i][j] += (p[i] - m[i]) * (p[j] - m[j]) / n;
+  for (let sweep = 0; sweep < 12; sweep++) for (const [p, q] of [[0, 1], [0, 2], [1, 2]]) {     // Jacobi: turn until nothing's left off the diagonal
+    if (Math.abs(c[p][q]) < 1e-12) continue;
+    const th = 0.5 * Math.atan2(2 * c[p][q], c[q][q] - c[p][p]), s = Math.sin(th), co = Math.cos(th);
+    for (let k = 0; k < 3; k++) { const a = c[k][p], b = c[k][q]; c[k][p] = co * a - s * b; c[k][q] = s * a + co * b; }
+    for (let k = 0; k < 3; k++) { const a = c[p][k], b = c[q][k]; c[p][k] = co * a - s * b; c[q][k] = s * a + co * b; }
+  }
+  return [c[0][0], c[1][1], c[2][2]].map((v) => Math.sqrt(Math.max(v, 0))).sort((a, b) => b - a);
+}
+
+/** The mesh's points that move with each bone: bone -> [[x, y, z], ...], world space */
+function pointsByBone(root) {
+  const out = new Map(), v = new THREE.Vector3();
+  root.updateMatrixWorld(true);
+  root.traverse((m) => {
+    if (!m.isSkinnedMesh) return;
+    const pos = m.geometry.attributes.position, si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+    if (!pos || !si || !sw) return;
+    m.skeleton.update();
+    const step = Math.max(1, Math.floor(pos.count / 6000));
+    for (let i = 0; i < pos.count; i += step) {
+      let best = -1, bw = 0;
+      for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; best = si.getComponent(i, k); } }
+      const b = m.skeleton.bones[best];
+      if (!b) continue;
+      m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld);
+      if (!out.has(b)) out.set(b, []);
+      out.get(b).push([v.x, v.y, v.z]);
+    }
+  });
+  return out;
+}
+
+/** What this body can do, from its shape; names can't tell (Charizard's wings are "LFeeler1", Lugia's are its arms and fingers).
+ *  A wing is a limb on the body's side that's long, broad and flat. -> { wings: [first bones], legs, tail, travel } where travel is
+ *  "walk" (legs), "both" (legs and wings), "fly" (wings, no legs) or "float" (neither). */
+export function bodyPlan(root, info) {
+  if (!info.bones.length) return { wings: [], legs: false, tail: false, travel: "still", seen: [] };      // no rig at all: it can't move until it has one
+  const by = pointsByBone(root), all = [...by.values()].flat();
+  if (!all.length) return { wings: [], legs: info.feet.length > 0, tail: false, travel: info.feet.length ? "walk" : "float", seen: [] };
+  const height = Math.max(...all.map((p) => p[1])) - Math.min(...all.map((p) => p[1])) || 1;
+  const midX = (info.hips || root).getWorldPosition(new THREE.Vector3()).x;
+  const size = Math.max(height, Math.max(...all.map((p) => p[2])) - Math.min(...all.map((p) => p[2])));
+  const wings = [], seen = [], spans = new Map();
+  for (const b of info.bones) {
+    const k = info.kind.get(b), up = info.kind.get(b.parent);
+    if (!side(b.name) || !["soft", "arm"].includes(k) || !b.parent?.isBone || (up !== "spine" && !(k === "soft" && up === "arm"))) continue;
+    const pts = [];
+    b.traverse((o) => { if (o.isBone && by.has(o) && !["spine", "leg"].includes(info.kind.get(o))) pts.push(...by.get(o)); });
+    if (pts.length < 12) continue;
+    const [s1, s2, s3] = spreads(pts);
+    const reach = Math.max(...pts.map((p) => Math.abs(p[0] - midX)));
+    const named = /wing/.test(clean(b.name));
+    const flat = s2 / (s3 || 1e-6), broad = s2 / (s1 || 1e-6);
+    const isWing = named || (reach > size * 0.3 && broad > 0.28 && flat > 3 && !SOFT_CLOTHES.test(clean(b.name)));     // a cape is flat too
+    seen.push([clean(b.name), +(reach / size).toFixed(2), +broad.toFixed(2), +flat.toFixed(2), isWing ? "WING" : ""]);
+    if (isWing) { wings.push(b); spans.set(b, reach / size); }
+  }
+  // a limb inside a wing that's already counted isn't a second wing: both would beat at once
+  for (const w of wings.slice()) { for (let p = w.parent; p?.isBone; p = p.parent) if (wings.includes(p)) { wings.splice(wings.indexOf(w), 1); break; } }
+  const legs = info.bones.some((b) => info.kind.get(b) === "leg") && info.feet.length > 0;
+  const tail = info.bones.some((b) => /tail/.test(clean(b.name)));
+  const hasWings = wings.length > 0;
+  // arms this long are wings all the way (Lugia's): they can't hang at the sides like an arm with a fin on it (Garchomp's)
+  const bigWings = wings.filter((w) => spans.get(w) > 0.55);
+  return { wings, bigWings, legs, tail, travel: legs ? (hasWings ? "both" : "walk") : hasWings ? "fly" : "float", seen };
+}
+
+/** wings, a tail or no legs: suggests Body type -> Monster */
+export function looksLikeMonster(info) {
+  return info.bones.length > 0 && (!info.feet.length || info.bones.some((b) => /wing|tail/.test(clean(b.name))));
+}
+
+/** A body drawn as see-through is seen through itself: without depth, its back shows over its front (some exports mark everything that
+ *  way, for a mask in the texture's alpha). The big meshes of a model are drawn solid. Holes that are really holes (lace) stay holes. */
+export function solidBodies(root) {
+  const meshes = [];
+  root.traverse((m) => { if (m.isMesh) meshes.push(m); });
+  const total = meshes.reduce((s, m) => s + m.geometry.attributes.position.count, 0) || 1;
+  let fixed = 0;
+  for (const m of meshes) {
+    for (const mat of [].concat(m.material)) {
+      if (/sten|fire|flame/i.test(mat.map?.name || "")) {      // a game's flame: its black is nothing and its white is light, never a black and white stripe
+        mat.transparent = true; mat.blending = THREE.AdditiveBlending; mat.depthWrite = false; mat.color.set(0xff9a3c); mat.needsUpdate = true;
+        continue;
+      }
+      if (!mat.transparent || mat.opacity < 0.99 || m.geometry.attributes.position.count < total * 0.15) continue;
+      mat.transparent = false; mat.depthWrite = true; mat.alphaTest = alphaHoles(mat.map) ? 0.5 : 0; mat.needsUpdate = true;
+      fixed++;
+    }
+  }
+  return fixed;
+}
+
+/** does the picture have real holes: most of it solid and a good part fully clear? (A mask for shine has soft values all over.) */
+function alphaHoles(tex) {
+  const img = tex?.image;
+  if (!img?.width) return false;
+  try {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 48;
+    const g = cv.getContext("2d", { willReadFrequently: true });
+    g.drawImage(img, 0, 0, 48, 48);
+    const d = g.getImageData(0, 0, 48, 48).data;
+    let clear = 0, solid = 0;
+    for (let i = 3; i < d.length; i += 4) { if (d[i] < 16) clear++; else if (d[i] > 240) solid++; }
+    return clear + solid > 48 * 48 * 0.9 && clear > 48 * 48 * 0.03;
+  } catch { return false; }
+}
 
 function smoothTrack(t, loop, radius) {
   const n = t.times.length, size = t.getValueSize();
@@ -295,7 +467,7 @@ function groundClip(root, info, clip) {
 }
 
 // clips where the arms are meant to go up or out: left as they are
-const ARMS_FREE = /wave|cheer|jump|dance|stretch|press|jacks|clap|point|shrug|pushup|plank|row|curl|deadlift|swim|fly|hug|yawn|book|type|sit|lie|lounge/i;
+const ARMS_FREE = /wave|cheer|jump|dance|stretch|press|jacks|clap|point|shrug|pushup|plank|row|curl|deadlift|swim|fly|hover|float|glide|roar|claw|stomp|slash|charge|attack|hug|yawn|book|type|sit|lie|lounge/i;
 
 /** UniMate keeps the T/A-pose arms of the rest pose in calm clips (they stick out stiffly): turn the upper arms so
  *  they hang at the sides, keeping the swing the clip already has. */
@@ -415,12 +587,293 @@ function pinTravel(root, info, clip) {
   return changed;
 }
 
-/** Make UniMate's clips behave: body bones only, smooth, feet on the floor, seamless loops. Returns a short report. */
+/** A clip the model came with moves its wings, tail, fingers or face too; what UniMate made (saved by _merge) moves only
+ *  the body. Those made by an artist are never "cleaned": lowering Charizard's arms pushed them into his belly. */
+export function isOwnClip(clip, info) {
+  if (/^[a-z_]{1,20}$/.test(clip.name)) return false;       // "walk", "tail_swing": the names ours get. Theirs are like "pm0006_walk01_loop"
+  const body = new Set([...info.body].map((b) => b.name));
+  const moved = new Set(clip.tracks.map((t) => t.name.split(".")[0]));
+  let other = 0;
+  for (const n of moved) if (!body.has(n) && info.bones.some((b) => b.name === n)) other++;
+  return moved.size > 0 && other / moved.size > 0.15;
+}
+
+// what a model's own animations are called, for what the room plays. First match wins, base clips before variants.
+const OWN_NAMES = [["idle", /(default)?wait\d*(_loop)?$|(^|[_|.\s])idle|breath|stand(ing)?(_|$)/i], ["walk", /walk/i], ["run", /(^|[_|.\s])run/i],
+  ["roar", /roar/i], ["sleepy", /sleep/i], ["jump", /jump/i], ["happy", /glad|happy/i], ["sad", /hate|sad/i], ["surprised", /notice|surprise/i],
+  ["attack", /attack/i], ["hurt", /damage|hurt/i], ["fly", /(^|_)fly/i], ["eat", /eat/i]];
+
+/** Give a model's own clips the names the room plays ("pm0006_00_00_00030_walk01_loop" -> walk). What UniMate made under
+ *  that name steps aside: an animation made for this very model is better. Returns the names it found. */
+export function useOwnClips(clips, info) {
+  const own = clips.filter((c) => isOwnClip(c, info));
+  const found = [];
+  for (const [name, re] of OWN_NAMES) {
+    const hit = own.find((c) => c.name !== name && re.test(c.name) && !/_start|_end|turn|start$|end$/i.test(c.name)) || own.find((c) => c.name === name);
+    if (!hit) continue;
+    for (const c of clips) if (c !== hit && c.name.toLowerCase() === name) c.name = `${name}_unimate`;
+    hit.userData = { ...hit.userData, ownName: hit.name };
+    hit.name = name;
+    found.push(name);
+  }
+  return found;
+}
+
+/** Feet with no toe bones: a foot's skin reaches further forward than back from the ankle. +1 / -1 / 0 as facing() */
+function footShape(root, info) {
+  const feet = new Set(info.feet), a = new THREE.Vector3(), v = new THREE.Vector3();
+  let sum = 0, n = 0;
+  root.traverse((m) => {
+    if (!m.isSkinnedMesh) return;
+    const pos = m.geometry.attributes.position, si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+    if (!pos || !si || !sw) return;
+    m.skeleton.update();
+    for (let i = 0; i < pos.count; i++) {
+      let best = -1, bw = 0;
+      for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; best = si.getComponent(i, k); } }
+      const bone = m.skeleton.bones[best];
+      if (!feet.has(bone)) continue;
+      bone.getWorldPosition(a); m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld);
+      sum += v.z - a.z; n++;
+    }
+  });
+  if (n < 8) return 0;
+  const size = new THREE.Box3().setFromObject(root).getSize(a).y || 1;
+  return Math.abs(sum / n) > size * 0.003 ? Math.sign(sum) : 0;
+}
+
+/** which way the model faces: where its toes point from its ankles at rest, or its feet's shape (+1 toward +z, -1 toward -z, 0 can't tell) */
+export function facing(root, info) {
+  root.updateMatrixWorld(true);
+  let sum = 0, side = 0;
+  const a = new THREE.Vector3(), b = new THREE.Vector3();
+  for (const f of info.feet) {
+    for (const c of f.children) {
+      if (!c.isBone || !info.feet.includes(c)) continue;
+      f.getWorldPosition(a); c.getWorldPosition(b);
+      sum += b.z - a.z; side += Math.abs(b.x - a.x);
+    }
+  }
+  return Math.abs(sum) > side * 0.5 && sum !== 0 ? Math.sign(sum) : footShape(root, info);     // toes spread sideways say nothing
+}
+
+/** How a walk's feet travel while they're on the ground, along the way the model faces: negative is right (a foot on the floor
+ *  goes BACK under the body), positive means the legs step backwards. 0 when it can't tell. */
+export function walkDrift(root, info, clip) {
+  const dir = facing(root, info);
+  const feet = info.feet.filter((f) => !info.feet.includes(f.parent));
+  if (!dir || !feet.length || !info.hips) return 0;
+  const saved = info.bones.map((b) => [b.position.clone(), b.quaternion.clone(), b.scale.clone()]);
+  const mixer = new THREE.AnimationMixer(root);
+  const act = mixer.clipAction(clip).play();
+  const N = 40, track = feet.map(() => []);
+  const p = new THREE.Vector3(), h = new THREE.Vector3();
+  for (let i = 0; i < N; i++) {
+    act.time = clip.duration * i / N; mixer.update(0); root.updateMatrixWorld(true);
+    info.hips.getWorldPosition(h);
+    feet.forEach((f, k) => { f.getWorldPosition(p); track[k].push([p.y, p.z - h.z]); });
+  }
+  act.stop(); mixer.uncacheRoot(root);
+  info.bones.forEach((b, i) => { b.position.copy(saved[i][0]); b.quaternion.copy(saved[i][1]); b.scale.copy(saved[i][2]); });
+  root.updateMatrixWorld(true);
+  let drift = 0;
+  for (const rows of track) {
+    const ys = rows.map((r) => r[0]), low = Math.min(...ys), high = Math.max(...ys), cut = low + (high - low) * 0.35;
+    for (let i = 0; i < N; i++) {
+      const j = (i + 1) % N;
+      if (rows[i][0] <= cut && rows[j][0] <= cut) drift += (rows[j][1] - rows[i][1]) * dir;
+    }
+  }
+  return drift;
+}
+
+/** Legs stepping backwards while the model goes forward: the clip is playing in reverse, whatever it was made from. Turn it round. */
+function fixWalkDirection(root, info, clip) {
+  if (!/^(walk|run|crawl|prowl|charge)/i.test(clip.name) || walkDrift(root, info, clip) <= 0) return false;
+  for (const t of clip.tracks) {
+    const size = t.getValueSize(), n = t.times.length, v = t.values, out = new v.constructor(v.length);
+    for (let i = 0; i < n; i++) for (let k = 0; k < size; k++) out[i * size + k] = v[(n - 1 - i) * size + k];
+    t.values = out;
+  }
+  return true;
+}
+
+/** The arms mustn't go through the body. Measured on the model: how thick the trunk really is around its spine (a big belly
+ *  counts), and for every frame the upper arm turns out just far enough for the elbow and hand to clear it. */
+function keepArmsOut(root, info, clip) {
+  const arms = Object.values(info.arms).filter((a) => a.upper && (a.lower || a.hand));
+  const top = info.chest || info.neck || info.head;
+  if (!arms.length || !info.hips || !top) return false;
+  root.updateMatrixWorld(true);
+  const a0 = info.hips.getWorldPosition(new THREE.Vector3()), b0 = top.getWorldPosition(new THREE.Vector3());
+  const closest = (pt, a, b) => { const ab = b.clone().sub(a), t = THREE.MathUtils.clamp(pt.clone().sub(a).dot(ab) / (ab.lengthSq() || 1), 0, 1); return a.clone().addScaledVector(ab, t); };
+  // the trunk's thickness: the skin that follows the spine, how far it is from the spine
+  const trunk = new Set(info.bones.filter((b) => info.kind.get(b) === "spine"));
+  const dists = [], v = new THREE.Vector3();
+  root.traverse((m) => {
+    if (!m.isSkinnedMesh) return;
+    const pos = m.geometry.attributes.position, si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+    if (!pos || !si || !sw) return;
+    m.skeleton.update();
+    const step = Math.max(1, Math.floor(pos.count / 3000));
+    for (let i = 0; i < pos.count; i += step) {
+      let best = -1, bw = 0;
+      for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; best = si.getComponent(i, k); } }
+      if (!trunk.has(m.skeleton.bones[best])) continue;
+      m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld);
+      dists.push(v.distanceTo(closest(v, a0, b0)));
+    }
+  });
+  if (dists.length < 20) return false;
+  dists.sort((x, y) => x - y);
+  const radius = dists[Math.floor(dists.length * 0.7)];
+  const saved = info.bones.map((b) => [b.position.clone(), b.quaternion.clone(), b.scale.clone()]);
+  const mixer = new THREE.AnimationMixer(root);
+  const act = mixer.clipAction(clip).play();
+  let changed = false;
+  for (const a of arms) {
+    const name = `${a.upper.name}.quaternion`;
+    const track = clip.tracks.find((t) => t.name === name);
+    if (!track) continue;
+    const ends = [a.lower, a.hand].filter(Boolean), n = track.times.length;
+    const fix = new Array(n).fill(null);
+    for (let i = 0; i < n; i++) {
+      act.time = track.times[i]; mixer.update(0); root.updateMatrixWorld(true);
+      const s = a.upper.getWorldPosition(new THREE.Vector3());
+      const ha = info.hips.getWorldPosition(new THREE.Vector3()), to = top.getWorldPosition(new THREE.Vector3());
+      let worst = null, angle = 0;
+      for (const e of ends) {
+        const pt = e.getWorldPosition(new THREE.Vector3()), c = closest(pt, ha, to), d = pt.distanceTo(c), len = pt.distanceTo(s) || 1;
+        if (d >= radius) continue;
+        const need = Math.asin(Math.min(0.9, (radius - d) / len));
+        if (need > angle) { angle = need; worst = { pt, c }; }
+      }
+      if (!worst) continue;
+      const armDir = worst.pt.clone().sub(s).normalize();
+      const away = s.clone().sub(closest(s, ha, to)).setY(0).normalize();           // toward the arm's own side
+      const axis = armDir.clone().cross(away);
+      if (axis.lengthSq() < 1e-6) continue;
+      fix[i] = { axis: axis.normalize(), angle, pw: a.upper.parent.getWorldQuaternion(new THREE.Quaternion()) };
+    }
+    // softened over time, so the arm eases out instead of jumping
+    const raw = fix.map((f) => f?.angle || 0);
+    const eased = raw.map((_, i) => { let m = 0; for (let d = -3; d <= 3; d++) m = Math.max(m, raw[(i + d + n) % n] * (1 - Math.abs(d) / 4)); return m; });
+    const last = fix.find(Boolean);
+    if (!last) continue;
+    for (let i = 0; i < n; i++) {
+      if (!eased[i]) continue;
+      const f = fix[i] || last;
+      const turn = new THREE.Quaternion().setFromAxisAngle(f.axis, eased[i]);
+      const pw = f.pw, q = new THREE.Quaternion().fromArray(track.values, i * 4);
+      pw.clone().invert().multiply(turn).multiply(pw).multiply(q).normalize().toArray(track.values, i * 4);
+    }
+    changed = true;
+  }
+  act.stop(); mixer.uncacheRoot(root);
+  info.bones.forEach((b, i) => { b.position.copy(saved[i][0]); b.quaternion.copy(saved[i][1]); b.scale.copy(saved[i][2]); });
+  root.updateMatrixWorld(true);
+  return changed;
+}
+
+/** Monster clips UniMate can't know about: wings beat, the tail swings, and a floating monster is off the ground. Bases everything on
+ *  the rest pose, not on the clip's last height: a clip is cleaned again each time the model loads, and mustn't climb every time. */
+function monsterExtras(root, info, clip) {
+  const air = FLOATING.test(clip.name), flap = air || /^wing_flap/i.test(clip.name), tail = /^tail_swing/i.test(clip.name);
+  if (!flap && !tail) return false;
+  root.updateMatrixWorld(true);
+  const dur = clip.duration || 2, n = 25, times = Float32Array.from({ length: n }, (_, i) => dur * i / (n - 1));
+  const height = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).y || 1;
+  const wave = (i, speed) => Math.sin((i / (n - 1)) * Math.PI * 2 * speed);
+  const swing = (bone, worldAxis, angle) => {
+    const axis = worldAxis.clone().applyQuaternion(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert());
+    const vals = new Float32Array(n * 4), q = new THREE.Quaternion();
+    for (let i = 0; i < n; i++) q.setFromAxisAngle(axis, angle(i)).multiply(bone.quaternion).toArray(vals, i * 4);
+    clip.tracks = clip.tracks.filter((t) => t.name !== `${bone.name}.quaternion`).concat(new THREE.QuaternionKeyframeTrack(`${bone.name}.quaternion`, times, vals));
+  };
+  const first = (word) => info.soft.filter((b) => word.test(clean(b.name)) && !word.test(clean(b.parent?.name)));
+  // the first bone of each wing, up and down around the body's front-back line
+  if (flap) for (const w of first(/wing/)) {
+    const out = Math.sign(w.getWorldPosition(new THREE.Vector3()).x - (info.hips || root).getWorldPosition(new THREE.Vector3()).x) || 1;
+    swing(w, new THREE.Vector3(0, 0, 1), (i) => out * wave(i, 3) * 0.55);
+  }
+  if (tail) for (const t of first(/tail/)) swing(t, new THREE.Vector3(0, 1, 0), (i) => wave(i, 2) * 0.7);
+  // off the ground, bobbing gently
+  if (air && info.hips?.parent) {
+    const name = `${info.hips.name}.position`, old = clip.tracks.find((t) => t.name === name);
+    const up = new THREE.Vector3(0, 1, 0).applyMatrix3(new THREE.Matrix3().setFromMatrix4(info.hips.parent.matrixWorld).invert());
+    const unit = up.clone().normalize(), rest = info.hips.position, vals = new Float32Array(n * 3), p = new THREE.Vector3();
+    for (let i = 0; i < n; i++) {
+      p.copy(rest);
+      if (old) p.fromArray(old.values, Math.round((old.times.length - 1) * i / (n - 1)) * 3);
+      p.addScaledVector(unit, rest.dot(unit) - p.dot(unit)).addScaledVector(up, height * (0.28 + wave(i, 1) * 0.03)).toArray(vals, i * 3);
+    }
+    clip.tracks = clip.tracks.filter((t) => t !== old).concat(new THREE.VectorKeyframeTrack(name, times, vals));
+  }
+  return true;
+}
+
+/** the head as a box, in world space: everything on the model that moves with the head (hair and ears too), so a close-up can
+ *  show all of it. null when the model has no head bone or no skin. */
+export function headBox(root, info) {
+  if (!info.head) return null;
+  root.updateMatrixWorld(true);
+  const group = new Set();
+  info.head.traverse((o) => { if (o.isBone) group.add(o); });
+  const box = new THREE.Box3(), v = new THREE.Vector3();
+  root.traverse((m) => {
+    if (!m.isSkinnedMesh || !m.visible) return;
+    const pos = m.geometry.attributes.position, si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+    if (!pos || !si || !sw) return;
+    m.skeleton.update();
+    for (let i = 0; i < pos.count; i++) {
+      let best = -1, bw = 0;
+      for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; best = si.getComponent(i, k); } }
+      if (!group.has(m.skeleton.bones[best])) continue;
+      m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld); box.expandByPoint(v);
+    }
+  });
+  return box.isEmpty() ? null : box;
+}
+
+/** the mouth rig: opens the jaw by amount (0-1) on top of whatever the animation did. Finds which way the jaw's tip has to
+ *  turn to go down. null without a jaw bone. Call apply() after the animation each frame. */
+export function jawOpener(info) {
+  const jaw = info.jaw;
+  if (!jaw?.parent) return null;
+  jaw.updateWorldMatrix(true, true);
+  const tipBone = jaw.children.find((c) => c.isBone);
+  const p = jaw.getWorldPosition(new THREE.Vector3());
+  const tip = tipBone ? tipBone.getWorldPosition(new THREE.Vector3()) : (info.head ? p.clone().add(p.clone().sub(info.head.getWorldPosition(new THREE.Vector3()))) : null);
+  if (!tip || tip.distanceToSquared(p) < 1e-10) return null;
+  const dir = tip.sub(p).normalize();
+  const axis = dir.clone().cross(new THREE.Vector3(0, -1, 0));
+  if (axis.lengthSq() < 1e-5) axis.set(1, 0, 0);
+  axis.normalize().applyQuaternion(jaw.getWorldQuaternion(new THREE.Quaternion()).invert());   // in the jaw's own frame: it turns with the model
+  const q = new THREE.Quaternion(), base = new THREE.Quaternion(), after = new THREE.Quaternion();
+  let opened = false;
+  return {
+    bone: jaw,
+    apply(amount) {
+      // a clip that moves the jaw sets it fresh each frame; without one, last frame's opening has to come off first
+      if (opened && jaw.quaternion.equals(after)) jaw.quaternion.copy(base);
+      opened = amount > 0.001;
+      if (!opened) return;
+      base.copy(jaw.quaternion);
+      jaw.quaternion.multiply(q.setFromAxisAngle(axis, Math.min(1, amount) * 0.42));
+      after.copy(jaw.quaternion);
+    },
+  };
+}
+
+/** Make UniMate's clips behave: body bones only, smooth, feet on the floor, seamless loops. Returns a short report.
+ *  The model's own animations are left exactly as they are. */
 export function cleanClips(root, clips, info = analyzeRig(root)) {
   const bodyNames = new Set([...info.body].map((b) => b.name));
-  const report = { dropped: 0, smoothed: 0, grounded: 0, arms: 0, calmed: 0 };
+  const report = { dropped: 0, smoothed: 0, grounded: 0, arms: 0, calmed: 0, reversed: 0, own: 0 };
+  const monster = bodyOf(root) === "monster" || info.soft.some((b) => /wing/.test(clean(b.name)));
   for (const clip of clips || []) {
     if (/^talk$/i.test(clip.name) && clip.userData?.made === "app") continue;
+    if (isOwnClip(clip, info)) { report.own++; continue; }
     // standing clips that step around (UniMate sometimes walks on the spot): a calm idle instead
     if (/^(idle|sad)$/i.test(clip.name) && footTravel(root, info, clip) > 0.15) {
       const calm = makeCalmIdle(root, info, clip.name);
@@ -439,8 +892,11 @@ export function cleanClips(root, clips, info = analyzeRig(root)) {
       if (loop) closeLoop(t);
       report.smoothed++;
     }
-    if (relaxArms(root, info, clip)) report.arms++;
-    if (groundClip(root, info, clip)) report.grounded++;
+    if (!monster && relaxArms(root, info, clip)) report.arms++;  // a monster's arms aren't meant to hang at its sides
+    if (keepArmsOut(root, info, clip)) report.armsOut = (report.armsOut || 0) + 1;
+    if (fixWalkDirection(root, info, clip)) report.reversed++;
+    monsterExtras(root, info, clip);
+    if (!FLOATING.test(clip.name) && groundClip(root, info, clip)) report.grounded++;
   }
   return report;
 }

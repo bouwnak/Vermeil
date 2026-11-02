@@ -1483,6 +1483,10 @@ class Api:
     def browser_nav(self, tab, action):
         return self._browser().nav(int(tab), action)
 
+    def browser_video(self, tab, action="playing"):
+        """the floating player (ui/browser.js) asks about or controls the tab's video"""
+        return self._browser().video(int(tab), action)
+
     def browser_place(self, rect=None, active=None):
         """the Browser panel's page area (window pixels) - the active tab is shown right there; None hides the tabs"""
         b = self._browser()
@@ -2506,6 +2510,8 @@ class Api:
                       "flip": bool(data.get("flip")),
                       "language": (data.get("language") or "auto").strip()[:8], "translate": bool(data.get("translate")),
                       "outfit": str(data.get("outfit") or "")[:20], "hair": str(data.get("hair") or "")[:20],
+                      "hat": str(data.get("hat") or "")[:20],
+                      "travel": data.get("travel") if data.get("travel") in ("walk", "fly", "hover") else "",
                       "rvc": _rvc_settings(data.get("rvc"))})
         _write_json(CHARACTERS_FILE, self._characters)
         if entry["id"] == self._characters["active"]:
@@ -2567,18 +2573,50 @@ class Api:
         os.makedirs(MODELS_DIR, exist_ok=True)  # (Pip the penguin is built in: model "builtin:penguin")
         return sorted(f for f in os.listdir(MODELS_DIR) if f.lower().endswith(MODEL_TYPES))
 
-    def import_model(self):
-        """Open a file picker and copy a .glb / .gltf / .vrm (plus its texture pictures) into ui/models."""
-        paths = self._window.create_file_dialog(
-            _OPEN_DIALOG, allow_multiple=True,
-            file_types=("3D models and their textures (*.glb;*.gltf;*.vrm;*.bin;*.png;*.jpg;*.jpeg;*.webp)",))
+    def import_model(self, folder=False):
+        """Pick a .glb, .fbx or .vrm, a .zip, or with folder=True a whole folder: it's searched for the model and its textures
+        (skills/modelimport.py). -> {"name", "note"}, or None when you cancel."""
+        import modelimport
+        if folder:
+            paths = self._window.create_file_dialog(_FOLDER_DIALOG)
+        else:
+            paths = self._window.create_file_dialog(_OPEN_DIALOG, allow_multiple=True,
+                                                    file_types=("3D models and their textures (*.glb;*.fbx;*.dae;*.vrm;*.zip;*.png;*.jpg;*.jpeg;*.webp)",))
         if not paths:
             return None
-        res = copy_model_files(paths if isinstance(paths, (list, tuple)) else [paths], MODELS_DIR)
+        res = modelimport.import_paths(list(paths) if isinstance(paths, (list, tuple)) else [paths], MODELS_DIR, copy_model_files)
         if res.get("error"):
             self.emit({"type": "toast", "text": res["error"]})
             return None
-        return res["name"]
+        return res
+
+    def delete_animated_models(self):
+        """Characters -> Delete animated models: every <name>-animated.glb goes. A character using one goes back to the model it was made from."""
+        gone = [f for f in os.listdir(MODELS_DIR) if re.search(r"-animated(-[\w-]+)?\.glb$", f, re.I)]
+        for f in gone:
+            os.remove(os.path.join(MODELS_DIR, f))
+        left = self.list_models()
+        for c in self._characters["characters"]:
+            if c.get("model") in gone:
+                stem = re.sub(r"(-animated)+.*\.glb$", "", c["model"], flags=re.I)
+                c["model"] = next((n for n in (f"{stem}.glb", f"{re.sub(r'-(simple|rigged)$', '', stem)}.glb") if n in left), DEFAULT_CHARACTERS["characters"][0]["model"])
+        _write_json(CHARACTERS_FILE, self._characters)
+        self._apply_character()
+        return {"deleted": len(gone), "state": self.get_state()}
+
+    def simplify_rig(self, name):
+        """The rigger's Simplify button: <model>-simple.glb with only the bones that matter (skills/slimrig.py)."""
+        import slimrig
+        base = os.path.basename(str(name or ""))
+        src = os.path.join(MODELS_DIR, base)
+        if not base.lower().endswith(".glb") or not os.path.exists(src):
+            return {"error": "Simplify works on a saved .glb model."}
+        out = re.sub(r"(-simple)?\.glb$", "", base, flags=re.I) + "-simple.glb"
+        try:
+            before, after = slimrig.simplify(src, os.path.join(MODELS_DIR, out))
+        except Exception as e:  # noqa: BLE001 - shown to the user
+            return {"error": f"Couldn't simplify it: {e}"}
+        return {"name": out, "before": before, "after": after}
 
     def save_rigged_model(self, name, data_b64):
         """The rigger (ui/rigger.js) sends the rigged .glb as base64; it's saved next to the original."""
@@ -2615,7 +2653,7 @@ class Api:
 
     def unimate_animate(self, name, motions, body="neutral"):
         """Runs UniMate in the background; progress comes as {"type": "animate_progress"} events.
-        body: "male" / "female" / "neutral" - how the character walks and stands (skills/animate.py BODY_STYLE)."""
+        body: "male" / "female" / "monster" / "neutral" - how the character walks and stands (skills/animate.py BODY_STYLE)."""
         import animate
         st = animate.status()
         if not st["ready"]:
@@ -2632,7 +2670,7 @@ class Api:
                 left = spent * (1 - pct) / pct if pct >= 0.15 and spent > 20 else None
                 self.emit({"type": "animate_progress", "pct": pct, "text": text, "left": round(left) if left else None})
             try:
-                out = animate.animate(path, list(motions or ["idle"]), progress, body if body in ("male", "female") else "neutral")
+                out = animate.animate(path, list(motions or ["idle"]), progress, body if body in ("male", "female", "monster") else "neutral")
                 rel = lambda p: os.path.relpath(p, UI_DIR).replace(os.sep, "/")
                 self.emit({"type": "animate_progress", "done": True,
                            "outputs": [{"clip": o["clip"], "url": rel(o["path"])} for o in out]})
@@ -3260,6 +3298,15 @@ class Api:
         self._settings["photo_folder"] = picked[0] if isinstance(picked, (list, tuple)) else picked
         self._save_settings()
         return self.photo_list()
+
+    def photo_pick(self):
+        """the file picker of a photo frame: any picture. -> its path, or None"""
+        import roomlife
+        kinds = ";".join(f"*{e}" for e in roomlife.PHOTO_TYPES)
+        picked = self._window.create_file_dialog(_OPEN_DIALOG, file_types=(f"Pictures ({kinds})", "All files (*.*)"))
+        if not picked:
+            return None
+        return picked[0] if isinstance(picked, (list, tuple)) else picked
 
     def photo_list(self):
         import roomlife
@@ -3941,6 +3988,32 @@ class Api:
         import retroplay
         return retroplay.start(game)
 
+    def retro_stage(self):
+        """the game running inside the window: {running, title}"""
+        import retrobar
+        return retrobar.state()
+
+    def retro_place(self, rect=None):
+        import retrobar
+        return retrobar.place(rect)
+
+    def retro_cmd(self, name):
+        import retrobar
+        return retrobar.command(name)
+
+    def retro_leave(self):
+        import retrobar
+        return retrobar.leave()
+
+    def turtle_load(self):
+        """Turtle Island's save (ui/turtle, skills/turtlesave.py), or None"""
+        import turtlesave
+        return turtlesave.load()
+
+    def turtle_save(self, state):
+        import turtlesave
+        return turtlesave.save(state)
+
     def _start_buddy(self):
         """your character in a box over whatever game you're playing (skills/gamebuddy.py)"""
         try:
@@ -4052,7 +4125,7 @@ class Api:
         return {**mygames.remove(gid), **self.games_list()}
 
     def launcher_games(self):
-        """Games hub -> Installed games: Steam, Epic Games, GOG and Ubisoft games on this PC (skills/launchers.py)"""
+        """Games hub -> Installed games: every game on this PC (skills/launchers.py)"""
         import launchers
         return {"games": launchers.installed(), "stores": launchers.STORES}
 

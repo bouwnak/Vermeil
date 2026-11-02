@@ -296,7 +296,7 @@ class Session:
     def _measure(self):
         """look for black bars at the sides of the game (her own box is painted out so she doesn't count as picture)"""
         game = ow.rect(self.game_hwnd)
-        if not game or ow.foreground() not in (self.game_hwnd, self.hwnd):
+        if not game or _front_window() not in (self.game_hwnd, self.hwnd):
             return
         from PIL import ImageDraw
         pic = ow.grab(game)
@@ -314,7 +314,7 @@ class Session:
             try:
                 if not self.visible and self.hwnd:
                     ow.hide(self.hwnd)              # a see-through window shows itself as its page loads
-                elif ow.foreground() == self.hwnd and not ow.mouse_down():
+                elif _front_window() == self.hwnd and not ow.mouse_down():
                     ow.give_focus(self.game_hwnd)   # the keyboard always goes back to the game
                 if self.visible:
                     if time.time() - measured > 4 and not self.moved_by_you:
@@ -340,7 +340,7 @@ class Session:
         next_look = time.time() + FIRST_TIP_AFTER
         while not self.closing:
             time.sleep(1)
-            if time.time() < next_look or not self.visible or not settings()["see"] or ow.foreground() not in (self.game_hwnd, self.hwnd):
+            if time.time() < next_look or not self.visible or not settings()["see"] or _front_window() not in (self.game_hwnd, self.hwnd):
                 continue
             game = ow.rect(self.game_hwnd)
             if not game:
@@ -371,6 +371,17 @@ def _game_in_front(on):
             on_game_front(on)
 
 
+def _front_window():
+    """the window in front. A retro game runs inside Vermeil's window: when that's in front, the game is."""
+    fg = ow.foreground()
+    try:
+        import retrobar
+        inside = retrobar.game_window()
+        return inside if inside and fg == retrobar.main_window() else fg
+    except Exception:  # noqa: BLE001 - no retro games here
+        return fg
+
+
 def _exe_of(pid):
     import psutil
     try:
@@ -387,10 +398,10 @@ def _tick():
     if s and not psutil.pid_exists(s.pid):
         s.close()
         _session = s = None
-    fg = ow.foreground()
+    fg = _front_window()
     if s and fg == s.hwnd:
         return                                      # you're dragging her: nothing changes
-    if not fg or ow.find("VermeilRetroBar") == fg:
+    if not fg:
         return
     pid = ow.pid_of(fg)
     name = game_name(_exe_of(pid))

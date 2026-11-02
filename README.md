@@ -14,7 +14,36 @@ Running the installer again is safe: it only gets what's missing. If UniMate did
 dropped), Vermeil still works - press **Make the animations** in the Animate box and she installs the rest in the
 background.
 
-## New (31 Oct 2026, latest): Fixes and a livelier Game Night
+## New (3 Nov 2026, latest): Turtle Island, and much smarter model importing
+
+**Turtle Island** is a new game in the Games hub, between **Adventure** and **Retro Games**. You build a farm on the back of a living turtle and sail between other turtles.
+
+- **Farm:** till flat ground, plant, water and harvest. Crops go seed, sprout, young, mature, then ripe with a round **!** bubble above them.
+- **Getting around:** you can't walk on water or up cliffs. Roads link the areas; boats and dinosaurs take you further.
+- **Dinosaurs:** ten lines, three forms each. Friendship levels them, and friendship plus days together evolves them. Assign them farm work in **Journal → Dinos**.
+- **Drawbridge:** mend the winch to bring it down when Willowmere moors. **Boats:** mend the one at your dock, or ring the ferry bell.
+- **Build (B):** place fences, paths, buildings, machines and vehicles the same way as Edit room, without the paint button.
+- **Also:** 35 fish, crafting and machines, a shipping bin, your own market stall, seven turtles, a ten-arc story, weekly orders and festivals.
+- **Test tools:** **Journal → Settings → Test tools** gives flying, shells, instant crops, skipping days, weather and more.
+
+**Models and rig (UniMate):**
+- Imports `.glb`, `.gltf`, `.fbx` and whole folders, and finds textures by itself.
+- Any future model works: rigs are identified by their shape and bones, with nothing written per model.
+- **Monster** body types get their own animations. **Gets around by** picks walk, fly or hover, and wings, legs or no legs are worked out for you.
+- **Simplify** cuts a heavy rig down, **Snap X/Y/Z** helps in the rigger, and **Hat** lets you choose one.
+- Faces drawn in textures blink and talk, and win over a rigged mouth.
+- **Delete animated models** clears them out.
+
+**Room and browser:**
+- Photo frames take every image type, gifs included, through a normal picker.
+- Videos in the browser get a floating, adjustable window on any site.
+- A furniture category closes when you press it again.
+
+**Games:**
+- **Installed games** scans your whole PC, including Riot games.
+- **Retro games** play inside Vermeil rather than in a new window. 16 of the 17 consoles started a real game; PS2 needs your own BIOS file.
+
+## New (31 Oct 2026): Fixes and a livelier Game Night
 
 - **Game Night** has Vermeil up close on the right, like the Games hub's preview. She moves her head after your
   mouse, blinks, talks while her line types out, and reacts to the game (cheers, claps, laughs, thinks). Click her

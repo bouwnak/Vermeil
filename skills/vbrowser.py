@@ -25,6 +25,26 @@ DIAL = [{"name": "Google", "url": "https://www.google.com"}, {"name": "YouTube",
         {"name": "GitHub", "url": "https://github.com"}, {"name": "Reddit", "url": "https://www.reddit.com"},
         {"name": "Twitch", "url": "https://www.twitch.tv"}, {"name": "Discord", "url": "https://discord.com/app"}]
 MAX_HISTORY = 60
+# The floating player: the page's video fills its tab, on any site. The video can sit deep inside web components (their shadow DOM), and many can be
+# on a page (TikTok's feed): the one playing wins, then the biggest. An embedded player from another site can't be reached, so its whole frame fills
+# the tab instead. Everything is set on the elements themselves and written down, so MINI_OFF puts the page back exactly.
+FIND = """const vm_all=(r,o=[])=>{for(const e of r.querySelectorAll('*')){if(e.tagName==='VIDEO')o.push(e);if(e.shadowRoot)vm_all(e.shadowRoot,o)}return o};
+const vm_area=e=>{const r=e.getBoundingClientRect();return r.width*r.height};
+const vm_videos=()=>vm_all(document).filter(v=>v.readyState>0||v.currentSrc||v.src||v.srcObject);
+const vm_video=()=>vm_videos().sort((a,b)=>(!b.paused-!a.paused)||(vm_area(b)-vm_area(a)))[0];
+const vm_frame=()=>[...document.querySelectorAll('iframe')].filter(f=>vm_area(f)>40000).sort((a,b)=>vm_area(b)-vm_area(a))[0];
+const vm_target=()=>vm_video()||vm_frame();"""
+IS_PLAYING = "(()=>{" + FIND + "const v=vm_video();return v?(!v.paused&&!v.ended)||v.currentTime>0:!!vm_frame()})()"
+MINI_ON = "(()=>{" + FIND + r"""const t=vm_target();if(!t)return false;const saved=window.__vmSaved=[];
+const put=(e,rules)=>{saved.push([e,e.getAttribute('style')]);for(const[k,v]of Object.entries(rules))e.style.setProperty(k,v,'important')};
+const clear={transform:'none',filter:'none',contain:'none','clip-path':'none','will-change':'auto',overflow:'visible','z-index':'auto',visibility:'visible',opacity:'1',perspective:'none'};
+let s=document.createElement('style');s.id='vermeil-mini';s.textContent='html,body{overflow:hidden!important}body *{visibility:hidden!important}';document.head.append(s);
+for(let p=t.parentNode;p&&p!==document;p=p.parentNode||p.host){if(p.nodeType===11)continue;if(p===document.documentElement||p===document.body){put(p,{transform:'none',filter:'none'});continue}put(p,clear)}
+put(t,{position:'fixed',left:'0',top:'0',width:'100vw',height:'100vh','max-width':'none','max-height':'none','min-width':'0','min-height':'0',margin:'0',padding:'0',border:'0','z-index':'2147483647','object-fit':'contain',background:'#000',transform:'none',visibility:'visible'});
+return true})()"""
+MINI_OFF = r"""(()=>{document.getElementById('vermeil-mini')?.remove();for(const[e,old]of(window.__vmSaved||[]).reverse()){if(old==null)e.removeAttribute('style');else e.setAttribute('style',old)}window.__vmSaved=[];return true})()"""
+TOGGLE = "(()=>{" + FIND + "const v=vm_video();if(!v)return false;if(v.paused)v.play();else v.pause();return !v.paused})()"
+PAUSE = "(()=>{" + FIND + "const v=vm_video();if(v)v.pause();return false})()"
 
 
 def to_url(text):
@@ -82,7 +102,8 @@ def embed(child, parent):
     get = getattr(u, "GetWindowLongPtrW", u.GetWindowLongW)
     put = getattr(u, "SetWindowLongPtrW", u.SetWindowLongW)
     style = get(child, GWL_STYLE)
-    put(child, GWL_STYLE, (style & ~(WS_POPUP | WS_CAPTION | WS_THICKFRAME)) | WS_CHILD)
+    # as a signed 32-bit number: skills/overlaywin.py sets how these two calls read their numbers, and a large one is refused
+    put(child, GWL_STYLE, ctypes.c_long(((style & ~(WS_POPUP | WS_CAPTION | WS_THICKFRAME)) | WS_CHILD) & 0xFFFFFFFF).value)
     u.SetParent(child, parent)
     return True
 
@@ -243,6 +264,17 @@ class Browser:
                 self.active = next(reversed(self.tabs), None)
         self._layout()
         self._changed()
+
+    def video(self, tid, action="playing"):
+        """the tab's video, for the floating player: playing / mini_on / mini_off / toggle / pause. -> True or False"""
+        t = self.tabs.get(tid)
+        if not t:
+            return False
+        js = {"playing": IS_PLAYING, "mini_on": MINI_ON, "mini_off": MINI_OFF, "toggle": TOGGLE, "pause": PAUSE}.get(action)
+        try:
+            return bool(js and t["win"].evaluate_js(js))
+        except Exception:  # noqa: BLE001 - the page is gone or still loading
+            return False
 
     def nav(self, tid, action):
         """back / forward / reload / focus / close one tab"""

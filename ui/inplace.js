@@ -6,7 +6,7 @@
 // meets the first one again. The small sway and bounce inside each step stay.
 
 // clips that play once: their move from start to end is the point (sitting down, a jump), so they're left alone
-const ONCE = /^(sit|jump|lie|lounge|crouch|book_take|book_put|cheer|stretch|yawn|shrug|bow|nod|shake|point)$/i;
+const ONCE = /^(sit|jump|lie|lounge|crouch|book_take|book_put|cheer|stretch|yawn|shrug|bow|nod|shake|point|roar|claw|bite|tail_swing|breathe_fire|hurt|faint|attack)$/i;
 
 /** Remove the start -> end drift from the bone positions of every looping clip. Returns how many tracks changed. */
 export function inPlace(clips) {

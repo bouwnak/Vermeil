@@ -1,7 +1,45 @@
 # Handover: Vermeil assistant + "AI Dungeon Adventure" game
 
 Paste this whole file into a new Claude conversation, together with the project folder, to continue the work.
-Last updated: 2026-10-28.
+Last updated: 2026-11-03.
+
+---
+
+## 0. Newest work (read this first)
+
+**Where it lives.** The folder is `D:\THIS PC\Downloads\Vermeil-voice-gpu-and-setup-fix\Vermeil-voice-gpu-and-setup-fix` and is not a git repo. GitHub is `bouwnak/Vermeil`, branch `voice-gpu-and-setup-fix`.
+
+**How to push.** Git isn't on PATH. Use `%LOCALAPPDATA%\Vermeil\PortableGit\cmd\git.exe` with the clone at `%TEMP%\claude\vermeil_push`: pull with `--ff-only`, copy changed files in, commit, push. The owner signs in to GitHub themself. Never push `data/`, `env`, or `ui/games/asset_packs/_originals/`. Push only when asked.
+
+**Rules added lately.**
+- Everything for models must be universal: no per-model code, and it must work on models imported later.
+- Turtle Island uses only the chosen packs: Ultimate Nature, Farm Buildings, Farm Animal, Simple Nature, Ultimate Modular Men, Ultimate Modular Women, Stylized Nature MegaKit, Stylized Tree, Ultimate Food, Animated Cute Fish, plus everything in `ui/games/asset_packs`.
+- Dialogue has no voice: letters, blips and dots, like Animal Crossing.
+- The dinosaurs are chibi low-poly and original.
+- Never capture the full screen, avoid popping up windows, and don't download or run executables.
+
+**Turtle Island (`ui/turtle/`).** A three.js game; all content is plain data in `data.js`.
+- `terrain.js`: land, exact mesh ground in `Land.ground()`, roads, walled flats.
+- `world.js`: turtles, collision grid, far turtles load when near, clock, weather.
+- `player.js`: movement, blocking, camera.
+- `farm.js`: crops; plots are instanced.
+- `dinos.js` and `made.js`: dinosaurs, original props.
+- `bridge.js`, `build.js` (placing), `craft.js` (machines, market), `sail.js`, `quests.js`, `vfx.js`, `audio.js`, `ui.js`, `main.js`.
+- Save is version 2, and version 1 upgrades itself on load. `skills/turtlesave.py` writes `data/turtle_island.json` with a backup.
+- `G.run(seconds)` runs the game without drawing, so tests work when the preview pane is hidden; `G.draw()` draws one frame.
+- Status, milestones and gaps: `ui/turtle/DEVLOG.md`.
+
+**Asset packs (`ui/games/asset_packs/`).**
+- `lowpoly_farm_01`, `lowpoly_farm_02`, `farm_vehicles` and `garden_tools`, split by Blender (Steam, run headless with `-b`).
+- Each model is one `.gltf`, centred, feet at y=0; `models.json` lists them.
+- The LowPoly packs' real texture `color_1024x1024.jpg` was never in the download; `textures/pack1.jpg` and `pack2.jpg` are stand-ins. Saving the real image over them restores the colours.
+- Garden tools export without colour.
+
+**Other rounds since 31 Oct.** UniMate rig identification and monster moves (`ui/rigparts.js`, `ui/monstermoves.js`), texture faces (`ui/facetex.js`), Simplify (`skills/slimrig.py`), import of glb, gltf, fbx and folders (`skills/modelimport.py`, `skills/fbx2glb.py`), all image types in frames (`skills/roomlife.py`), floating video window (`skills/vbrowser.py`), PC-wide installed games (`skills/launchers.py`), RetroArch inside the app (`skills/retroplay.py`, `skills/retrobar.py`).
+
+**Google Drive.** Google Drive for desktop isn't on this PC now, so `G:\My Drive\Vermeil` can't be written from here. `python scripts/package_app.py --drive` builds `dist/Vermeil-Drive/` to upload by hand.
+
+**Open.** Offered, unanswered: shape-based legs, arms and tail detection for rigs with meaningless bone names. PS2 unconfirmed (needs a BIOS). Women's Farmer outfit may show a sword.
 
 ---
 

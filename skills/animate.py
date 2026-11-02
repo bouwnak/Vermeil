@@ -56,6 +56,23 @@ PROMPTS = {
     "press": "An object pushes both hands straight up overhead and lowers them, like a shoulder press.",
     "plank": "An object holds a plank on the floor.",
     "jumping_jacks": "An object does jumping jacks.",
+    # monster moves (Body type -> Monster)
+    "fly": "An object flies forward through the air, flapping its wings steadily.",
+    "hover": "An object hovers in place in the air, beating its wings gently.",
+    "float": "An object floats in place in the air, drifting slowly up and down.",
+    "glide": "An object glides forward through the air with its arms spread wide.",
+    "roar": "An object rears back and roars loudly, thrusting its head forward.",
+    "stomp": "An object stomps the ground hard with its feet, shaking its body.",
+    "claw": "An object slashes forward with its claws.",
+    "bite": "An object lunges its head forward and bites.",
+    "tail_swing": "An object turns its body and swings its tail from side to side.",
+    "wing_flap": "An object stands in place and flaps its wings.",
+    "breathe_fire": "An object rears its head back, then thrusts it forward and breathes fire.",
+    "crawl": "An object crawls forward low to the ground on all fours.",
+    "prowl": "An object prowls forward slowly, crouched low.",
+    "charge": "An object charges forward at full speed with its head down.",
+    "hurt": "An object flinches backward in pain.",
+    "faint": "An object collapses to the ground and stays down.",
 }
 
 
@@ -68,6 +85,9 @@ BODY_STYLE = {
     "female": {"walk": "An object walks forward with a light, graceful stride, arms swinging softly.",
                "idle": "An object stands still in place, relaxed, with its arms down at its sides, breathing slowly.",
                "wave": "An object stands in place and waves hello cheerfully with its right hand raised."},
+    "monster": {"walk": "An object walks forward with a heavy, lumbering monster gait, its body low and its arms held out in front.",
+                "idle": "An object stands in place like a large beast, breathing slowly, with its arms held forward and ready.",
+                "wave": "An object stands in place and raises one clawed arm in greeting."},
 }
 
 

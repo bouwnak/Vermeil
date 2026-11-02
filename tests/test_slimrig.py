@@ -1,5 +1,6 @@
 """slimrig: game rigs with too many bones are cut down for UniMate (helpers first, weights go to the parent)"""
 import os, shutil, sys, tempfile, unittest
+from unittest import mock
 
 import numpy as np
 
@@ -41,7 +42,8 @@ class SlimTests(unittest.TestCase):
 
     def test_helpers_go_first_and_weights_move_to_the_parent(self):
         self.assertEqual(slimrig.bone_count(self.src), 9)
-        self.assertEqual(slimrig.slim(self.src, self.dest, max_bones=7), (9, 7))
+        with mock.patch.object(slimrig, "_needs_rebind", return_value=False):       # a clean rig; the matrices here only tell the bones apart
+            self.assertEqual(slimrig.slim(self.src, self.dest, max_bones=7), (9, 7))
         js, binary = slimrig.read_glb(self.dest)
         names = [js["nodes"][i]["name"] for i in js["skins"][0]["joints"]]
         self.assertNotIn("upperarm_drv", names)                     # helpers before real bones

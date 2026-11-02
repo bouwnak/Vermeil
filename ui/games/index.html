@@ -7,6 +7,20 @@
 <title>Vermeil — Games</title>
 <link rel="stylesheet" href="../vendor/fonts/nunito.css">
 <link rel="stylesheet" href="games.css">
+<style>
+  /* a retro game inside the app: RetroArch's window sits over .rs-view */
+  .retro-stage { position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column; background: #000; }
+  .retro-stage[hidden] { display: none; }
+  .rs-bar { flex: none; height: 48px; box-sizing: border-box; display: flex; align-items: center; gap: 4px; padding: 0 10px; background: #0e1116; border-bottom: 1px solid #2b313b; color: #e6e9ee; font-weight: 700; user-select: none; }
+  .rs-bar button { flex: none; height: 36px; min-width: 38px; padding: 0 8px; font: inherit; font-size: 16px; color: inherit; background: transparent; border: 0; border-radius: 9px; cursor: pointer; }
+  .rs-bar button:hover { background: #222832; }
+  .rs-bar button.rs-text { font-size: 13px; }
+  .rs-bar button.on { background: rgba(62, 142, 255, .2); box-shadow: inset 0 0 0 1px #3e8eff; }
+  .rs-sep { width: 1px; height: 24px; background: #2b313b; margin: 0 3px; }
+  .rs-title { flex: 1; min-width: 0; padding-left: 6px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rs-msg { flex: none; color: #8b929d; font-size: 12px; font-weight: 600; }
+  .rs-view { flex: 1; min-height: 0; }
+</style>
 </head>
 <body>
 
@@ -33,6 +47,11 @@
         <span class="hub-text"><b>Adventure</b><small>Dungeon RPG with Vermeil — explore, fight and build your party</small></span>
         <span class="hub-go" aria-hidden="true">›</span>
       </button>
+      <button class="hub-card" id="cardTurtle" type="button" data-preview="turtle" data-sfx="open">
+        <span class="hub-art art-turtle" aria-hidden="true">🐢</span>
+        <span class="hub-text"><b>Turtle Island</b><small>Farm on the back of a giant living turtle, with dinosaurs and Vermeil beside you</small></span>
+        <span class="hub-go" aria-hidden="true">›</span>
+      </button>
       <button class="hub-card" id="cardRetro" type="button" data-preview="retro" data-sfx="open">
         <span class="hub-art art-retro" aria-hidden="true">🕹</span>
         <span class="hub-text"><b>Retro Games</b><small>Classic NES, SNES, Sega, Game Boy, PlayStation and arcade games</small></span>
@@ -47,6 +66,9 @@
         <img src="img/adventure.jpg" alt="" onerror="this.remove()">
         <div class="pv-caption"><b>Adventure</b><span>Explore the dungeon with Vermeil</span></div>
       </div>
+      <div class="pv pv-turtle" data-pv="turtle">
+        <div class="pv-caption"><b>Turtle Island</b><span>Your farm, on something alive</span></div>
+      </div>
       <div class="pv pv-retro" data-pv="retro">
         <div class="pv-collage" id="collage"></div>
         <div class="pv-retro-title">RETRO</div>
@@ -55,7 +77,7 @@
     </aside>
   </div>
 
-  <!-- games installed with Steam, Epic Games, GOG, Ubisoft (skills/launchers.py) -->
+  <!-- every game on this PC: launchers, Riot, and what else Windows and the drives have (skills/launchers.py) -->
   <section class="lib-shelf" id="libShelf" hidden>
     <div class="rg-title"><h2>Installed games</h2><span class="muted" id="libCount"></span>
       <nav class="lib-stores" id="libStores" aria-label="Launcher"></nav>
@@ -135,5 +157,27 @@
 </div>
 
 <script type="module" src="games.js"></script>
+<!-- a retro game plays here, inside the app -->
+<section class="retro-stage" id="retroStage" hidden>
+  <div class="rs-bar">
+    <button id="retroLeave" class="rs-text" type="button" title="Close the game and go back">← Back</button>
+    <span class="rs-sep"></span>
+    <button data-cmd="RESET" type="button" title="Restart" aria-label="Restart">↻</button>
+    <button id="retroPause" type="button" title="Pause" aria-label="Pause">⏸</button>
+    <button data-cmd="SAVE_STATE" data-say="Saved" type="button" title="Save" aria-label="Save">💾</button>
+    <button data-cmd="LOAD_STATE" data-say="Loaded" type="button" title="Load your save" aria-label="Load">📂</button>
+    <button id="retroSpeed" class="rs-text" type="button" title="Fast forward">1x</button>
+    <button data-cmd="SCREENSHOT" data-say="Screenshot taken" type="button" title="Screenshot" aria-label="Screenshot">📷</button>
+    <span class="rs-sep"></span>
+    <span class="rs-title" id="retroTitle"></span>
+    <span class="rs-msg" id="retroMsg" aria-live="polite"></span>
+    <button id="retroMute" type="button" title="Sound on / off" aria-label="Sound on or off">🔊</button>
+    <button data-cmd="VOLUME_DOWN" type="button" title="Quieter" aria-label="Quieter">−</button>
+    <button data-cmd="VOLUME_UP" type="button" title="Louder" aria-label="Louder">+</button>
+    <span class="rs-sep"></span>
+    <button data-cmd="MENU_TOGGLE" type="button" title="RetroArch settings" aria-label="Settings">⚙</button>
+  </div>
+  <div class="rs-view" id="retroView"></div>
+</section>
 </body>
 </html>

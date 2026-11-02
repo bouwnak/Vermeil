@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { beat } from "./visualizer.js";
 
-export const roomHooks = { api: null, open: null };      // set by app.js: the Python API and a way to open a panel
+export const roomHooks = { api: null, open: null, toast: () => {} };      // set by app.js: the Python API and a way to open a panel
 
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...extra });
 const metal = (color) => std(color, { metalness: 0.9, roughness: 0.25 });
@@ -238,30 +238,44 @@ function photoFrame(style, size) {
       g.add(cube(W + b * 2, H + b * 2 + (polaroid ? H * 0.12 : 0), 0.05, m, 0, polaroid ? -H * 0.04 : 0, 0), photo);
       if (style === "gold") for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(ball(b * 0.9, m, x * (W / 2 + b * 0.6), y * (H / 2 + b * 0.6), 0.04));
       if (style === "neon") lightOn(g, 0xff5fb7, 1.5, 0).position.z = 0.4;
+      let timer = 0, moving = [];                           // a .gif: its frames, shown one after another
+      const fit = (url, d) => new Promise((done) => new THREE.TextureLoader().load(url, (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const a = d.w / d.h, frameA = W / picH;             // crop the picture to fill the frame
+        if (a > frameA) { tex.repeat.set(frameA / a, 1); tex.offset.set((1 - frameA / a) / 2, 0); }
+        else { tex.repeat.set(1, a / frameA); tex.offset.set(0, (1 - a / frameA) / 2); }
+        done(tex);
+      }));
       const load = async (path) => {
         const d = path && await roomHooks.api?.photo_data(path);
+        if (d?.error) roomHooks.toast(d.error, 6000);
         if (!d?.url) return;
-        new THREE.TextureLoader().load(d.url, (tex) => {
-          tex.colorSpace = THREE.SRGBColorSpace;
-          const a = d.w / d.h, frameA = W / picH;           // crop the picture to fill the frame
-          if (a > frameA) { tex.repeat.set(frameA / a, 1); tex.offset.set((1 - frameA / a) / 2, 0); }
-          else { tex.repeat.set(1, a / frameA); tex.offset.set(0, (1 - a / frameA) / 2); }
-          pic.map?.dispose(); pic.map = tex; pic.needsUpdate = true;
-        });
+        clearTimeout(timer);
+        const old = moving.length ? moving : [pic.map];
+        moving = d.frames ? await Promise.all(d.frames.map((u) => fit(u, d))) : [];
+        const first = moving[0] || await fit(d.url, d);
+        old.forEach((t) => t?.dispose());
+        pic.map = first; pic.needsUpdate = true;
+        if (!moving.length) return;
+        let i = 0;
+        const next = () => {
+          if (!g.parent) return;                            // taken off the wall
+          i = (i + 1) % moving.length;
+          pic.map = moving[i];
+          timer = setTimeout(next, d.delays[i]);
+        };
+        timer = setTimeout(next, d.delays[0]);
       };
       load(ctx.spec.photo);
-      return { group: g, interact: { label: "Photo frame: next picture", onClick: () => {
+      return { group: g, interact: { label: "Photo frame: choose a picture", onClick: () => {
         (async () => {
-          let list = await roomHooks.api?.photo_list();
-          if (!list?.photos?.length) list = await roomHooks.api?.photo_folder_pick();
-          const ps = list?.photos || [];
-          if (!ps.length) return;
-          const i = (ps.findIndex((p) => p.path === ctx.spec.photo) + 1) % ps.length;
-          ctx.spec.photo = ps[i].path;
-          await load(ctx.spec.photo);
+          const path = await roomHooks.api?.photo_pick();
+          if (!path) return;
+          ctx.spec.photo = path;
+          await load(path);
           ctx._room.onChange?.();
         })();
-        return "next photo";
+        return "choose a picture";
       } } };
     },
   };

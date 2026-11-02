@@ -331,7 +331,7 @@ async function loadCharacter() {
   room.setScreenName(c.name);
   $("loading").hidden = !c.model;
   try {
-    await room.setModel(c.model, { flip: !!c.flip, outfit: c.outfit || "", hair: c.hair || "" });
+    await room.setModel(c.model, { flip: !!c.flip, outfit: c.outfit || "", hair: c.hair || "", travel: c.travel || "" });
   } catch (e) {
     console.error(e);
     toast(c.model.toLowerCase().endsWith(".vrm")
@@ -425,6 +425,8 @@ function openEditor(id) {
   f.emotional.checked = !!c.emotional;
   showChatterNote();
   f.flip.checked = !!c.flip;
+  f.hat.value = c.hat || "";
+  f.travel.value = c.travel || "";
   f.language.value = c.language || "auto";
   f.translate.checked = !!c.translate;
   fillModelSelect(c.model);
@@ -974,6 +976,8 @@ $("personEnroll").addEventListener("click", async () => {
 
 // ---------------- outfit ----------------
 function outfit() {          // skills/herlife.py picks it (Settings → Her → Dress her for the day); off = no hats or glasses
+  const hat = activeChar()?.hat;
+  if (hat) return { auto: false, hat, glasses: false };       // Characters → Hat: this character's own choice
   const o = herLife?.her.outfit;
   return o && state?.settings?.outfit_auto !== false ? { auto: true, base: o } : { auto: false, hat: "none", glasses: false };
 }
@@ -1032,13 +1036,26 @@ for (const box of document.querySelectorAll("input[data-setting]")) {
 }
 
 $("newChar").addEventListener("click", () => openEditor(null));
-$("importModel").addEventListener("click", async () => {
-  const name = await api.import_model();
-  if (!name) return;
+async function importModel(folder) {
+  const res = await api.import_model(folder);
+  if (!res) return;
+  const name = res.name;
   if (!state.models.includes(name)) state.models.push(name);
   fillModelSelect(name);
-  toast(`Imported ${name}. Save the character to use it.`);
-  if (/\.(glb|gltf)$/i.test(name)) rig(name, true);      // asks about the rig (keep it / look / rig it yourself)
+  toast(`Imported ${name}. ${res.note || ""} Save the character to use it.`, 7000);
+  if (/\.glb$/i.test(name)) rig(name, true);             // asks about the rig (keep it / look / rig it yourself)
+}
+$("importModel").addEventListener("click", () => importModel(false));
+$("importFolder").addEventListener("click", () => importModel(true));
+$("deleteAnimated").addEventListener("click", async () => {
+  if (!confirm("Delete every animated model? This can't be undone. Characters using one go back to the model it was made from.")) return;
+  const r = await api.delete_animated_models();
+  state = r.state; renderCharacters(); loadCharacter();
+  if (editingId) openEditor(editingId);
+  toast(r.deleted ? `Deleted ${r.deleted} animated model${r.deleted > 1 ? "s" : ""}.` : "There were no animated models.");
+});
+$("hatSelect").addEventListener("change", (e) => {     // live preview on the character standing in the room
+  if (editingId === state.active) room.setOutfit(e.target.value ? { hat: e.target.value, glasses: false } : outfit().base || { hat: "none", glasses: false });
 });
 function rig(name, fromImport = false) {
   openRigger(name, {
@@ -1085,13 +1102,13 @@ $("editor").addEventListener("submit", async (ev) => {
     voice_online: f.voice_online ? f.voice_online.value : "",
     rate: f.rate.value, pitch: f.pitch.value, volume: Number(f.volume.value), emotion: Number(f.emotion.value),
     natural: f.natural.checked, emotional: f.emotional.checked, language: f.language.value, translate: f.translate.checked, rvc: rvcValue(),
-    outfit: $("lookRow").hidden ? prev?.outfit || "" : f.outfit.value, hair: $("lookRow").hidden ? prev?.hair || "" : f.hair.value,
+    outfit: $("lookRow").hidden ? prev?.outfit || "" : f.outfit.value, hair: $("lookRow").hidden ? prev?.hair || "" : f.hair.value, hat: f.hat.value, travel: f.travel.value,
   });
   state = res.state;
   editingId = res.id;
   renderCharacters();
   toast("Character saved.");
-  if (res.id === state.active && (!prev || prev.model !== f.model.value || prev.name !== f.name.value || !!prev.flip !== f.flip.checked)) loadCharacter();
+  if (res.id === state.active && (!prev || prev.model !== f.model.value || prev.name !== f.name.value || !!prev.flip !== f.flip.checked || (prev.travel || "") !== f.travel.value)) loadCharacter();
   $("useChar").hidden = res.id === state.active;
   $("deleteChar").hidden = false;
 });
@@ -1276,7 +1293,7 @@ function categoryOf(type, def) {
   return CATEGORIES.find(([, , re]) => re?.test(text))[0];
 }
 let living = null;              // livingroom.js: shop, designs, sounds, decorations, weather
-let catalogTab = "tables";
+let catalogTab = "tables", catalogShut = false;   // shut: the open category was pressed again, so its list is out of the way
 try { catalogTab = localStorage.getItem("catalogTab") || catalogTab; } catch { /* ignore */ }
 function renderCatalog() {
   const items = Object.entries(CATALOG).map(([type, def]) => ({ type, def, cat: categoryOf(type, def) }));
@@ -1287,6 +1304,7 @@ function renderCatalog() {
     b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(k === catalogTab));
     b.textContent = label;
     b.addEventListener("click", () => {
+      catalogShut = k === catalogTab && !catalogShut;
       catalogTab = k;
       try { localStorage.setItem("catalogTab", k); } catch { /* ignore */ }
       renderCatalog();
@@ -1295,8 +1313,9 @@ function renderCatalog() {
     return b;
   }));
   const pane = ROOM_PANES.some(([k]) => k === catalogTab) ? (catalogTab === "wallcolour" ? "walls" : catalogTab) : null;
-  for (const p of document.querySelectorAll(".edit-pane")) p.hidden = p.dataset.pane !== pane;
-  $("catalog").hidden = !!pane;
+  for (const p of document.querySelectorAll(".edit-pane")) p.hidden = catalogShut || p.dataset.pane !== pane;
+  $("catalog").hidden = !!pane || catalogShut;
+  if (catalogShut) return;
   if (pane === "house") renderHousePane();
   if (pane === "designs") living?.renderDesigns($("designsPane"));
   if (pane === "sounds") living?.renderSounds($("soundsPane"));
@@ -1664,15 +1683,20 @@ function renderAnimTest() {
     return wrap;
   };
   const names = room.animationNames();
+  const MONSTER_KEYS = ["fly", "hover", "hover_go", "float", "glide", "roar", "stomp", "claw", "bite", "tail_swing", "wing_flap", "breathe_fire", "crawl", "prowl", "charge", "hurt", "faint"];
   const GYM = { squat: "Squats", lunge: "Lunges", deadlift: "Deadlift", pushup: "Push-ups", curl: "Bicep curls", row: "Rows",
     press: "Overhead press", plank: "Plank", jumping_jacks: "Jumping jacks" };
   const UNIMATE = ["idle", "walk", "wave", "talk", "happy", "dance", "cheer", "jump", "sad", "sit"];
   const fromUniMate = state ? /-animated\.glb$/i.test(activeChar()?.model || "") : false;   // drawn once before the characters load
-  const clips = names.filter((n) => !GYM[n] && !(fromUniMate && UNIMATE.includes(n))).map((n) => [ANIM_LABELS[n] || n, () => room.testAnimation(n, 8)]);
+  const clips = names.filter((n) => !GYM[n] && !MONSTER_KEYS.includes(n) && !(fromUniMate && UNIMATE.includes(n))).map((n) => [ANIM_LABELS[n] || n, () => room.testAnimation(n, 8)]);
   const made = fromUniMate ? names.filter((n) => UNIMATE.includes(n)).map((n) => [ANIM_LABELS[n] || n, () => room.testAnimation(n, 8)]) : [];
   // every gym exercise: the ones this character can't do yet say how to get them
   const gym = Object.entries(GYM).map(([k, label]) => names.includes(k) ? [label, () => room.testAnimation(k, 10)]
     : [`${label} (not made yet)`, () => toast("Make it in Characters → 🦴 Rig & animate → 🏋 Gym exercises.", 5000), true]);
+  // monster moves: shown once it has one of them, so people and robots don't get a list of things they'll never do
+  const MONSTER = { fly: "Flying", hover: "Hovering", hover_go: "Hovering along", float: "Floating", glide: "Gliding", roar: "Roaring", stomp: "Stomping", claw: "Claw swipe", bite: "Biting",
+    tail_swing: "Tail swing", wing_flap: "Wing flap", breathe_fire: "Breathing fire", crawl: "Crawling", prowl: "Prowling", charge: "Charging", hurt: "Hurt", faint: "Faint" };
+  const monster = names.filter((n) => MONSTER[n]).map((k) => [MONSTER[k], () => room.testAnimation(k, 10)]);
   const hands = ["relaxed", "fist", "open", "point", "grip"].map((p) => [`Hands: ${p}`, () => { if (!room.testHands(p, 4)) toast("This model has no finger bones (a paw or a stub).", 3500); }]);
   const spots = room.spots?.() || [];
   const go = (kind, label) => {                                // looked up when you press it, so moved furniture counts
@@ -1687,8 +1711,10 @@ function renderAnimTest() {
   box.replaceChildren(...[
     names.length ? null : Object.assign(document.createElement("p"), { className: "note", textContent: "This character has no animations of its own - try Kit, or the face / emote buttons." }),
     room.rigSummary() ? Object.assign(document.createElement("p"), { className: "note", textContent: `Rig: ${room.rigSummary()}.` }) : null,
+    room.travelNote() ? Object.assign(document.createElement("p"), { className: "note", textContent: room.travelNote() }) : null,
     group("Made with UniMate (cleaned: feet on the floor, relaxed arms, no jitter)", made),
     group("Animations (from the 3D model)", clips),
+    monster.length ? group("Monster moves", monster) : null,
     group("Gym exercises", gym),
     group("Hands (poses fit the finger count)", hands),
     group("Use the room", uses),

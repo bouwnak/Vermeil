@@ -1,32 +1,36 @@
 """
-retrobar.py - the bar over a running retro game (ui/games/retrobar.html): restart, pause, save, load, speed, sound...
+retrobar.py - a running retro game, inside Vermeil's window.
 
-RetroArch runs in its own window, so the bar is a small always-on-top window of its own. It shows when the mouse goes
-near the bottom of the screen and hides again, like the bar of a video player. Every button sends RetroArch one of its
-own network commands (skills/retroplay.py send_command).
+RetroArch is its own program, but its window is made a child of Vermeil's (Windows SetParent, as the browser tabs in skills/vbrowser.py),
+so no new window opens: the game shows on the stage of the Games hub (ui/games/games.js), under a bar with restart, pause, save, load, speed
+and sound. The page says where the stage is (place()). Every button sends RetroArch one of its own network commands
+(skills/retroplay.py send_command). RetroArch can make its window again when a core changes the video driver, so the window is watched
+for as long as the game runs and put back inside.
 """
 import ctypes
 from ctypes import wintypes
-import os
 import threading
 import time
 
 import overlaywin as ow
 import retroplay
+import vbrowser
 
-WIDTH, HEIGHT = 860, 62
-SHOW_NEAR_BOTTOM = 80        # pixels from the bottom of the screen
 ALLOWED = {"RESET", "PAUSE_TOGGLE", "SAVE_STATE", "LOAD_STATE", "FAST_FORWARD", "SCREENSHOT", "MUTE", "VOLUME_UP", "VOLUME_DOWN",
-           "MENU_TOGGLE", "FULLSCREEN_TOGGLE", "STATE_SLOT_PLUS", "STATE_SLOT_MINUS"}
+           "MENU_TOGGLE", "STATE_SLOT_PLUS", "STATE_SLOT_MINUS"}
+HWND_TOP, SWP_NOACTIVATE, SWP_SHOWWINDOW = 0, 0x10, 0x40
+
+_game = {"proc": None, "title": "", "hwnd": 0, "rect": None}
 
 
 def window_of(pid):
-    """the biggest visible window of a process (its main one), or 0"""
+    """the biggest visible top-level window of a process, or 0. Once it's inside Vermeil it isn't top-level any more."""
     user32 = ctypes.windll.user32
     user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     user32.IsWindowVisible.argtypes = [wintypes.HWND]
     user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
     best, area = 0, 0
+
     def check(hwnd, _):
         nonlocal best, area
         p, r = wintypes.DWORD(), wintypes.RECT()
@@ -40,70 +44,73 @@ def window_of(pid):
     return best
 
 
-class BarApi:
-    """what the bar's buttons call. (Names starting with _ stay hidden from the page.)"""
-    def __init__(self, proc, title):
-        self._proc, self._title = proc, title
+def main_window():
+    """Vermeil's own window, or 0"""
+    try:
+        import webview
+        return int(webview.windows[0].native.Handle.ToInt64())
+    except Exception:  # noqa: BLE001 - no window yet, or not on Windows
+        return vbrowser.find_window("Vermeil")
 
-    def _game_window(self):
-        return window_of(self._proc.pid) if self._proc.poll() is None else 0
 
-    def _back_to_game(self):
-        hwnd = self._game_window()
-        if hwnd:
-            ctypes.windll.user32.SetForegroundWindow(hwnd)     # the keys and controller go to the game again
+def game_window():
+    """the game's window inside Vermeil, or 0"""
+    p = _game["proc"]
+    return _game["hwnd"] if p and p.poll() is None else 0
 
-    def cmd(self, name):
-        if name not in ALLOWED:
-            return {"error": "unknown"}
-        retroplay.send_command(name)
-        self._back_to_game()
-        return {"ok": True}
 
-    def leave(self):
-        """close the game. (RetroArch saves the game's own save as it quits.)"""
+def _layout():
+    h, r = _game["hwnd"], _game["rect"]
+    if h and r:
+        ctypes.windll.user32.SetWindowPos(wintypes.HWND(h), HWND_TOP, r["x"], r["y"], r["w"], r["h"], SWP_NOACTIVATE | SWP_SHOWWINDOW)
+
+
+def place(rect):
+    """rect: {x, y, w, h}, the stage in Vermeil's window (pixels)"""
+    if rect:
+        _game["rect"] = {k: int(round(float(rect[k]))) for k in ("x", "y", "w", "h")}
+        _layout()
+    return True
+
+
+def state():
+    p = _game["proc"]
+    return {"running": bool(p and p.poll() is None), "title": _game["title"]}
+
+
+def command(name):
+    if name not in ALLOWED:
+        return {"error": "unknown"}
+    retroplay.send_command(name)
+    ow.give_focus(game_window())                    # the keys and controller go to the game again
+    return {"ok": True}
+
+
+def leave():
+    """close the game. (RetroArch saves the game's own save as it quits.)"""
+    p = _game["proc"]
+    if p and p.poll() is None:
         retroplay.send_command("QUIT")
-        threading.Timer(4, lambda: self._proc.poll() is None and self._proc.terminate()).start()
-        return {"ok": True}
+        threading.Timer(4, lambda: p.poll() is None and p.terminate()).start()
+    return {"ok": True}
+
+
+def _keep_inside(proc):
+    while proc.poll() is None:
+        try:
+            loose = window_of(proc.pid)
+            parent = main_window()
+            if loose and parent and vbrowser.embed(loose, parent):
+                _game["hwnd"] = loose
+                _layout()
+        except Exception as e:  # noqa: BLE001 - the game plays on in its own window rather than stopping
+            print(f"[retro inside] {type(e).__name__}: {e}")
+        time.sleep(0.25)
+    if _game["proc"] is proc:
+        _game.update(proc=None, hwnd=0, title="")
 
 
 def attach(proc, title):
-    """show the bar for a running game; it closes by itself with the game. Does nothing outside the app's window."""
-    try:
-        import webview
-    except ImportError:
-        return
-    if not webview.windows:
-        return
-    W, H = ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1)
-    page = os.path.join(retroplay.APP_ROOT, "ui", "retrobar.html")
-    win = webview.create_window("VermeilRetroBar", page, js_api=BarApi(proc, title), frameless=True, easy_drag=False, on_top=True,
-                                width=min(WIDTH, W - 20), height=HEIGHT, x=max(0, (W - WIDTH) // 2), y=H - HEIGHT - 12,
-                                hidden=True, background_color="#0e1116")
-    threading.Thread(target=_follow_mouse, args=(proc, win, H), daemon=True, name="retro-bar").start()
-
-
-def _follow_mouse(proc, win, screen_h):
-    class P(ctypes.Structure):
-        _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
-    shown = False
-    last_near = 0.0
-    hwnd = 0
-    p = P()
-    time.sleep(2)                                   # let the page load
-    while proc.poll() is None:
-        ctypes.windll.user32.GetCursorPos(ctypes.byref(p))
-        if p.y >= screen_h - SHOW_NEAR_BOTTOM:
-            last_near = time.time()
-        want = time.time() - last_near < 2.0
-        hwnd = hwnd or ow.find("VermeilRetroBar")
-        if hwnd and not shown and want:
-            ow.never_take_focus(hwnd)
-        if hwnd and want != shown:
-            shown = want
-            ow.show(hwnd) if want else ow.hide(hwnd)
-        time.sleep(0.15)
-    try:
-        win.destroy()
-    except Exception:  # noqa: BLE001
-        pass
+    """the game goes inside Vermeil's window, and stays there until it closes"""
+    _game.update(proc=proc, title=title, hwnd=0)
+    threading.Thread(target=_keep_inside, args=(proc,), daemon=True, name="retro-inside").start()

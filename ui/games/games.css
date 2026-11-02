@@ -87,6 +87,7 @@ body.playing .hub-waves { display: none; }
 }
 .hub-art.big { width: 84px; height: 84px; font-size: 38px; margin: 0 auto 14px; }
 .art-adventure { background: linear-gradient(145deg, #1d5c66, #0a1d24); color: #f3ebd8; border-color: #2a6e78; }
+.art-turtle { background: linear-gradient(145deg, #53d6c6, #2f8f6f); color: #fff; border-color: #6fe0c8; }
 .art-retro { background: linear-gradient(145deg, rgba(var(--accent-rgb), .55), rgba(var(--accent-rgb), .12)); color: #fff; border-color: rgba(var(--accent-rgb), .6); }
 .hub-text { flex: 1; display: grid; gap: 3px; }
 .hub-text b { font-size: clamp(16px, 1.3vw, 24px); font-weight: 900; color: var(--strong); }
@@ -322,6 +323,8 @@ body.playing .hub-waves { display: none; }
 }
 .pv-caption b { font-size: 26px; font-weight: 900; }
 .pv-caption span { opacity: .85; }
+.pv-turtle { background: radial-gradient(ellipse at 50% 45%, #a9e07a 0 16%, #f6e6bb 17% 19%, #53d6c6 20%, #2f9c8d 100%); }
+.pv-turtle::before { content: "🐢"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 100px; }
 .pv-retro { background: #000; }
 .pv-collage { position: absolute; inset: -6%; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; transform: rotate(-4deg); }
 .pv-collage img { width: 100%; aspect-ratio: 4 / 3; height: auto; object-fit: cover; border-radius: 4px; animation: rise .5s ease both; }

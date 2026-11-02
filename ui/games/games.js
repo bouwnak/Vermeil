@@ -105,6 +105,7 @@ $("confirmYes").onclick = () => {
   loader.progress(0.4);
   setTimeout(() => { location.href = `../game/index.html${keep}`; }, 350);
 };
+$("cardTurtle").onclick = () => { musicStop(0.3); location.href = "../turtle/index.html"; };
 $("cardRetro").onclick = () => { show("retro"); if (!rg.loaded) loadGames(); };
 
 // the big picture on the right follows the game you point at
@@ -248,7 +249,7 @@ function libCard(g) {
   const name = document.createElement("div"); name.className = "rg-name"; name.textContent = g.name;
   c.append(thumb, name);
   const go = async () => {
-    loader.show(`Starting ${g.name}…`, `Opening it with ${g.store_name}`, g.cover);
+    loader.show(`Starting ${g.name}…`, g.store === "pc" ? "Opening it" : `Opening it with ${g.store_name}`, g.cover);
     loader.progress(0.6);
     const r = await call("launcher_play", g.store, g.id);
     setTimeout(() => loader.hide(), 1600);
@@ -616,8 +617,35 @@ async function playInEmulator(g, job, live) {
   await loadLibrary();
   if (LISTS[rg.platform]) loadGames();
   const started = Date.now();
-  while ((await call("retro_launch_status", job))?.running) await sleep(2000);
+  await playOnStage();
   call("gn_record", "retro", Math.round((Date.now() - started) / 1000));   // hours for your yearly recap
+}
+
+// ---------------- the game, inside this page: RetroArch's window sits over the stage (skills/retrobar.py) ----------------
+const stage = $("retroStage"), stageView = $("retroView");
+function placeStage() {
+  if (stage.hidden) return;
+  const r = stageView.getBoundingClientRect(), k = devicePixelRatio || 1;
+  call("retro_place", { x: r.left * k, y: r.top * k, w: r.width * k, h: r.height * k });
+}
+new ResizeObserver(placeStage).observe(stageView);
+let sayTimer = 0;
+function stageSay(text) { $("retroMsg").textContent = text; clearTimeout(sayTimer); sayTimer = setTimeout(() => { $("retroMsg").textContent = ""; }, 3000); }
+for (const b of stage.querySelectorAll("[data-cmd]")) b.onclick = () => { call("retro_cmd", b.dataset.cmd); if (b.dataset.say) stageSay(b.dataset.say); };
+for (const [id, cmd, off, on] of [["retroPause", "PAUSE_TOGGLE", "⏸", "▶"], ["retroSpeed", "FAST_FORWARD", "1x", "⏩"], ["retroMute", "MUTE", "🔊", "🔇"]]) {
+  const b = $(id);
+  b.onclick = () => { const was = b.classList.toggle("on"); b.textContent = was ? on : off; call("retro_cmd", cmd); };
+}
+$("retroLeave").onclick = () => call("retro_leave");
+/** shows the stage until the game closes */
+async function playOnStage() {
+  const now = await call("retro_stage");
+  if (!now?.running) return;
+  $("retroTitle").textContent = now.title || "";
+  stage.hidden = false;
+  placeStage();
+  while ((await call("retro_stage"))?.running) await sleep(1000);
+  stage.hidden = true;
 }
 
 function failPlay(text) {
@@ -635,5 +663,6 @@ function toast(text) {
   setTimeout(() => t.remove(), 3100);
 }
 
+playOnStage();                                         // the page was reloaded while a game runs: back to it
 // opened as games/index.html?retro -> straight to Retro Games
 if (new URLSearchParams(location.search).has("retro")) $("cardRetro").click();

@@ -26,7 +26,9 @@ from datetime import date
 from paths import data_file
 
 PRESETS_FILE = data_file("room_presets.json")
-PHOTO_TYPES = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp")
+PHOTO_TYPES = (".jpg", ".jpeg", ".jfif", ".jpe", ".png", ".apng", ".webp", ".gif", ".bmp", ".dib", ".tif", ".tiff", ".psd", ".tga", ".ico",
+               ".heic", ".heif", ".avif", ".jp2", ".pcx", ".ppm", ".svg")
+MAX_FRAMES = 60                 # a moving picture (.gif, .webp): this many frames at most, evenly taken
 _weather_cache = {}
 
 TIPS = [
@@ -37,7 +39,7 @@ TIPS = [
     "Tip: save more than one room design in Edit room → Designs.",
     "Tip: say \"search inside for ...\" to search in the app's own browser.",
     "Tip: a new themed furniture set comes to the shop every month.",
-    "Tip: photo frames come in 6 styles and 3 sizes. Pick a folder of pictures in the frame's options.",
+    "Tip: photo frames come in 6 styles and 3 sizes. Click one to put any picture in it.",
     "Tip: clap twice to wake Vermeil when the double-clap wake is on.",
     "Tip: Exam week mode clears your schedule down to studying, sleep and food.",
 ]
@@ -118,18 +120,64 @@ def photos(folder=None, limit=60):
     return {"folder": folder, "photos": [{"name": os.path.basename(p), "path": p} for _t, p in found[:limit]]}
 
 
-def photo_data(path, size=512):
-    if not path or not os.path.isfile(path) or not path.lower().endswith(PHOTO_TYPES):
-        return {"error": "That picture isn't there."}
+def _open_picture(path):
+    """Pillow reads almost everything; phones' .heic and .avif need its plug-in, added the first time one turns up"""
+    from PIL import Image
     try:
-        from PIL import Image, ImageOps
-        im = ImageOps.exif_transpose(Image.open(path)).convert("RGB")
-        im.thumbnail((size, size))
-        buf = io.BytesIO()
-        im.save(buf, "JPEG", quality=85)
-        return {"url": "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode(), "w": im.width, "h": im.height}
+        return Image.open(path)
+    except Exception:  # noqa: BLE001 - not a kind it knows yet
+        if not path.lower().endswith((".heic", ".heif", ".avif")):
+            raise
+    import subprocess
+    import sys
+    subprocess.run([sys.executable, "-m", "pip", "install", "pillow-heif"], capture_output=True, timeout=180,
+                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+    pillow_heif.register_avif_opener() if hasattr(pillow_heif, "register_avif_opener") else None
+    return Image.open(path)
+
+
+def _jpeg(im, size):
+    """a frame as a data: URL, on white where it's see-through. -> (url, width, height)"""
+    from PIL import Image
+    if im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info:
+        rgba = im.convert("RGBA")
+        back = Image.new("RGB", rgba.size, "white")
+        back.paste(rgba, mask=rgba.getchannel("A"))
+        im = back
+    else:
+        im = im.convert("RGB")
+    im.thumbnail((size, size))
+    buf = io.BytesIO()
+    im.save(buf, "JPEG", quality=85)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode(), im.width, im.height
+
+
+def photo_data(path, size=512):
+    """-> {url, w, h}, and for a picture that moves {frames: [urls], delays: [ms]} too"""
+    if not path or not os.path.isfile(path):
+        return {"error": "That picture isn't there."}
+    if path.lower().endswith(".svg"):                   # the page draws these itself
+        with open(path, "rb") as f:
+            return {"url": "data:image/svg+xml;base64," + base64.b64encode(f.read()).decode(), "w": size, "h": size}
+    try:
+        from PIL import ImageOps
+        im = _open_picture(path)
+        count = getattr(im, "n_frames", 1) if getattr(im, "is_animated", False) else 1
+        if count < 2:
+            url, w, h = _jpeg(ImageOps.exif_transpose(im), size)
+            return {"url": url, "w": w, "h": h}
+        step = max(1, count // MAX_FRAMES)
+        frames, delays = [], []
+        for i in range(0, count, step):
+            im.seek(i)
+            url, w, h = _jpeg(im.copy(), min(size, 320))
+            frames.append(url)
+            delays.append(max(20, int(im.info.get("duration") or 100)) * step)
+        return {"url": frames[0], "w": w, "h": h, "frames": frames, "delays": delays}
     except Exception as e:  # noqa: BLE001 - a broken picture just isn't shown
-        return {"error": f"Couldn't open the picture ({e})."}
+        return {"error": f"Couldn't open {os.path.basename(path)} ({type(e).__name__})."}
 
 
 # ---------------------------------------------------------------- weather

@@ -1,0 +1,1550 @@
+[
+{
+"name": "barrel_a",
+"size": [
+0.77,
+0.92,
+0.77
+],
+"polys": 528
+},
+{
+"name": "barrel_b",
+"size": [
+0.59,
+0.7,
+0.56
+],
+"polys": 496
+},
+{
+"name": "bench_a",
+"size": [
+1.38,
+1.33,
+1.07
+],
+"polys": 608
+},
+{
+"name": "bench_b",
+"size": [
+1.38,
+1.01,
+0.69
+],
+"polys": 504
+},
+{
+"name": "bench_c",
+"size": [
+1.34,
+0.54,
+0.47
+],
+"polys": 350
+},
+{
+"name": "bench_d",
+"size": [
+1.38,
+0.79,
+0.51
+],
+"polys": 296
+},
+{
+"name": "bonfire_a",
+"size": [
+1.61,
+0.57,
+1.64
+],
+"polys": 1280
+},
+{
+"name": "bonfire_a_1232",
+"size": [
+1.61,
+0.42,
+1.64
+],
+"polys": 1232
+},
+{
+"name": "brick_a",
+"size": [
+0.39,
+0.15,
+0.44
+],
+"polys": 136
+},
+{
+"name": "brick_b",
+"size": [
+0.46,
+0.22,
+0.46
+],
+"polys": 136
+},
+{
+"name": "brick_b_34",
+"size": [
+0.28,
+0.11,
+0.4
+],
+"polys": 34
+},
+{
+"name": "brick_b_340",
+"size": [
+1.09,
+0.22,
+0.92
+],
+"polys": 340
+},
+{
+"name": "bridge_a01",
+"size": [
+3.17,
+1.71,
+12.07
+],
+"polys": 582
+},
+{
+"name": "bridge_a02",
+"size": [
+4.96,
+1.71,
+7.19
+],
+"polys": 426
+},
+{
+"name": "bucket_a",
+"size": [
+0.27,
+0.45,
+0.35
+],
+"polys": 500
+},
+{
+"name": "bucket_b",
+"size": [
+0.38,
+0.27,
+0.38
+],
+"polys": 348
+},
+{
+"name": "car_a01",
+"size": [
+2.41,
+2.23,
+5.68
+],
+"polys": 4327
+},
+{
+"name": "car_a02",
+"size": [
+2.41,
+2.23,
+5.68
+],
+"polys": 4939
+},
+{
+"name": "car_a03",
+"size": [
+2.76,
+2.23,
+10.2
+],
+"polys": 13094
+},
+{
+"name": "car_a03_12598",
+"size": [
+2.6,
+2.23,
+10.2
+],
+"polys": 12598
+},
+{
+"name": "cart_a",
+"size": [
+0.61,
+0.58,
+1.17
+],
+"polys": 870
+},
+{
+"name": "cart_a_966",
+"size": [
+0.61,
+0.62,
+1.36
+],
+"polys": 966
+},
+{
+"name": "cart_a_726",
+"size": [
+0.61,
+0.39,
+1.33
+],
+"polys": 726
+},
+{
+"name": "cart_b",
+"size": [
+0.83,
+0.76,
+1.62
+],
+"polys": 444
+},
+{
+"name": "cart_c",
+"size": [
+0.81,
+0.74,
+1.84
+],
+"polys": 688
+},
+{
+"name": "chair_a",
+"size": [
+1.01,
+1.08,
+1.01
+],
+"polys": 364
+},
+{
+"name": "chair_a_230",
+"size": [
+1.03,
+1.04,
+1.03
+],
+"polys": 230
+},
+{
+"name": "chair_b",
+"size": [
+0.42,
+0.62,
+0.42
+],
+"polys": 260
+},
+{
+"name": "chair_b_234",
+"size": [
+0.88,
+0.63,
+0.88
+],
+"polys": 234
+},
+{
+"name": "chair_b_130",
+"size": [
+0.88,
+0.63,
+0.88
+],
+"polys": 130
+},
+{
+"name": "Coop_a",
+"size": [
+2.8,
+1.85,
+2.91
+],
+"polys": 1110
+},
+{
+"name": "coop_a",
+"size": [
+2.8,
+1.85,
+2.91
+],
+"polys": 1110
+},
+{
+"name": "coop_b",
+"size": [
+4.24,
+2.82,
+5.25
+],
+"polys": 5218
+},
+{
+"name": "coop_b_5694",
+"size": [
+4.24,
+2.82,
+5.25
+],
+"polys": 5694
+},
+{
+"name": "cow_a",
+"size": [
+0.96,
+1.41,
+2.58
+],
+"polys": 544
+},
+{
+"name": "cratebox_a",
+"size": [
+1.44,
+0.82,
+1.44
+],
+"polys": 196
+},
+{
+"name": "cratebox_b",
+"size": [
+0.51,
+0.31,
+0.81
+],
+"polys": 492
+},
+{
+"name": "cratebox_c",
+"size": [
+1.02,
+0.32,
+0.55
+],
+"polys": 173
+},
+{
+"name": "cratebox_d",
+"size": [
+0.5,
+0.23,
+0.65
+],
+"polys": 228
+},
+{
+"name": "cratebox_d_276",
+"size": [
+0.33,
+0.17,
+0.42
+],
+"polys": 276
+},
+{
+"name": "donkey_a",
+"size": [
+0.54,
+1.45,
+1.92
+],
+"polys": 456
+},
+{
+"name": "farmbuilding_a",
+"size": [
+11.91,
+6.5,
+15.67
+],
+"polys": 7033
+},
+{
+"name": "farmbuilding_b",
+"size": [
+14.08,
+6.19,
+8.61
+],
+"polys": 3451
+},
+{
+"name": "farmbuilding_c",
+"size": [
+13.57,
+6.5,
+9.69
+],
+"polys": 4359
+},
+{
+"name": "farmbuilding_d",
+"size": [
+17.02,
+6.19,
+8.61
+],
+"polys": 3326
+},
+{
+"name": "farmbuilding_e",
+"size": [
+7.29,
+7.25,
+4.86
+],
+"polys": 1577
+},
+{
+"name": "farmbuilding_f",
+"size": [
+6.25,
+4.34,
+4.4
+],
+"polys": 1403
+},
+{
+"name": "farmhouse_a01",
+"size": [
+12.45,
+7.57,
+18.15
+],
+"polys": 6499
+},
+{
+"name": "farmhouse_a02",
+"size": [
+14.24,
+7.57,
+18.15
+],
+"polys": 6681
+},
+{
+"name": "farmhouse_a03",
+"size": [
+14.02,
+8.41,
+14.8
+],
+"polys": 5099
+},
+{
+"name": "farmsign_a",
+"size": [
+3.0,
+2.36,
+0.26
+],
+"polys": 1146
+},
+{
+"name": "farmstructure_a",
+"size": [
+4.21,
+10.57,
+4.21
+],
+"polys": 1720
+},
+{
+"name": "farmstructure_b",
+"size": [
+10.51,
+12.02,
+8.7
+],
+"polys": 1054
+},
+{
+"name": "farmstructure_c",
+"size": [
+6.7,
+10.55,
+5.47
+],
+"polys": 1068
+},
+{
+"name": "farmstructure_d",
+"size": [
+8.29,
+15.27,
+4.1
+],
+"polys": 674
+},
+{
+"name": "farmstructure_e",
+"size": [
+3.68,
+10.5,
+3.83
+],
+"polys": 1206
+},
+{
+"name": "farmstructure_f",
+"size": [
+3.68,
+10.55,
+5.24
+],
+"polys": 992
+},
+{
+"name": "farmwagon_a01",
+"size": [
+2.51,
+1.77,
+4.37
+],
+"polys": 1754
+},
+{
+"name": "farmwagon_a02",
+"size": [
+2.51,
+1.77,
+5.82
+],
+"polys": 2178
+},
+{
+"name": "fence_a",
+"size": [
+1.82,
+1.0,
+0.26
+],
+"polys": 484
+},
+{
+"name": "fence_b",
+"size": [
+1.82,
+1.0,
+0.26
+],
+"polys": 484
+},
+{
+"name": "fence_c",
+"size": [
+1.41,
+0.8,
+0.11
+],
+"polys": 194
+},
+{
+"name": "fence_c1",
+"size": [
+1.41,
+0.8,
+0.11
+],
+"polys": 194
+},
+{
+"name": "fence_d",
+"size": [
+1.43,
+0.7,
+1.43
+],
+"polys": 152
+},
+{
+"name": "fence_e",
+"size": [
+1.17,
+0.84,
+0.1
+],
+"polys": 344
+},
+{
+"name": "fence_f",
+"size": [
+0.93,
+0.54,
+0.08
+],
+"polys": 344
+},
+{
+"name": "fence_g",
+"size": [
+1.44,
+0.75,
+0.13
+],
+"polys": 152
+},
+{
+"name": "fence_h",
+"size": [
+0.99,
+0.52,
+0.1
+],
+"polys": 152
+},
+{
+"name": "fence_i",
+"size": [
+1.41,
+0.81,
+0.08
+],
+"polys": 188
+},
+{
+"name": "fence_j",
+"size": [
+0.83,
+0.47,
+0.05
+],
+"polys": 162
+},
+{
+"name": "fence_k",
+"size": [
+1.44,
+0.8,
+1.44
+],
+"polys": 210
+},
+{
+"name": "fence_l",
+"size": [
+1.21,
+0.52,
+1.21
+],
+"polys": 210
+},
+{
+"name": "fence_m",
+"size": [
+1.45,
+0.8,
+1.45
+],
+"polys": 216
+},
+{
+"name": "fence_n",
+"size": [
+1.66,
+1.65,
+0.09
+],
+"polys": 216
+},
+{
+"name": "fence_o",
+"size": [
+1.41,
+0.77,
+0.07
+],
+"polys": 180
+},
+{
+"name": "fence_p",
+"size": [
+1.04,
+0.57,
+0.05
+],
+"polys": 180
+},
+{
+"name": "field_a",
+"size": [
+1.05,
+0.19,
+5.09
+],
+"polys": 145
+},
+{
+"name": "field_a_ready",
+"size": [
+1.05,
+0.35,
+5.09
+],
+"polys": 2722
+},
+{
+"name": "field_a_ready_1378",
+"size": [
+1.05,
+0.42,
+5.09
+],
+"polys": 1378
+},
+{
+"name": "field_b",
+"size": [
+3.01,
+0.19,
+5.09
+],
+"polys": 407
+},
+{
+"name": "field_b_ready",
+"size": [
+3.01,
+1.62,
+5.09
+],
+"polys": 4710
+},
+{
+"name": "field_b_ready_16610",
+"size": [
+3.01,
+1.09,
+5.09
+],
+"polys": 16610
+},
+{
+"name": "field_c",
+"size": [
+5.01,
+0.19,
+7.09
+],
+"polys": 768
+},
+{
+"name": "fooddish_a",
+"size": [
+0.77,
+0.25,
+1.02
+],
+"polys": 50
+},
+{
+"name": "garage_a01",
+"size": [
+7.57,
+4.54,
+11.4
+],
+"polys": 1232
+},
+{
+"name": "garage_a02",
+"size": [
+7.57,
+4.54,
+10.16
+],
+"polys": 1170
+},
+{
+"name": "garage_a03",
+"size": [
+7.57,
+4.54,
+6.65
+],
+"polys": 974
+},
+{
+"name": "gate_a",
+"size": [
+2.6,
+1.14,
+0.11
+],
+"polys": 472
+},
+{
+"name": "gate_b",
+"size": [
+2.6,
+1.14,
+0.12
+],
+"polys": 472
+},
+{
+"name": "goat_a",
+"size": [
+0.51,
+1.32,
+1.46
+],
+"polys": 1123
+},
+{
+"name": "grass",
+"size": [
+0.22,
+0.25,
+0.25
+],
+"polys": 100
+},
+{
+"name": "grass_50",
+"size": [
+0.15,
+0.2,
+0.15
+],
+"polys": 50
+},
+{
+"name": "greenhouse_a01",
+"size": [
+5.18,
+3.04,
+10.52
+],
+"polys": 969
+},
+{
+"name": "greenhouse_a02",
+"size": [
+4.18,
+3.04,
+6.36
+],
+"polys": 765
+},
+{
+"name": "greenhouse_b01",
+"size": [
+7.18,
+3.37,
+10.52
+],
+"polys": 965
+},
+{
+"name": "greenhouse_b02",
+"size": [
+4.71,
+2.33,
+7.18
+],
+"polys": 781
+},
+{
+"name": "harvest_a",
+"size": [
+3.0,
+1.07,
+3.0
+],
+"polys": 92
+},
+{
+"name": "harvest_b",
+"size": [
+3.02,
+0.72,
+3.02
+],
+"polys": 92
+},
+{
+"name": "hen_a",
+"size": [
+0.31,
+0.64,
+0.6
+],
+"polys": 1212
+},
+{
+"name": "horse_a",
+"size": [
+0.71,
+1.97,
+2.27
+],
+"polys": 466
+},
+{
+"name": "ladder_along",
+"size": [
+0.74,
+3.0,
+0.18
+],
+"polys": 370
+},
+{
+"name": "ladder_ashort",
+"size": [
+0.74,
+1.98,
+0.18
+],
+"polys": 266
+},
+{
+"name": "laddertriangle_a",
+"size": [
+2.17,
+2.48,
+0.74
+],
+"polys": 1272
+},
+{
+"name": "lawn_mower_a",
+"size": [
+0.61,
+0.7,
+1.26
+],
+"polys": 852
+},
+{
+"name": "littlefoodholder_a",
+"size": [
+1.97,
+0.7,
+0.62
+],
+"polys": 123
+},
+{
+"name": "littlefoodholder_b",
+"size": [
+1.59,
+0.5,
+0.35
+],
+"polys": 106
+},
+{
+"name": "littlehouse_a",
+"size": [
+4.72,
+3.09,
+2.95
+],
+"polys": 889
+},
+{
+"name": "littlehouse_b",
+"size": [
+3.83,
+3.36,
+2.95
+],
+"polys": 617
+},
+{
+"name": "littlehouse_c",
+"size": [
+5.95,
+5.23,
+4.83
+],
+"polys": 5079
+},
+{
+"name": "logs_a",
+"size": [
+2.89,
+1.33,
+3.54
+],
+"polys": 2544
+},
+{
+"name": "logs_a_2968",
+"size": [
+1.91,
+1.26,
+2.54
+],
+"polys": 2968
+},
+{
+"name": "logs_a_1272",
+"size": [
+1.56,
+0.98,
+2.49
+],
+"polys": 1272
+},
+{
+"name": "mailbox_a",
+"size": [
+0.24,
+1.02,
+0.45
+],
+"polys": 278
+},
+{
+"name": "milktank_a",
+"size": [
+0.43,
+0.74,
+0.44
+],
+"polys": 240
+},
+{
+"name": "plants_a",
+"size": [
+0.45,
+1.48,
+0.46
+],
+"polys": 258
+},
+{
+"name": "plants_b",
+"size": [
+0.56,
+1.47,
+0.55
+],
+"polys": 67
+},
+{
+"name": "plants_b_49",
+"size": [
+0.46,
+1.4,
+0.35
+],
+"polys": 49
+},
+{
+"name": "plants_b_59",
+"size": [
+0.45,
+1.6,
+0.46
+],
+"polys": 59
+},
+{
+"name": "plants_c",
+"size": [
+0.73,
+0.42,
+0.73
+],
+"polys": 102
+},
+{
+"name": "plants_d",
+"size": [
+0.56,
+0.8,
+0.65
+],
+"polys": 786
+},
+{
+"name": "plants_e",
+"size": [
+0.78,
+0.97,
+0.71
+],
+"polys": 786
+},
+{
+"name": "plants_f",
+"size": [
+0.38,
+0.22,
+0.39
+],
+"polys": 304
+},
+{
+"name": "plants_g",
+"size": [
+0.38,
+0.25,
+0.25
+],
+"polys": 137
+},
+{
+"name": "roc_b",
+"size": [
+0.2,
+0.12,
+0.22
+],
+"polys": 16
+},
+{
+"name": "rock_a",
+"size": [
+0.59,
+0.21,
+0.58
+],
+"polys": 78
+},
+{
+"name": "rock_a_110",
+"size": [
+0.82,
+0.21,
+0.84
+],
+"polys": 110
+},
+{
+"name": "rock_c",
+"size": [
+0.34,
+0.12,
+0.2
+],
+"polys": 46
+},
+{
+"name": "rock_d",
+"size": [
+0.26,
+0.11,
+0.18
+],
+"polys": 46
+},
+{
+"name": "rooster_a",
+"size": [
+0.36,
+0.85,
+0.71
+],
+"polys": 1236
+},
+{
+"name": "sheep_a",
+"size": [
+0.69,
+1.13,
+1.36
+],
+"polys": 458
+},
+{
+"name": "shovel_a",
+"size": [
+0.3,
+1.34,
+0.05
+],
+"polys": 220
+},
+{
+"name": "Stoneroad_a",
+"size": [
+3.0,
+0.02,
+1.0
+],
+"polys": 1018
+},
+{
+"name": "Stoneroad_b",
+"size": [
+3.0,
+0.02,
+1.0
+],
+"polys": 992
+},
+{
+"name": "strawpack_a",
+"size": [
+1.37,
+0.82,
+0.96
+],
+"polys": 234
+},
+{
+"name": "strawpack_a_248",
+"size": [
+1.79,
+0.81,
+1.02
+],
+"polys": 248
+},
+{
+"name": "streetlight_a",
+"size": [
+0.17,
+1.92,
+0.81
+],
+"polys": 524
+},
+{
+"name": "streetlight_a_322",
+"size": [
+0.14,
+1.29,
+0.14
+],
+"polys": 322
+},
+{
+"name": "streetsign_a",
+"size": [
+0.56,
+1.92,
+0.87
+],
+"polys": 382
+},
+{
+"name": "streetsign_a_458",
+"size": [
+0.87,
+1.92,
+0.87
+],
+"polys": 458
+},
+{
+"name": "structures_a01",
+"size": [
+6.4,
+4.94,
+4.04
+],
+"polys": 892
+},
+{
+"name": "structures_a02",
+"size": [
+6.4,
+4.94,
+6.67
+],
+"polys": 1152
+},
+{
+"name": "structures_a03",
+"size": [
+6.4,
+4.94,
+9.21
+],
+"polys": 1412
+},
+{
+"name": "structures_a03_002",
+"size": [
+6.4,
+4.94,
+6.67
+],
+"polys": 1152
+},
+{
+"name": "structures_b",
+"size": [
+5.0,
+2.93,
+4.64
+],
+"polys": 1724
+},
+{
+"name": "structures_b001",
+"size": [
+5.0,
+2.93,
+4.64
+],
+"polys": 1724
+},
+{
+"name": "structures_c",
+"size": [
+5.0,
+3.02,
+4.71
+],
+"polys": 785
+},
+{
+"name": "table_a",
+"size": [
+1.24,
+0.64,
+0.7
+],
+"polys": 312
+},
+{
+"name": "table_b",
+"size": [
+2.13,
+0.58,
+0.64
+],
+"polys": 388
+},
+{
+"name": "timber_a",
+"size": [
+1.13,
+0.49,
+1.19
+],
+"polys": 1620
+},
+{
+"name": "timber_a_972",
+"size": [
+0.99,
+0.27,
+1.05
+],
+"polys": 972
+},
+{
+"name": "timber_a_642",
+"size": [
+0.87,
+0.27,
+0.83
+],
+"polys": 642
+},
+{
+"name": "toilet_a01",
+"size": [
+2.35,
+2.42,
+1.26
+],
+"polys": 488
+},
+{
+"name": "toilet_a02",
+"size": [
+1.35,
+2.42,
+1.26
+],
+"polys": 488
+},
+{
+"name": "tractor_a01",
+"size": [
+4.61,
+2.77,
+4.72
+],
+"polys": 3773
+},
+{
+"name": "tractor_a02",
+"size": [
+4.61,
+2.78,
+5.66
+],
+"polys": 3955
+},
+{
+"name": "tractor_a03",
+"size": [
+4.61,
+2.77,
+9.95
+],
+"polys": 11135
+},
+{
+"name": "tree_a",
+"size": [
+5.64,
+6.01,
+5.34
+],
+"polys": 718
+},
+{
+"name": "tree_b",
+"size": [
+3.49,
+6.92,
+2.72
+],
+"polys": 374
+},
+{
+"name": "tree_c",
+"size": [
+2.48,
+4.45,
+2.48
+],
+"polys": 236
+},
+{
+"name": "tree_c_764",
+"size": [
+2.58,
+3.18,
+2.58
+],
+"polys": 764
+},
+{
+"name": "tree_d",
+"size": [
+3.69,
+4.5,
+2.41
+],
+"polys": 404
+},
+{
+"name": "tree_e",
+"size": [
+2.02,
+4.01,
+2.06
+],
+"polys": 142
+},
+{
+"name": "tree_e_154",
+"size": [
+1.84,
+3.83,
+1.66
+],
+"polys": 154
+},
+{
+"name": "tree_f",
+"size": [
+2.28,
+3.74,
+2.49
+],
+"polys": 1104
+},
+{
+"name": "tree_g",
+"size": [
+1.07,
+3.06,
+1.19
+],
+"polys": 158
+},
+{
+"name": "tree_h",
+"size": [
+2.28,
+3.13,
+2.32
+],
+"polys": 444
+},
+{
+"name": "truck_a01",
+"size": [
+3.29,
+5.8,
+14.76
+],
+"polys": 7392
+},
+{
+"name": "truck_a02",
+"size": [
+3.29,
+5.54,
+12.11
+],
+"polys": 7252
+},
+{
+"name": "truck_a03",
+"size": [
+3.41,
+5.06,
+12.11
+],
+"polys": 9028
+},
+{
+"name": "truck_a04",
+"size": [
+3.38,
+5.06,
+12.05
+],
+"polys": 9513
+},
+{
+"name": "waterdish_a",
+"size": [
+0.39,
+0.23,
+1.75
+],
+"polys": 59
+},
+{
+"name": "watersprinkler_a",
+"size": [
+0.23,
+0.41,
+0.59
+],
+"polys": 512
+}
+]
