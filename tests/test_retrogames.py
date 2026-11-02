@@ -1,4 +1,4 @@
-"""Retro Games (skills/retrogames.py): reading the website's game cards and finding a game's player - no internet needed."""
+"""Retro Games (skills/retrogames.py): reading the website's game cards, your lists and saves - no internet needed."""
 import os
 import sys
 import tempfile
@@ -6,17 +6,19 @@ import unittest
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-for d in ("", "skills", "brain", "senses"):
-    sys.path.insert(0, os.path.join(ROOT, d))
+sys.path.insert(0, ROOT)
+import folders  # noqa
+import sandbox  # noqa: E402,F401
 import retrogames
 
-CARD = '''<div class="post thumb-border"><div class="thumb">
-<a href="https://www.retrogames.cc/genesis-games/sonic-classic-heroes.html"><img data-src="https://i.987967.xyz/screenshot/47/2020/11/27/42046_d54bf1.png" alt="Sonic Classic Heroes"></a>
-<div class="thumb-stats pull-left"><h6>Genesis</h6></div>
-<div class="thumb-stats pull-right"><i class="fa fa-heart"></i> <span>1,234</span></div></div>
-<div class="post-des"><h6><a href="https://www.retrogames.cc/genesis-games/sonic-classic-heroes.html">Sonic Classic Heroes &amp; Friends</a></h6></div></div>'''
-CARD2 = CARD.replace("sonic-classic-heroes", "streets-of-rage-2").replace("Sonic Classic Heroes &amp; Friends", "Streets of Rage 2").replace("1,234", "87")
-PAGE = f"<html>{CARD}{CARD}{CARD2}<a href='/genesis-games/page/2.html'>2</a></html>"
+CARD = '''<a href="/sega-genesis-rom-sonic-the-hedgehog/" class="relative p-2">
+  <img src="https://cache.example/static/abc/image.jpg" class="mb-3" alt="Sonic &amp; Friends">
+  <div class="ml-2">Sonic &amp; Friends</div></a>'''
+PAGE = CARD + CARD + CARD.replace("sonic-the-hedgehog", "streets-of-rage").replace("Sonic &amp; Friends", "Streets of Rage") + \
+    '<a href="/sega-saturn-rom-nights/"><img src="x.jpg" alt="Nights"></a>' \
+    '<a href="/super-nintendo-rom-super-mario-world/" class="rounded-full"><span>Super Mario World ROM</span></a>' \
+    '<a href="/roms/sega-genesis/?page=2&amp;sort=popularity">2</a>'
+GAME = {"title": "Sonic", "url": "https://www.romsgames.net/sega-genesis-rom-sonic-the-hedgehog/", "image": "https://cache.example/x.jpg", "platform": "Genesis"}
 
 
 class RetroGamesTests(unittest.TestCase):
@@ -28,45 +30,41 @@ class RetroGamesTests(unittest.TestCase):
 
     def test_reads_cards_without_repeats(self):
         games = retrogames.parse_cards(PAGE)
-        self.assertEqual(len(games), 2)
-        g = games[0]
-        self.assertEqual(g["title"], "Sonic Classic Heroes & Friends")
-        self.assertEqual(g["platform"], "Genesis")
-        self.assertEqual(g["likes"], 1234)
-        self.assertTrue(g["image"].endswith("42046_d54bf1.png"))
+        self.assertEqual([g["title"] for g in games], ["Sonic & Friends", "Streets of Rage"])     # no link-only "Mario", no Saturn
+        self.assertEqual(games[0]["platform"], "Genesis")
+        self.assertEqual(games[0]["url"], GAME["url"])
+        self.assertEqual(games[0]["image"], "https://cache.example/static/abc/image.jpg")
 
     def test_page_addresses(self):
-        self.assertEqual(retrogames.page_url(), "https://www.retrogames.cc/")
-        self.assertEqual(retrogames.page_url("snes"), "https://www.retrogames.cc/snes-games")
-        self.assertEqual(retrogames.page_url("snes", 3), "https://www.retrogames.cc/snes-games/page/3.html")
-        self.assertIn("search?q=super+mario", retrogames.page_url(query=" super mario "))
+        self.assertEqual(retrogames.page_url("super-nintendo"), "https://www.romsgames.net/roms/super-nintendo/")
+        self.assertEqual(retrogames.page_url("super-nintendo", 3), "https://www.romsgames.net/roms/super-nintendo/?page=3")
+        self.assertIn("/search/?q=super+mario", retrogames.page_url(query=" super mario "))
         with self.assertRaises(ValueError):
             retrogames.page_url("../etc")
 
     def test_list_games_and_more_pages(self):
         with mock.patch.object(retrogames, "_get", return_value=PAGE):
-            out = retrogames.list_games("genesis")
+            out = retrogames.list_games("sega-genesis")
+            self.assertFalse(retrogames.list_games("sega-genesis", 2)["more"])
         self.assertEqual(len(out["games"]), 2)
         self.assertTrue(out["more"])
         self.assertIn("Nintendo", out["platforms"])
+
+    def test_most_popular_takes_turns_between_consoles(self):
+        def page(url, fresh=False):
+            plat = url.rstrip("/").rsplit("/", 1)[-1]
+            return f'<a href="/{plat}-rom-a/"><img src="a.jpg" alt="{plat} A"></a><a href="/{plat}-rom-b/"><img src="b.jpg" alt="{plat} B"></a>'
+        with mock.patch.object(retrogames, "_get", side_effect=page):
+            games = retrogames.list_games()["games"]
+        self.assertEqual(games[0]["title"], f"{retrogames.POPULAR[0]} A")
+        self.assertEqual(games[1]["title"], f"{retrogames.POPULAR[1]} A")
+        self.assertEqual(len(games), 2 * len(retrogames.POPULAR))
 
     def test_no_internet_gives_a_friendly_error(self):
         with mock.patch.object(retrogames.requests, "get", side_effect=OSError("offline")):
             out = retrogames.list_games()
         self.assertIn("error", out)
         self.assertIn("internet", out["error"])
-
-    def test_play_url_reads_the_embed_player(self):
-        page = '<iframe id="gameFrame" src="//www.retrogames.cc/embed/42046-sonic-classic-heroes.html"></iframe>'
-        with mock.patch.object(retrogames, "_get", return_value=page):
-            out = retrogames.play_url("https://www.retrogames.cc/genesis-games/sonic-classic-heroes.html")
-        self.assertEqual(out, {"url": "https://www.retrogames.cc/embed/42046-sonic-classic-heroes.html"})
-
-    def test_play_url_backup_from_the_picture(self):
-        with mock.patch.object(retrogames, "_get", side_effect=OSError("offline")):
-            out = retrogames.play_url("https://www.retrogames.cc/genesis-games/sonic-classic-heroes.html",
-                                      "https://i.987967.xyz/screenshot/47/2020/11/27/42046_d54bf1.png")
-        self.assertEqual(out["url"], "https://www.retrogames.cc/embed/42046-sonic-classic-heroes.html")
 
     def test_only_english_games_are_shown(self):
         for t in ("Aladdin (USA)", "Aero the Acro-Bat (Europe)", "Tintin (Europe) (En,Fr,De,Es)", "1941 - Counter Attack (World)",
@@ -76,67 +74,30 @@ class RetroGamesTests(unittest.TestCase):
         for t in ("Aladdin (Japan)", "Aladdin (France)", "Aladdin (Germany)", "Dragon Ball Z - Supersonic Warriors (K)(ProjectG)",
                   "Akumajou Dracula XX (Japan)", "Some Game (Fr,De)", "JoJo (Japan 990927, NO CD)"):
             self.assertFalse(retrogames.is_english(t), t)
-        page = PAGE + CARD.replace("sonic-classic-heroes", "aladdin-japan").replace("Sonic Classic Heroes &amp; Friends", "Aladdin (Japan)")
+        page = PAGE + CARD.replace("sonic-the-hedgehog", "aladdin-japan").replace("Sonic &amp; Friends", "Aladdin (Japan)")
         with mock.patch.object(retrogames, "_get", return_value=page):
-            self.assertEqual(len(retrogames.list_games("genesis")["games"]), 2)
+            self.assertEqual(len(retrogames.list_games("sega-genesis")["games"]), 2)
 
-    def test_only_retrogames_pages_can_be_played(self):
-        for bad in ("https://evil.example/genesis-games/x.html", "http://www.retrogames.cc/genesis-games/x.html",
-                    "https://www.retrogames.cc/../../x", "javascript:alert(1)", ""):
-            self.assertIn("error", retrogames.play_url(bad), bad)
+    def test_only_the_sites_game_pages_count(self):
+        self.assertTrue(retrogames.is_game_url(GAME["url"]))
+        for bad in ("https://evil.example/sega-genesis-rom-x/", "http://www.romsgames.net/sega-genesis-rom-x/", "https://www.romsgames.net/sega-saturn-rom-x/",
+                    "https://www.retrogames.cc/genesis-games/x.html", "https://www.romsgames.net/roms/sega-genesis/", "javascript:alert(1)", ""):
+            self.assertFalse(retrogames.is_game_url(bad), bad)
 
-
-EMBED = """<script>EJS_player = '#game';
-EJS_gameUrl = 'https://filesus3.retrogames.cc/rom/19/new/1941r1.zip';
-EJS_gameParentUrl = 'https://filesus3.retrogames.cc/rom/19/new/1941.zip';
-EJS_core = 'arcade';
-EJS_biosUrl = '/bios/arcade.7z';</script>"""
-GAME = {"title": "1941 - Counter Attack (World)", "url": "https://www.retrogames.cc/arcade-games/1941-counter-attack-world.html",
-        "image": "https://i.987967.xyz/screenshot/19/7651_ab.png", "platform": "Arcade"}
+    def test_game_id_is_a_steady_number(self):
+        self.assertTrue(retrogames.game_id(GAME["url"]).isdigit())
+        self.assertEqual(retrogames.game_id(GAME["url"]), retrogames.game_id(GAME["url"]))
+        self.assertNotEqual(retrogames.game_id(GAME["url"]), retrogames.game_id(GAME["url"].replace("sonic", "tails")))
 
 
-class RetroPlayerTests(unittest.TestCase):
-    """our own player: the game files, your saves, Recent + Favorites (all in a temp folder, no internet)"""
+class YourGamesTests(unittest.TestCase):
+    """what's on this PC, your saves, Recent + Favorites (all in a temp folder, no internet)"""
     def setUp(self):
         self.d = tempfile.mkdtemp()
         for name, val in (("CACHE_FILE", "cache.json"), ("ROM_DIR", "roms"), ("SAVE_DIR", "saves"), ("LIBRARY_FILE", "lib.json")):
             p = mock.patch.object(retrogames, name, os.path.join(self.d, val))
             p.start()
             self.addCleanup(p.stop)
-        retrogames._downloads.clear()
-
-    def test_reads_the_embed_player(self):
-        info = retrogames.parse_embed(EMBED)
-        self.assertEqual(info["core"], "arcade")
-        self.assertTrue(info["game_url"].endswith("/1941r1.zip"))
-        self.assertTrue(info["parent_url"].endswith("/1941.zip"))
-        self.assertEqual(info["bios_url"], "https://www.retrogames.cc/bios/arcade.7z")
-        self.assertEqual(retrogames.parse_embed(EMBED.replace("'arcade'", "'mupen64plus2'"))["core"], "n64")
-        self.assertIsNone(retrogames.parse_embed("<html>no player</html>"))
-
-    def test_prepare_keeps_the_file_names_and_wraps_the_parent(self):
-        import zipfile
-
-        class Resp:
-            def __init__(self, url):
-                self.headers = {"Content-Length": "4"}
-                self.url = url
-            def __enter__(self): return self
-            def __exit__(self, *a): return False
-            def raise_for_status(self): pass
-            def iter_content(self, n): yield b"DATA"
-
-        pages = {GAME["url"]: '<iframe src="//www.retrogames.cc/embed/7651-1941-counter-attack-world.html">', }
-        with mock.patch.object(retrogames, "_get", side_effect=lambda u, fresh=False: pages.get(u, EMBED)), \
-             mock.patch.object(retrogames.requests, "get", side_effect=lambda url, **k: Resp(url)), \
-             mock.patch.object(retrogames.threading, "Thread", side_effect=lambda target, args, daemon: mock.Mock(start=lambda: target(*args))):
-            out = retrogames.prepare(GAME)
-        self.assertEqual(out, {"id": "7651", "core": "arcade", "rom": "roms/7651/1941r1.zip", "bios": "roms/bios/arcade.7z",
-                               "parent": "roms/7651/1941.zip.wrap.zip"})
-        self.assertTrue(retrogames.progress("7651", out["bios"], out["parent"])["done"])
-        with zipfile.ZipFile(os.path.join(self.d, "roms", "7651", "1941.zip.wrap.zip")) as z:
-            self.assertEqual(z.namelist(), ["1941.zip"])           # the player unpacks it back to 1941.zip
-        self.assertEqual(retrogames.library()["recent"][0]["id"], "7651")
 
     def test_saves_are_kept_with_a_backup(self):
         self.assertIsNone(retrogames.load_data("7651", "state")["data"])
@@ -150,7 +111,7 @@ class RetroPlayerTests(unittest.TestCase):
 
     def test_downloaded_games_can_be_deleted(self):
         for gid, data in (("7651", b"x" * 10), ("42046", b"y" * 5)):
-            os.makedirs(os.path.join(self.d, "roms", gid))
+            os.makedirs(os.path.join(self.d, "roms", gid, "rom"))           # the opened archive doesn't name the game
             with open(os.path.join(self.d, "roms", gid, "game.zip"), "wb") as f:
                 f.write(data)
         os.makedirs(os.path.join(self.d, "roms", "bios"))
@@ -160,6 +121,8 @@ class RetroPlayerTests(unittest.TestCase):
         self.assertEqual(out["total"], 15)
         names = {g["id"]: g["title"] for g in out["games"]}
         self.assertEqual(names, {"7651": GAME["title"], "42046": "Game"})      # the BIOS folder isn't a game
+        with mock.patch.object(retrogames, "downloading", {"7651"}):
+            self.assertIn("error", retrogames.delete_download("7651"))
         out = retrogames.delete_download("7651")
         self.assertEqual([g["id"] for g in out["games"]], ["42046"])
         self.assertIsNotNone(retrogames.load_data("7651", "state")["data"])     # the save is kept
@@ -179,6 +142,10 @@ class RetroPlayerTests(unittest.TestCase):
         self.assertEqual(lib["favorites"][0]["id"], "7651")
         self.assertEqual(retrogames.favorite(GAME, False)["favorites"], [])
         self.assertIn("error", retrogames.favorite({"url": "https://evil.example/x.html"}))
+
+    def test_games_from_the_old_site_are_left_out(self):
+        retrogames._write_library({"recent": [{"title": "Old", "url": "https://www.retrogames.cc/genesis-games/x.html"}, {**GAME, "id": "1"}], "favorites": []})
+        self.assertEqual([g["title"] for g in retrogames.library()["recent"]], [GAME["title"]])
 
 
 if __name__ == "__main__":

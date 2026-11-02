@@ -59,6 +59,23 @@ PROMPTS = {
 }
 
 
+# how the body moves, said in the prompt (Characters -> Rig & animate -> Body). A plain "walks forward" came out
+# light and swaying - fine for some characters, "like a girl" for a big male one.
+BODY_STYLE = {
+    "male": {"walk": "An object walks forward with a confident, heavy masculine stride, shoulders square, arms swinging naturally.",
+             "idle": "An object stands still in place with feet apart, chest up and its arms relaxed down at its sides, breathing slowly.",
+             "wave": "An object stands firmly in place and waves hello with its right hand raised, its left arm relaxed at its side."},
+    "female": {"walk": "An object walks forward with a light, graceful stride, arms swinging softly.",
+               "idle": "An object stands still in place, relaxed, with its arms down at its sides, breathing slowly.",
+               "wave": "An object stands in place and waves hello cheerfully with its right hand raised."},
+}
+
+
+def prompt_for(motion, body="neutral"):
+    """the sentence UniMate gets for a motion key (your own sentence stays as it is)"""
+    return BODY_STYLE.get(body, {}).get(motion) or PROMPTS.get(motion, motion)
+
+
 def _conda():
     found = shutil.which("conda")
     if found:
@@ -319,14 +336,22 @@ def _read_skeleton(model_path, asset, log, progress=lambda pct, text: None):
             shutil.rmtree(asset, ignore_errors=True)
 
 
-def animate(model_path, motions, progress=lambda pct, text: None):
-    """Animate one rigged .glb. motions: keys of PROMPTS (or your own sentences).
-    Returns [{"clip": "walk", "path": ".../walk.glb"}, ...]."""
+def work_name(model_file):
+    """the model's folder under ui/models/_unimate: short, because UniMate builds file names from the folder, the model's
+    name and the prompt, and Windows refuses paths over 260 characters ("No such file or directory" saving a motion)"""
+    import hashlib
+    stem = os.path.splitext(os.path.basename(model_file))[0]
+    return re.sub(r"[^a-z0-9]+", "_", stem.lower()).strip("_")[:14] + "-" + hashlib.md5(stem.encode("utf-8")).hexdigest()[:6]
+
+
+def animate(model_path, motions, progress=lambda pct, text: None, body="neutral"):
+    """Animate one rigged .glb. motions: keys of PROMPTS (or your own sentences). body: "male" / "female" / "neutral"
+    (how she walks and stands). Returns [{"clip": "walk", "path": ".../walk.glb"}, ...]."""
     st = status()
     if not st["ready"]:
         raise RuntimeError(st["hint"])
     _cancel.clear()
-    name = os.path.splitext(os.path.basename(model_path))[0]
+    name = work_name(model_path)
     work = os.path.join(WORK_DIR, name)
     shutil.rmtree(work, ignore_errors=True)
     os.makedirs(work, exist_ok=True)
@@ -339,16 +364,16 @@ def animate(model_path, motions, progress=lambda pct, text: None):
     # float), and the app moves those itself. The clips go back onto the full model afterwards (ui/rigger.js _merge).
     import slimrig
     os.makedirs(os.path.join(work, "slim"), exist_ok=True)
-    slim = os.path.join(work, "slim", os.path.basename(model_path))
+    slim = os.path.join(work, "slim", "m.glb")                 # a short name: it's part of every file UniMate writes
     before, after = slimrig.slim(model_path, slim, body_only=True)
     if after < before:
         progress(0.04, f"Giving UniMate the {after} body bones (of {before}); hands, hair and clothes are moved by the app…")
-        model_path = slim
+    model_path = slim
 
     progress(0.05, "Reading the skeleton…")
     _read_skeleton(model_path, asset, log, progress)
 
-    clips = [(m, PROMPTS.get(m, m)) for m in motions]
+    clips = [(m, prompt_for(m, body)) for m in motions]
     for i, (clip, prompt) in enumerate(clips):
         progress(0.15 + 0.6 * i / len(clips), f"Making the motion: {clip} ({i + 1} of {len(clips)})…")
         _run(["python", "-m", "unimate.inference.sample", "--exp_dir", EXP, "--asset", asset,

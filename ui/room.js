@@ -8,7 +8,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { CozyRoom, CATALOG } from "./cozyroom.js";
 import { inPlace } from "./inplace.js";
-import { analyzeRig, cleanClips, rigExtras } from "./rigparts.js";
+import { analyzeRig, cleanClips, rigExtras, floorUnder } from "./rigparts.js";
 import { buildGymRoom, GYM_LAYOUT } from "./gymroom.js";
 
 const INK = 0x2e2135;
@@ -503,7 +503,7 @@ export class Room {
     const centre = box.getCenter(new THREE.Vector3());
     root.position.x -= centre.x;
     root.position.z -= centre.z;
-    root.position.y -= box.min.y;
+    root.position.y -= c.info ? floorUnder(root, c.info) : box.min.y;   // feet on the floor, even in clothes longer than the legs
     const turn = new THREE.Group();               // fixes models that face the wall
     turn.add(root);
     if (flip) turn.rotation.y = Math.PI;
@@ -544,13 +544,15 @@ export class Room {
     for (const e of ears) animated.add(e.bone.name);
     const extras = rigExtras(root, info, { skip: animated });
     const fingers = Object.values(extras.info.hands).flatMap((h) => h.fingers);
-    const c = { kind: "gltf", root, head, headBase: head?.rotation.clone(), mouths, mixer: null, actions: {}, ears, fingers, extras };
+    const c = { kind: "gltf", root, head, headBase: head?.rotation.clone(), mouths, mixer: null, actions: {}, ears, fingers, extras, info };
     this._findLooks(c);
     this._findFace(c, file);
     if (gltf.animations.length) {
       inPlace(gltf.animations);                  // a walk that moves the hips would jump back at every loop
       c.mixer = new THREE.AnimationMixer(root);
-      const find = (re) => gltf.animations.find((a) => re.test(a.name));
+      // of the clips with a matching name, the one that moves the most bones: a model can carry an old 4-track "Idle"
+      // next to the real "idle", and playing that one left the character in a T-pose
+      const find = (re) => gltf.animations.filter((a) => re.test(a.name)).sort((a, b) => b.tracks.length - a.tracks.length)[0];
       const idle = find(/idle|breath|stand/i) || gltf.animations[0];
       const walk = find(/walk/i);
       const wave = find(/wave|hello|greet/i);
@@ -1945,7 +1947,7 @@ export class Room {
   /** draw a frame now? Nothing on screen when the window is hidden; 30 frames a second while the room is calm
       (she's standing, nobody's touching it) and the full 60 while something moves - half the work most of the time */
   _frameDue(now) {
-    if (document.hidden) return false;
+    if (document.hidden || this.gameInFront) return false;           // nobody can see her: no drawing at all
     const active = this._camTween || this.walkTarget || this.speaking || this.editMode || this.hop > 0 || this.emote
       || (this._userActive || 0) > now || this.char?.seat?.leaving || (this.char?.seat && this.char.seat.t < 1);
     const gap = now - (this._lastFrame || 0);

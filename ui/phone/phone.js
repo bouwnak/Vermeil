@@ -519,9 +519,11 @@ async function playRetro(g) {
   $("retroInfo").textContent = "Getting " + (g.title || "the game") + " ready…";
   try {
     const info = await api("retro_prepare", { args: [g] });
+    if (info.error) throw new Error(info.error);
     for (let i = 0; i < 600; i++) {                     // the computer downloads the game first (if it's new)
       const p = await api("retro_progress", { args: [info.id, info.bios || "", info.parent || ""] });
       if (p.error) throw new Error(p.error);
+      if (p.rom) info.rom = p.rom;
       if (p.done) break;
       $("retroInfo").textContent = "Downloading… " + (p.total ? Math.round(p.got / p.total * 100) : 0) + "%";
       await new Promise((r) => setTimeout(r, 1000));

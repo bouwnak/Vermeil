@@ -31,6 +31,7 @@
 requests
 pywebview>=5.0           # the window app (python app.py)
 numpy
+py7zr                    # opens the 7-Zip games from the Retro Games site
 rapidfuzz
 vaderSentiment
 keyboard

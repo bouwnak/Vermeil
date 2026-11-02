@@ -18,6 +18,7 @@ import { initPlugins } from "./plugins.js";
 import { initMyMusic } from "./mymusic.js";
 import { beat } from "./visualizer.js";
 import { initCleanup } from "./cleanup.js";
+let cleanupUi = null;
 // features whose code can be uninstalled (Settings -> Plugins deletes their files; Install gets them from Drive):
 // a missing file gives a do-nothing panel instead of breaking the whole app
 const notInstalled = new Proxy({}, { get: (_, k) => k === "then" ? undefined : k === "status" ? () => null : () => Promise.resolve() });
@@ -588,6 +589,9 @@ window.onPyEvent = async (e) => {
     case "approval_done": document.querySelector(`#approvals [data-id="${e.id}"]`)?.remove(); break;
     case "milestone": toast(`🎉 ${e.text}`, 7000); room.playEmote("celebrate"); chat?.refreshStory(); break;
     case "story": chat?.refreshStory(); break;
+    case "game_front": gameInFront = !!e.on; if (room) room.gameInFront = gameInFront; updateBgm(); break;
+    case "ai_install": showAiInstall(e); break;
+    case "cleanup_progress": cleanupUi?.progress(e); break;
     case "group_done": toast("The group chat ended.", 2500); break;
     case "gesture": toast({ thumbs_up: "👍", thumbs_down: "👎", peace: "✌", wave: "👋", stop: "✋ Stopped", ok: "👌", heart: "🫶" }[e.gesture] || e.gesture, 1800); break;
   }
@@ -607,9 +611,39 @@ async function renderAi(given) {
       el("div", {}, s.running ? "Local AI (Ollama): running" : "Local AI (Ollama): not running — open the Ollama app"),
       el("div", {}, `Local models: ${s.models.chat} · ${s.models.smart} · camera ${s.models.vision}`),
       el("div", {}, `Listening: Whisper (${s.whisper}) · Voices installed: ${s.voices.length}`),
-      s.missing.length ? el("div", { class: "warn" }, `Not downloaded yet: ${s.missing.join(", ")} — run: python scripts/setup_local.py`) : null].filter(Boolean));
+      s.missing.length ? el("div", { class: "warn" }, `Not downloaded yet: ${s.missing.join(", ")}`) : null].filter(Boolean));
+    renderAiRecommended();
   } catch (e) { box.textContent = "Couldn't check the AI."; }
 }
+// the models that suit this PC (skills/aimodels.py), and the button that gets them
+async function renderAiRecommended() {
+  const r = await api.ai_recommended?.().catch(() => null);
+  if (!r || aiInstalling) return;
+  $("aiRecNote").textContent = `Recommended for your PC (${r.gpu ? `${r.gpu}, ${r.vram} GB` : "no graphics card found"} · ${r.ram} GB memory): ${r.models.join(" · ")}`;
+  const btn = $("aiRecInstall");
+  btn.disabled = r.active && !r.missing.length;
+  btn.textContent = btn.disabled ? "✓ Using the recommended model" : r.missing.length ? "⬇ Install recommended model" : "✨ Use recommended model";
+}
+let aiInstalling = false;
+function showAiInstall(e) {
+  const bar = $("aiRecBar");
+  bar.hidden = false;
+  bar.classList.toggle("bad", !!e.error);
+  bar.querySelector("i").style.width = `${Math.round((e.done ? 1 : e.pct || 0) * 100)}%`;
+  bar.querySelector("span").textContent = e.error || (e.done ? "Ready" : `${Math.round((e.pct || 0) * 100)}%  ${e.text || ""}`);
+  if (!e.done) return;
+  aiInstalling = false;
+  $("aiRecInstall").disabled = false;
+  toast(e.error || `Local AI ready: ${(e.models || []).join(", ")}`, 7000);
+  renderAi();
+}
+$("aiRecInstall")?.addEventListener("click", async (ev) => {
+  aiInstalling = true;
+  ev.currentTarget.disabled = true;
+  showAiInstall({ pct: 0, text: "Starting…" });
+  const r = await api.ai_install_recommended();
+  if (!r?.started) showAiInstall({ done: true, error: r?.error || "Couldn't start." });
+});
 $("aiProvider").addEventListener("change", async (e) => {
   const s = await api.set_ai_provider(e.target.value);
   if (s.error) return toast(s.error);
@@ -700,9 +734,10 @@ $("sfxVol").addEventListener("change", (e) => { saveFx({ volume: e.target.value 
 // It rests while your own music (My Music / Spotify) plays, while a meeting is recorded and while the window is hidden,
 // and it goes quiet while she talks or while you give a voice command.
 const bgm = { on: true, volume: 0.5, theme: "room", speaking: false, awake: false };
+let gameInFront = false;                        // you're playing: the room and the menu music step aside
 function updateBgm() {
   const own = (music.playing && !music.paused) || !!spotifyPanel?.status()?.playing;
-  if (bgm.on && bgm.volume > 0 && !document.hidden && !own && !meeting.on) psp.musicStart(bgm.theme); else psp.musicStop(1.2);
+  if (bgm.on && bgm.volume > 0 && !document.hidden && !gameInFront && !own && !meeting.on) psp.musicStart(bgm.theme); else psp.musicStop(1.2);
   psp.duck(bgm.speaking ? 0.3 : bgm.awake ? 0.35 : 1);
 }
 function syncBgmControls() {
@@ -746,6 +781,7 @@ function chip(cls, icon, text, buttons = [], onclick = null) {
       onclick: (ev) => { ev.stopPropagation(); fn(); } }, label)));
 }
 function renderHud() {
+  if (document.hidden || gameInFront) return;
   const hud = $("hud");
   const chips = [];
   if (meeting.on) chips.push(chip("rec", "🔴", `Recording meeting ${fmt(Math.floor((Date.now() - meeting.since) / 1000))}`,
@@ -1491,7 +1527,7 @@ setTimeout(bootDone, 60000);   // never stay stuck on the loading screen
   codePanel = initCode(api);
   mind = initMind(api);
   gym = initGym(api);
-  initCleanup(api);
+  cleanupUi = initCleanup(api);
   elecPanel = initElectronics(api);
   genPanel = initGenerator(api);
   musicPanel = initMyMusic(api);
@@ -1726,13 +1762,23 @@ $("appUpdate")?.addEventListener("click", async (ev) => {
   if (!r?.started) showAppUpdate({ done: true, error: r?.error || "Couldn't start the update." });
 });
 $("appRestart")?.addEventListener("click", () => { toast("Restarting Vermeil…"); api.app_restart(); });
-// a note in Settings → General when GitHub has a newer Vermeil (checked at start and every 6 hours; no dot on the menu)
+// when GitHub has a newer Vermeil (checked at start and every 6 hours): a dot on Settings, a message once, and the
+// button itself says it's ready to install
+let updateToldAbout = "";
 async function checkForUpdate() {
   try {
     const r = await api.app_update_check();
-    const has = !!r?.new && !r.error;
+    if (r?.error) return;
+    const has = !!r?.new;
     $("updDotTitle").hidden = !has;
-    if (has && !$("appUpdateNote").textContent) $("appUpdateNote").textContent = `A new version is ready${r.message ? `: ${r.message}` : ""}. Tap Update Vermeil.`;
+    $("updDotMenu").hidden = !has;
+    $("appUpdate").textContent = has ? "⬇ Install update" : "⬇ Update Vermeil";
+    $("appUpdate").classList.toggle("upd-ready", has);
+    if ($("appUpdateBar").hidden) $("appUpdateNote").textContent = has ? `Update ready to install${r.message ? `: ${r.message}` : ""}.` : "You're on the newest version.";
+    if (has && updateToldAbout !== (r.message || "new")) {
+      updateToldAbout = r.message || "new";
+      toast("A Vermeil update is ready to install: Settings → General → Update.", 8000);
+    }
   } catch { /* offline */ }
 }
 setTimeout(checkForUpdate, 15000);

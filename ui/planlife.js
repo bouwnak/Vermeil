@@ -1,42 +1,8 @@
 // planlife.js - the extra Focus tabs (skills/planlife.py on the Python side): a drag-and-drop 📅 week calendar,
-// 🌳 goal tree, 🟩 habit heatmap, ✈️ travel planner and ⏱️ screen time. focus.js draws one of these into its view.
+// 🌳 goal tree, ✈️ travel planner and ⏱️ screen time. focus.js draws one of these into its view.
 import { el, toast, busy } from "./util.js";
 
 const peso = (n, cur = "PHP") => `${cur === "PHP" ? "₱" : cur === "USD" ? "$" : cur + " "}${Math.round(Number(n) || 0).toLocaleString()}`;
-
-// ---------------- 📅 week calendar (drag a task onto another day to move its deadline) ----------------
-export async function drawWeek(view, api, start = null) {
-  const w = await api.week_view(start);
-  const shift = (days) => { const d = new Date(w.start); d.setDate(d.getDate() + days); drawWeek(view, api, d.toISOString().slice(0, 10)); };
-  const chip = (kind, item, date) => {
-    const c = el("div", { class: `wk-chip ${kind} ${item.priority || ""} ${item.done ? "done" : ""}`, draggable: "true", tabindex: "0",
-      title: kind === "task" ? "Drag to another day" : "Event" },
-      kind === "event" ? `📌 ${item.time ? item.time + " " : ""}${item.title}` : `${item.priority === "high" ? "🔥 " : ""}${item.title}`);
-    c.addEventListener("dragstart", (e) => e.dataTransfer.setData("text/plain", JSON.stringify({ kind, title: item.title, old: date })));
-    return c;
-  };
-  const drop = (date) => ({
-    ondragover: (e) => { e.preventDefault(); e.currentTarget.classList.add("over"); },
-    ondragleave: (e) => e.currentTarget.classList.remove("over"),
-    ondrop: async (e) => {
-      e.preventDefault(); e.currentTarget.classList.remove("over");
-      const m = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
-      if (!m.title || m.old === date) return;
-      const r = await api.week_move(m.kind, m.title, m.old, date);
-      if (r.error || !r.ok) return toast(r.error || "Couldn't move it.");
-      toast(date ? `Moved to ${date}.` : "No deadline now.");
-      drawWeek(view, api, w.start);
-    },
-  });
-  const today = new Date().toISOString().slice(0, 10);
-  view.replaceChildren(
-    el("div", { class: "row center" }, el("button", { class: "ghost small", onclick: () => shift(-7) }, "◀ Last week"),
-      el("b", {}, `Week of ${w.start}`), el("button", { class: "ghost small", onclick: () => shift(7) }, "Next week ▶")),
-    el("div", { class: "wk-grid" }, w.days.map((d) => el("div", { class: `wk-day ${d.date === today ? "today" : ""}`, ...drop(d.date) },
-      el("h5", {}, `${d.weekday} ${d.date.slice(8)}`), ...d.events.map((x) => chip("event", x, d.date)), ...d.tasks.map((x) => chip("task", x, d.date))))),
-    el("div", { class: "wk-undated", ...drop(null) }, el("h5", {}, "No deadline yet (drag onto a day)"), ...w.undated.map((x) => chip("task", x, null))),
-    el("p", { class: "note" }, "Add tasks and events in Planner. Drag a task to a day to give it that deadline."));
-}
 
 // ---------------- 🌳 goal tree ----------------
 export async function drawGoals(view, api) {
@@ -63,16 +29,6 @@ export async function drawGoals(view, api) {
     render(r.goals);
   };
   render((await api.goal_tree()).goals);
-}
-
-// ---------------- 🟩 habit heatmap ----------------
-export async function drawHabits(view, api) {
-  const h = await api.habit_heatmap(84);
-  if (!h.habits.length) return view.replaceChildren(el("p", { class: "none" }, "No habits yet. Add them in Life → Habits."));
-  view.replaceChildren(el("p", { class: "note" }, "The last 12 weeks. Darker = more of your goal done that day."),
-    ...h.habits.map((r) => el("div", { class: "heat" }, el("h5", {}, `${r.icon} ${r.name}`),
-      el("div", { class: "heat-grid", role: "img", "aria-label": `${r.name}: done on ${r.cells.filter((c) => c >= 1).length} of ${r.cells.length} days` },
-        r.cells.map((c, i) => el("i", { style: `--a:${c}`, title: `${h.days[i]}: ${Math.round(c * 100)}%` }))))));
 }
 
 // ---------------- ⏱️ screen time ----------------

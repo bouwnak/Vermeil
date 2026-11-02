@@ -20,6 +20,7 @@
     </div>
     <div class="hub-tools">
       <button class="btn ghost icon" id="gamesBtn" type="button" title="Add or remove games (from this PC or a Google Drive link)" aria-label="Add or remove games"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20V5M3 9l4-4 4 4"/><path d="M17 4v15M13 15l4 4 4-4"/></svg></button>
+      <button class="btn ghost" id="buddyBtn" type="button" aria-pressed="true" title="Your character in a small box over the games you play">💜 Over my games</button>
       <button class="btn ghost icon" id="musicBtn" type="button" title="Music on / off" aria-label="Music on / off" aria-pressed="true">🎵</button>
       <button class="btn ghost" id="backApp" type="button">← Back to Vermeil</button>
     </div>
@@ -37,11 +38,6 @@
         <span class="hub-text"><b>Retro Games</b><small>Classic NES, SNES, Sega, Game Boy, PlayStation and arcade games</small></span>
         <span class="hub-go" aria-hidden="true">›</span>
       </button>
-      <button class="hub-card" id="cardNight" type="button" data-preview="night" data-sfx="open">
-        <span class="hub-art art-night" aria-hidden="true">🎲</span>
-        <span class="hub-text"><b>Mini games</b><small>Chess, cards, trivia, word games, drawing, puzzles, typing, rhythm and escape rooms — plus a weekly tournament</small></span>
-        <span class="hub-go" aria-hidden="true">›</span>
-      </button>
       <div class="my-games" id="myGames"></div>
     </div>
 
@@ -55,7 +51,6 @@
         <div class="pv-collage" id="collage"></div>
         <div class="pv-retro-title">RETRO</div>
       </div>
-      <div class="pv pv-mine pv-night" data-pv="night"><span class="pv-mine-icon" aria-hidden="true">🎲</span><b>Mini games</b><small>Play against your companion and win the weekly trophy</small></div>
       <div class="pv pv-mine" data-pv="mine"><span class="pv-mine-icon" aria-hidden="true">🎮</span><b id="pvMineName">Your game</b><small>Opens in its own window — Vermeil stays here</small></div>
     </aside>
   </div>
@@ -69,7 +64,7 @@
   </section>
 </section>
 
-<!-- ============ Retro Games (laid out like retrogames.cc) ============ -->
+<!-- ============ Retro Games ============ -->
 <section id="retro" class="view" hidden>
   <header class="rg-bar">
     <button class="rg-logo" id="rgHome" type="button" title="Most popular games">Retro<span>Games</span></button>
@@ -96,18 +91,6 @@
     </aside>
   </div>
 </section>
-
-<!-- ============ a retro game, filling the whole screen ============ -->
-<div class="stage" id="stage" hidden>
-  <div class="stage-bar" id="stageBar">
-    <button class="btn small" id="stBack" type="button">← Back to games</button>
-    <b class="stage-title" id="stTitle"></b>
-    <button class="btn ghost small fav-btn" id="stFav" type="button" aria-pressed="false">♡ Favorite</button>
-    <button class="btn ghost small" id="stHub" type="button">Games hub</button>
-  </div>
-  <div class="stage-game" id="stGame"></div>
-  <p class="stage-msg" id="stMsg" hidden></p>
-</div>
 
 <!-- Adventure: start or cancel -->
 <div class="modal" id="confirm" hidden>
@@ -148,6 +131,7 @@
   <p class="loading-title" id="loadingTitle">Loading…</p>
   <p class="muted" id="loadingSub">Getting the game ready</p>
   <div class="loading-track"><i id="loadingFill"></i></div>
+  <button class="btn ghost small" id="loadingCancel" type="button" hidden>Cancel</button>
 </div>
 
 <script type="module" src="games.js"></script>

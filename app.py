@@ -885,6 +885,11 @@ class Api:
         old = pm.VOICE_STYLE
         pm.VOICE_STYLE = "normal"
         t0 = time.time()
+        if not pm.tts_ready:                          # the voice wasn't ready yet (the log showed tts_ready=False): get it ready
+            try:
+                pm.start_tts()
+            except Exception as e:  # noqa: BLE001
+                self.log_ui_error("language voice", f"start_tts: {e}")
         try:
             pm.stop_speaking()                        # a lesson phrase you pressed for comes now, not after her reply
             pm.speak(say, v, "-35%" if sensei.speed() == "slow" else "-10%", plain=True)   # Study -> Language: 🐢 slow
@@ -1018,7 +1023,8 @@ class Api:
     def _phone_retro(self):
         """retro games on the phone: the same downloads and the same saves as on the computer"""
         import retrogames
-        fns = {"retro_library": retrogames.library, "retro_prepare": retrogames.prepare, "retro_progress": retrogames.progress,
+        import retroplay
+        fns = {"retro_library": retrogames.library, "retro_prepare": retroplay.prepare, "retro_progress": retroplay.progress,
                "retro_save": retrogames.save_data, "retro_load": retrogames.load_data}
         return {k: (lambda p, f=f: f(*((p or {}).get("args") or []))) for k, f in fns.items()}
 
@@ -1763,6 +1769,7 @@ class Api:
         if self._settings.get("focus_mute_restore") is not None and not __import__("focus").current():
             self._windows_toasts(True)                    # the app closed during a focus session: notifications back on
         threading.Thread(target=self._battery_loop, daemon=True).start()
+        self._start_buddy()
         if self._settings["phone_access"]:
             threading.Thread(target=self.phone_set, args=(True,), daemon=True).start()
         if self._settings["camera_on_start"]:
@@ -1803,7 +1810,7 @@ class Api:
         if st["missing"]:
             if uses_local_now:
                 self.emit({"type": "error", "text": f"AI models not downloaded yet: {', '.join(st['missing'])}. "
-                                                    f"Run: python scripts/setup_local.py"})
+                                                    f"Go to Settings -> AI -> Install recommended model."})
             return
         if uses_local_now:                       # only load the local model into memory if we're using it now
             try:
@@ -1817,6 +1824,29 @@ class Api:
         return {**st, "whisper": __import__("stt")._settings()[0], "voices": tts.installed_voices(),
                 "provider": llm.provider(), "has_groq_key": bool(llm.groq_key()), "groq_models": llm.groq_models(),
                 **{f"now_{k}": v for k, v in llm.which().items()}}
+
+    def ai_recommended(self):
+        """Settings -> AI: the models that suit this PC"""
+        import aimodels
+        return aimodels.recommend()
+
+    def ai_install_recommended(self):
+        """downloads what's missing and switches to the recommended models; the bar follows {"type": "ai_install"} events"""
+        import aimodels
+        if getattr(self, "_ai_installing", False):
+            return {"started": False, "error": "It's already installing."}
+        self._ai_installing = True
+
+        def work():
+            try:
+                res = aimodels.install(lambda pct, text: self.emit({"type": "ai_install", "pct": pct, "text": text}))
+            except Exception as err:  # noqa: BLE001 - shown to the user
+                res = {"error": str(err)[:200]}
+            finally:
+                self._ai_installing = False
+            self.emit({"type": "ai_install", "done": True, **res})
+        threading.Thread(target=work, daemon=True, name="ai-install").start()
+        return {"started": True}
 
     def set_ai_provider(self, mode):
         import llm
@@ -2583,8 +2613,9 @@ class Api:
                 "its own Python, the checkpoint and its libraries, up to 3 GB). The bar at the bottom shows how far it is; open this box again when it's done."
                 if started else st["hint"] or "UniMate's setup is already running."}
 
-    def unimate_animate(self, name, motions):
-        """Runs UniMate in the background; progress comes as {"type": "animate_progress"} events."""
+    def unimate_animate(self, name, motions, body="neutral"):
+        """Runs UniMate in the background; progress comes as {"type": "animate_progress"} events.
+        body: "male" / "female" / "neutral" - how the character walks and stands (skills/animate.py BODY_STYLE)."""
         import animate
         st = animate.status()
         if not st["ready"]:
@@ -2601,14 +2632,14 @@ class Api:
                 left = spent * (1 - pct) / pct if pct >= 0.15 and spent > 20 else None
                 self.emit({"type": "animate_progress", "pct": pct, "text": text, "left": round(left) if left else None})
             try:
-                out = animate.animate(path, list(motions or ["idle"]), progress)
+                out = animate.animate(path, list(motions or ["idle"]), progress, body if body in ("male", "female") else "neutral")
                 rel = lambda p: os.path.relpath(p, UI_DIR).replace(os.sep, "/")
                 self.emit({"type": "animate_progress", "done": True,
                            "outputs": [{"clip": o["clip"], "url": rel(o["path"])} for o in out]})
             except animate.Cancelled:
                 self.emit({"type": "animate_progress", "cancelled": True})
             except Exception as err:  # noqa: BLE001 - shown to the user
-                log = os.path.join(animate.WORK_DIR, os.path.splitext(os.path.basename(path))[0], "unimate.log")
+                log = os.path.join(animate.WORK_DIR, animate.work_name(path), "unimate.log")
                 self.emit({"type": "animate_progress", "error": str(err),
                            "log": os.path.relpath(log, BASE_DIR) if os.path.exists(log) else ""})
         threading.Thread(target=work, daemon=True).start()
@@ -2624,7 +2655,8 @@ class Api:
         import animate
         base = re.sub(r"(-animated)+(\.glb)$", r"\2", os.path.basename(str(name or "")), flags=re.I)
         stem = os.path.splitext(base)[0]
-        for folder in (stem, re.sub(r"-rigged$", "", stem)):
+        bare = re.sub(r"-rigged$", "", stem)
+        for folder in (animate.work_name(base), animate.work_name(bare + "-rigged.glb"), animate.work_name(bare + ".glb"), stem, bare):
             try:
                 with open(os.path.join(animate.WORK_DIR, folder, "result.json"), encoding="utf-8") as f:
                     out = json.load(f)
@@ -2720,14 +2752,21 @@ class Api:
         import quest
         return quest.state()
 
-    # ---------- clean-up wizard (skills/cleanup.py): big files, old downloads, duplicates -> Recycle Bin ----------
-    def cleanup_scan(self, big_mb=500, old_days=90):
+    # ---------- clean-up wizard (skills/cleanup.py): big, unused and hidden files on every drive -> Recycle Bin ----------
+    def cleanup_scan(self, big_mb=1024, old_days=90, everything=True, unused_days=30):
+        """everything: every hard drive and USB stick. Takes minutes; {"type": "cleanup_progress"} events show how far it is."""
         import cleanup
         try:
-            return cleanup.scan(big_mb=max(50, int(big_mb)), old_days=max(7, int(old_days)))
+            return cleanup.scan(big_mb=max(50, int(big_mb)), old_days=max(7, int(old_days)), everything=bool(everything), unused_days=max(1, int(unused_days)),
+                                progress=lambda files, folder: self.emit({"type": "cleanup_progress", "files": files, "folder": folder}))
         except Exception as e:  # noqa: BLE001
             print(f"[cleanup] {e}")
             return {"error": f"The scan stopped: {e}"}
+
+    def cleanup_stop(self):
+        import cleanup
+        cleanup.stop()
+        return {"ok": True}
 
     def cleanup_trash(self, ids):
         """only after you ticked the files and said yes in the window"""
@@ -3892,22 +3931,50 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
-    # ---------- Games hub (ui/games/): Retro Games from RetroGames.cc ----------
+    # ---------- Games hub (ui/games/): Retro Games ----------
     def retro_games(self, platform="", page=1, query=""):
         import retrogames
         return retrogames.list_games(platform, page, query)
 
-    def retro_play(self, game_url, image=""):
-        import retrogames
-        return retrogames.play_url(game_url, image)
+    def retro_launch(self, game):
+        """Play: download what's missing and open the game in RetroArch (skills/retroplay.py)"""
+        import retroplay
+        return retroplay.start(game)
+
+    def _start_buddy(self):
+        """your character in a box over whatever game you're playing (skills/gamebuddy.py)"""
+        try:
+            import gamebuddy
+            gamebuddy.say_aloud = self.gn_say
+            gamebuddy.get_look = self.game_vermeil_look
+            gamebuddy.on_game_front = lambda on: self.emit({"type": "game_front", "on": on})
+            gamebuddy.start_watching()
+        except Exception as e:  # noqa: BLE001 - the app works without it
+            print(f"[game buddy] {type(e).__name__}: {e}")
+
+    def buddy_status(self):
+        import gamebuddy
+        return gamebuddy.settings()
+
+    def buddy_set(self, on=True):
+        import gamebuddy
+        return gamebuddy.save_settings(on=bool(on))
+
+    def retro_launch_cancel(self, job):
+        import retroplay
+        return retroplay.cancel(job)
+
+    def retro_launch_status(self, job):
+        import retroplay
+        return retroplay.status(job)
 
     def retro_prepare(self, game, fresh=False):
-        import retrogames
-        return retrogames.prepare(game, fresh)
+        import retroplay
+        return retroplay.prepare(game, fresh)
 
     def retro_progress(self, gid, bios="", parent=""):
-        import retrogames
-        return retrogames.progress(gid, bios, parent)
+        import retroplay
+        return retroplay.progress(gid, bios, parent)
 
     def retro_save(self, gid, kind, b64):
         import retrogames
@@ -3993,9 +4060,9 @@ class Api:
         import launchers
         return launchers.play(store, gid)
 
-    # ---------- Mini games with Vermeil (ui/games/night.html): library, tournament, puzzles, trivia, words... ----------
+    # ---------- games: what she says over them, and the time played ----------
     def gn_say(self, text):
-        """Mini games: her line out loud, in the voice (and voice clone) of the character you're talking to.
+        """over a game: her line out loud, in the voice (and voice clone) of the character you're talking to.
         A new line cuts off the one before, so she never lags behind the game."""
         text = re.sub(r"[~*_]+", "", str(text or "")).strip()[:240]
         if not text or not pm.tts_ready:
@@ -4020,67 +4087,6 @@ class Api:
         if result == "win":
             self._xp("game_win", xp=5, why=f"Won at {gamenight.GAMES.get(game, ('', game))[1]}")
         return res
-
-    def gn_fav(self, game):
-        import gamenight
-        return gamenight.toggle_fav(game)
-
-    def gn_puzzle(self, kind):
-        import gamenight
-        try:
-            return gamenight.daily_puzzle(kind)
-        except ValueError as e:
-            return {"error": str(e)}
-
-    def gn_puzzle_check(self, kind, grid, seconds=0):
-        import gamenight
-        try:
-            res = gamenight.puzzle_check(kind, grid, seconds=seconds)
-        except ValueError as e:
-            return {"error": str(e)}
-        if res.get("solved") and res.get("streak"):
-            self._xp("puzzle", xp=8, why=f"Puzzle of the day ({kind})")
-        return res
-
-    def gn_trivia(self, categories=None, n=10):
-        import gamenight
-        return gamenight.trivia(categories, n)
-
-    def gn_words(self, lang="en"):
-        import gamenight
-        return gamenight.words(lang)
-
-    def gn_typing(self, n=40, deck=""):
-        import gamenight
-        return gamenight.typing_words(n, deck)
-
-    def gn_escape_topics(self):
-        import gamenight
-        return {"topics": gamenight.escape_topics()}
-
-    def gn_escape(self, topic=""):
-        import gamenight
-        return gamenight.escape_room(topic)
-
-    def gn_escape_check(self, answer, room):
-        import gamenight
-        return {"right": gamenight.escape_check(answer, room or {})}
-
-    def gn_doodle(self, exclude=None):
-        import gamenight
-        return gamenight.her_doodle(exclude or ())
-
-    def gn_doodle_check(self, doodle_id, guess):
-        import gamenight
-        return {"right": gamenight.doodle_check(doodle_id, guess)}
-
-    def gn_draw_prompt(self):
-        import gamenight
-        return gamenight.draw_prompt()
-
-    def gn_guess_drawing(self, data_uri, secret=""):
-        import gamenight
-        return gamenight.guess_drawing(data_uri, secret)
 
     def gn_bpm(self, title, artist=""):
         import gamenight
@@ -4806,8 +4812,10 @@ def _game_vermeil_look(self):
     """who waits by the portal: the character chosen in the assistant (name, model) + the outfit/hair Vermeil wears"""
     v = next((c for c in self._characters["characters"] if c.get("id") == "vermeil"), {})
     p = _game_companion(self)
+    m = self._active().get("model") or ""
+    file = m if m.lower().endswith((".glb", ".gltf")) and os.path.exists(os.path.join(MODELS_DIR, m)) else None
     return {"outfit": v.get("outfit", "mech"), "hair": v.get("hair", "original"), "name": p["name"], "model": p["model"],
-            "body": p["body"], "size": p["size"]}
+            "body": p["body"], "size": p["size"], "file": file}     # file: the ui/models file itself (her box over games loads it)
 
 
 Api.game_vermeil_look = _game_vermeil_look

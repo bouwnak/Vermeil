@@ -46,6 +46,7 @@ class CloneOnlyForCompanion(unittest.TestCase):
         fake = FakeTTS()
         with mock.patch.object(voices, "_tts", return_value=fake), \
              mock.patch.object(voices, "online_ready", return_value=False), \
+             mock.patch.object(voices, "main_room_key", return_value=None), \
              mock.patch.object(voices, "_cloned", return_value=([0.0] * 100, 22050)) as cloned:
             self.assertIn("audio", voices.speak(camp, "smith", "Fine steel today."))
             self.assertIn("audio", voices.speak(camp, "dm", "The road bends north."))

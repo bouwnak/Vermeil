@@ -70,6 +70,96 @@ class WizardTests(unittest.TestCase):
         self.assertTrue(cleanup._protected_dir(os.path.join(self.home, "x"), ["voice.index"]))
         self.assertFalse(cleanup._protected_dir(self.dl, ["a.txt"]))
 
+    # ---------- every drive ----------
+    def scan_all(self, **k):
+        return cleanup.scan([self.home], big_mb=k.pop("big_mb", 3), everything=True, unused_days=30, now=self.now, downloads=self.dl, **k)
+
+    def test_finds_big_and_unused_files_anywhere(self):
+        with __import__("unittest.mock").mock.patch.object(cleanup, "MIN_UNUSED_MB", 1):
+            self.f("Documents/ancient.iso", 2 * MB, age=400)
+            r = self.scan_all()
+        self.assertIn("big.bin", [x["name"] for x in r["big"]])
+        unused = {x["name"]: x for x in r["unused"]}
+        self.assertEqual(unused["ancient.iso"]["unused_days"], 400)
+        self.assertNotIn("big.bin", unused)                                     # used today
+
+    def test_system_files_and_folders_are_never_listed(self):
+        os.makedirs(os.path.join(self.home, "Windows"))
+        self.f("Windows/huge.dat", 5 * MB)
+        self.f("pagefile.sys", 5 * MB)
+        names = [x["name"] for x in self.scan_all()["big"]]
+        self.assertNotIn("huge.dat", names)
+        self.assertNotIn("pagefile.sys", names)
+        self.assertNotIn("map.png", names)                                      # the dnd folder
+        self.assertNotIn("model.pth", names)                                    # a voice model
+
+    def test_installed_apps_are_pointed_out_but_cant_be_removed(self):
+        os.makedirs(os.path.join(self.home, "SteamLibrary", "steamapps", "common", "Game"))
+        p = self.f("SteamLibrary/steamapps/common/Game/data.pak", 5 * MB)
+        r = self.scan_all()
+        self.assertNotIn("data.pak", [x["name"] for x in r["big"]])
+        app = next(x for x in r["apps"] if x["name"] == "data.pak")
+        gone = []
+        out = cleanup.to_recycle_bin([app["id"]], trash=gone.append)            # not even if something asks for it
+        self.assertEqual((gone, out["moved"]), ([], 0))
+        self.assertTrue(os.path.exists(p))
+
+    def test_app_data_only_its_throwaway_folders(self):
+        self.assertTrue(cleanup.in_app(r"C:\Users\x\AppData\Roaming\App\save.dat"))
+        self.assertFalse(cleanup.in_app(r"C:\Users\x\AppData\Local\Temp\junk.tmp"))
+        self.assertFalse(cleanup.in_app(r"C:\Users\x\AppData\Local\App\Cache\blob"))
+        self.assertTrue(cleanup.in_app(r"D:\Program Files\App\app.dat"))
+        self.assertFalse(cleanup.in_app(r"D:\Movies\film.mkv"))
+
+    def test_a_big_unused_folder_is_offered_whole(self):
+        os.makedirs(os.path.join(self.home, "OldProject", "assets"))
+        for i in range(3):
+            self.f(f"OldProject/assets/part{i}.bin", 2 * MB, data=bytes([65 + i]), age=300)
+        r = self.scan_all(big_mb=5)
+        folder = next(x for x in r["folders"] if x["name"] == "OldProject")
+        self.assertTrue(folder["is_folder"])
+        self.assertEqual(folder["mb"], 6.0)
+        self.assertNotIn("assets", [x["name"] for x in r["folders"]])           # only the top one
+        gone = []
+        self.assertEqual(cleanup.to_recycle_bin([folder["id"]], trash=gone.append)["moved"], 1)
+        self.assertEqual(gone, [folder["path"]])
+
+    def test_comparing_a_file_doesnt_count_as_using_it(self):
+        p = self.f("Documents/keepdate.bin", 2 * MB, age=300)
+        before = os.stat(p).st_atime_ns
+        cleanup._hash(p)
+        self.assertEqual(os.stat(p).st_atime_ns, before)
+
+    def test_desktop_ini_doesnt_keep_a_folder_from_being_offered(self):
+        os.makedirs(os.path.join(self.home, "OldStuff"))
+        self.f("OldStuff/movie.mkv", 6 * MB, age=300)
+        self.f("OldStuff/desktop.ini", 10)                                      # written today, by Windows
+        self.assertIn("OldStuff", [x["name"] for x in self.scan_all(big_mb=5)["folders"]])
+
+    def test_a_folder_in_use_isnt_offered(self):
+        os.makedirs(os.path.join(self.home, "Active"))
+        self.f("Active/old.bin", 6 * MB, age=300)
+        self.f("Active/today.txt", 10)
+        self.assertNotIn("Active", [x["name"] for x in self.scan_all(big_mb=5)["folders"]])
+
+    def test_my_own_top_folders_are_never_offered_whole(self):
+        os.makedirs(os.path.join(self.home, "Pictures"))
+        self.f("Pictures/a.bin", 6 * MB, age=300)
+        self.assertNotIn("Pictures", [x["name"] for x in self.scan_all(big_mb=5)["folders"]])
+
+    def test_usb_files_say_they_go_for_good(self):
+        drive = os.path.splitdrive(self.home)[0].upper()
+        cleanup._usb.add(drive)
+        self.addCleanup(cleanup._usb.clear)
+        self.assertTrue(cleanup._row(os.path.join(self.home, "x"), 1, 1, 1)["for_good"])
+
+    def test_it_can_be_stopped(self):
+        import unittest.mock as um
+        def progress(files, folder):
+            cleanup.stop()
+        with um.patch.object(cleanup._Scan, "walk", side_effect=lambda p: (cleanup.stop(), (0, 0.0, True))[1]):
+            self.assertTrue(self.scan_all(progress=progress)["stopped"])
+
     def test_default_roots_include_onedrive(self):
         os.makedirs(os.path.join(self.home, "OneDrive", "Desktop"))
         roots = cleanup.default_roots(self.home)

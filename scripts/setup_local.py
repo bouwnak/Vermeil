@@ -4,6 +4,7 @@ setup_local.py - gets everything ready so Vermeil's AI runs on YOUR PC, offline.
 Run once (with internet):      python scripts/setup_local.py
 Pick model size yourself:      python scripts/setup_local.py --size small | medium | large
 Only check what's installed:   python scripts/setup_local.py --check
+Only the AI models (installer): python scripts/setup_local.py --models-only
 
 What it does:
   1. Checks Ollama (the free app that runs AI models locally) is installed and running
@@ -28,61 +29,10 @@ import folders  # noqa: E402,F401  (lets Python find brain/, senses/, skills/)
 from paths import data_file  # noqa: E402
 
 UI_VENDOR = os.path.join(HERE, "ui", "vendor")
-
-# size -> models. qwen3 = chat + tools, qwen2.5vl = sees pictures. All run through Ollama.
-PLANS = {
-    "tiny":   {"chat": "qwen3:1.7b", "smart": "qwen3:4b",  "vision": "qwen2.5vl:3b", "whisper": "base"},
-    "small":  {"chat": "qwen3:4b",   "smart": "qwen3:4b",  "vision": "qwen2.5vl:3b", "whisper": "base"},
-    "medium": {"chat": "qwen3:4b",   "smart": "qwen3:8b",  "vision": "qwen2.5vl:7b", "whisper": "small"},
-    "large":  {"chat": "qwen3:8b",   "smart": "qwen3:14b", "vision": "qwen2.5vl:7b", "whisper": "small"},
-}
-
+from aimodels import PLANS, gpu_memory_gb, ram_gb, pick_size  # noqa: E402  (one list of models, also used by Settings -> AI)
 
 def say(msg):
     print(f"\n=== {msg}")
-
-
-# ------------------------------------------------------------------ hardware
-def gpu_memory_gb():
-    try:
-        out = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
-                             capture_output=True, text=True, timeout=10).stdout.strip().splitlines()
-        if out:
-            name, mb = out[0].rsplit(",", 1)
-            return name.strip(), int(mb) / 1024
-    except Exception:
-        pass
-    return None, 0
-
-
-def ram_gb():
-    try:
-        if sys.platform == "win32":
-            import ctypes
-
-            class MS(ctypes.Structure):
-                _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
-                            ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
-                            ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
-                            ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
-                            ("sullAvailExtendedVirtual", ctypes.c_ulonglong)]
-            m = MS()
-            m.dwLength = ctypes.sizeof(MS)
-            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m))
-            return m.ullTotalPhys / 1024 ** 3
-        return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 1024 ** 3
-    except Exception:
-        return 8
-
-
-def pick_size(vram, ram):
-    if vram >= 14:
-        return "large"
-    if vram >= 7:
-        return "medium"
-    if vram >= 4 or ram >= 16:
-        return "small"
-    return "tiny"
 
 
 # ------------------------------------------------------------------ ollama
@@ -209,6 +159,12 @@ def main():
         st = llm.status()
         print(json.dumps(st, indent=2))
         print("Voices installed:", __import__("tts").installed_voices())
+        return
+    if "--models-only" in args:
+        import aimodels
+        rec = aimodels.recommend()
+        print(f"Your PC: {rec['gpu'] or 'no graphics card found'}, {rec['ram']} GB memory -> {', '.join(rec['models'])}")
+        print(aimodels.install(lambda pct, text: print(f"  {round(pct * 100)}%  {text}")))
         return
     say("1/7 Ollama (runs the AI on your PC)")
     exe = ensure_ollama()

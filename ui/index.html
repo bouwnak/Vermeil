@@ -118,7 +118,7 @@
       <button class="item" data-panel="settings" aria-controls="panel-settings">
         <span class="item-title">Settings</span>
         <span class="item-sub">Face, behaviour</span>
-      </button>
+      <span class="upd-dot menu-dot" id="updDotMenu" hidden title="An update is ready to install"></span></button>
     </nav>
 
     <p class="hint" id="hint">Say “vermi” or type below. Click things in the room, or click the floor to walk.</p>
@@ -555,6 +555,9 @@
         </select>
       </label>
       <div id="aiStatus" class="note">Checking…</div>
+      <p class="note" id="aiRecNote"></p>
+      <div class="row"><button type="button" class="primary" id="aiRecInstall">⬇ Install recommended model</button></div>
+      <div class="clone-bar" id="aiRecBar" hidden><i></i><span></span></div>
 
       <h3>Behaviour</h3>
       <label>How she talks

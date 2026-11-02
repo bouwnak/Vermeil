@@ -1,11 +1,10 @@
-// closeup.js - Vermeil up close on the right of Game Night: her 3D model (the same one as in the room), framed on
-// her head and shoulders. She idles, blinks, talks while her line is shown, follows your mouse with her head,
-// reacts to the game with her animations (cheer, clap, laugh, think…) and giggles when you click her.
+// closeup.js - your character up close, in her box over a game (buddy.html): the 3D model (the same one as in the room),
+// framed on the head and shoulders. She idles, blinks, talks while her line is shown and reacts with her animations.
 // If the 3D view can't start (no WebGL, model missing) the panel shows a big 💜 instead and everything else works.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { inPlace } from "../inplace.js";
-import { analyzeRig, cleanClips, rigExtras } from "../rigparts.js";
+import { inPlace } from "./inplace.js";
+import { analyzeRig, cleanClips, rigExtras } from "./rigparts.js";
 
 // clips that play once and then go back to idling
 const ONCE = new Set(["cheer", "clap", "laugh", "bow", "nod", "shake", "shrug", "point", "surprised", "happy", "angry", "sad", "shy",
@@ -17,10 +16,10 @@ const FACES = { idle: ["eyes_open", "mouth_basic_normal"], happy: ["eyes_open", 
   shy: ["eyes_half", "mouth_smile_01"], shrug: ["eyes_half", "mouth_eek"], smug: ["eyes_half", "mouth_smile_02"] };
 const MODEL = "anime_girl.glb", HEIGHT = 1.6;
 
-const stub = { react() {}, talk() {}, ready: Promise.resolve(false) };
+const stub = { react() {}, talk() {}, pause() {}, ready: Promise.resolve(false) };
 
 /** Put the character in `box` (model: a file in ui/models, default Vermeil). Returns { react(clip, face), talk(ms), ready } */
-export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original", onPoke = () => {} } = {}) {
+export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original", onPoke = () => {}, maxFps = 60 } = {}) {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
@@ -74,7 +73,7 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     if (face.mats[part].emissiveMap) face.mats[part].emissiveMap = t;
   }
 
-  const ready = new GLTFLoader().loadAsync(`../models/${model || MODEL}`).then((gltf) => {
+  const ready = new GLTFLoader().loadAsync(`models/${model || MODEL}`).then((gltf) => {
     root = gltf.scene;
     const s = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
     root.scale.multiplyScalar(HEIGHT / Math.max(s.y, 1e-6));
@@ -94,7 +93,7 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     });
     if (mats.eyes && mats.mouth) {
       const loader = new THREE.TextureLoader(), cache = {};
-      const tex = (n) => cache[n] ||= loader.load(`../models/anime_girl_face/${n}.png`, (t) => { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; }, undefined, () => { cache[n] = null; });
+      const tex = (n) => cache[n] ||= loader.load(`models/anime_girl_face/${n}.png`, (t) => { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; }, undefined, () => { cache[n] = null; });
       for (const [e, m] of Object.values(FACES)) { tex(e); tex(m); }
       ["mouth_eek", "mouth_ooo", "mouth_open_smile_01"].forEach(tex);
       face = { mats, tex, cur: {} };
@@ -119,8 +118,8 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     size();
     return true;
   }).catch((e) => {
-    console.warn("[mini games] close-up:", e);
-    try { window.pywebview?.api?.log_ui_error?.(`minigames close-up (${model})`, String(e?.stack || e)); } catch { /* not in the app */ }
+    console.warn("[close-up]", e);
+    try { window.pywebview?.api?.log_ui_error?.(`close-up (${model})`, String(e?.stack || e)); } catch { /* not in the app */ }
     box.classList.add("vm-flat");
     renderer.domElement.remove();
     return false;
@@ -135,10 +134,14 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
   renderer.domElement.addEventListener("click", () => onPoke());
 
   const clock = new THREE.Clock();
+  let paused = false, lastFrame = 0;
   (function frame() {
     requestAnimationFrame(frame);
-    if (document.hidden || !root) return;
-    const dt = Math.min(clock.getDelta(), 0.1), now = performance.now();
+    if (document.hidden || paused || !root) return;
+    const now = performance.now();
+    if (now - lastFrame < 1000 / maxFps - 1) return;              // over a game she only takes what she needs
+    lastFrame = now;
+    const dt = Math.min(clock.getDelta(), 0.1);
     mixer?.update(dt);
     extras?.update(dt, now / 1000, now < talkUntil ? 1 : 0);
     look.x += (look.tx - look.x) * Math.min(1, dt * 4);
@@ -183,6 +186,8 @@ export function closeUp(box, { model = MODEL, outfit = "mech", hair = "original"
     },
     /** her mouth moves for `ms` (while her line types out) */
     talk(ms) { talkUntil = performance.now() + ms; },
+    /** stop drawing while nobody can see her */
+    pause(on) { paused = !!on; clock.getDelta(); },
   };
 }
 

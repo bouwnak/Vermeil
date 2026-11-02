@@ -1359,7 +1359,14 @@ body.editing .sidebar { animation: none; }
   box-shadow: 0 -10px 18px rgba(22,25,30,.95); background: var(--blue); color: #fff; }
 .rig-side > button.primary { border-color: var(--blue); background: var(--blue-soft); }
 .rig-side > button small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.rig-legend { position: absolute; right: 12px; top: 186px; display: grid; gap: 4px; padding: 8px 12px; font-size: 12.5px; background: rgba(22,25,30,.82); border: 1px solid var(--line); border-radius: 12px; pointer-events: none; }
+.rig-legend[hidden] { display: none; }
+.rig-legend span { display: flex; align-items: center; gap: 7px; }
+.rig-legend i { width: 10px; height: 10px; border-radius: 50%; }
+.rig-legend b { margin-left: auto; padding-left: 10px; color: var(--muted); font-weight: 600; }
 .rig-motions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.rig-body { display: flex; gap: 10px; align-items: center; justify-content: space-between; font-weight: 700; }
+.rig-body select { flex: 1; max-width: 170px; border-radius: 10px; padding: 6px 10px; background: var(--raised); border: 1px solid var(--line); color: var(--ink); font: inherit; font-weight: 400; }
 .rig-ask { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(560px, calc(100% - 24px)); background: rgba(22,25,30,.95); border: 1px solid var(--blue); box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 0 4px var(--blue-soft); border-radius: var(--radius-l); padding: 14px 16px; }
 .rig-ask.pop { animation: askPop .35s cubic-bezier(.2,1.4,.4,1); }
 .rig-ask p { margin: 0 0 10px; line-height: 1.45; }
@@ -2008,3 +2015,10 @@ input.tiny { width: 56px; }
 /* the page area: the tab's web view is put right over this box (skills/vbrowser.py) */
 .br-view { min-height: 240px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff1; display: grid; place-items: center; }
 .br-view[hidden], .br-start[hidden] { display: none; }
+
+/* an update is ready to install */
+#panel-settings button.upd-ready { box-shadow: 0 0 0 3px rgba(255, 90, 122, .35); animation: updPulse 1.8s ease-in-out infinite; }
+@keyframes updPulse { 50% { box-shadow: 0 0 0 7px rgba(255, 90, 122, .12); } }
+.item { position: relative; }
+.upd-dot.menu-dot { position: absolute; top: 10px; right: 12px; }
+@media (prefers-reduced-motion: reduce) { #panel-settings button.upd-ready { animation: none; } }

@@ -1,46 +1,46 @@
 """
-retrogames.py - the "Retro Games" part of the Games hub: classic console games from www.retrogames.cc.
+retrogames.py - the "Retro Games" list of the Games hub: classic console games from www.romsgames.net.
 
 How it works (beginner version):
-- list_games() reads a page of the website (the home page, a console like SNES, or a search) and pulls out each
-  game's name, picture, console and likes - so the app can show them in its own style.
-- play_url() opens one game's page and finds its "embed" player: the same small player the website gives you to
-  put a game on your own page (just the game + its buttons, no ads around it).
+- list_games() reads a page of the website (a console like SNES, or a search) and pulls out each game's name, picture
+  and console - so the app can show them in its own style.
+- Pressing Play is skills/retroplay.py: it downloads the game and opens it in the emulator.
 - Pages are remembered for a few hours in data/retrogames_cache.json, so the hub opens fast and still works
   (with the last list) when the site is slow.
+- Here too: which games are on this PC, your Recent / Favorites lists and the saves made on the phone.
 """
 import base64
+import hashlib
 import html
 import json
 import os
 import re
 import shutil
-import threading
 import time
-import zipfile
 from urllib.parse import quote_plus, urlparse
 
 import requests
 
 from paths import data_file
 
-SITE = "https://www.retrogames.cc"
+SITE = "https://www.romsgames.net"
 CACHE_FILE = data_file("retrogames_cache.json")
 CACHE_HOURS = 6
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"}
 
-# the website's own menu: group -> [(id, name)]
+# the consoles the emulator can run: group -> [(the website's name for it, the name shown)]
 PLATFORMS = {
-    "Nintendo": [("nes", "NES"), ("snes", "SNES"), ("n64", "N64"), ("gameboy", "Game Boy"), ("gameboycolor", "Game Boy Color"),
-                 ("gameboyadvance", "Game Boy Advance"), ("nds", "Nintendo DS"), ("fds", "Famicom Disk")],
-    "Sega": [("genesis", "Genesis"), ("mastersystem", "Master System"), ("gamegear", "Game Gear"), ("sega32x", "32X"), ("segacd", "Sega CD")],
-    "NEC": [("turbografx16", "TurboGrafx-16"), ("turbografxcd", "TurboGrafx CD"), ("pcecd", "PC Engine CD")],
-    "Atari": [("atari7800", "Atari 7800"), ("lynx", "Atari Lynx"), ("jaguar", "Atari Jaguar")],
-    "PlayStation": [("psx", "PlayStation")],
-    "Arcade": [("arcade", "Arcade")],
-    "Other": [("wonderswan", "WonderSwan"), ("ngp", "Neo Geo Pocket"), ("msx1", "MSX"), ("msx2", "MSX 2")],
+    "Nintendo": [("nintendo", "NES"), ("super-nintendo", "SNES"), ("nintendo-64", "N64"), ("gameboy", "Game Boy"), ("gameboy-color", "Game Boy Color"),
+                 ("gameboy-advance", "Game Boy Advance"), ("nintendo-ds", "Nintendo DS"), ("gamecube", "GameCube"), ("nintendo-wii", "Wii")],
+    # Master System, Game Gear and 32X aren't here: every game tried on the site gave a "404 Not Found" page (14 of 14 each, Nov 2026)
+    "Sega": [("sega-genesis", "Genesis"), ("dreamcast", "Dreamcast")],
+    "PlayStation": [("playstation", "PlayStation"), ("playstation-2", "PlayStation 2"), ("playstation-portable", "PSP")],
+    "Other": [("turbografx-16", "TurboGrafx-16"), ("atari-2600", "Atari 2600"), ("mame-037b11", "Arcade")],
 }
 PLATFORM_IDS = {p for group in PLATFORMS.values() for p, _ in group}
+PLATFORM_NAMES = {p: name for group in PLATFORMS.values() for p, name in group}
+# the site's home page has no game list, so "Most Popular" is the top of these
+POPULAR = ("gameboy-advance", "super-nintendo", "nintendo-ds", "nintendo-64", "playstation", "sega-genesis")
 
 
 # ---------------- reading the website ----------------
@@ -79,24 +79,21 @@ def _get(url, fresh=False):
     return r.text
 
 
-def _text(s):
-    return html.unescape(re.sub(r"<[^>]+>", "", s or "")).strip()
+def platform_of(url):
+    """the console in a game's address: /gameboy-advance-rom-sonic/ -> gameboy-advance"""
+    m = re.fullmatch(r"/([a-z0-9\-]+?)-rom-[^/]+/?", urlparse(url or "").path)
+    return m.group(1) if m else ""
 
 
 def parse_cards(page):
-    """every game card on a page -> [{title, url, image, platform, likes}]"""
+    """every game card on a page -> [{title, url, image, platform, likes}]. Consoles the emulator can't run are left out."""
     out, seen = [], set()
-    for block in page.split('class="post thumb-border"')[1:]:
-        url = re.search(r'href="(https://www\.retrogames\.cc/[a-z0-9]+-games/[^"]+\.html)"', block)
-        if not url or url.group(1) in seen:
+    for path, image, title in re.findall(r'<a href="(/[a-z0-9\-]+-rom-[^"]+/)"[^>]*>\s*<img src="([^"]+)"[^>]*alt="([^"]*)"', page):
+        plat = platform_of(path)
+        if path in seen or plat not in PLATFORM_IDS:
             continue
-        seen.add(url.group(1))
-        img = re.search(r'data-(?:src|poster)="([^"]+)"', block)
-        title = re.search(r'<div class="post-des">.*?<a[^>]*>(.*?)</a>', block, re.S) or re.search(r'alt="([^"]*)"', block)
-        plat = re.search(r'<div class="thumb-stats[^"]*">\s*<h6>(.*?)</h6>', block, re.S)
-        likes = re.search(r'fa-heart"></i>\s*<span>([\d,]+)</span>', block)
-        out.append({"title": _text(title.group(1)) if title else "Game", "url": url.group(1), "image": img.group(1) if img else "",
-                    "platform": _text(plat.group(1)) if plat else "", "likes": int(likes.group(1).replace(",", "")) if likes else 0})
+        seen.add(path)
+        out.append({"title": html.unescape(title).strip() or "Game", "url": SITE + path, "image": image, "platform": PLATFORM_NAMES[plat], "likes": 0})
     return out
 
 
@@ -121,130 +118,61 @@ def is_english(title):
 
 def page_url(platform="", page=1, query=""):
     if query:
-        return f"{SITE}/search?q={quote_plus(query.strip())}"
-    if platform:
-        if platform not in PLATFORM_IDS:
-            raise ValueError(f"unknown console {platform}")
-        return f"{SITE}/{platform}-games" if page <= 1 else f"{SITE}/{platform}-games/page/{int(page)}.html"
-    return SITE + "/"
+        return f"{SITE}/search/?q={quote_plus(query.strip())}"
+    if platform not in PLATFORM_IDS:
+        raise ValueError(f"unknown console {platform}")
+    return f"{SITE}/roms/{platform}/" if page <= 1 else f"{SITE}/roms/{platform}/?page={int(page)}"
+
+
+def _popular(fresh=False):
+    """the most popular games of the big consoles, taking turns"""
+    lists, last = [], None
+    for plat in POPULAR:
+        try:
+            lists.append(parse_cards(_get(page_url(plat), fresh)))
+        except Exception as e:
+            last = e
+    if not any(lists):
+        raise last or RuntimeError("no games")
+    return [g for row in zip(*[l[:8] for l in lists if l]) for g in row]
 
 
 def list_games(platform="", page=1, query="", fresh=False):
     """{games: [...], platforms, platform, page, query, more} - or {error} when the site can't be reached"""
     page = max(1, int(page or 1))
     try:
-        url = page_url(platform, page, query)
-        text = _get(url, fresh)
+        if not platform and not query:
+            games, text = _popular(fresh), ""
+        else:
+            text = _get(page_url(platform, page, query), fresh)
+            games = parse_cards(text)
     except ValueError as e:
         return {"error": str(e)}
     except Exception as e:
-        return {"error": f"Couldn't reach RetroGames.cc ({type(e).__name__}). Check your internet and try again."}
-    games = [g for g in parse_cards(text) if is_english(g["title"])]
-    more = bool(platform and not query and re.search(rf'/{platform}-games/page/{page + 1}\.html', text))
-    return {"games": games, "platforms": PLATFORMS, "platform": platform, "page": page, "query": query, "more": more}
+        return {"error": f"Couldn't reach the games site ({type(e).__name__}). Check your internet and try again."}
+    more = bool(platform and not query and re.search(rf'/roms/{re.escape(platform)}/\?page={page + 1}\b', text))
+    return {"games": [g for g in games if is_english(g["title"])], "platforms": PLATFORMS, "platform": platform, "page": page, "query": query, "more": more}
 
 
-def _is_game_url(url):
+def is_game_url(url):
     u = urlparse(url or "")
-    return u.scheme == "https" and u.netloc in ("www.retrogames.cc", "retrogames.cc") and re.fullmatch(r"/[a-z0-9]+-games/[^/]+\.html", u.path)
+    return u.scheme == "https" and u.netloc in ("www.romsgames.net", "romsgames.net") and platform_of(url) in PLATFORM_IDS
 
 
-def play_url(game_url, image=""):
-    """the game's embed player address ({url}) - or {error}"""
-    if not _is_game_url(game_url):
-        return {"error": "That isn't a RetroGames.cc game."}
-    try:
-        page = _get(game_url)
-        m = re.search(r'src="((?:https:)?//www\.retrogames\.cc/embed/[^"]+\.html)"', page)
-        if m:
-            src = m.group(1)
-            return {"url": "https:" + src if src.startswith("//") else src}
-        gid = re.search(r"game_id\s*[:=]\s*(\d+)", page)
-    except Exception:
-        gid = None
-    # backup: the number in the game's picture + the name in its address = the embed player
-    gid = gid.group(1) if gid else (re.search(r"/(\d+)_[0-9a-f]+\.", image or "") or [None, None])[1]
-    if not gid:
-        return {"error": "Couldn't open that game right now. Try again in a moment."}
-    slug = urlparse(game_url).path.rsplit("/", 1)[-1]
-    return {"url": f"{SITE}/embed/{gid}-{slug}"}
+def game_id(url):
+    """a game's folder name on this PC: a number made from its address"""
+    return str(int(hashlib.md5(urlparse(url).path.encode("utf-8")).hexdigest()[:12], 16))
 
 
-# ---------------- our own player (no ads, starts right away, saves kept on this PC) ----------------
-# The website only lets its own pages download its game files, so Python downloads each game ONCE into
-# ui/games/roms/ (the app's own folder, so the player page can open it). The player is EmulatorJS - the same
-# free emulator the website uses - loaded without the ad and "PLAY NOW" screens.
+# ---------------- the games on this PC (ui/games/roms/<game id>/) ----------------
 ROM_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ui", "games", "roms")
 SAVE_DIR = data_file("retro_saves")
 LIBRARY_FILE = data_file("retro_library.json")
 ROM_CACHE_MB = 3000          # the downloaded games folder is kept under ~3 GB (the oldest-played go first)
-CORES = {"mupen64plus2": "n64", "beetle-pce": "pce", "mame": "arcade", "fba": "arcade"}   # the website's name -> EmulatorJS's
-_downloads = {}              # game id -> {"got", "total", "done", "error"}
-_dl_lock = threading.Lock()
+downloading = set()          # game ids skills/retroplay.py is getting right now
 
 
-def parse_embed(page):
-    """the game file, emulator and BIOS named in an embed player page"""
-    vals = dict(re.findall(r"(EJS_\w+)\s*=\s*'([^']*)'", page))
-    if not vals.get("EJS_gameUrl") or not vals.get("EJS_core"):
-        return None
-    bios = vals.get("EJS_biosUrl", "")
-    if bios.startswith("/"):
-        bios = SITE + bios
-    core = vals["EJS_core"]
-    # some arcade games are a small "clone" file that needs its main ("parent") game file too
-    return {"game_url": vals["EJS_gameUrl"], "core": CORES.get(core, core), "bios_url": bios,
-            "parent_url": vals.get("EJS_gameParentUrl", "")}
-
-
-def _ext(url):
-    m = re.search(r"\.(7z|zip|bin|iso|cue|chd|pbp|nes|sfc|smc|gba|gbc|gb|nds|z64|n64|md|gen|pce|bios|gg|rom)$", urlparse(url).path, re.I)
-    return m.group(1).lower() if m else "bin"
-
-
-def _game_id(embed_url):
-    m = re.search(r"/embed/(\d+)-", embed_url)
-    return m.group(1) if m else None
-
-
-def _wrap(path):
-    """put a file inside a zip of its own. The player unpacks a game's extra files - but an arcade game's parent
-    has to stay a .zip, so it goes in another one (the same way the website's arcade BIOS pack holds .zip files)."""
-    part = path + ".part"
-    with zipfile.ZipFile(part, "w", zipfile.ZIP_STORED) as z:
-        z.write(path[:-len(".wrap.zip")], os.path.basename(path[:-len(".wrap.zip")]))
-    os.replace(part, path)
-
-
-def _download(url, path, key):
-    """download url -> path in the background, with progress in _downloads[key] (a .wrap.zip path: see _wrap)"""
-    st = _downloads[key]
-    wrap = path.endswith(".wrap.zip")
-    file = path[:-len(".wrap.zip")] if wrap else path
-    try:
-        if not os.path.exists(file):
-            with requests.get(url, headers={**UA, "Referer": SITE + "/"}, timeout=30, stream=True) as r:
-                r.raise_for_status()
-                st["total"] = int(r.headers.get("Content-Length") or 0)
-                part = file + ".part"
-                with open(part, "wb") as f:
-                    for chunk in r.iter_content(256 * 1024):
-                        f.write(chunk)
-                        st["got"] += len(chunk)
-            os.replace(part, file)
-        if wrap:
-            _wrap(path)
-        st["done"] = True
-    except Exception as e:
-        st["error"] = f"Couldn't download the game ({type(e).__name__}). Check your internet and try again."
-        for p in (file + ".part", path + ".part"):
-            try:
-                os.remove(p)
-            except OSError:
-                pass
-
-
-def _trim_cache(keep):
+def trim_cache(keep):
     """the downloaded games (one folder each) stay under ROM_CACHE_MB: the longest-unplayed go first"""
     size = _folder_size
     try:
@@ -283,8 +211,8 @@ def downloads():
         if not gid.isdigit() or not os.path.isdir(d):
             continue
         g = known.get(gid, {})
-        files = [f for f in os.listdir(d) if not f.endswith(".part")]
-        guess = re.sub(r"^\d+_", "", os.path.splitext(files[0])[0]).replace("-", " ").replace("_", " ") if files else ""
+        files = [f for f in os.listdir(d) if not f.endswith(".part") and os.path.isfile(os.path.join(d, f))]
+        guess = os.path.splitext(files[0])[0].replace("-", " ").replace("_", " ") if files else ""
         title = g.get("title") or (guess[:1].upper() + guess[1:]) or f"Game {gid}"
         out.append({"id": gid, "title": title, "platform": g.get("platform", ""), "image": g.get("image", ""),
                     "url": g.get("url", ""), "size": _folder_size(d), "when": os.path.getmtime(d)})
@@ -299,79 +227,13 @@ def delete_download(gid="all"):
     for one in ids:
         if not re.fullmatch(r"\d+", one):
             return {"error": "That isn't a downloaded game."}
-        with _dl_lock:
-            st = _downloads.get(one)
-            if st and not st["done"] and not st["error"]:
-                return {"error": "That game is still downloading. Try again when it's done."}
-            _downloads.pop(one, None)
-            _downloads.pop("parent:" + one, None)
+        if one in downloading:
+            return {"error": "That game is still downloading. Try again when it's done."}
         shutil.rmtree(os.path.join(ROM_DIR, one), ignore_errors=True)
     return downloads()
 
 
-def _start(key, url, path):
-    with _dl_lock:
-        st = _downloads.get(key)
-        if os.path.exists(path):
-            _downloads[key] = {"got": 1, "total": 1, "done": True, "error": None}
-            return
-        if st and not st["done"] and not st["error"]:
-            return                                     # already downloading
-        _downloads[key] = {"got": 0, "total": 0, "done": False, "error": None}
-    threading.Thread(target=_download, args=(url, path, key), daemon=True).start()
-
-
-def prepare(game, fresh=False):
-    """get a game ready for the player: {id, core, rom, bios} (paths the player page can open) - or {error}.
-    The download runs in the background; ask progress(id) how it's going."""
-    game = game if isinstance(game, dict) else {"url": game}
-    r = play_url(game.get("url", ""), game.get("image", ""))
-    if r.get("error"):
-        return r
-    gid = _game_id(r["url"])
-    try:
-        info = parse_embed(_get(r["url"], fresh))
-    except Exception:
-        info = None
-    if not gid or not info:
-        return {"error": "Couldn't open that game right now. Try again in a moment."}
-    os.makedirs(os.path.join(ROM_DIR, "bios"), exist_ok=True)
-    # the file keeps its own name (arcade games are recognised by it), in a folder for this game
-    def name(url):
-        return re.sub(r"[^\w.\-]", "_", os.path.basename(urlparse(url).path)) or f"game.{_ext(url)}"
-    os.makedirs(os.path.join(ROM_DIR, gid), exist_ok=True)
-    rom = f"{gid}/{name(info['game_url'])}"
-    parent = f"{gid}/{name(info['parent_url'])}.wrap.zip" if info["parent_url"] else ""
-    st = _downloads.get(gid)
-    if st and st["error"] and not fresh:               # the website's download link may have expired: get a new one
-        return prepare(game, fresh=True)
-    _start(gid, info["game_url"], os.path.join(ROM_DIR, rom))
-    if parent:
-        _start("parent:" + gid, info["parent_url"], os.path.join(ROM_DIR, parent))
-    bios = ""
-    if info["bios_url"]:
-        bios = "bios/" + os.path.basename(urlparse(info["bios_url"]).path)
-        _start("bios:" + bios, info["bios_url"], os.path.join(ROM_DIR, bios))
-    try:
-        os.utime(os.path.join(ROM_DIR, gid))           # just played: keep it when tidying
-    except OSError:
-        pass
-    _trim_cache(keep={gid})
-    add_recent({**game, "id": gid})
-    return {"id": gid, "core": info["core"], "rom": "roms/" + rom, "bios": ("roms/" + bios) if bios else "",
-            "parent": ("roms/" + parent) if parent else ""}
-
-
-def progress(gid, bios="", parent=""):
-    """{done, got, total, error} for a game's download (and its BIOS / parent file, if it needs them)"""
-    keys = [str(gid)] + (["bios:" + bios.split("roms/", 1)[-1]] if bios else []) + ([f"parent:{gid}"] if parent else [])
-    sts = [_downloads.get(k) or {"got": 0, "total": 0, "done": False, "error": "not started"} for k in keys]
-    err = next((s["error"] for s in sts if s["error"]), None)
-    return {"done": all(s["done"] for s in sts), "got": sum(s["got"] for s in sts),
-            "total": sum(s["total"] for s in sts), "error": err}
-
-
-# ---------------- your saves (kept in data/retro_saves/<game id>/) ----------------
+# ---------------- your saves from the phone (kept in data/retro_saves/<game id>/) ----------------
 SAVE_KINDS = ("state", "sram")       # state = the Save button (exactly where you were); sram = the game's own save
 
 
@@ -421,10 +283,11 @@ def library():
             lib = json.load(f)
     except Exception:
         lib = {}
-    lib.setdefault("recent", []); lib.setdefault("favorites", [])
     saved = set(os.listdir(SAVE_DIR)) if os.path.isdir(SAVE_DIR) else set()
-    for g in lib["recent"] + lib["favorites"]:
-        g["saved"] = g.get("id") in saved
+    for key in ("recent", "favorites"):             # games from a site the app no longer uses are left out
+        lib[key] = [g for g in lib.get(key, []) if is_game_url(g.get("url"))]
+        for g in lib[key]:
+            g["saved"] = g.get("id") in saved
     return lib
 
 
@@ -437,7 +300,7 @@ def _write_library(lib):
 
 
 def add_recent(game):
-    if not _is_game_url(game.get("url")):
+    if not is_game_url(game.get("url")):
         return
     lib = library()
     entry = {**_game_entry(game), "id": game.get("id"), "played": time.time()}
@@ -447,8 +310,8 @@ def add_recent(game):
 
 def favorite(game, on=True):
     """add/remove a favourite -> the new lists"""
-    if not isinstance(game, dict) or not _is_game_url(game.get("url")):
-        return {"error": "That isn't a RetroGames.cc game."}
+    if not isinstance(game, dict) or not is_game_url(game.get("url")):
+        return {"error": "That game can't be added."}
     lib = library()
     lib["favorites"] = [g for g in lib["favorites"] if g.get("url") != game["url"]]
     if on:

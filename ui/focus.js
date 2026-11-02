@@ -1,7 +1,7 @@
 // focus.js - Focus Session Director (work/break rounds, distraction log, summary) + Progress charts.
 import { $, el, toast, setMd, busy } from "./util.js";
 import { play, alarm } from "./fx.js";
-import { drawWeek, drawGoals, drawHabits, drawScreen } from "./planlife.js";
+import { drawGoals, drawScreen } from "./planlife.js";
 import { sleepBars } from "./gymlife.js";
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart(2, "0")}`;
@@ -16,7 +16,7 @@ export function initFocus(api) {
   const view = el("div");
   root.replaceChildren(tabs, view);
   const TABS = [["focus", "Focus session"], ["goals", "🌳 Goals"], ["progress", "📈 My progress"]];
-  const SUBS = [["charts", "📈 Your trends"], ["week", "📅 This week"], ["habits", "🟩 Habits"], ["screen", "⏱️ Screen time"]];
+  const SUBS = [["charts", "📈 Your trends"], ["screen", "⏱️ Screen time"]];
   const drawTabs = () => tabs.replaceChildren(...TABS.map(([k, l]) =>
     el("button", { role: "tab", "aria-selected": String(k === tab), onclick: () => { tab = k; load(); } }, l)));
 
@@ -177,10 +177,10 @@ export function initFocus(api) {
   async function load() {
     drawTabs();
     if (tab === "goals") return drawGoals(view, api);
-    if (tab === "progress") {                         // everything on one page: charts, the week, habits, screen time
+    if (tab === "progress") {                         // everything on one page: charts and screen time
       const parts = SUBS.map(([k, l]) => [k, l, el("div")]);
       view.replaceChildren(...parts.flatMap(([, l, box]) => [el("h3", { class: "prog-head" }, l), box]));
-      const draw = { charts: (box) => drawProgress(box), week: (box) => drawWeek(box, api), habits: (box) => drawHabits(box, api), screen: (box) => drawScreen(box, api) };
+      const draw = { charts: (box) => drawProgress(box), screen: (box) => drawScreen(box, api) };
       return Promise.all(parts.map(([k, , box]) => draw[k](box).catch((e) => box.replaceChildren(el("p", { class: "none" }, String(e?.message || e))))));
     }
     if (st.on) return drawTimer();

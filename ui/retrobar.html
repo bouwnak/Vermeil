@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Game bar</title>
+<link rel="stylesheet" href="vendor/fonts/nunito.css">
+<style>
+  /* the bar over a running retro game; every button is one RetroArch command (skills/retrobar.py) */
+  :root { --bg: #0e1116; --line: #2b313b; --ink: #e6e9ee; --muted: #8b929d; --blue: #3e8eff; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 700 13px Nunito, "Segoe UI", sans-serif; overflow: hidden; user-select: none; }
+  .bar { height: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 4px; padding: 0 10px; border: 1px solid var(--line); }
+  button { flex: none; height: 40px; min-width: 40px; padding: 0 9px; font: inherit; font-size: 17px; color: var(--ink); background: transparent; border: 0; border-radius: 9px; cursor: pointer; }
+  button:hover { background: #222832; }
+  button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+  button.text { font-size: 13px; }
+  button.on { background: rgba(62, 142, 255, .2); color: #fff; box-shadow: inset 0 0 0 1px var(--blue); }
+  .gap { flex: 1; min-width: 6px; text-align: center; color: var(--muted); font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sep { width: 1px; height: 26px; background: var(--line); margin: 0 3px; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button id="leave" class="text" type="button" title="Close the game and go back">← Back</button>
+  <span class="sep"></span>
+  <button data-cmd="RESET" type="button" title="Restart" aria-label="Restart">↻</button>
+  <button id="pause" type="button" title="Pause" aria-label="Pause">⏸</button>
+  <button data-cmd="SAVE_STATE" data-say="Saved" type="button" title="Save" aria-label="Save">💾</button>
+  <button data-cmd="LOAD_STATE" data-say="Loaded" type="button" title="Load your save" aria-label="Load">📂</button>
+  <button id="speed" class="text" type="button" title="Fast forward">1x</button>
+  <button data-cmd="SCREENSHOT" data-say="Screenshot taken" type="button" title="Screenshot" aria-label="Screenshot">📷</button>
+  <span class="sep"></span>
+  <span class="gap" id="msg" aria-live="polite"></span>
+  <button id="mute" type="button" title="Sound on / off" aria-label="Sound on or off">🔊</button>
+  <button data-cmd="VOLUME_DOWN" type="button" title="Quieter" aria-label="Quieter">−</button>
+  <button data-cmd="VOLUME_UP" type="button" title="Louder" aria-label="Louder">+</button>
+  <span class="sep"></span>
+  <button data-cmd="MENU_TOGGLE" type="button" title="RetroArch settings" aria-label="Settings">⚙</button>
+  <button data-cmd="FULLSCREEN_TOGGLE" type="button" title="Full screen / window" aria-label="Full screen or window">⛶</button>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const ready = new Promise((go) => { if (window.pywebview?.api?.cmd) go(); else addEventListener("pywebviewready", go, { once: true }); });
+const api = async (name, ...args) => { await ready; return window.pywebview.api[name](...args); };
+let msgTimer = 0;
+function say(text) { $("msg").textContent = text; clearTimeout(msgTimer); if (text) msgTimer = setTimeout(() => { $("msg").textContent = ""; }, 3000); }
+document.querySelectorAll("[data-cmd]").forEach((b) => { b.onclick = () => { api("cmd", b.dataset.cmd); if (b.dataset.say) say(b.dataset.say); }; });
+function toggler(id, cmd, off, on) {
+  let state = false;
+  $(id).onclick = () => { state = !state; $(id).textContent = state ? on : off; $(id).classList.toggle("on", state); api("cmd", cmd); };
+}
+toggler("pause", "PAUSE_TOGGLE", "⏸", "▶");
+toggler("speed", "FAST_FORWARD", "1x", "⏩");
+toggler("mute", "MUTE", "🔊", "🔇");
+$("leave").onclick = () => api("leave");
+</script>
+</body>
+</html>

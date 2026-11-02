@@ -2,6 +2,10 @@
 # Vermeil - Git Ignore Rules
 # ==========================================
 
+# --- Downloaded games and the emulator (they download again by themselves) ---
+ui/games/roms/
+tools/emulators/
+
 # --- Secrets and Credentials ---
 # Never commit private API keys or tokens
 env

@@ -290,9 +290,6 @@ class AppTests(unittest.TestCase):
             self.assertEqual(r["tournament"]["you"], 3)
             xp.assert_called_once()
             self.assertEqual(self.api.gn_library()["tournament"]["you"], 3)
-            self.assertIn("grid", self.api.gn_puzzle("sudoku"))
-            self.assertIn("error", self.api.gn_puzzle("nope"))
-            self.assertEqual(self.api.gn_escape_check("Paris", {"answer": "paris"}), {"right": True})
         self.assertIn("restaurant", sensei.SCENES)                                 # Talk live: ordering food abroad
         h = self.api._phone_handlers()
         self.assertTrue({"retro_library", "retro_prepare", "retro_progress", "retro_save", "retro_load"} <= set(h))

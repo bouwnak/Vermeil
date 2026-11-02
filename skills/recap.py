@@ -165,7 +165,7 @@ def slides(n):
         out.append({"icon": "🎵", "title": "Your music", "big": f"{m['plays']} songs played",
                     "sub": f"Top artist: {m['top_artist']}" if m.get("top_artist") else "", "list": m.get("top_songs", [])})
     if gm.get("hours"):
-        out.append({"icon": "🎲", "title": "Game night", "big": f"{gm['hours']} hours played",
+        out.append({"icon": "🎲", "title": "Games", "big": f"{gm['hours']} hours played",
                     "sub": f"Favourite: {gm['top']} · {gm['wins']} wins against me · {gm['trophies']} trophies"})
     return out
 

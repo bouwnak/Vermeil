@@ -39,11 +39,12 @@ class H(http.server.SimpleHTTPRequestHandler):
             os.makedirs(test_dir, exist_ok=True)
             retrogames.SAVE_DIR = os.path.join(test_dir, "saves")
             retrogames.LIBRARY_FILE = os.path.join(test_dir, "library.json")
-            fn = {"retro_games": retrogames.list_games, "retro_play": retrogames.play_url, "retro_prepare": retrogames.prepare,
-                  "retro_progress": retrogames.progress, "retro_save": retrogames.save_data, "retro_load": retrogames.load_data,
+            fn = {"retro_games": retrogames.list_games,
+                  "retro_save": retrogames.save_data, "retro_load": retrogames.load_data,
                   "retro_library": retrogames.library, "retro_favorite": retrogames.favorite,
                   "retro_downloads": retrogames.downloads, "retro_delete": retrogames.delete_download,
-                  "retro_fullscreen": lambda on=True: {"ok": True}}.get(name)
+                  "retro_fullscreen": lambda on=True: {"ok": True},
+            "retro_launch": lambda game: {"error": "Playing needs the Vermeil app."}, "retro_launch_status": lambda job: {"done": True}}.get(name)
         if name.startswith("games_"):                 # the hub's own games (skills/mygames.py), kept in a test folder
             import mygames
             test_dir = os.path.join(os.environ["GAME_SAVE_DIR"], "mygames")
@@ -56,9 +57,9 @@ class H(http.server.SimpleHTTPRequestHandler):
             import launchers
             fn = {"launcher_games": lambda: {"games": launchers.installed(), "stores": launchers.STORES},
                   "launcher_play": lambda s, g: {"ok": True}}.get(name)
-        if name == "game_vermeil_look":               # the mini games' companion: Vermeil in tests
-            fn = lambda: {"name": "Vermeil", "model": "anime_girl.glb", "outfit": "mech", "hair": "original"}
-        if name.startswith("gn_") or name == "mm":   # Mini games (ui/games/night.html), its scores kept in the test folder
+        if name == "game_vermeil_look":               # her box over games: Vermeil in tests
+            fn = lambda: {"name": "Vermeil", "model": "vermeil", "file": "anime_girl.glb", "outfit": "mech", "hair": "original"}
+        if name.startswith("gn_") or name == "mm":   # time played and song tempos, kept in the test folder
             import gamenight
             gamenight.FILE = os.path.join(os.environ["GAME_SAVE_DIR"], "gamenight.json")
             import app as vermeil_app

@@ -12,8 +12,10 @@
 //                    with gravity and settle) and the HANDS get real poses for their finger type (relaxed, fist,
 //                    open, point) instead of whatever UniMate guessed.
 import * as THREE from "three";
+import { inPlace } from "./inplace.js";
 
-const clean = (n) => String(n || "").replace(/^mixamorig:?/i, "").replace(/[_.]?\d+$/, "").toLowerCase();
+// "mixamorigLeftArm_09_27" -> "leftarm" (game rips stack several numbers on the end)
+const clean = (n) => String(n || "").replace(/^mixamorig:?/i, "").replace(/([_.]?\d+)+$/, "").toLowerCase();
 const HELPER = /drv|driver|twist|helper|corrective|roll\b|^bk[_]|_ex$|^ex_|[_]ex[_]|nub$|end$|^end|_end_|tip$|_top$|target|pole|ik[_]|[_]ik$|offset|socket|attach|weapon|prop/;
 const FACE = /brow|eye|lid|lash|lip|teeth|tooth|tongue|cheek|nose|forehead|face|mouth|chin|squint|smile|pupil/;
 const JAW = /^jaw|lowerjaw|jaw$/;
@@ -116,6 +118,99 @@ export function analyzeRig(root) {
   }
   return { bones, kind, body, soft, hands, feet, head, hips, arms, jaw: bones.find((b) => kind.get(b) === "jaw") || null,
     neck: named(/neck/).find((b) => body.has(b)) || null, chest: named(/chest|spine2|spine\.?003|upperchest/).find((b) => body.has(b)) || null };
+}
+
+const HAIR_NAME = /hair|bangs?(_|$)|fringe|braid|ponytail|sideburn|ahoge/;
+const NOT_CLOTH = /tail|(^|[_ ])ears?([_ ]|[lr]?$)|bust|breast|antenna|tentacle|(^|_)fin(_|$)|wing|petal|leaf/;
+/** The rigger's colours: bone -> "hands" / "hair" / "clothes". A hand and its fingers; soft bones by name, and a soft
+ *  bone with a meaningless name ("bone_12") by where it hangs: from the head it's hair, from the body it's clothes.
+ *  Tails, ears and the like aren't in the map. */
+export function rigRegions(info) {
+  const out = new Map();
+  for (const h of Object.values(info.hands)) {
+    h.hand.traverse((b) => { if (b.isBone && ["hand", "finger"].includes(info.kind.get(b))) out.set(b, "hands"); });
+  }
+  const ownName = (b) => {                       // a chain's own name is on its first bone too: "hair_1" > "bone_03"
+    for (let x = b; x && x.isBone && info.kind.get(x) === "soft"; x = x.parent) {
+      const n = clean(x.name);
+      if (HAIR_NAME.test(n)) return "hair";
+      if (NOT_CLOTH.test(n)) return "";
+    }
+    return null;
+  };
+  const underHead = (b) => { for (let p = b.parent; p && p.isBone; p = p.parent) if (p === info.head) return true; return false; };
+  for (const b of info.soft) {
+    const own = ownName(b);
+    if (own === "") continue;
+    out.set(b, own || (underHead(b) && !SOFT_CLOTHES.test(clean(b.name)) ? "hair" : "clothes"));
+  }
+  return out;
+}
+const SOFT_CLOTHES = /skirt|cloth|cape|cloak|dress|coat|scarf|sleeve|hood|ribbon|robe|gown|apron|veil|frill|lace|tie/;
+
+/** Is the model standing in its rest pose (a T- or A-pose)? UniMate animates changes FROM the rest pose, so a model
+ *  saved crouching or lying (a "vs" poster pose) gives crouched, broken clips. Returns "" if fine, else why not. */
+export function restPoseProblem(info, root) {
+  if (!info.head || !info.feet.length) return "";
+  // measured on the mesh as it's drawn (a model's bones can say "T-pose" while its skin was bound crouching)
+  root.updateMatrixWorld(true);
+  const thigh = info.bones.find((b) => info.kind.get(b) === "leg" && info.kind.get(b.parent) !== "leg");
+  const hipsBone = thigh?.parent || info.hips;
+  const groups = { head: new Set(), hips: new Set(), feet: new Set(info.feet) };
+  info.head.traverse((o) => { if (o.isBone && info.kind.get(o) !== "soft") groups.head.add(o); });
+  if (hipsBone) groups.hips.add(hipsBone);
+  const sum = { head: [0, 0], hips: [0, 0], feet: [0, 0] }, v = new THREE.Vector3(), all = new THREE.Vector3();
+  const bodyXs = [];
+  root.traverse((m) => {
+    if (!m.isSkinnedMesh) return;
+    const pos = m.geometry.attributes.position, si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+    if (!pos || !si || !sw) return;
+    m.skeleton.update();
+    const step = Math.max(1, Math.floor(pos.count / 5000));
+    for (let i = 0; i < pos.count; i += step) {
+      let best = -1, bw = 0;
+      for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; best = si.getComponent(i, k); } }
+      const bone = m.skeleton.bones[best];
+      if (!bone) continue;
+      m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld);
+      for (const k of Object.keys(groups)) if (groups[k].has(bone)) { sum[k][0] += v.y; sum[k][1]++; }
+      bodyXs.push(v.y);
+    }
+  });
+  if (!sum.head[1] || !sum.feet[1] || !sum.hips[1]) return "";
+  const y = (k) => sum[k][0] / sum[k][1];
+  const legs = y("hips") - y("feet"), torso = y("head") - y("hips");
+  if (torso <= 0) return "its head is below its hips (it's upside down or lying down)";
+  if (legs < torso * 0.45) return "its legs are folded up (it's crouching, kneeling or sitting)";
+  return "";
+}
+
+/** How high the floor is under a standing model (world space): under its feet, even when a gown, coat or tail reaches
+ *  lower than them (those settle on the floor). The soles count: when the lowest point is only a little under the skin
+ *  of the feet, it's a shoe, not clothes. No feet or no skin: the model's lowest point, as before. */
+export function floorUnder(root, info) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  const feet = new Set(info.feet);
+  if (!feet.size) return box.min.y;
+  let low = Infinity;
+  const v = new THREE.Vector3();
+  root.traverse((m) => {
+    if (!m.isSkinnedMesh) return;
+    const pos = m.geometry.attributes.position, si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+    if (!pos || !si || !sw) return;
+    m.skeleton.update();
+    for (let i = 0; i < pos.count; i++) {
+      let best = -1, bw = 0;
+      for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; best = si.getComponent(i, k); } }
+      if (!feet.has(m.skeleton.bones[best])) continue;
+      m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld);
+      if (v.y < low) low = v.y;
+    }
+  });
+  const height = box.max.y - box.min.y;
+  if (low === Infinity || low - box.min.y < height * 0.025) return box.min.y;
+  return low;
 }
 
 /** names the analysis puts on the body (Python sends only these to UniMate too; see skills/slimrig.py) */
@@ -295,6 +390,31 @@ export function makeCalmIdle(root, info = analyzeRig(root), name = "idle") {
   return new THREE.AnimationClip(name, LEN, tracks);
 }
 
+/** A looping clip whose body travels far (a walk that goes forward, or one saved earlier with the travel squeezed back
+ *  into its last frames): keep each moving bone's sideways/forward position at its average - walking in place, the
+ *  room moves her itself. The up-and-down bob and the legs' stride stay. Returns true when it changed something. */
+function pinTravel(root, info, clip) {
+  if (!info.head || !info.hips) return false;
+  root.updateMatrixWorld(true);
+  const size = info.head.getWorldPosition(new THREE.Vector3()).distanceTo(info.hips.getWorldPosition(new THREE.Vector3())) || 1;
+  let changed = false;
+  for (const t of clip.tracks) {
+    if (!t.name.endsWith(".position")) continue;
+    const bone = info.bones.find((b) => b.name === t.name.split(".")[0]);
+    if (!bone?.parent) continue;
+    const q = bone.parent.getWorldQuaternion(new THREE.Quaternion()), qi = q.clone().invert();
+    const s = bone.parent.getWorldScale(new THREE.Vector3()).y || 1;
+    const n = t.times.length, w = [];
+    for (let i = 0; i < n; i++) w.push(new THREE.Vector3().fromArray(t.values, i * 3).multiplyScalar(s).applyQuaternion(q));
+    const mx = w.reduce((a, v) => a + v.x, 0) / n, mz = w.reduce((a, v) => a + v.z, 0) / n;
+    const reach = Math.max(...w.map((v) => Math.hypot(v.x - mx, v.z - mz)));
+    if (reach < size * 0.15) continue;                  // a little sway: leave it
+    w.forEach((v, i) => { v.x = mx; v.z = mz; v.applyQuaternion(qi).divideScalar(s).toArray(t.values, i * 3); });
+    changed = true;
+  }
+  return changed;
+}
+
 /** Make UniMate's clips behave: body bones only, smooth, feet on the floor, seamless loops. Returns a short report. */
 export function cleanClips(root, clips, info = analyzeRig(root)) {
   const bodyNames = new Set([...info.body].map((b) => b.name));
@@ -311,6 +431,9 @@ export function cleanClips(root, clips, info = analyzeRig(root)) {
     const before = clip.tracks.length;
     clip.tracks = clip.tracks.filter((t) => bodyNames.has(t.name.split(".")[0]) && !t.name.endsWith(".scale"));
     report.dropped += before - clip.tracks.length;
+    // a walk that travels forward: take the travel out FIRST. Blending the end into the start (closeLoop) before
+    // that squeezed the whole walk back into the last few frames - he snapped back to the start, then walked again
+    if (loop) { inPlace([clip]); if (pinTravel(root, info, clip)) report.pinned = (report.pinned || 0) + 1; }
     for (const t of clip.tracks) {
       smoothTrack(t, loop, t.name.endsWith(".position") ? 2 : 1);
       if (loop) closeLoop(t);
@@ -324,43 +447,55 @@ export function cleanClips(root, clips, info = analyzeRig(root)) {
 
 /** Put a clip made on UniMate's copy of the rig (fewer bones, other units, the top bone turned) onto the ORIGINAL rig,
  *  so the original's fingers, hair and cloth bones stay (they get the app's hands and springs instead).
- *  For each bone K = (its rest in `from`)⁻¹ · (its rest in `to`), in world space; then q_to = K_parent⁻¹ · q_from · K. */
+ *  Done in world space, frame by frame: the clip plays on UniMate's copy, each bone's world rotation is read, and the
+ *  original is posed to match, top bone first (W_to = W_from · K, K = the two rests' difference). Copying local
+ *  rotations instead broke rigs where UniMate's copy has fewer bones in between (Source/Valve rigs' helper bones:
+ *  a bone's parent isn't the same bone in both, and Omniman came out crouched on the floor). */
 export function retargetClip(clip, fromRoot, toRoot) {
   fromRoot.updateMatrixWorld(true); toRoot.updateMatrixWorld(true);
   const toBones = new Map();
   toRoot.traverse((o) => { if (o.isBone && !toBones.has(o.name)) toBones.set(o.name, o); });
   const fromBones = new Map();
   fromRoot.traverse((o) => { if (o.isBone && !fromBones.has(o.name)) fromBones.set(o.name, o); });
-  const K = new Map(), parentK = new Map();
-  const wq = (o) => o.getWorldQuaternion(new THREE.Quaternion());
-  const ratios = [];
-  for (const [name, f] of fromBones) {
-    const t = toBones.get(name);
-    if (!t) continue;
-    K.set(name, wq(f).invert().multiply(wq(t)));
-    parentK.set(name, wq(f.parent).invert().multiply(wq(t.parent)));
-    const a = f.position.length(), b = t.position.length();
-    if (a > 1e-6 && b > 1e-6) ratios.push(b / a);
+  const animated = new Set(clip.tracks.map((t) => t.name.split(".")[0]));
+  const pairs = [];                                   // [from, to, K], parents before children (the to-rig's order)
+  toRoot.traverse((t) => {
+    const f = t.isBone && fromBones.get(t.name);
+    if (f && toBones.get(t.name) === t && animated.has(t.name))
+      pairs.push([f, t, f.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(t.getWorldQuaternion(new THREE.Quaternion()))]);
+  });
+  if (!pairs.length) return new THREE.AnimationClip(clip.name, clip.duration, []);
+  // the top moving bone also moves (hips bob, a jump): its world offset from rest, in the original's size
+  const top = pairs[0];
+  const fromRest = top[0].getWorldPosition(new THREE.Vector3()), toRest = top[1].getWorldPosition(new THREE.Vector3());
+  // the size difference: how tall the matching skeletons are (UniMate's copy can sit at the origin with odd meshes,
+  // so the models' boxes don't say it)
+  const span = (k) => { const ys = pairs.map((p) => p[k].getWorldPosition(new THREE.Vector3()).y); return Math.max(1e-6, Math.max(...ys) - Math.min(...ys)); };
+  const scale = span(1) / span(0);
+  const savedTo = pairs.map(([, t]) => [t.position.clone(), t.quaternion.clone()]);
+  const fps = 30, n = Math.max(2, Math.round(clip.duration * fps) + 1);
+  const times = Float32Array.from({ length: n }, (_, i) => Math.min(clip.duration, i / fps));
+  const q = pairs.map(() => new Float32Array(n * 4)), pos = new Float32Array(n * 3);
+  const mixer = new THREE.AnimationMixer(fromRoot), act = mixer.clipAction(clip).play();
+  const W = new THREE.Quaternion(), P = new THREE.Quaternion(), v = new THREE.Vector3();
+  for (let i = 0; i < n; i++) {
+    act.time = times[i]; mixer.update(0); fromRoot.updateMatrixWorld(true);
+    pairs.forEach(([f, t, K], k) => {
+      W.copy(f.getWorldQuaternion(new THREE.Quaternion())).multiply(K);           // where this bone points, in the original
+      t.parent.updateWorldMatrix(true, false);
+      t.parent.getWorldQuaternion(P);
+      t.quaternion.copy(P.invert().multiply(W)).normalize();
+      t.updateMatrixWorld(true);
+      t.quaternion.toArray(q[k], i * 4);
+    });
+    v.copy(top[0].getWorldPosition(new THREE.Vector3())).sub(fromRest).multiplyScalar(scale).add(toRest);
+    top[1].parent.worldToLocal(v).toArray(pos, i * 3);
   }
-  // the two copies use different units (UniMate's Blender export vs the original): the bone lengths say how much
-  ratios.sort((x, y) => x - y);
-  const unit = ratios.length ? ratios[ratios.length >> 1] : 1;
-  const tracks = [];
-  for (const tr of clip.tracks) {
-    const [name, prop] = tr.name.split(".");
-    if (!K.has(name)) continue;
-    const vals = tr.values.slice();
-    const kp = parentK.get(name), kpi = kp.clone().invert(), k = K.get(name);
-    if (prop === "quaternion") {
-      const q = new THREE.Quaternion();
-      for (let i = 0; i < vals.length; i += 4) q.fromArray(vals, i).premultiply(kpi).multiply(k).normalize().toArray(vals, i);
-      tracks.push(new THREE.QuaternionKeyframeTrack(tr.name, tr.times, vals));
-    } else if (prop === "position") {
-      const v = new THREE.Vector3(), s = unit;
-      for (let i = 0; i < vals.length; i += 3) v.fromArray(vals, i).multiplyScalar(s).applyQuaternion(kpi).toArray(vals, i);
-      tracks.push(new THREE.VectorKeyframeTrack(tr.name, tr.times, vals));
-    }
-  }
+  act.stop(); mixer.uncacheRoot(fromRoot);
+  pairs.forEach(([, t], k) => { t.position.copy(savedTo[k][0]); t.quaternion.copy(savedTo[k][1]); });
+  toRoot.updateMatrixWorld(true);
+  const tracks = pairs.map(([, t], k) => new THREE.QuaternionKeyframeTrack(`${t.name}.quaternion`, times, q[k]));
+  tracks.push(new THREE.VectorKeyframeTrack(`${top[1].name}.position`, times, pos));
   return new THREE.AnimationClip(clip.name, clip.duration, tracks);
 }
 
@@ -587,10 +722,10 @@ function makeSprings(info, root) {
     if (w > 0.02) s.legs = { w, list: thighs.filter((th) => th.parent).map((th) => ({ thigh: th, hips: th.parent, rest: wquat(th.parent).invert().multiply(wquat(th)) })) };
   }
   const legQ = new THREE.Quaternion(), hipQ = new THREE.Quaternion(), ID = new THREE.Quaternion();
-  // the floor, in the model's own space (its lowest point at rest): cloth settles on it instead of sinking through.
+  // the floor, in the model's own space (under its feet at rest): cloth settles on it instead of sinking through.
   // Kept in local space so it follows when the room scales and places the model afterwards.
   root.updateMatrixWorld(true);
-  const floorLocal = springs.length ? root.worldToLocal(new THREE.Vector3(0, new THREE.Box3().setFromObject(root).min.y, 0)).y : 0;
+  const floorLocal = springs.length ? root.worldToLocal(new THREE.Vector3(0, floorUnder(root, info), 0)).y : 0;
   const floorPt = new THREE.Vector3();
   const head = new THREE.Vector3(), want = new THREE.Vector3(), cur = new THREE.Vector3(), next = new THREE.Vector3();
   const wq = new THREE.Quaternion(), pq = new THREE.Quaternion(), rot = new THREE.Quaternion();

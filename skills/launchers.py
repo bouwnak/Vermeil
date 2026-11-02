@@ -208,6 +208,33 @@ def installed():
     return sorted(games, key=lambda g: g["name"].lower())
 
 
+def game_dirs():
+    """{folder (lower case): game name} of the Epic, GOG and Ubisoft games. (Steam games are known by their steamapps path.)"""
+    out = {}
+    for p in glob.glob(os.path.join(EPIC_DATA, "Manifests", "*.item")):
+        try:
+            with open(p, encoding="utf-8") as f:
+                m = json.load(f)
+            if m.get("InstallLocation"):
+                out[os.path.normcase(os.path.normpath(m["InstallLocation"]))] = m.get("DisplayName") or m.get("AppName") or "this game"
+        except (OSError, ValueError):
+            continue
+    if sys.platform == "win32":
+        import winreg
+        gog = r"SOFTWARE\WOW6432Node\GOG.com\Games"
+        for gid in _reg(winreg.HKEY_LOCAL_MACHINE, gog) or []:
+            exe = _reg(winreg.HKEY_LOCAL_MACHINE, f"{gog}\\{gid}", "exe")
+            if exe:
+                out[os.path.normcase(os.path.dirname(exe))] = _reg(winreg.HKEY_LOCAL_MACHINE, f"{gog}\\{gid}", "gameName") or "this game"
+        ubi = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs"
+        for gid in _reg(winreg.HKEY_LOCAL_MACHINE, ubi) or []:
+            folder = _reg(winreg.HKEY_LOCAL_MACHINE, f"{ubi}\\{gid}", "InstallDir")
+            if folder:
+                folder = os.path.normpath(folder)
+                out[os.path.normcase(folder)] = os.path.basename(folder)
+    return out
+
+
 def play(store, gid):
     """start the game through its launcher (like pressing Play there)"""
     gid = str(gid)

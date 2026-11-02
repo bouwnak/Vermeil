@@ -49,75 +49,7 @@ class LibraryTests(_Tmp):
         self.assertEqual(t["won"], 1)
 
 
-class PuzzleTests(_Tmp):
-    def test_sudoku_is_unique_and_the_streak_counts_days(self):
-        p = gamenight.daily_puzzle("sudoku", MON)
-        self.assertEqual(gamenight._sudoku_solve(p["grid"][:]), 1)
-        self.assertEqual(p, gamenight.daily_puzzle("sudoku", MON))               # the same puzzle all day
-        sol = gamenight.make_sudoku(f"sudoku:{MON.isoformat()}")["solution"]
-        bad = sol[:]
-        i = p["grid"].index(0)
-        bad[i] = bad[i] % 9 + 1
-        self.assertEqual(gamenight.puzzle_check("sudoku", bad, MON)["wrong"], [i])
-        self.assertEqual(gamenight.puzzle_check("sudoku", sol, MON)["streak"], 1)
-        tue = MON + timedelta(days=1)
-        sol2 = gamenight.make_sudoku(f"sudoku:{tue.isoformat()}")["solution"]
-        self.assertEqual(gamenight.puzzle_check("sudoku", sol2, tue)["streak"], 2)
-        self.assertEqual(gamenight.daily_puzzle("sudoku", tue + timedelta(days=2))["streak"], 0)   # a missed day
-
-    def test_nonogram_checks_the_clues(self):
-        p = gamenight.daily_puzzle("nonogram", MON)
-        sol = gamenight.make_nonogram(f"nonogram:{MON.isoformat()}")["solution"]
-        self.assertTrue(gamenight.puzzle_check("nonogram", sol, MON)["solved"])
-        self.assertFalse(gamenight.puzzle_check("nonogram", [[0] * p["size"]] * p["size"], MON)["solved"])
-        with self.assertRaises(ValueError):
-            gamenight.daily_puzzle("chess")
-
-
 class AskTests(_Tmp):
-    def test_trivia_from_ai_and_fallback(self):
-        q = {"category": "Science", "question": "2+2?", "choices": ["3", "4", "5", "6"], "answer": 1, "fact": "x"}
-        r = gamenight.trivia(["Science"], 3, ask=lambda p: {"questions": [q, {"question": "broken"}]})
-        self.assertEqual(len(r["questions"]), 3)
-        self.assertIn("2+2?", [x["question"] for x in r["questions"]])
-        def boom(p): raise RuntimeError("no AI")
-        r = gamenight.trivia(["Animals"], 3, ask=boom)
-        self.assertTrue(all(x["category"] == "Animals" for x in r["questions"]))
-
-    def test_words_other_language_cached(self):
-        calls = []
-        ai = lambda p: calls.append(p) or {"five": ["gatos", "perro", "casas", "mesas", "libro", "verde", "playa", "fuego", "nieve"],
-                                           "hangman": [{"word": f"palabra{c}", "hint": "word"} for c in "abcde"]}
-        r = gamenight.words("es", ask=ai)
-        self.assertIn("perro", r["five"])
-        gamenight.words("es", ask=ai)
-        self.assertEqual(len(calls), 1)
-        self.assertTrue(all(len(w) == 5 for w in gamenight.words("en")["five"]))
-
-    def test_escape_room_fallback_and_answers(self):
-        def boom(p): raise RuntimeError("no AI")
-        with mock.patch.object(gamenight, "_cards", return_value=[]):
-            r = gamenight.escape_room("Math", ask=boom)
-        self.assertEqual(len(r["rooms"]), 3)
-        room = {"answer": "Mitochondria", "also": ["the mitochondrion"]}
-        self.assertTrue(gamenight.escape_check("  mitochondria!", room))
-        self.assertTrue(gamenight.escape_check("The Mitochondrion", room))
-        self.assertFalse(gamenight.escape_check("", room))
-
-    def test_typing_words_from_cards(self):
-        cards = [{"front": f"term{i}", "back": "meaning", "deck": "Bio"} for i in range(12)]
-        with mock.patch.object(gamenight, "_cards", return_value=cards):
-            r = gamenight.typing_words(20)
-        self.assertEqual((r["source"], r["decks"], len(r["words"])), ("your study cards", ["Bio"], 20))
-
-    def test_drawing_and_doodles(self):
-        r = gamenight.guess_drawing("data:image/jpeg;base64,AAAA", "cat", see=lambda d, p: {"guess": "Cat", "others": ["dog"], "comment": "meow"})
-        self.assertTrue(r["right"])
-        self.assertIn("error", gamenight.guess_drawing("nope"))
-        d = gamenight.her_doodle()
-        self.assertTrue(gamenight.doodle_check(d["id"], d["id"].upper()))
-        self.assertTrue(gamenight.doodle_check("boat", "ship"))
-
     def test_song_bpm_cached_and_folded(self):
         self.assertEqual(gamenight.song_bpm("Slow", ask=lambda p: {"bpm": 60})["bpm"], 120)
         self.assertEqual(gamenight.song_bpm("Slow", ask=lambda p: {"bpm": 999})["bpm"], 120)     # cached

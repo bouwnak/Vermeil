@@ -1,4 +1,4 @@
-// games.js - the Games hub: Adventure (the Dungeon RPG) and Retro Games (classic games from retrogames.cc).
+// games.js - the Games hub: Adventure (the Dungeon RPG) and Retro Games (classic games, played in RetroArch).
 // Inside Vermeil it talks to Python through window.pywebview.api.retro_*; in a normal browser (testing) add ?bridge.
 import { startWaves, wireSounds, musicStart, musicStop, setMuted, isMuted } from "./hubfx.js";
 const $ =(id) => document.getElementById(id);
@@ -106,7 +106,6 @@ $("confirmYes").onclick = () => {
   setTimeout(() => { location.href = `../game/index.html${keep}`; }, 350);
 };
 $("cardRetro").onclick = () => { show("retro"); if (!rg.loaded) loadGames(); };
-$("cardNight").onclick = () => { musicStop(0.3); location.href = `night.html${keep}`; };
 
 // the big picture on the right follows the game you point at
 function preview(which) {
@@ -179,7 +178,13 @@ function gameBar(e) {
   bar.setAttribute("aria-valuenow", Math.round(pct * 100));
   if (pct >= 1 && !e.error) bar._hide = setTimeout(() => { bar.hidden = true; }, 1500);
 }
-window.onPyEvent = (e) => { if (e?.type === "game_progress") gameBar(e); };   // Python reports the copy / download here
+window.onPyEvent = (e) => {
+  if (e?.type === "game_progress") gameBar(e);
+  if (e?.type === "game_front") {                  // you're playing: the menu's waves and music step aside
+    document.body.classList.toggle("playing", !!e.on);
+    if (e.on) musicStop(0.5); else if (!isMuted() && !$("hub").hidden) musicStart();
+  }
+};   // Python reports the copy / download here
 async function addGame(name, arg) {
   if (mine.busy) return;
   mine.busy = true;
@@ -208,6 +213,16 @@ $("gamesLinkForm").onsubmit = (e) => {
   addGame("games_add_url", url);
 };
 call("games_list").then(renderMine);
+
+// ---------------- 💜 your character's box over the games you play (skills/gamebuddy.py) ----------------
+const paintBuddy = (on) => { $("buddyBtn").classList.toggle("on", !!on); $("buddyBtn").setAttribute("aria-pressed", String(!!on)); };
+$("buddyBtn").onclick = async () => {
+  const r = await call("buddy_set", $("buddyBtn").getAttribute("aria-pressed") !== "true");
+  if (r?.error) return toast(r.error);
+  paintBuddy(r.on);
+  toast(r.on ? "She'll be in a small box over your games. Drag her anywhere." : "She stays out of your games now.");
+};
+call("buddy_status").then((s) => paintBuddy(s?.on));
 
 // ---------------- installed launcher games (Steam, Epic...): a shelf of covers under the hub ----------------
 const lib = { games: [], stores: {}, store: "all" };
@@ -283,12 +298,11 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (!$("confirm").hidden) $("confirmNo").click();
   else if (!$("gamesDlg").hidden) $("gamesClose").click();
-  else if (!$("stage").hidden) poke();
 });
 
 // ---------------- Retro Games ----------------
 // platform is a console id, or "recent" / "favorites" (your own lists)
-const rg = { platform: "", page: 1, query: "", games: [], platforms: {}, more: false, loaded: false, busy: false, playing: null,
+const rg = { platform: "", page: 1, query: "", games: [], platforms: {}, more: false, loaded: false, busy: false,
              lib: { recent: [], favorites: [] } };
 const LISTS = { recent: "Recently Played", favorites: "Favorites", downloads: "Downloaded Games" };
 const LIST_ICON = { recent: "⟲", favorites: "♥", downloads: "⬇" };
@@ -304,6 +318,13 @@ async function loadLibrary() {
 }
 
 function renderNav() {
+  const home = document.createElement("div");
+  home.className = "rg-group mine";
+  home.classList.toggle("on", !rg.platform && !rg.query);
+  const homeBtn = document.createElement("button");
+  homeBtn.type = "button"; homeBtn.textContent = "⌂ Home"; homeBtn.title = "Most popular games";
+  homeBtn.onclick = () => pick("");
+  home.append(homeBtn);
   const mine = Object.entries(LISTS).map(([id, name]) => {
     const g = document.createElement("div");
     g.className = "rg-group mine";
@@ -332,15 +353,15 @@ function renderNav() {
     g.append(top, drop);
     return g;
   });
-  $("rgNav").replaceChildren(...mine, ...consoles);
+  $("rgNav").replaceChildren(home, ...mine, ...consoles);
 }
 
 function renderSide() {
-  const lists = Object.entries(LISTS).map(([id, name]) => [id, `${LIST_ICON[id]} ${name}`]);
+  const lists = [["", "⌂ Home"]].concat(Object.entries(LISTS).map(([id, name]) => [id, `${LIST_ICON[id]} ${name}`]));
   $("rgSide").replaceChildren(...lists.concat(Object.values(rg.platforms).flat()).map(([p, name]) => {
     const b = document.createElement("button");
     b.type = "button"; b.textContent = name; b.classList.toggle("on", p === rg.platform);
-    if (LISTS[p]) b.classList.add("mine");
+    if (LISTS[p] || !p) b.classList.add("mine");
     b.onclick = () => pick(p);
     return b;
   }));
@@ -357,7 +378,8 @@ function card(g) {
   stats.className = "rg-stats";
   const tag = document.createElement("span"); tag.className = "rg-tag"; tag.textContent = g.platform || "Game";
   const likes = document.createElement("span"); likes.className = "rg-likes"; likes.textContent = (g.likes || 0).toLocaleString();
-  stats.append(tag, likes);
+  stats.append(tag);
+  if (g.likes) stats.append(likes);
   const btn = document.createElement("span"); btn.className = "rg-play"; btn.textContent = "Play";
   const fav = document.createElement("button");
   fav.type = "button"; fav.className = "rg-fav";
@@ -553,25 +575,10 @@ function zoomFrom(el, image) {
   });
 }
 
-// ---------------- playing: our own player (no ads, starts by itself, full screen, saves kept by Python) ----------------
+// ---------------- playing: Python downloads whatever is missing behind the loading screen, then opens RetroArch ----------------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const mb = (n) => `${(n / 1048576).toFixed(n < 10485760 ? 1 : 0)} MB`;
 let playToken = 0;
-let startWait = null;                              // resolves when the player says the game is running
-
-// the player page (player.html, in the frame) calls these
-window.retroHost = {
-  call,
-  accent,
-  started(msg) { startWait?.(msg || ""); },
-  saved() { if (rg.playing) markSaved(rg.playing); },
-  failed(text) { startWait?.({ error: text }); },
-  poke: (y) => poke(y),
-};
-
-function markSaved(g) {
-  for (const f of rg.lib.recent.concat(rg.lib.favorites)) if (f.url === g.url) f.saved = true;
-}
 
 async function play(g, fromEl) {
   const token = ++playToken;
@@ -579,65 +586,38 @@ async function play(g, fromEl) {
   const cover = g.image || fromEl?.querySelector?.("img")?.src || "";
   await zoomFrom(fromEl, cover);
   loader.show(g.title, `${g.platform || "Retro"} · getting the game ready`, cover);
-  let found = 0.08;                                // the website can take a few seconds to answer
-  const finding = setInterval(() => { found = Math.min(0.14, found + 0.004); loader.progress(found); }, 400);
-  loader.sub("Finding the game…");
-  let info = await call("retro_prepare", g);
-  clearInterval(finding);
+  const run = await call("retro_launch", g);
   if (!live()) return;
-  if (info?.error) return failPlay(info.error);
+  if (run?.error) return failPlay(run.error);
+  return playInEmulator(g, run.job, live);
+}
 
-  // the game downloads to this PC first (only the first time you play it)
-  for (let tries = 0, retried = false; ; tries++) {
-    const p = await call("retro_progress", info.id, info.bios, info.parent || "");
+/** the loading screen follows Python's steps; when RetroArch is open it goes away, and the hours are counted until it closes */
+async function playInEmulator(g, job, live) {
+  let st = null, shown = 0;
+  // Cancel on the loading screen: Python stops the download, and this loop stops watching it
+  const cancel = $("loadingCancel");
+  cancel.hidden = false;
+  cancel.onclick = () => { call("retro_launch_cancel", job); playToken++; cancel.hidden = true; loader.hide(); };
+  while (live()) {
+    st = await call("retro_launch_status", job);
     if (!live()) return;
-    if (p?.error) {
-      if (retried) return failPlay("Couldn't download the game. Check your internet and try again.");
-      retried = true;
-      info = await call("retro_prepare", g, true);
-      if (!live()) return;
-      if (info?.error) return failPlay(info.error);
-      continue;
-    }
-    if (p?.done) break;
-    const part = p?.total ? p.got / p.total : Math.min(0.9, tries * 0.02);
-    loader.progress(0.15 + part * 0.6);
-    loader.sub(p?.total ? `Downloading the game · ${mb(p.got)} of ${mb(p.total)}` : "Downloading the game…");
+    if (st?.done) break;
+    // a browser's download gives no numbers: the bar creeps so it never looks stuck
+    shown = Math.max(shown + 0.0015, st?.pct || 0);
+    loader.progress(Math.min(0.97, shown));
+    if (st?.text) loader.sub(st.text);
     await sleep(400);
   }
-
-  loader.progress(0.8);
-  loader.sub("Starting the game…");
-  rg.playing = { ...g, id: info.id, image: cover, t0: Date.now() };
-  try { sessionStorage.setItem("retro_cover", cover); } catch {}
-  const q = new URLSearchParams({ core: info.core, rom: info.rom, bios: info.bios || "", parent: info.parent || "", id: info.id, name: g.title, image: cover });
-  const frame = document.createElement("iframe");
-  frame.title = g.title;
-  frame.allow = "autoplay; fullscreen; gamepad";
-  frame.allowFullscreen = true;
-  frame.src = `player.html?${q}`;
-  $("stTitle").textContent = g.title;
-  paintStageFav();
-  $("stMsg").hidden = true;
-  $("stGame").replaceChildren(frame);
-  $("stage").hidden = false;
-  document.body.classList.add("playing");
-  call("retro_fullscreen", true);
-
-  // the emulator downloads its parts and starts; the loading screen stays until the game is really running
-  let creep = 0.8;
-  const tick = setInterval(() => { if (!live()) return clearInterval(tick); creep = Math.min(0.97, creep + 0.01); loader.progress(creep); }, 500);
-  const res = await Promise.race([new Promise((r) => { startWait = r; }), sleep(90000).then(() => "")]);
-  clearInterval(tick);
-  startWait = null;
+  cancel.hidden = true;
   if (!live()) return;
-  if (res?.error) {
-    $("stMsg").textContent = res.error; $("stMsg").hidden = false;
-  }
+  if (st?.error) return failPlay(st.error);
   loader.hide();
-  frame.focus({ preventScroll: true });
-  poke();
-  if (res && typeof res === "string") toast(res);
+  await loadLibrary();
+  if (LISTS[rg.platform]) loadGames();
+  const started = Date.now();
+  while ((await call("retro_launch_status", job))?.running) await sleep(2000);
+  call("gn_record", "retro", Math.round((Date.now() - started) / 1000));   // hours for your yearly recap
 }
 
 function failPlay(text) {
@@ -649,54 +629,11 @@ function failPlay(text) {
 function toast(text) {
   const t = document.createElement("div");
   t.className = "toast"; t.textContent = text;
-  if ($("stage").hidden) t.style.position = "fixed";          // on the hub (no game showing)
-  ($("stage").hidden ? document.body : $("stage")).append(t);
+  t.style.position = "fixed";
+  document.body.append(t);
   setTimeout(() => t.classList.add("out"), 2600);
   setTimeout(() => t.remove(), 3100);
 }
-
-// the bar over the game hides by itself; Esc or the mouse near the top shows it again
-let barTimer = 0;
-function poke(y) {
-  if ($("stage").hidden || (y !== undefined && y > 90)) return;
-  $("stageBar").classList.add("show");
-  clearTimeout(barTimer);
-  barTimer = setTimeout(() => { if (!$("stageBar").matches(":hover, :focus-within")) $("stageBar").classList.remove("show"); }, 2500);
-}
-$("stageBar").addEventListener("mouseleave", () => poke());
-$("stage").addEventListener("mousemove", (e) => poke(e.clientY));
-
-function paintStageFav() {
-  const on = rg.playing && isFav(rg.playing);
-  $("stFav").textContent = on ? "♥ Favorite" : "♡ Favorite";
-  $("stFav").classList.toggle("on", !!on);
-  $("stFav").setAttribute("aria-pressed", String(!!on));
-}
-$("stFav").onclick = async () => { if (rg.playing) { await toggleFav(rg.playing); paintStageFav(); } };
-
-async function leaveGame(to = "retro") {
-  playToken++;
-  startWait = null;
-  if (!$("loading").hidden) loader.hide();
-  const frame = $("stGame").querySelector("iframe");
-  if (frame) {
-    // keep the game's own save before closing it (the Save button's saves are already kept)
-    try { await Promise.race([frame.contentWindow.backupSram?.(), sleep(1500)]); } catch { /* the game never started */ }
-  }
-  $("stGame").replaceChildren();                   // removing the game stops its sound
-  $("stage").hidden = true;
-  document.body.classList.remove("playing");
-  $("stageBar").classList.remove("show");
-  call("retro_fullscreen", false);
-  if (rg.playing?.t0) call("gn_record", "retro", Math.round((Date.now() - rg.playing.t0) / 1000));   // hours in the Game Night library
-  rg.playing = null;
-  await loadLibrary();
-  if (to === "hub") { show("hub"); $("cardRetro").focus({ preventScroll: true }); return; }
-  if (LISTS[rg.platform]) loadGames();             // your Recent / Favorites lists may have changed
-  else if (rg.games.length) $("rgGrid").replaceChildren(...rg.games.map(card));   // same cards, fresh hearts + "Saved"
-}
-$("stBack").onclick = () => leaveGame("retro");
-$("stHub").onclick = () => leaveGame("hub");
 
 // opened as games/index.html?retro -> straight to Retro Games
 if (new URLSearchParams(location.search).has("retro")) $("cardRetro").click();
