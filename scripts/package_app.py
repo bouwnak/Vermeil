@@ -36,7 +36,7 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(ROOT, "dist")
 
-ALWAYS_SKIP_DIRS = {"_originals", "__pycache__", ".git", ".vscode", ".idea", "dist", "_archive", "node_modules", ".pytest_cache"}
+ALWAYS_SKIP_DIRS = {"_originals", "emulators", "__pycache__", ".git", ".vscode", ".idea", "dist", "_archive", "node_modules", ".pytest_cache"}
 # login tokens / secrets - never copied, sign in again on the new PC
 SECRET_FILES = ["data/spotify_token.json", "data/google_token.json", "data/google_credentials.json", "data/cookies.txt"]
 ALWAYS_SKIP_FILES = ["env", ".env", "*.pyc", "*.blend1", "*.tmp", "*.part", "*.log",
@@ -62,6 +62,8 @@ def wanted(r, a):
     """should this project file go into the main zip?"""
     parts = r.split("/")
     if any(p in ALWAYS_SKIP_DIRS for p in parts):
+        return False
+    if not os.path.exists(os.path.join(ROOT, r)):            # a path too long for Windows to open
         return False
     if matches(r, ALWAYS_SKIP_FILES) or parts[-1] in ("env", ".env"):
         return False
