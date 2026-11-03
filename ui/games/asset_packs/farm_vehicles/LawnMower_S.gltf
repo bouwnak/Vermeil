@@ -11,24 +11,18 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				1
+				0,
+				1,
+				2
 			]
 		}
 	],
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"SM_StylizedFarm_LawnMower_S_Vehicle_Lowpoly_M_0",
-			"translation":[
-				6.103515625e-05,
-				0,
-				0
-			]
+			"name":"body"
 		},
 		{
-			"children":[
-				0
-			],
 			"name":"SM_StylizedFarm_LawnMower_S",
 			"scale":[
 				0.009999999776482582,
@@ -39,6 +33,15 @@
 				9.006443977355957,
 				0,
 				-9.640481948852539
+			]
+		},
+		{
+			"mesh":1,
+			"name":"wheel_0",
+			"translation":[
+				0.30777645111083984,
+				0.20455946028232574,
+				0.01431894302368164
 			]
 		}
 	],
@@ -74,6 +77,20 @@
 					"material":0
 				}
 			]
+		},
+		{
+			"name":"SM_StylizedFarm_LawnMower_S_Vehicle_Lowpoly_M_0.012",
+			"primitives":[
+				{
+					"attributes":{
+						"POSITION":4,
+						"NORMAL":5,
+						"TEXCOORD_0":6
+					},
+					"indices":7,
+					"material":0
+				}
+			]
 		}
 	],
 	"textures":[
@@ -93,61 +110,119 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":4763,
+			"count":4803,
 			"max":[
-				-858.3812866210938,
-				180.03662109375,
-				989.8157348632812
+				0.42263221740722656,
+				1.8003665208816528,
+				0.2576770782470703
 			],
 			"min":[
-				-942.9075317382812,
+				-0.42263031005859375,
 				0,
-				938.2804565429688
+				-0.2576761245727539
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":4763,
+			"count":4803,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":4763,
+			"count":4803,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":6276,
+			"count":6246,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":4,
+			"componentType":5126,
+			"count":16,
+			"max":[
+				0,
+				0.12639950215816498,
+				0.1421341896057129
+			],
+			"min":[
+				0,
+				-0.12639948725700378,
+				-0.1421341896057129
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":5,
+			"componentType":5126,
+			"count":16,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":6,
+			"componentType":5126,
+			"count":16,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":7,
+			"componentType":5123,
+			"count":30,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":57156,
+			"byteLength":57636,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":57156,
-			"byteOffset":57156,
+			"byteLength":57636,
+			"byteOffset":57636,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":38104,
-			"byteOffset":114312,
+			"byteLength":38424,
+			"byteOffset":115272,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":12552,
-			"byteOffset":152416,
+			"byteLength":12492,
+			"byteOffset":153696,
+			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":192,
+			"byteOffset":166188,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":192,
+			"byteOffset":166380,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":128,
+			"byteOffset":166572,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":60,
+			"byteOffset":166700,
 			"target":34963
 		}
 	],
@@ -159,7 +234,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":164968,
+			"byteLength":166760,
 			"uri":"LawnMower_S.bin"
 		}
 	]

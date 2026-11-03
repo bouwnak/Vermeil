@@ -8,8 +8,31 @@ import { popup } from "./ui.js";
 const AT_DOCK = [DOCK.x[0] + 18, 7.6];
 export async function makeSail(G) {
   const s = G.s, holder = new THREE.Group(), S = { holder };
-  await prop(`${FISH_PACK}Boat.glb`, holder, { height: 2.2, ry: Math.PI / 2 });
+  S.hull = await prop(`${FISH_PACK}Boat.glb`, holder, { height: 1.15, ry: 0 });
   G.scene.add(holder);
+  // a thwart to sit on, and a pair of oars in their rowlocks: you row while the boat moves, and they rest across your lap when it doesn't
+  const wood = new THREE.MeshStandardMaterial({ color: 0x8a5a32, flatShading: true, roughness: 0.8 }), pale = new THREE.MeshStandardMaterial({ color: 0xc9975a, flatShading: true, roughness: 0.8 });
+  const bench = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.08, 0.42), pale); bench.position.set(0, 0.62, 0); bench.castShadow = true; holder.add(bench);
+  const oars = [1, -1].map((s) => {
+    const g = new THREE.Group(), shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 2.7, 6).translate(0, 1.35, 0), wood), blade = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.6, 0.2).translate(0, 2.55, 0), pale);
+    const lock = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.015, 5, 8), new THREE.MeshStandardMaterial({ color: 0x55585e })); lock.position.set(s * 1.28, 1.1, 0.05); lock.rotation.y = Math.PI / 2; holder.add(lock);
+    shaft.castShadow = blade.castShadow = true; g.add(shaft, blade); holder.add(g);
+    return { g, s, pivot: new THREE.Vector3(s * 1.28, 1.08, 0.05), hand: new THREE.Vector3() };
+  });
+  let row = 0, rowK = 0;
+  /** the oars, from where your hands hold them through the rowlocks; and where your hands should be */
+  const oarsAt = (dt, going) => {
+    rowK += ((going ? 1 : 0) - rowK) * Math.min(1, dt * 4);
+    row += dt * 5.2 * rowK;
+    const P = G.player, d = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
+    for (const o of oars) {
+      o.hand.set(o.s * (0.36 + rowK * 0.04), 0.78 + Math.sin(row) * 0.08 * rowK, 0.34 + Math.cos(row) * 0.3 * rowK);
+      o.g.position.copy(o.hand);
+      o.g.quaternion.setFromUnitVectors(Y, d.subVectors(o.pivot, o.hand).normalize());
+    }
+    holder.updateMatrixWorld(true);
+    P.oars = P.sailing ? { L: holder.localToWorld(oars[0].hand.clone()), R: holder.localToWorld(oars[1].hand.clone()) } : null;
+  };
   s.boatAt ||= [...AT_DOCK];
   const crates = [];
   for (let i = 0; i < 7; i++) { const c = await prop(`${FISH_PACK}Boat.glb`, G.scene, { height: 0.01 }); if (c) G.scene.remove(c); const m = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1.2), new THREE.MeshStandardMaterial({ color: 0xa8743e, flatShading: true })); m.castShadow = true; G.scene.add(m); crates.push({ m, x: 0, z: 0, got: true }); }
@@ -63,15 +86,20 @@ export async function makeSail(G) {
   S.tick = (dt, t) => {
     const P = G.player;
     if (P.sailing) {
-      holder.position.copy(P.pos).setY(0.05 + Math.sin(t * 1.6) * 0.1);
-      holder.rotation.y = P.heading;
-      holder.rotation.z = Math.sin(t * 1.1) * 0.03;
+      const go = P.movingNow ? 1 : 0;
+      S.lean = (S.lean || 0) + (go * 0.12 - (S.lean || 0)) * Math.min(1, dt * 3);
+      const swell = Math.sin(P.pos.x * 0.035 + t * 0.9) * 0.3 + Math.cos(P.pos.z * 0.05 + t * 0.7) * 0.25;
+      holder.position.copy(P.pos).setY(0.28 + swell);            // riding high enough that the sea stays outside the hull
+      P.pos.y = S.deck = 0.57 + swell;
+      holder.rotation.set(-S.lean + Math.sin(t * 1.3) * 0.05, P.heading, Math.sin(t * 1.1) * 0.06 + (S.turn || 0), "YXZ");
       s.boatAt = [P.pos.x, P.pos.z];
-      if (P.movingNow && Math.random() < dt * 24) G.vfx.burst("wake", P.pos.x - P.front.x * 2.6, 0.2, P.pos.z - P.front.z * 2.6);
+      if (P.movingNow && Math.random() < dt * 30) { G.vfx.burst("wake", P.pos.x - P.front.x * 1.6, 0.2, P.pos.z - P.front.z * 1.6); G.vfx.burst("wake", P.pos.x + P.front.x * 1.5 + P.front.z, 0.2, P.pos.z + P.front.z * 1.5 - P.front.x, 0.4); }
+      if (P.movingNow && Math.random() < dt * 2) G.sfx("splash");
     } else {
-      holder.position.set(s.boatAt[0], s.flags.boat ? 0.05 + Math.sin(t * 1.2) * 0.08 : -0.18, s.boatAt[1]);
-      holder.rotation.z = s.flags.boat ? 0 : 0.1;
+      holder.position.set(s.boatAt[0], s.flags.boat ? 0.28 + Math.sin(t * 1.2) * 0.08 : -0.18, s.boatAt[1]);
+      holder.rotation.set(Math.sin(t * 1.2) * 0.03, holder.rotation.y, (s.flags.boat ? Math.sin(t * 0.9) * 0.04 : 0.1), "YXZ");
     }
+    oarsAt(dt, P.sailing && P.movingNow);
     for (const c of crates) {
       c.m.visible = !c.got;
       if (c.got) continue;

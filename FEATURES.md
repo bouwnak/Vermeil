@@ -306,7 +306,20 @@ Where: Games hub, between Adventure and Retro Games. Files: `ui/turtle/`, save i
 | 🧪 Test tools | Journal → Settings | Fly, shells, instant crops, days, weather, dinosaurs, teleport |
 | 🧺 Asset packs | `ui/games/asset_packs` | 452 farm models split out with Blender, about 60 in the build menu |
 
-Limits: not played by hand start to finish; no control remapping, level-of-detail models, scored tournaments, aquarium or facial animation yet; the two LowPoly Farm packs use stand-in colours; garden tools have no colour and aren't used.
+| 🐢 The turtles' story | Journal → Story | Oma and Tarn, husband and wife, searching for their lost child Pell |
+| 🦖 Living dinosaurs | Everywhere | Rigged models with jaws added in Blender; blink, yawn, wag; three truly different forms |
+| 🤗 Touching | E beside a dinosaur | Pet, chin scratch, belly rub, play, feed, each with its own reaction |
+| 🌍 Wild herds | Every turtle | Roam freely; tameable once unlocked; tamed ones go to your island |
+| 🐦 Birds and pterosaurs | The sky | Fly between islands, rest in trees and on the ground |
+| 🏘 Willowmere | Second turtle | Fountain, stalls, crowd, stalls to rent, Mara's market selling everything |
+| 🚜 Driving | E beside a vehicle | Every vehicle drives, with turning wheels; work vehicles till, plant, water, harvest |
+| 🌱 Crop models | Farm | The Nature Crops pack's real growth stages, plus new crops |
+| 🌀 Moving world | Everywhere | Windmills, running machines, fountains, fires, animal legs, waves, foam, boat |
+| 🧍 Poses | You | Sitting, kneeling, pouring and reaching on top of the pack's clips |
+| 🎨 New interface | Everywhere | Animated loading screen, drawn tool icons, animated panels and rows |
+| 🧪 Next stage | Test tools | Level up all dinos to the next stage only |
+
+Limits: not played by hand start to finish; no control remapping, level-of-detail models, scored tournaments or aquarium yet; the two LowPoly Farm packs use stand-in colours; garden tools have no colour and aren't used.
 
 ## Ã°Å¸â€ â€¢ 31 Oct 2026: Fixes and a livelier Game Night
 

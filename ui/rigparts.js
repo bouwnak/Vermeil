@@ -98,6 +98,19 @@ export function analyzeRig(root) {
   }
   for (const b of bones) if (kind.get(b) === "other") kind.set(b, "helper");
 
+  // limbs that stand on the ground are legs, whatever they're called: four-legged animals are often rigged with arm and hand bones for their front legs.
+  // Judged from where the bones really are, against the whole skeleton's height
+  root.updateMatrixWorld(true);
+  const yOf = new Map(bones.map((b) => [b, b.getWorldPosition(new THREE.Vector3()).y])), ys = [...yOf.values()], floor = Math.min(...ys), height = Math.max(...ys) - floor, onFoot = new Set();
+  if (height > 1e-6) for (const b of bones) {
+    if (!["arm", "hand", "finger"].includes(kind.get(b)) || !side(b.name)) continue;
+    let low = Infinity;                                  // the wrist has to reach the ground, not just a long finger (a robot's claw, a pose bending down), and on both sides
+    b.traverse((o) => { if (o.isBone && ["arm", "hand"].includes(kind.get(o))) low = Math.min(low, yOf.get(o)); });
+    if ((low - floor) / height < 0.14) onFoot.add(b);
+  }
+  if (new Set([...onFoot].map((b) => side(b.name))).size < 2) onFoot.clear();
+  for (const b of [...onFoot]) b.traverse((o) => { if (o.isBone && kind.get(o) === "finger") onFoot.add(o); });
+  for (const b of onFoot) kind.set(b, "leg");
   const body = new Set(bones.filter((b) => bodyKinds.has(kind.get(b)) || kind.get(b) === "jaw"));
   const soft = bones.filter((b) => kind.get(b) === "soft");
   const named = (re) => bones.filter((b) => re.test(nameOf(b)));
@@ -128,7 +141,7 @@ export function analyzeRig(root) {
     const count = fingers.length;
     hands[s] = { hand, fingers, count, type: count >= 5 ? "five" : count === 4 ? "four" : count === 3 ? "three" : count === 2 ? "two" : count === 1 ? "mitten" : "paw" };
   }
-  const feet = bones.filter((b) => /foot|ankle|toe|heel/.test(nameOf(b)) && body.has(b));
+  const feet = bones.filter((b) => (/foot|ankle|toe|heel/.test(nameOf(b)) || (onFoot.has(b) && !b.children.some((c) => onFoot.has(c)))) && body.has(b));
   const jawBone = bones.find((b) => /lowerjaw|lower_jaw|lowerbeak/.test(nameOf(b))) || bones.find((b) => kind.get(b) === "jaw" && !/upper|root/.test(nameOf(b))) || bones.find((b) => kind.get(b) === "jaw") || null;
   // the head: called that, or what the jaw hangs from ("head_neck_upper" with "head_jaw" under it), or anything like it
   let aboveJaw = jawBone?.parent;
@@ -142,7 +155,7 @@ export function analyzeRig(root) {
   const hips = hipsRe(/^hips?$|pelvis/) || hipsRe(/hip/) || hipsRe(/cog|waist/) || hipsRe(/root/) || bones.find((b) => body.has(b)) || null;
   const arms = {};
   for (const s of ["L", "R"]) {
-    const list = bones.filter((b) => side(b.name) === s && body.has(b));
+    const list = bones.filter((b) => side(b.name) === s && body.has(b) && !onFoot.has(b));
     const upper = list.find((b) => /upperarm|upper_arm|^arm$|^larm|^rarm|arm[lr]?$/.test(nameOf(b)) && !/fore|lower/.test(nameOf(b)));
     // the second arm bone can just be "arm_02": the arm bone under the upper arm
     const lower = list.find((b) => /forearm|lowerarm|elbow/.test(nameOf(b))) || upper?.children.find((c) => c.isBone && kind.get(c) === "arm") || null;
@@ -150,14 +163,15 @@ export function analyzeRig(root) {
     const above = !upper && lower?.parent?.isBone && kind.get(lower.parent) === "arm" ? lower.parent : null;
     if (upper || above) arms[s] = { upper: upper || above, lower, hand: hands[s]?.hand || null };
   }
-  return { bones, kind, body, soft, hands, feet, head, hips, arms, jaw: jawBone, prefix,
+  return { bones, kind, body, soft, hands, feet, head, hips, arms, jaw: jawBone, prefix, standsOnFront: onFoot.size > 0,
     neck: named(/neck/).find((b) => body.has(b) && b !== head) || null,
     chest: named(/chest|spine2|spine\.?003|upperchest|spine_upper|spine_02/).find((b) => body.has(b)) || null };
 }
 
+const EAR_NAME = /(^|[_ .])(l_|r_|left_?|right_?)?ears?([_ .]|[lr]?$)/;
 const HAIR_NAME = /hair|bangs?(_|$)|fringe|braid|ponytail|sideburn|ahoge/;
 const NOT_CLOTH = /tail|(^|[_ ])ears?([_ ]|[lr]?$)|bust|breast|antenna|tentacle|(^|_)fin(_|$)|wing|petal|leaf/;
-/** The rigger's colours: bone -> "hands" / "hair" / "clothes". A hand and its fingers; soft bones by name, and a soft
+/** The rigger's colours: bone -> "hands" / "feet" / "hair" / "clothes". A hand and its fingers; soft bones by name, and a soft
  *  bone with a meaningless name ("bone_12") by where it hangs: from the head it's hair, from the body it's clothes.
  *  Tails, ears and the like aren't in the map. */
 export function rigRegions(info) {
@@ -173,8 +187,23 @@ export function rigRegions(info) {
     }
     return null;
   };
+  for (const b of info.feet) out.set(b, "feet");
+  // ears: called that (with everything hanging from them), or a short pair standing up off the head, whatever the rig calls them
+  const up = (b) => b.getWorldPosition(new THREE.Vector3());
+  for (const b of info.bones) {
+    if (EAR_NAME.test(clean(b.name)) && !["face"].includes(info.kind.get(b))) b.traverse((o) => { if (o.isBone) out.set(o, "ears"); });
+    else if (info.head && b.parent === info.head && side(b.name) && info.kind.get(b) === "soft" && !HAIR_NAME.test(clean(b.name))) {
+      let tip = b, n = 1;
+      while (tip.children.some((c) => c.isBone)) { tip = tip.children.find((c) => c.isBone); n++; }
+      const a = up(b), z = up(tip), rise = z.y - a.y, flat = Math.hypot(z.x - a.x, z.z - a.z);
+      if (n <= 8 && rise > flat * 0.8 && rise > 0 && a.y >= up(info.head).y) b.traverse((o) => { if (o.isBone) out.set(o, "ears"); });
+    }
+  }
   const underHead = (b) => { for (let p = b.parent; p && p.isBone; p = p.parent) if (p === info.head) return true; return false; };
+  // something worn or carried, rigid on one bone of its own: a hat, a staff, a bag
+  for (const b of info.bones) if (ITEM_NAME.test(clean(b.name)) && !out.has(b)) out.set(b, "items");
   for (const b of info.soft) {
+    if (out.get(b) === "ears" || out.get(b) === "items") continue;
     const own = ownName(b);
     if (own === "") continue;
     out.set(b, own || (underHead(b) && !SOFT_CLOTHES.test(clean(b.name)) ? "hair" : "clothes"));
@@ -182,6 +211,8 @@ export function rigRegions(info) {
   return out;
 }
 const SOFT_CLOTHES = /skirt|cloth|cape|cloak|dress|coat|scarf|sleeve|hood|ribbon|robe|gown|apron|veil|frill|lace|tie/;
+/** worn or carried, and stiff: one bone each */
+export const ITEM_NAME = /^item([_.\d]|$)|(^|[_ ])(hat|cap|helm(et)?|crown|tiara|staff|wand|sword|shield|weapon|bag|purse|glasses|goggles|mask|lantern|book|broom)([_ .\d]|$)/;
 
 /** Is the model standing in its rest pose (a T- or A-pose)? UniMate animates changes FROM the rest pose, so a model
  *  saved crouching or lying (a "vs" poster pose) gives crouched, broken clips. Returns "" if fine, else why not. */
@@ -349,6 +380,79 @@ export function bodyPlan(root, info) {
   return { wings, bigWings, legs, tail, travel: legs ? (hasWings ? "both" : "walk") : hasWings ? "fly" : "float", seen };
 }
 
+/** Game rips keep working data in their vertex colours (shading masks, often cyan). Multiplied over a painted texture it tints the whole model, so a textured surface ignores them.
+ *  The shells some engines lay over a face for shadows have nothing to show here either. */
+export function plainSurfaces(root) {
+  root.traverse((m) => {
+    if (!m.isMesh) return;
+    for (const mat of [].concat(m.material)) {
+      if (mat.map && mat.vertexColors) { mat.vertexColors = false; mat.needsUpdate = true; }
+      if (mat.map && !mat.emissiveMap && mat.emissive && mat.emissive.r + mat.emissive.g + mat.emissive.b > 0.3) mat.emissive.setRGB(0, 0, 0);     // a glow with no picture over a painted surface: a converter's guess that washes it out white
+      if (!mat.map && /face_?mask|shadow_?mask/i.test(mat.name || "")) m.visible = false;
+      // an anime outline: a dark shell turned inside out that shows only round the edges. Drawn from both sides it covers the body in black
+      if (!mat.map && /^(line|outline|edge)/i.test(mat.name || "") && mat.color && mat.color.r + mat.color.g + mat.color.b < 0.6) { mat.side = THREE.FrontSide; mat.needsUpdate = true; }
+    }
+  });
+}
+
+/** where an item goes on the body, from what it's called */
+const WORN = [[/hat|cap|helm|crown|tiara|hood|horn|halo/, "head"], [/glasses|goggle|mask|visor|hairpin|hair_?clip|earring/, "face"], [/necklace|chest|brooch|bow|scarf|collar|choker|pendant/, "chest"], [/belt|waist|ribbon|sash|pouch|bag|skirt|tail/, "hips"], [/back|wing|cape|quiver|backpack/, "back"]];
+
+/** The extra things a model comes with: a hat, a bow, a staff, a fan. Game rips often store them laid out beside the body, on bones of their own that lead to no part of it, so they stay
+ *  on the floor while the body moves. Anything like that is looked at, by its name and where it is, and put where it belongs: worn on the head, chest, hips or back, or held in the hand.
+ *  -> [{ mesh, did: "kept" | "worn on head" | ... | "in hand" | "hidden" }]. `clips`: tracks for moved bones come out of these, or the old animation would drag them back */
+export function tidyProps(root, info = analyzeRig(root), clips = []) {
+  const parts = [], v = new THREE.Vector3(), done = [];
+  root.updateMatrixWorld(true);
+  root.traverse((m) => {
+    if (!m.isMesh || !m.geometry?.attributes.position) return;
+    const p = m.geometry.attributes.position, box = new THREE.Box3(), step = Math.max(1, Math.floor(p.count / 800)), si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight, votes = new Map();
+    if (m.isSkinnedMesh) m.skeleton.update();
+    for (let i = 0; i < p.count; i += step) {
+      if (m.isSkinnedMesh) m.getVertexPosition(i, v); else v.fromBufferAttribute(p, i);
+      box.expandByPoint(v.applyMatrix4(m.matrixWorld));
+      if (si) { let best = 0, w = 0; for (let k = 0; k < 4; k++) if (sw.getComponent(i, k) > w) { w = sw.getComponent(i, k); best = si.getComponent(i, k); } const b = m.skeleton.bones[best]; if (b) votes.set(b, (votes.get(b) || 0) + 1); }
+    }
+    parts.push({ m, box, bone: [...votes.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null });
+  });
+  if (parts.length < 2 || !info.bones.length) return done;
+  // part of the body: its bone is one, or hangs from one. Those move with it already. What's left leads to nothing
+  const attached = (b) => { for (let x = b; x?.isBone; x = x.parent) if (info.body.has(x)) return true; return false; };
+  // or it hangs off a bone at the root but is stored clear of the body: the biggest piece is the body, and an item off to one side of it isn't being worn
+  const main = parts.reduce((a, q) => (q.m.geometry.attributes.position.count > a.m.geometry.attributes.position.count ? q : a)), worn = (q) => WORN.some(([re]) => re.test(`${q.m.name} ${q.bone?.name}`.toLowerCase().replace(/[^a-z_ ]/g, "_"))), off = (q) => !q.box.intersectsBox(main.box) && (!(q.bone && info.body.has(q.bone)) || worn(q));
+  const free = parts.filter((q) => (q.bone ? !attached(q.bone) || off(q) : !q.m.parent?.isBone)), held = parts.filter((q) => !free.includes(q));
+  if (!held.length || !free.length) return done;
+  const body = new THREE.Box3();
+  for (const q of held) body.union(q.box);
+  const size = body.getSize(new THREE.Vector3()), at = (b) => b.getWorldPosition(new THREE.Vector3()), hand = info.hands.R?.hand || info.hands.L?.hand || info.arms.R?.hand || info.arms.L?.hand || null;
+  const chest = info.chest || info.neck || info.hips, moved = new Set();
+  for (const q of free) {
+    if (!q.bone) { q.m.visible = false; done.push({ mesh: q.m, did: "hidden" }); continue; }          // a stray object with no bone at all: a floor, a prop stand
+    const name = `${q.m.name} ${q.bone.name}`.toLowerCase().replace(/[^a-z_ ]/g, "_"), slot = WORN.find(([re]) => re.test(name))?.[1] || null, mid = q.box.getCenter(new THREE.Vector3()), s = q.box.getSize(new THREE.Vector3());
+    const overBody = mid.x > body.min.x && mid.x < body.max.x && mid.z > body.min.z && mid.z < body.max.z && q.box.max.y > body.min.y + size.y * 0.1;      // already sitting where it's worn
+    let bone = null, to = null;
+    if (slot === "head" || slot === "face") { bone = info.head; if (bone) { const h = at(bone); to = new THREE.Vector3(h.x, slot === "head" ? body.max.y - s.y * 0.3 : h.y + size.y * 0.03, h.z + (slot === "face" ? size.y * 0.05 : 0)); } }
+    else if (slot === "chest") { bone = chest; if (bone) { const h = at(bone); to = new THREE.Vector3(h.x, h.y, h.z + size.z * 0.28); } }
+    else if (slot === "hips") { bone = info.hips; if (bone) { const h = at(bone); to = new THREE.Vector3(h.x, h.y, h.z - size.z * 0.28); } }
+    else if (slot === "back") { bone = chest; if (bone) { const h = at(bone); to = new THREE.Vector3(h.x, h.y, h.z - size.z * 0.34); } }
+    if (!bone) { bone = hand; if (bone) to = at(bone); }
+    if (!bone) { q.m.visible = false; done.push({ mesh: q.m, did: "hidden" }); continue; }
+    // the top of its own little chain moves, so a hat's ribbons stay with the hat
+    let top = q.bone;
+    while (top.parent?.isBone && !attached(top.parent) && top.parent.children.filter((c) => c.isBone).length === 1) top = top.parent;
+    if (moved.has(top)) top = q.bone;                     // two items on one spare root: each goes its own way
+    if (moved.has(top)) continue;
+    let under = false;                                    // the bone it would go on hangs from it (an item skinned to the head itself): leave it be, or it'd hang from itself
+    for (let x = bone; x; x = x.parent) if (x === top) under = true;
+    if (under) continue;
+    moved.add(top);
+    bone.attach(top);
+    if (!overBody) { const p = at(top).add(to.clone().sub(mid)); top.position.copy(bone.worldToLocal(p)); }
+    top.traverse((b) => { if (b.isBone) for (const c of clips) c.tracks = c.tracks.filter((t) => !t.name.startsWith(`${b.name}.`)); });
+    done.push({ mesh: q.m, did: bone === hand ? "in hand" : `worn on ${slot}` });
+  }
+  return done;
+}
 /** wings, a tail or no legs: suggests Body type -> Monster */
 export function looksLikeMonster(info) {
   return info.bones.length > 0 && (!info.feet.length || info.bones.some((b) => /wing|tail/.test(clean(b.name))));

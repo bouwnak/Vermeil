@@ -60,11 +60,14 @@ export function makeFarm(G) {
       if (p.weed) put(WEED, 0.5);
       if (!p.crop) continue;
       const c = CROPS[p.crop], stage = stageOf(p);
-      if (c.tree) { put(c.tree, [0.6, 1.4, 2.8, 4.4, 5][stage]); if (stage === 4) { for (const [a, b] of [[0.7, 0.3], [-0.5, 0.6], [0.1, -0.7]]) (groups[c.ripe] ||= { path: c.ripe, size: c.ripeSize, spots: [] }).spots.push({ x: x + a, z: z + b, y: y + 3, ry: a }); } }
-      else if (stage === 0) { seed.setMatrixAt(seeds++, m.makeScale(1.2, 0.5, 1.2).setPosition(x, y + 0.02, z)); }
-      else if (stage < 4) put(YOUNG[stage - 1], STAGE_HEIGHT[stage]);
-      else { put(YOUNG[2], 0.5); put(c.ripe, c.ripeSize, 0.04); }             // ripe: what you'll pick, sitting in its leaves
-      if (stage === 4) { B.setXYZ(ripeN++, x, y + (c.tree ? 5.8 : 1.5), z); }
+      const full = c.ripeSize * (c.tree ? 1.1 : 1.5), cut = p.cut && c.cut;
+      if (stage === 0 && !c.tree) seed.setMatrixAt(seeds++, m.makeScale(1.2, 0.5, 1.2).setPosition(x, y + 0.02, z));
+      else if (cut && stage < 4) put(c.cut, full * 0.8);                       // picked: it stays standing and fruits again
+      else if (stage < 4) put(c.grow[Math.max(0, stage - (c.tree ? 0 : 1))], full * [0.4, 0.5, 0.72, 0.92][stage]);
+      else if (c.ripe.includes("_Crop")) put(c.ripe, full);
+      else { put(c.grow[3], Math.min(1, full * 1.2)); put(c.ripe, c.ripeSize, 0.3); }
+      if (c.fruit && stage === 4) put(c.fruit, 0.5, 3);
+      if (stage === 4) { B.setXYZ(ripeN++, x, y + Math.max(full, 1) + 0.7, z); }
     }
     seed.count = seeds; seed.instanceMatrix.needsUpdate = true;
     bubbleGeo.setDrawRange(0, ripeN); B.needsUpdate = true;
@@ -128,7 +131,7 @@ export function makeFarm(G) {
       } else if (!p.wet && Math.random() < 0.12) delete G.s.plots[k];                                   // left empty and dry: grass takes it back
       p.wet = !!rain || under;
     }
-    const spray = (G.s.placed || []).filter((p) => CATALOG[p.type]?.sprinkle);
+    const spray = rain ? [] : G.water ? G.water.sprinklers() : (G.s.placed || []).filter((p) => CATALOG[p.type]?.sprinkle);      // each draws its water from the tower's barrel
     for (const sp of spray) { const r = CATALOG[sp.type].sprinkle; for (const [k, p] of Object.entries(G.s.plots)) { const [x, z] = spotOf(k); if (Math.abs(x - sp.x) <= r && Math.abs(z - sp.z) <= r) p.wet = true; } }
     F.draw();
     return grown;

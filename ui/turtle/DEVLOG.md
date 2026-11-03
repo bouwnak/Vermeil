@@ -38,6 +38,28 @@ A cozy farming game on the back of a giant living turtle. Spec: `Turtle_Island_M
 
 Farm loop through all stages and the bubble; slope refused; walking stops at the shore; cliff stops you; flood fill of the island (roads connect, gates block, ledge and shrine need a dinosaur); bridge stays up until mended, lowers, walkable to Willowmere; evolution; all 30 forms build; a dinosaur assigned to water does it; placing, turning, undo, removing; boat mended and boarded; ferry to Sunback and its people arriving.
 
+## Second round
+
+Done: Oma and Tarn's story; rigged dinosaurs with jaws, blinking and touch reactions; forms that change shape; wild herds with unlocks; birds and pterosaurs; town with fountain, crowd, rentable stalls and a market for everything; driving with farm work; crop pack stages; moving sails, machines, sea, foam and boat; animal legs; poses; new interface and loading screen; the active character as companion; next-stage test button.
+
+Checked in the running game: boot with no missing files, all forms built, town, tractor tilling 42 plots, boat, crops, the start on the ground. Checked by the data test: crop files and jaws.
+
+Not looked at closely: rented stall sales, far island crowds and buildings, windmill sails turning by eye, the companion with a real app character (needs the app), belly rub by eye. Vermeil's face in the game is not animated.
+
+## Third round
+
+Done: head spin, dinosaur bodies and parts, belly rub, held tools and swings, moving machines, getting out of vehicles, the active character as companion, wooden interface, the picture loading screen, scenery patches. Details in `HANDOVER.md`.
+
+Checked in the running game: every form builds, no form sinks through the ground on a belly rub (rigged forms stay at or above it; flyers and swimmers were tuned by number), head stays within 32 degrees over 60 seconds, ten dinosaurs at full form running about with no errors, tractor in and out, a tree felled after the split.
+
+## Fourth round
+
+Done: seats, crouch, town way in, fountain, crowds, roaming and drinking, pens, companion jobs, stall goods and walking customers, test floor, restart, mouths and teeth, one-skin swimmer and armoured dinosaur, new pterosaur. Details in `HANDOVER.md`.
+
+## Fifth round
+
+Done: dinosaurs bigger, long necks carried high, Crestback mouth, eyes set ahead of the jaw hinge, real legs for the armoured one and the pterosaur, swimmers kept to beach and sea, saddles and a rider who moves with the back, a rowing boat, the swordfish showing, fire and smoke on machines, a walk-in cheese cellar, a stirring pot, wheels that roll by distance, hens living in coops, smooth roads, a town layout and stalls for every island, and clearable debris on the farm. Details in `HANDOVER.md`.
+
 ## Known gaps
 
 - Not played by hand start to finish. The story chain past the ferry was checked by its conditions, not walked through.

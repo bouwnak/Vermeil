@@ -2574,14 +2574,14 @@ class Api:
         return sorted(f for f in os.listdir(MODELS_DIR) if f.lower().endswith(MODEL_TYPES))
 
     def import_model(self, folder=False):
-        """Pick a .glb, .fbx or .vrm, a .zip, or with folder=True a whole folder: it's searched for the model and its textures
+        """Pick a .glb, .blend, .fbx or .vrm, a .zip, or with folder=True a whole folder: it's searched for the model and its textures
         (skills/modelimport.py). -> {"name", "note"}, or None when you cancel."""
         import modelimport
         if folder:
             paths = self._window.create_file_dialog(_FOLDER_DIALOG)
         else:
             paths = self._window.create_file_dialog(_OPEN_DIALOG, allow_multiple=True,
-                                                    file_types=("3D models and their textures (*.glb;*.fbx;*.dae;*.vrm;*.zip;*.png;*.jpg;*.jpeg;*.webp)",))
+                                                    file_types=("3D models and their textures (*.glb;*.blend;*.fbx;*.dae;*.vrm;*.zip;*.png;*.jpg;*.jpeg;*.webp)",))
         if not paths:
             return None
         res = modelimport.import_paths(list(paths) if isinstance(paths, (list, tuple)) else [paths], MODELS_DIR, copy_model_files)
@@ -2595,6 +2595,9 @@ class Api:
         gone = [f for f in os.listdir(MODELS_DIR) if re.search(r"-animated(-[\w-]+)?\.glb$", f, re.I)]
         for f in gone:
             os.remove(os.path.join(MODELS_DIR, f))
+        work = os.path.join(MODELS_DIR, "_unimate")           # and what UniMate left behind making them
+        if os.path.isdir(work):
+            shutil.rmtree(work, ignore_errors=True)
         left = self.list_models()
         for c in self._characters["characters"]:
             if c.get("model") in gone:

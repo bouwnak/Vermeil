@@ -1,14 +1,16 @@
 // build.js - placing things on your turtle, the same way Edit room works in the app (without the paint): a bar of categories on top (press the open one to
 // shut it), click a piece to add it, drag it about, round buttons follow what you've picked, R turns it, Delete removes it, Ctrl+Z undoes it.
 import * as THREE from "three";
-import { BUILD_CATS, CATALOG, ITEMS, LAYOUT } from "./data.js";
-import { madeProp } from "./made.js";
+import { BUILD_CATS, CATALOG, ITEMS, LAYOUT, RECIPES } from "./data.js";
+import { fillFountain, lampLight, madeProp } from "./made.js";
 import { prop } from "./assets.js";
 import { addSolid, dropSolid, groundAt, nearest } from "./world.js";
 import { spotOf } from "./farm.js";
 import { popup } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
+/** where a tower's barrel stands: just off its right side, turned the same way, so the pipe from the tank comes down into it */
+export const barrelBy = (t) => ({ x: t.x + Math.cos(t.ry) * 3.3, z: t.z - Math.sin(t.ry) * 3.3, ry: t.ry });
 const costText = (c) => Object.entries(c.cost || {}).filter(([, n]) => n).map(([k, n]) => (k === "money" ? `${n} 🐚` : `${n} ${ITEMS[k]?.icon || k}`)).join("  ") || "Free";
 
 export function makeBuild(G) {
@@ -20,13 +22,14 @@ export function makeBuild(G) {
   // ---------------- what stands where ----------------
   const solidsFor = (c, p) => {
     if (c.wall) { const ca = Math.cos(p.ry), sa = Math.sin(p.ry); return [-1.5, -0.5, 0.5, 1.5].map((u) => ({ x: p.x + ca * u, z: p.z - sa * u, r: 0.42 })); }
+    if (c.use === "pen") { const out = [], R = 9; for (let i = -R; i <= R; i += 2) { out.push({ x: p.x + i, z: p.z - R, r: 0.5 }, { x: p.x - R, z: p.z + i, r: 0.5 }, { x: p.x + R, z: p.z + i, r: 0.5 }); if (Math.abs(i) >= 3) out.push({ x: p.x + i, z: p.z + R, r: 0.5 }); } return out; }
     return c.r ? [{ x: p.x, z: p.z, r: c.r }] : [];
   };
   async function dress(p) {
     const c = CATALOG[p.type], g = new THREE.Group();
     g.userData.itemId = p.id;
     const inner = new THREE.Group(); g.add(inner);
-    if (c.made) inner.add(madeProp(c.made));
+    if (c.made) { const made = madeProp(c.made); inner.add(made); g.userData.run = made.userData.run; }
     else {
       const m = await prop(c.model, inner, { height: c.height || 0 });
       if (m) {
@@ -34,9 +37,24 @@ export function makeBuild(G) {
         m.updateMatrixWorld(true);
         const b = new THREE.Box3().setFromObject(m), mid = b.getCenter(new THREE.Vector3());     // standing on the ground, around its own middle
         m.position.set(m.position.x - mid.x, m.position.y - b.min.y, m.position.z - mid.z);
+        if (c.light) { const top = lampLight(0.22, b.max.y - b.min.y - 0.35); inner.add(top); }      // a pack lamp lights up at night like the rest
+        if (/fountain/i.test(c.model)) fillFountain(m);                                              // its basins hold water
       }
     }
-    g.traverse((m) => { if (m.isMesh) { m.castShadow = m.receiveShadow = !c.flat; } });
+    g.traverse((m) => {
+      if (/_blades$/i.test(m.name)) (g.userData.sails ||= []).push({ m, axis: "z" });        // the farm pack's mills: already hung on their hub
+      if (!m.isMesh) return;
+      m.castShadow = m.receiveShadow = !c.flat;
+      if (/blades/i.test(m.name)) {                         // sails turn about their own middle, across their thinnest side
+        m.geometry.computeBoundingBox();
+        const b = m.geometry.boundingBox, mid = b.getCenter(new THREE.Vector3()), size = b.getSize(new THREE.Vector3());
+        if (!m.geometry.userData.centred) { m.geometry.translate(-mid.x, -mid.y, -mid.z); m.geometry.userData.centred = true; m.geometry.userData.size = size; m.geometry.userData.mid = mid; }
+        const sz = m.geometry.userData.size, md = m.geometry.userData.mid.clone().multiply(m.scale).applyQuaternion(m.quaternion);
+        m.position.add(md);
+        const [thin, mid2, big] = [sz.x, sz.y, sz.z].sort((p, q) => p - q);
+        if (thin < big * 0.3 && mid2 > big * 0.72) (g.userData.sails ||= []).push({ m, axis: sz.x < sz.y && sz.x < sz.z ? "x" : sz.y < sz.z ? "y" : "z" });     // a wheel of sails, not a railing
+      }
+    });
     return g;
   }
   const seat = (t) => {
@@ -54,9 +72,21 @@ export function makeBuild(G) {
     return t;
   }
   B.load = async () => {
+    await Promise.all(["lowpoly_farm_01", "lowpoly_farm_02", "farm_vehicles"].map(async (pack) => {            // nothing goes unused: every model of the packs can be placed
+      const root = `../games/asset_packs/${pack}/`, list = await fetch(`${root}models.json`).then((r) => r.json()).catch(() => []), used = new Set(Object.values(CATALOG).map((c) => c.model));
+      for (const m of list) {
+        const model = `${root}${m.name}.gltf`;
+        if (used.has(model)) continue;
+        const wheels = /^(car|truck|tractor|farmwagon)/i.test(m.name), wide = Math.max(m.size[0], m.size[2]), r = m.size[1] < 0.3 ? 0 : Math.min(9, wide * 0.42);
+        CATALOG[`${pack}_${m.name}`] = { label: m.name.replace(/[_\d]+/g, " ").trim().replace(/^./, (x) => x.toUpperCase()), cat: wheels ? "vehicles" : "more", model, r, flat: r === 0, cost: { money: Math.round(10 + wide * 30) } };
+      }
+    }));
     if (!G.s.placed) { G.s.placed = LAYOUT.map(([type, x, z, ry]) => ({ id: ++nextId, type, x, z, ry })); }
+    // every water tower has its barrel beside it, piped in: a farm saved before there were barrels gets one too
+    for (const t of G.s.placed.filter((p) => p.type === "watertower")) if (!G.s.placed.some((p) => p.type === "waterbarrel" && Math.hypot(p.x - t.x, p.z - t.z) < 6)) G.s.placed.push({ id: ++nextId, type: "waterbarrel", ...barrelBy(t) });
     await Promise.all(G.s.placed.map(make));
   };
+  B.reseat = (t) => { seat(t); setSolids(t); };
   B.of = (type) => [...things.values()].filter((t) => t.p.type === type);
   B.useNear = (x, z, r = 3) => { const [lx, lz] = home.local(x, z); let best = null, bd = 1e9; for (const t of things.values()) { const c = CATALOG[t.p.type]; if (!c.use) continue; const d = Math.hypot(t.p.x - lx, t.p.z - lz) - (c.r || 0); if (d < r && d < bd) { bd = d; best = t; } } return best; };
 
@@ -72,6 +102,7 @@ export function makeBuild(G) {
   };
 
   // ---------------- the bar ----------------
+  const owned = (type) => G.s.owned?.[type] || 0;
   const afford = (c) => Object.entries(c.cost || {}).every(([k, n]) => (k === "money" ? G.s.money >= n : (G.s.inv[k] || 0) >= n));
   const pay = (c, sign) => { for (const [k, n] of Object.entries(c.cost || {})) { if (k === "money") G.s.money -= n * sign; else G.add(k, -n * sign); } };
   function drawBar() {
@@ -83,8 +114,8 @@ export function makeBuild(G) {
     const list = $("buildList");
     list.hidden = shut;
     list.replaceChildren(...Object.entries(CATALOG).filter(([, c]) => c.cat === tab && (!c.unique || !B.of(Object.keys(CATALOG).find((k) => CATALOG[k] === c)).length)).map(([type, c]) => {
-      const b = document.createElement("button"); b.type = "button"; b.className = "build-card"; b.disabled = !afford(c) && !c.free;
-      const n = document.createElement("b"), m = document.createElement("small"); n.textContent = c.label; m.textContent = costText(c); b.append(n, m);
+      const b = document.createElement("button"); b.type = "button"; b.className = "build-card"; b.disabled = !afford(c) && !c.free && !owned(type);
+      const n = document.createElement("b"), m = document.createElement("small"); n.textContent = c.label; m.textContent = owned(type) ? `Owned × ${owned(type)}` : costText(c); b.append(n, m);
       b.onclick = () => add(type);
       return b;
     }));
@@ -105,12 +136,13 @@ export function makeBuild(G) {
   const snapTo = (c, v) => { const n = c.snap || 1; return [Math.round(v / n) * n]; };
   async function add(type) {
     const c = CATALOG[type];
-    if (!afford(c)) return popup("Not enough for that yet");
+    const mine = owned(type) > 0;
+    if (!mine && !afford(c)) return popup("Not enough for that yet");
     const at = spotAhead();
     let x = snapTo(c, at.x)[0], z = snapTo(c, at.z)[0];
     for (let i = 0; i < 24 && why(type, x, z); i++) { const a = i * 1.1, r = 1 + i * 0.9; const nx = at.x + Math.cos(a) * r, nz = at.z + Math.sin(a) * r; x = snapTo(c, nx)[0]; z = snapTo(c, nz)[0]; }
     if (why(type, x, z)) return (popup(why(type, x, z)), G.sfx("deny"));
-    pay(c, 1);
+    if (mine) G.s.owned[type]--; else pay(c, 1);
     const p = { id: ++nextId, type, x, z, ry: 0 };
     G.s.placed.push(p);
     const t = await make(p);
@@ -253,6 +285,27 @@ export function makeBuild(G) {
 
   /** every frame while building: the view, and the things that follow what you've picked */
   B.tick = (dt) => {
+    // the farm at work: sails turn with the wind, running machines shake and smoke, fountains play, fires burn, lamps come on at dusk
+    const now = performance.now() / 1000, windy = G.s.weather === "wind" || G.s.weather === "storm" ? 2.4 : 1, P = G.player.pos, hour = G.s.minute / 60, dark = hour > 18.5 || hour < 6;
+    for (const t of things.values()) {
+      for (const s of t.group.userData.sails || []) s.m.rotation[s.axis] += dt * 0.9 * windy;
+      const c = CATALOG[t.p.type], close = Math.hypot(t.p.x - P.x, t.p.z - P.z) < 70, y = t.group.position.y;
+      t.fxIn = (t.fxIn || Math.random()) - dt;
+      if (!close) continue;
+      t.kick = Math.max(0, (t.kick || 0) - dt);                   // walking up to one and opening it gives it a turn, so you can see it work
+      const running = c.machine && G.s.machines?.[t.p.id] && G.s.machines[t.p.id].at > G.s.day * 1440 + G.s.minute;
+      const job = running ? RECIPES.find((r) => r.out === G.s.machines[t.p.id].out && r.machine === c.machine) : null;      // what's in it: a pot's broth and what floats in it
+      if (c.use === "bin") { t.group.userData.run?.(now, !$("shop").hidden && /Shipping bin/.test($("shopTitle").textContent)); continue; }
+      if (c.use === "barrel") { const w = G.water?.at(t); t.group.userData.run?.(now, !!w?.filling, { level: w ? w.level / w.cap : 0 }); continue; }
+      t.group.userData.run?.(now, !!running || t.kick > 0 || !!c.sprinkle && hour > 6 && hour < 8, job);
+      if (t.fxIn > 0) continue;
+      if (running) { t.fxIn = 0.7; G.vfx.burst("smoke", t.p.x, y + 2, t.p.z, 0.3); }
+      else if (t.p.type === "fountain") { t.fxIn = 0.14; G.vfx.burst("water", t.p.x, y + 3.6, t.p.z, 0.5); }
+      else if (t.p.type === "bonfire") { t.fxIn = 0.2; G.vfx.burst("spark", t.p.x, y + 0.5, t.p.z, 0.25); if (Math.random() < 0.3) G.vfx.burst("smoke", t.p.x, y + 0.8, t.p.z, 0.2); }
+      else if (c.sprinkle && hour > 6 && hour < 8) { t.fxIn = 0.2; G.vfx.burst("water", t.p.x, y + 1, t.p.z, 0.6); }
+      else if (c.light && dark) { t.fxIn = 0.5; G.vfx.burst("spark", t.p.x, y + 3, t.p.z, 0.08); }
+      else t.fxIn = 1;
+    }
     for (const t of things.values()) if (t.pop) { t.pop = Math.max(0, t.pop - dt * 3); const k = 1 + Math.sin(t.pop * Math.PI) * 0.16; t.group.scale.set(k, 2 - k, k); if (!t.pop) t.group.scale.setScalar(1); }
     if (!B.active) return;
     const I = G.input, move = new THREE.Vector3();

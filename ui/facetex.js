@@ -102,7 +102,9 @@ function findGrid(px, box) {
     const eps = 0.004, col = Math.floor((box.u0 + eps) * cols), row = Math.floor((box.v0 + eps) * rows);
     if (Math.floor((box.u1 - eps) * cols) !== col || Math.floor((box.v1 - eps) * rows) !== row) continue;
     const bw = (box.u1 - box.u0) * px.width, bh = (box.v1 - box.v0) * px.height;
-    if ((box.u1 - box.u0) * cols < 0.35 || (box.v1 - box.v0) * rows < 0.35) continue;      // a tiny corner of the cell: not what it's for
+    // a tiny corner of the cell isn't what it's for. Eyes are wide and thin, though (Rayquaza's fill a third of their frame's height), so one side may be small if the other isn't
+    const fu = (box.u1 - box.u0) * cols, fv = (box.v1 - box.v0) * rows;
+    if (Math.min(fu, fv) < 0.18 || Math.max(fu, fv) < 0.35) continue;
     const at = (c, r) => thumb(px, (box.u0 + (c - col) / cols) * px.width, (box.v0 + (r - row) / rows) * px.height, bw, bh);
     const base = at(col, row), frames = [];
     if (blank(base)) continue;
@@ -113,7 +115,8 @@ function findGrid(px, box) {
       frames.push({ col: c, row: r });
       most = Math.max(most, 1 - alike(base, th, false));
     }
-    if (frames.length >= 3 && most > 0.03 && (!best || frames.length > best.frames.length)) best = { cols, rows, col, row, frames };
+    // frames must differ somewhere inside: small eyes in a big dark lid (Rayquaza's) change only a few per cent of the picture between open and shut
+    if (frames.length >= 3 && most > 0.015 && (!best || frames.length > best.frames.length)) best = { cols, rows, col, row, frames };
   }
   return best;
 }

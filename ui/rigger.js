@@ -15,7 +15,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { inPlace } from "./inplace.js";
 import { ViewAxis } from "./viewaxis.js";
 import { makeTalkClip, talkBones } from "./talkanim.js";
-import { analyzeRig, cleanClips, retargetClip, rigRegions, scanSummary, looksLikeMonster, useOwnClips, bodyOf, FLOATING } from "./rigparts.js";
+import { analyzeRig, cleanClips, retargetClip, rigRegions, scanSummary, plainSurfaces, looksLikeMonster, useOwnClips, bodyOf, FLOATING, ITEM_NAME } from "./rigparts.js";
 import { faceReport } from "./facetex.js";
 
 // Presets, in "box" units: x and z from -0.5 to 0.5 of the model's width/depth, y from 0 (feet) to 1 (top).
@@ -34,7 +34,7 @@ const QUADRUPED = [   // facing +z: head at the front
   ["spine.003", "spine.002", 0, 0.66, 0.28], ["spine.004", "spine.003", 0, 0.78, 0.38], ["head", "spine.004", 0, 0.88, 0.44],
   ["head_end", "head", 0, 0.9, 0.5], ["ear.L", "head", 0.08, 0.95, 0.42], ["ear_end.L", "ear.L", 0.12, 1, 0.4],
   ["tail", "spine", 0, 0.66, -0.4], ["tail.001", "tail", 0, 0.68, -0.46], ["tail_end", "tail.001", 0, 0.7, -0.5],
-  ["upper_arm.L", "spine.003", 0.2, 0.58, 0.3], ["forearm.L", "upper_arm.L", 0.2, 0.32, 0.31], ["hand.L", "forearm.L", 0.2, 0.05, 0.31], ["hand_end.L", "hand.L", 0.2, 0.01, 0.38],
+  ["front_thigh.L", "spine.003", 0.2, 0.58, 0.3], ["front_shin.L", "front_thigh.L", 0.2, 0.32, 0.31], ["front_foot.L", "front_shin.L", 0.2, 0.05, 0.31], ["front_toe_end.L", "front_foot.L", 0.2, 0.01, 0.38],      // four feet, no hands
   ["thigh.L", "spine", 0.2, 0.58, -0.3], ["shin.L", "thigh.L", 0.2, 0.32, -0.34], ["foot.L", "shin.L", 0.2, 0.05, -0.3], ["toe.L", "foot.L", 0.2, 0.01, -0.24],
 ];
 const CREATURE = [    // short and round, big head, ears and a tail (think Riolu)
@@ -96,12 +96,45 @@ const IS_UPPER_ARM = (n) => /upper_?arm|^(left|right)arm$/.test(n);
 const isUnder = (j, top) => { for (let p = j.parent; p; p = p.parent) if (p === top) return true; return false; };
 // hair and cloth chains sit right on the surface: they only take the vertices that are clearly theirs
 const CLOTH_NAME = /hair|skirt|cape|cloth|dress|coat/i;
-// the dots: hands blue, hair green, clothes red, so you can tell them apart (on any rig, made here or not)
-const COLORS = { hands: 0x3d8bff, hair: 0x3ddc6b, clothes: 0xff3b3b, face: 0xff9ecb, helper: 0x76808f };
+// the dots: hands blue, feet teal, hair green, clothes red, so you can tell them apart (on any rig, made here or not)
+const COLORS = { hands: 0x3d8bff, feet: 0x2fd3c4, ears: 0xc77dff, hair: 0x3ddc6b, clothes: 0xff3b3b, items: 0xff8c1a, face: 0xff9ecb, helper: 0x76808f };
 const BODY_COLOR = 0xffc44d, TIP_COLOR = 0xfff1c9, SELECTED_COLOR = 0xff5cf0;
 const dotColor = (name, region) => COLORS[region] ?? (IS_TIP.test(name) ? TIP_COLOR : BODY_COLOR);
 // no IK handles for fingers, hair and cloth (the room moves those itself)
-const NO_IK = /finger|thumb|index|middle|ring|pinky|little|^f_|hair|skirt|cape|cloth|dress|coat/i;
+const NO_IK = /finger|thumb|index|middle|ring|pinky|little|^f_|hair|skirt|cape|cloth|dress|coat|^item/i;
+
+// parts of a body, whatever the rig calls them (Rigify, Mixamo, game rips)
+const PART = {
+  upperArm: (n) => IS_UPPER_ARM(n) || /upper_?arm|^arm[._]?[lr]?$|(^|_)arm(_|$)/.test(n) && !/fore|lower/.test(n), forearm: (n) => /fore_?arm|lower_?arm/.test(n),
+  thigh: (n) => /thigh|up_?leg|upper_?leg/.test(n) && !/front/.test(n), shin: (n) => (IS_KNEE(n) || /calf/.test(n)) && !/front/.test(n),
+  frontThigh: (n) => /front_?thigh|front_?up|frontup/.test(n), frontShin: (n) => /front_?shin|front_?low|frontlow/.test(n),
+  hips: (n) => /^spine$|^hips?$|pelvis|^root$/.test(n), chest: (n) => /spine\.?00[23]|chest|upper_?chest/.test(n), neck: (n) => /neck|spine\.?004/.test(n), head: (n) => /^head$|head[._]?$/.test(n) && !/end|top/.test(n),
+  tail: (n) => /tail/.test(n) && !/end/.test(n), wing: (n) => /wing/.test(n), jaw: (n) => /jaw/.test(n),
+};
+// test poses: [part, side (1 left, -1 right, "both" mirrored, 0 any), world axis, degrees]. Sideways turns are mirrored for the right side
+const POSES = {
+  biped: {
+    "Wave": [["upperArm", -1, "z", -150], ["forearm", -1, "z", -30], ["head", 0, "z", 8]],
+    "Cheer": [["upperArm", "both", "z", 150], ["forearm", "both", "z", 20], ["head", 0, "x", -15]],
+    "Sit": [["thigh", "both", "x", -90], ["shin", "both", "x", 90], ["upperArm", "both", "z", -70]],
+    "Run": [["thigh", 1, "x", -55], ["shin", 1, "x", 70], ["thigh", -1, "x", 30], ["shin", -1, "x", 40], ["upperArm", 1, "x", 40], ["upperArm", -1, "x", -40], ["upperArm", "both", "z", -70], ["chest", 0, "x", 12]],
+    "Think": [["upperArm", -1, "z", -60], ["upperArm", -1, "x", -40], ["forearm", -1, "x", -120], ["upperArm", 1, "z", -75], ["head", 0, "z", -12], ["head", 0, "x", 8]],
+  },
+  quadruped: {
+    "Sit": [["hips", 0, "x", -35], ["thigh", "both", "x", -40], ["shin", "both", "x", 70], ["frontThigh", "both", "x", 35], ["head", 0, "x", -10]],
+    "Lie down": [["frontThigh", "both", "x", -80], ["frontShin", "both", "x", 70], ["thigh", "both", "x", 80], ["shin", "both", "x", -60]],
+    "Play bow": [["chest", 0, "x", 25], ["frontThigh", "both", "x", -60], ["head", 0, "x", -25], ["tail", 0, "x", -20]],
+    "Rear up": [["hips", 0, "x", -50], ["frontThigh", "both", "x", -70], ["frontShin", "both", "x", 80], ["head", 0, "x", 20]],
+    "Paw lift": [["frontThigh", 1, "x", -60], ["frontShin", 1, "x", 80], ["head", 0, "z", 15]],
+  },
+  monster: {
+    "Roar": [["neck", 0, "x", -25], ["head", 0, "x", -30], ["jaw", 0, "x", 35], ["upperArm", "both", "z", 40], ["wing", "both", "z", 40]],
+    "Crouch": [["hips", 0, "x", 20], ["thigh", "both", "x", -60], ["shin", "both", "x", 80], ["head", 0, "x", -10]],
+    "Wings spread": [["wing", "both", "z", 55], ["upperArm", "both", "z", 60], ["head", 0, "x", -15]],
+    "Tail whip": [["tail", 0, "y", 25], ["chest", 0, "y", -15], ["head", 0, "y", -20]],
+    "Pounce": [["hips", 0, "x", -25], ["upperArm", "both", "x", -70], ["thigh", "both", "x", 30], ["jaw", 0, "x", 25]],
+  },
+};
 
 let R = null;          // the one open rigger
 
@@ -137,6 +170,7 @@ class Rigger {
     this.selected = null;
     this.chainFrom = null;
     this.snap = "";          // "" free, or the axis a dragged joint keeps to: "x", "y", "z"
+    this.linkFrom = null;    // while linking: the joint the next click hangs from
     this._build();
   }
 
@@ -178,9 +212,10 @@ class Rigger {
     this.ray = new THREE.Raycaster();
 
     this._onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !/TEXTAREA/.test(document.activeElement?.tagName)) { e.preventDefault(); this.undo(); return; }      // Ctrl+Z: one step back, in any mode
       if (/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) return;
       if (this.mode === "edit" && /^[xyz]$/i.test(e.key) && !e.ctrlKey) { this.setSnap(e.key.toLowerCase()); return; }
-      if (e.key === "Escape") { if (this.mode === "place") this.setMode("edit"); else if (this.$(".rig-ask").hidden) this.close(); }
+      if (e.key === "Escape") { if (this.mode === "place" || this.mode === "link") this.setMode("edit"); else if (this.$(".rig-ask").hidden) this.close(); }
       if ((e.key === "Delete" || e.key === "Backspace") && this.mode === "edit" && this.selected) this.deleteJoint(this.selected);
     };
     addEventListener("keydown", this._onKey);
@@ -202,6 +237,7 @@ class Rigger {
       this.controls.update();
       if (this.mode === "pose") this._solveIK();
       this._updateLines();
+      this._updateArrows();
       this.renderer.render(this.scene, this.camera);
       this.axis.update();
     };
@@ -283,6 +319,7 @@ class Rigger {
     this.unit = Math.max(this.size.x, this.size.y, this.size.z);
     this._frame();
     this.meshes = [];
+    plainSurfaces(this.model);
     this.model.traverse((o) => { if (o.isMesh) { this.meshes.push(o); o.material = [].concat(o.material).map((m) => { const c = m.clone(); c.side = THREE.DoubleSide; Object.assign(c.userData, { side: m.side, transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite }); return c; }); if (o.material.length === 1) o.material = o.material[0]; } });
 
     const bones = [];
@@ -345,7 +382,7 @@ class Rigger {
     const box = this.$(".rig-legend");
     const count = (k) => regions.filter((r) => r === k).length;
     const row = (hex, label, n) => `<span><i style="background:#${hex.toString(16).padStart(6, "0")}"></i>${label} <b>${n}</b></span>`;
-    box.innerHTML = row(COLORS.hands, "Hands", count("hands")) + row(COLORS.hair, "Hair", count("hair")) + row(COLORS.clothes, "Clothes", count("clothes")) +
+    box.innerHTML = (count("hands") ? row(COLORS.hands, "Hands", count("hands")) : "") + (count("feet") ? row(COLORS.feet, "Feet", count("feet")) : "") + (count("ears") ? row(COLORS.ears, "Ears", count("ears")) : "") + row(COLORS.hair, "Hair", count("hair")) + row(COLORS.clothes, "Clothes", count("clothes")) + (count("items") ? row(COLORS.items, "Items", count("items")) : "") +
       (count("face") ? row(COLORS.face, "Face", count("face")) : "") + (count("helper") ? row(COLORS.helper, "Helpers", count("helper")) : "") +
       row(BODY_COLOR, "Body", regions.filter((r) => !COLORS[r]).length);
     box.hidden = false;
@@ -359,6 +396,7 @@ class Rigger {
       if (bones.has(j)) return bones.get(j);
       const b = new THREE.Bone();
       b.name = j.name.replace(/[.:/[\]]/g, "");     // as three.js will read it back from the saved file
+      b.position.copy(j.pos); if (j.parent) b.position.sub(j.parent.pos);
       (j.parent ? made(j.parent) : root).add(b);
       bones.set(j, b);
       return b;
@@ -445,7 +483,7 @@ class Rigger {
       return plain;
     });
     this.scene.remove(this.model);
-    this._tris = null;                                  // the cross-section cache was of the old meshes
+    this._tris = null; this._scanned = null;            // the cross-section cache was of the old meshes
     this.model = root;
     this.scene.add(root);
     this.gltf.animations = [];
@@ -476,6 +514,7 @@ class Rigger {
 
   _guessKind() {
     const { x, y, z } = this.size;
+    if (this._feet().length >= 4) return "quadruped";        // four separate things on the ground, however tall its ears or long its ribbons
     if (z > y * 1.1 && z > x) return "quadruped";            // longer front-to-back than tall: four legs
     const wide = (v) => { const p = this._slab(v, 0.05); return p.length ? this._spread(p) / x : 0; };
     if (wide(0.78) > 0.8) return "biped";                       // arms straight out (T-pose)
@@ -485,11 +524,12 @@ class Rigger {
   /** vertices (world space) between two heights, as fractions of the model's height */
   _slab(v, half, filter) {
     const out = [], y0 = this.box.min.y + (v - half) * this.size.y, y1 = this.box.min.y + (v + half) * this.size.y;
-    const p = new THREE.Vector3();
+    const p = new THREE.Vector3(), skip = this._scan().loose;
     for (const m of this.meshes) {
       const pos = m.geometry.attributes.position;
       const step = Math.max(1, Math.floor(pos.count / 6000));
       for (let i = 0; i < pos.count; i += step) {
+        if (skip.has(`${m.uuid}:${i}`)) continue;
         p.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
         if (p.y >= y0 && p.y <= y1 && (!filter || filter(p))) out.push(p.clone());
       }
@@ -500,13 +540,13 @@ class Rigger {
    *  even on low-poly models, where a thin slice often holds no vertices at all */
   _section(f, filter) {
     if (!this._tris) {
-      const list = [], p = new THREE.Vector3();
+      const list = [], p = new THREE.Vector3(), skip = this._scan().loose;
       for (const m of this.meshes) {
         const pos = m.geometry.attributes.position, idx = m.geometry.index, n = idx ? idx.count : pos.count;
         const step = Math.max(1, Math.floor(n / 3 / 150000)) * 3;
-        for (let i = 0; i + 2 < n; i += step) for (let k = 0; k < 3; k++) {
-          p.fromBufferAttribute(pos, idx ? idx.getX(i + k) : i + k).applyMatrix4(m.matrixWorld);
-          list.push(p.x, p.y, p.z);
+        for (let i = 0; i + 2 < n; i += step) {
+          if (skip.has(`${m.uuid}:${idx ? idx.getX(i) : i}`)) continue;
+          for (let k = 0; k < 3; k++) { p.fromBufferAttribute(pos, idx ? idx.getX(i + k) : i + k).applyMatrix4(m.matrixWorld); list.push(p.x, p.y, p.z); }
         }
       }
       this._tris = new Float32Array(list);
@@ -521,6 +561,84 @@ class Rigger {
     }
     return out;
   }
+  /** reading a model that has no rig: it's split into the pieces that are really separate (its surfaces share no points). The biggest is the body. Hair, bows, ribbons and floating ornaments are
+   *  whatever else stands out past the body or is called that: the skeleton is fitted to the body alone, then those get chains of their own. -> { loose: first vertices to leave out, extras: [{ name, pts, box }] } */
+  _scan() {
+    if (this._scanned) return this._scanned;
+    const islands = [], KEY = (p) => `${Math.round(p.x * 2000)},${Math.round(p.y * 2000)},${Math.round(p.z * 2000)}`, v = new THREE.Vector3();
+    for (const m of this.meshes) {
+      const pos = m.geometry.attributes.position, idx = m.geometry.index, n = idx ? idx.count : pos.count, up = new Int32Array(pos.count).map((_, i) => i), weld = new Map();
+      const find = (a) => { while (up[a] !== a) { up[a] = up[up[a]]; a = up[a]; } return a; }, join = (a, b) => { up[find(a)] = find(b); };
+      for (let i = 0; i < pos.count; i++) { const k = KEY(v.fromBufferAttribute(pos, i)); if (weld.has(k)) join(i, weld.get(k)); else weld.set(k, i); }
+      for (let i = 0; i + 2 < n; i += 3) { const a = idx ? idx.getX(i) : i, b = idx ? idx.getX(i + 1) : i + 1, c = idx ? idx.getX(i + 2) : i + 2; join(a, b); join(b, c); }
+      const groups = new Map();
+      for (let i = 0; i < pos.count; i++) { const r = find(i); let g = groups.get(r); if (!g) groups.set(r, g = { mesh: m, verts: [], pts: [], box: new THREE.Box3(), name: m.name || "" }); g.verts.push(i); v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld); g.box.expandByPoint(v); if (g.verts.length % 3 === 1) g.pts.push(v.clone()); }
+      islands.push(...groups.values());
+    }
+    const named = (g) => /hair|bow|ribbon|cape|cloak|scarf|tail|wing|flower|ornament|acces/i.test(g.name), bodyLike = (g) => /body|skin|torso/i.test(g.name), main = islands.filter((g) => !named(g)).sort((a, b) => (bodyLike(b) - bodyLike(a)) || b.verts.length - a.verts.length)[0] || islands[0];
+    const wide = main.box.max.x - main.box.min.x, loose = new Set(), extras = [], total = islands.reduce((n, g) => n + g.verts.length, 0);
+    for (const g of islands) {
+      if (g === main) continue;
+      const past = Math.max(main.box.min.x - g.box.min.x, g.box.max.x - main.box.max.x) > wide * 0.2;
+      if (!named(g) && !past) continue;
+
+      // many little pieces of one mesh (a ribbon's leaves) count as one thing
+      let e = extras.find((x) => x.mesh === g.mesh);
+      if (!e) extras.push(e = { mesh: g.mesh, name: g.name, pts: [], box: new THREE.Box3(), verts: 0, keys: new Set() });
+      e.pts.push(...g.pts); e.box.union(g.box); e.verts += g.verts.length;
+    }
+    // the body's own size: everything but the loose pieces. A tall hat or long ears no longer make the shoulders land on the face
+    const body = new THREE.Box3();
+    for (const g of islands) if (!loose.has(`${g.mesh.uuid}:${g.verts[0]}`)) body.union(g.box);
+    return (this._scanned = { main, loose, body, extras: extras.filter((e) => e.verts > total * 0.004 && e.pts.length > 3) });
+  }
+
+  /** after the body's skeleton: each loose piece gets what it needs. Hair strands from the head, and a chain from where it meets the body out to its far end for ribbons, tails and the like */
+  _fitExtras() {
+    const { extras } = this._scan(), head = this.joints.find((j) => /^head$/.test(j.name)), body = this.joints.filter((j) => !IS_TIP.test(j.name)), made = { hair: 0, ribbon: 0, item: 0 };
+    if (!head) return made;
+    const before = new Set(this.joints);
+    const own = (g) => { for (const j of this.joints) if (!before.has(j)) { j.owner = g; before.add(j); } };       // what's skinned to these bones: this piece, and nothing else
+    for (const g of extras.slice(0, 12)) {
+      const hair = /hair/i.test(g.name), mid = g.box.getCenter(new THREE.Vector3()), size = g.box.getSize(new THREE.Vector3());
+      if (hair) continue;
+      // something stiff that's worn or carried (a hat brim, a staff, a bag, a bow): one bone of its own on the nearest part of the body, so it moves whole and never bends.
+      // Ribbons, tails, capes and anything long and thin hang in a chain instead
+      const dims = [size.x, size.y, size.z].sort((a, b) => b - a), flowing = /ribbon|cape|cloak|scarf|tail|skirt|sash|streamer|wing|tentacle|sleeve/i.test(g.name), long = dims[0] > dims[1] * 2.6 && dims[0] > this.size.y * 0.25;
+      if (!flowing && (ITEM_NAME.test(g.name.toLowerCase()) || !long)) {
+        const c = this._centroid(g.pts) || mid, root = body.reduce((a, j) => (j.pos.distanceToSquared(c) < a.pos.distanceToSquared(c) ? j : a), body[0]);
+        const j = this.addJoint(`item_${++made.item}`, root, c);
+        j.owner = g; before.add(j);
+        continue;
+      }
+      // two sides of one ribbon are one piece: each arm of it is a chain of its own
+      const span = size.x > size.y && size.x > size.z * 1.2 && size.x > this.size.x * 0.3, sides = span ? [[(p) => p.x >= mid.x, 1], [(p) => p.x < mid.x, -1]] : [[() => true, 0]];
+      for (const [keep, s] of sides) {
+        const pts = g.pts.filter(keep);
+        if (pts.length < 4) continue;
+        const near = pts.reduce((a, p) => { const d = Math.min(...body.map((j) => j.pos.distanceToSquared(p))); return d < a.d ? { d, p } : a; }, { d: Infinity, p: null }).p, far = pts.reduce((a, p) => (p.distanceToSquared(near) > a.distanceToSquared(near) ? p : a), near);
+        const root = body.reduce((a, j) => (j.pos.distanceToSquared(near) < a.pos.distanceToSquared(near) ? j : a), body[0]), sfx = s ? (s > 0 ? ".L" : ".R") : "", n = ++made.ribbon;
+        const stops = [0.05, 0.35, 0.65, 1].map((t) => { const at = near.clone().lerp(far, t), by = pts.filter((p) => p.distanceTo(at) < near.distanceTo(far) * 0.25); return this._centroid(by.length > 2 ? by : [at]); });
+        this._chain(`ribbon_${n}`, sfx, root, stops);
+        own(g);
+      }
+    }
+    const hairs = extras.filter((g) => /hair/i.test(g.name));
+    if (hairs.length) { this._hairStrands(head); made.hair = 3; own({ keys: new Set(hairs.flatMap((g) => [...g.keys])), hair: true }); }
+    return made;
+  }
+
+  /** what touches the ground: the mesh cut just above the floor, in separate pieces. -> the middle of each piece, biggest first */
+  _feet() {
+    const pts = this._section(0.06), cell = Math.max(this.size.x, this.size.z) * 0.045, groups = [];
+    for (const p of pts) {
+      const near = groups.filter((g) => g.pts.some((q) => Math.hypot(p.x - q.x, p.z - q.z) < cell));
+      if (!near.length) { groups.push({ pts: [p] }); continue; }
+      near[0].pts.push(p);
+      for (const g of near.slice(1)) { near[0].pts.push(...g.pts); groups.splice(groups.indexOf(g), 1); }
+    }
+    return groups.filter((g) => g.pts.length >= 3).sort((a, b) => b.pts.length - a.pts.length).map((g) => this._mid(g.pts) || g.pts[0]);
+  }
   /** the middle of a cross-section's bounding box */
   _mid(pts) {
     if (pts.length < 3) return null;
@@ -531,7 +649,14 @@ class Rigger {
   _centroid(pts) { const c = new THREE.Vector3(); for (const p of pts) c.add(p); return pts.length ? c.divideScalar(pts.length) : null; }
 
   preset(kind, fit) {
+    if (this.joints.length) this.remember();
     this.clearJoints();
+    // auto: fitted to the body alone (worn and loose pieces left out), when that's a real part of the model
+    const whole = { box: this.box, size: this.size, tris: this._tris }, body = fit ? this._scan().body : null;
+    if (body && !body.isEmpty() && body.getSize(new THREE.Vector3()).y > this.size.y * 0.5) { this.box = body.clone(); this.size = body.getSize(new THREE.Vector3()); }
+    try { this._preset(kind, fit); } finally { this.box = whole.box; this.size = whole.size; }
+  }
+  _preset(kind, fit) {
     const B = this.box, S = this.size, cx = (B.min.x + B.max.x) / 2, cz = (B.min.z + B.max.z) / 2;
     const at = (x, y, z) => new THREE.Vector3(cx + x * S.x, B.min.y + y * S.y, cz + z * S.z);
     const byName = {};
@@ -542,9 +667,38 @@ class Rigger {
         byName[OTHER(name)] = this.addJoint(OTHER(name), pr, at(-x, y, z));
       }
     }
-    if (fit && kind !== "quadruped") this._fitBiped(byName);
+    if (fit && kind === "quadruped") this._fitQuadruped(byName);
+    else if (fit) this._fitBiped(byName);
+    const extra = fit ? this._fitExtras() : null;
+    for (const j of this.joints) j.mesh.position.copy(j.pos);
     this._afterRig();
-    this.toast(fit ? `Auto rig: looks like a ${kind}. Drag any dot that's in the wrong place.` : `${kind[0].toUpperCase() + kind.slice(1)} rig added. Drag the dots to fit the model.`);
+    this.toast(fit ? `Auto rig: read it as a ${kind}${extra.hair ? ", with hair" : ""}${extra.ribbon ? `, ${extra.ribbon} ribbon${extra.ribbon > 1 ? "s" : ""}` : ""}${extra.item ? ` and ${extra.item} item${extra.item > 1 ? "s" : ""} it wears or holds (orange: each moves whole)` : ""}. Drag any dot that's in the wrong place.` : `${kind[0].toUpperCase() + kind.slice(1)} rig added. Drag the dots to fit the model.`);
+  }
+
+  /** the same for four legs: each leg over the foot found on the ground, the back along the body's middle, the head and tail where the mesh really reaches */
+  _fitQuadruped(J) {
+    const feet = this._feet().slice(0, 4), B = this.box, H = this.size.y, y = (f) => B.min.y + f * H, cx = (B.min.x + B.max.x) / 2;
+    if (feet.length < 4) return;
+    feet.sort((a, b) => b.z - a.z);
+    const front = feet.slice(0, 2), back = feet.slice(2), zF = (front[0].z + front[1].z) / 2, zB = (back[0].z + back[1].z) / 2, top = this._section(0.9), facing = (this._centroid(top)?.z ?? zF) >= (zF + zB) / 2 ? 1 : -1;
+    const [nearF, nearB] = facing > 0 ? [front, back] : [back, front], zFront = facing > 0 ? zF : zB, zBack = facing > 0 ? zB : zF;
+    // the belly: the first height, coming up, where the cut joins front and back into one long body
+    const deep = (f) => { const p = this._section(f, (q) => Math.abs(q.x - cx) < this.size.x * 0.3); if (p.length < 3) return 0; const b = new THREE.Box3().setFromPoints(p); return b.max.z - b.min.z; };
+    const span = Math.abs(zFront - zBack);
+    let belly = 0.3, roof = 0.7;
+    for (let f = 0.1; f < 0.9; f += 0.03) if (deep(f) > span * 0.85) { belly = f; break; }
+    for (let f = belly + 0.05; f < 0.96; f += 0.03) if (deep(f) < span * 0.6) { roof = f; break; }
+    const back0 = y(belly + (roof - belly) * 0.6), put = (j, x, Y, z) => { if (j) j.pos.set(x, Y, z); };
+    const leg = (hip, knee, ankle, toe, [a, c]) => { for (const [f, s] of [[a, 1], [c, -1]]) { const left = f.x >= cx ? 1 : -1, tag = left > 0 ? ".L" : ".R"; put(J[hip + tag], f.x, back0 - H * 0.03, f.z); put(J[knee + tag], f.x, y(belly * 0.55), f.z + facing * H * 0.01); put(J[ankle + tag], f.x, y(0.05), f.z); put(J[toe + tag], f.x, B.min.y + H * 0.01, f.z + facing * H * 0.05); void s; } };
+    leg("front_thigh", "front_shin", "front_foot", "front_toe_end", nearF);
+    leg("thigh", "shin", "foot", "toe", nearB);
+    ["spine", "spine.001", "spine.002", "spine.003"].forEach((n, i) => put(J[n], cx, back0 + H * 0.005 * i, THREE.MathUtils.lerp(zBack, zFront, i / 3)));
+    const headCut = this._section(Math.min(0.93, roof + 0.08), (q) => (q.z - (zFront + zBack) / 2) * facing > -span * 0.2), head = this._centroid(headCut) || J.head.pos.clone();
+    put(J["spine.004"], cx, (back0 + head.y) / 2, (zFront + head.z) / 2); put(J.head, cx, head.y, head.z); put(J.head_end, cx, head.y + H * 0.04, head.z + facing * H * 0.12);
+    for (const s of [".L", ".R"]) if (J[`ear${s}`]) { const sign = s === ".L" ? 1 : -1; put(J[`ear${s}`], cx + sign * this.size.x * 0.05, head.y + H * 0.06, head.z); put(J[`ear_end${s}`], cx + sign * this.size.x * 0.08, B.max.y - H * 0.02, head.z); }
+    const rear = this._section(belly + (roof - belly) * 0.5, (q) => (q.z - zBack) * facing < 0), tail = rear.reduce((a, q) => (q.z * facing < a * facing ? q.z : a), zBack - facing * H * 0.1);
+    put(J.tail, cx, back0, zBack - facing * H * 0.04); put(J["tail.001"], cx, back0, (zBack + tail) / 2); put(J.tail_end, cx, back0, tail);
+    for (const j of this.joints) j.mesh.position.copy(j.pos);
   }
 
   /** nudge the preset onto the actual mesh: spine down the middle, legs into the legs, hands at the ends of the arms */
@@ -600,6 +754,7 @@ class Rigger {
       const c = this._mid(this._section(v(j), (p) => Math.abs(p.x - j.pos.x) < Math.min(this.size.x * 0.15, H * 0.1)));
       if (c) { j.pos.x = c.x; j.pos.z = c.z; }
     }
+    const traced = {};
     for (const s of ["L", "R"]) {
       const sign = s === "L" ? 1 : -1;
       for (const n of [`thigh.${s}`, `shin.${s}`, `foot.${s}`]) {
@@ -610,10 +765,30 @@ class Rigger {
         if (c) { j.pos.x = c.x; j.pos.z = c.z; }
       }
       const toe = J[`toe.${s}`], foot = J[`foot.${s}`];
-      if (toe && foot) { toe.pos.x = foot.pos.x; toe.pos.z = foot.pos.z + this.size.z * 0.3; }
+      if (toe && foot) {
+        const sole = this._centroid(this._section(0.015, (p) => Math.abs(p.x - foot.pos.x) < this.size.x * 0.12)), way = sole && Math.abs(sole.z - foot.pos.z) > H * 0.004 ? Math.sign(sole.z - foot.pos.z) : 1;    // whichever way the feet point
+        toe.pos.x = foot.pos.x; toe.pos.z = foot.pos.z + way * Math.min(this.size.z * 0.3, H * 0.09);
+      }
       // arms: the furthest point out at shoulder height is the hand
       const ua = J[`upper_arm.${s}`], hand = J[`hand.${s}`], fa = J[`forearm.${s}`], end = J[`hand_end.${s}`];
       if (!ua || !hand) continue;
+      // arms in any pose: the body's own surface, out past the sides of the waist and above the hips, is the arm. Its far end is the hand
+      const waist = this._section(v(J["spine.001"] || J.spine), (p) => Math.abs(p.x - cx) < H * 0.2), half = (waist.length > 3 ? this._spread(waist) / 2 : H * 0.08) * 1.12;
+      const arm = this._scan().main.pts.filter((p) => (p.x - J.spine.pos.x) * sign > half && p.y > J.spine.pos.y - H * 0.08 && p.y < ua.pos.y + H * 0.06);
+      if (arm.length > 8) {
+        ua.pos.x = J.spine.pos.x + sign * half * 0.95;
+        ua.pos.z = this._centroid(arm.filter((p) => p.y > ua.pos.y - H * 0.05))?.z ?? ua.pos.z;
+        // no arm is longer than about half the body up to the neck: past that it's a sleeve, a ribbon or a wing joined on (Kindred's ribbons), not the hand
+        const reach = (neck || 0.85) * H * 0.5, armPts = arm.filter((p) => p.distanceTo(ua.pos) < reach), use = armPts.length > 8 ? armPts : arm;
+        const tip = use.reduce((a, p) => (p.distanceToSquared(ua.pos) > a.distanceToSquared(ua.pos) ? p : a), use[0]), L = tip.distanceTo(ua.pos), bend = use.filter((p) => Math.abs(p.distanceTo(ua.pos) - L * 0.5) < L * 0.14), wrist = use.filter((p) => Math.abs(p.distanceTo(ua.pos) - L * 0.8) < L * 0.12);
+        fa.pos.copy(this._centroid(bend.length > 2 ? bend : [ua.pos.clone().lerp(tip, 0.5)]));
+        hand.pos.copy(this._centroid(wrist.length > 2 ? wrist : [ua.pos.clone().lerp(tip, 0.82)]));
+        end.pos.copy(tip);
+        const sh = J[`shoulder.${s}`];
+        if (sh) sh.pos.lerpVectors(J["spine.003"].pos, ua.pos, 0.45);
+        traced[s] = true;
+        continue;
+      }
       const pts = this._slab(v(ua), 0.08, (p) => (p.x - J.spine.pos.x) * sign > 0);
       let far = null;
       for (const p of pts) if (!far || (p.x - far.x) * sign > 0) far = p;
@@ -629,10 +804,48 @@ class Rigger {
         if (c) { fa.pos.copy(c); hand.pos.set(c.x + (c.x - ua.pos.x) * 0.8, c.y - (ua.pos.y - c.y) * 0.9, c.z); end.pos.copy(hand.pos).add(new THREE.Vector3(0, -this.size.y * 0.06, 0)); }
       }
     }
+    if (traced.L !== traced.R) {                               // one arm hidden in a pose or against the body: it follows the one that was found
+      const [from, to] = traced.L ? ["L", "R"] : ["R", "L"];
+      for (const n of ["upper_arm", "forearm", "hand", "hand_end", "shoulder"]) { const a = J[`${n}.${from}`], b = J[`${n}.${to}`]; if (a && b) b.pos.set(2 * J.spine.pos.x - a.pos.x, a.pos.y, a.pos.z); }
+    }
     for (const j of this.joints) j.mesh.position.copy(j.pos);
   }
 
   clearJoints() { this.joints = []; this.jointsGroup.clear(); this.selected = this.chainFrom = null; this.$(".rig-legend").hidden = true; }
+
+  // ---------- undo: every change to the joints (or to a test pose) can be taken back with Ctrl+Z ----------
+  /** keep how things are now, before a change */
+  remember() {
+    if (this.mode === "pose" && this.preview) { (this._poseHistory ||= []).push(this.preview.skeleton.bones.map((b) => b.quaternion.clone())); return; }
+    const at = new Map(this.joints.map((j, i) => [j, i]));
+    (this._history ||= []).push(this.joints.map((j) => ({ name: j.name, parent: j.parent ? at.get(j.parent) : -1, pos: j.pos.clone(), owner: j.owner })));
+    if (this._history.length > 80) this._history.shift();
+  }
+  undo() {
+    if (this.mode === "pose" && this.preview) {
+      const was = this._poseHistory?.pop();
+      if (!was) return this.toast("Nothing to undo in this pose", 1500);
+      this.preview.skeleton.bones.forEach((b, i) => b.quaternion.copy(was[i])); this.preview.root.updateMatrixWorld(true);
+      for (const t of this.ikTargets) t.handle.position.copy(t.eff.getWorldPosition(new THREE.Vector3()));
+      return;
+    }
+    const was = this._history?.pop();
+    if (!was) return this.toast("Nothing to undo", 1500);
+    this.jointsGroup.clear(); this.joints = []; this.selected = this.chainFrom = this.linkFrom = null;
+    const made = was.map((w) => { const j = this.addJoint(w.name, null, w.pos); j.owner = w.owner; j.popT = null; j.mesh.scale.setScalar(this.dotScale || 1); return j; });
+    was.forEach((w, i) => { if (w.parent >= 0) made[i].parent = made[w.parent]; });
+    this._colorsDirty = true; this._renderEditTools();
+    this.toast("Undone", 900);
+  }
+  /** what a joint is for, picked from a list: it's renamed so it reads as that everywhere (its colour here, and how the room and UniMate move it), with what hangs from it */
+  setRole(j, role) {
+    if (!j) return;
+    this.remember();
+    const pre = { body: "bone", hands: "hand", feet: "foot", hair: "hair", clothes: "cloth", items: "item", ears: "ear", tail: "tail", face: "face" }[role] || "bone";
+    const chain = [j, ...this.joints.filter((x) => isUnder(x, j))];
+    chain.forEach((x, i) => { const sfx = (/[._][LR]$/.exec(x.name) || [""])[0], n = this.joints.filter((y) => y !== x && y.name.startsWith(pre)).length + 1; x.name = `${pre}_${String(n + i).padStart(2, "0")}${i === chain.length - 1 && chain.length > 1 ? "_end" : ""}${sfx}`; });
+    this._colorsDirty = true; this._renderEditTools();
+  }
 
   addJoint(name, parent, pos) {
     const tip = IS_TIP.test(name);
@@ -651,12 +864,74 @@ class Rigger {
   }
 
   deleteJoint(j) {
+    this.remember();
     for (const c of this.joints) if (c.parent === j) c.parent = j.parent;
     this.joints = this.joints.filter((x) => x !== j);
     this.jointsGroup.remove(j.mesh);
     if (this.selected === j) this.select(null);
     if (this.chainFrom === j) this.chainFrom = j.parent;
+    if (this.linkFrom === j) this.linkFrom = null;
     this._colorsDirty = true;
+  }
+
+  /** the other side's joint, while Mirror is on */
+  _twin(j) { return this.mirror && sideOf(j.name) ? this.joints.find((x) => x.name === OTHER(j.name)) || null : null; }
+
+  /** hang `child` from `parent` (a bone goes from the parent to the child). With Mirror on, the other side is linked the same way */
+  link(parent, child) {
+    if (parent === child) return false;
+    if (isUnder(parent, child)) { this.toast("That would make a loop: this joint already hangs from the other one."); return false; }
+    this.remember();
+    child.parent = parent;
+    const twin = this._twin(child), other = this._twin(parent) || parent;
+    if (twin && twin !== parent && !isUnder(other, twin)) twin.parent = other;
+    this._colorsDirty = true;
+    return true;
+  }
+  /** cut a joint loose from what it hangs from */
+  unlink(j) {
+    if (!j?.parent) return;
+    this.remember();
+    j.parent = null;
+    const twin = this._twin(j);
+    if (twin) twin.parent = null;
+    this._colorsDirty = true;
+    this.toast(`${j.name} is on its own now. Press Link to hang it from another joint.`, 3000);
+  }
+
+  // ---------- the arrows on the selected joint: drag one to move along that axis only ----------
+  _makeArrows() {
+    const g = this.arrows = new THREE.Group();
+    this.arrowHits = [];
+    for (const [axis, color, dir] of [["x", 0xff4d5e, new THREE.Vector3(1, 0, 0)], ["y", 0x5ee05e, new THREE.Vector3(0, 1, 0)], ["z", 0x4d9dff, new THREE.Vector3(0, 0, 1)]]) {
+      const a = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true }), stem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.8, 8), mat), tip = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.24, 12), mat);
+      const hit = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.1, 6), new THREE.MeshBasicMaterial({ visible: false }));
+      stem.position.y = 0.4; tip.position.y = 0.9; hit.position.y = 0.55;
+      stem.renderOrder = tip.renderOrder = 12;
+      hit.userData = { axis, dir };
+      a.add(stem, tip, hit);
+      a.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      a.userData = { axis, mat };
+      g.add(a);
+      this.arrowHits.push(hit);
+    }
+    g.visible = false;
+    this.scene.add(g);
+  }
+  _updateArrows() {
+    if (!this.arrows) this._makeArrows();
+    const j = this.selected, on = this.mode === "edit" && !!j;
+    this.arrows.visible = on;
+    if (!on) return;
+    this.arrows.position.copy(j.mesh.position);
+    this.arrows.scale.setScalar(this.camera.position.distanceTo(j.mesh.position) * 0.13);
+    for (const a of this.arrows.children) a.userData.mat.opacity = !this.snap || this.snap === a.userData.axis ? 1 : 0.16;   // with Snap on, the arrow it keeps to stands out
+  }
+  /** how far along the line (from, dir) the mouse ray comes closest */
+  _alongAxis(from, dir) {
+    const r = this.ray.ray.direction, w = from.clone().sub(this.ray.ray.origin), b = dir.dot(r), den = 1 - b * b;
+    if (Math.abs(den) < 1e-4) return null;              // looking straight down the arrow
+    return (b * w.dot(r) - w.dot(dir)) / den;
   }
 
   /** lines from each joint to its parent */
@@ -669,11 +944,12 @@ class Rigger {
     }
     const pts = [];
     for (const j of this.joints) {
-      if (j.popT != null) { j.popT += 1 / 60; const x = Math.min(1, j.popT / 0.35); j.mesh.scale.setScalar(x >= 1 ? 1 : x + Math.sin(x * Math.PI) * 0.4); if (x >= 1) j.popT = null; }
+      if (j.popT != null) { j.popT += 1 / 60; const x = Math.min(1, j.popT / 0.35); j.mesh.scale.setScalar((x >= 1 ? 1 : x + Math.sin(x * Math.PI) * 0.4) * (this.dotScale || 1)); if (x >= 1) j.popT = null; }
       if (j.parent) pts.push(j.parent.mesh.position, j.mesh.position);
     }
+    if (this.mode === "link" && this.linkFrom && this.linkTip) pts.push(this.linkFrom.mesh.position, this.linkTip);      // the link you're about to make
     this.lines.geometry.setFromPoints(pts);
-    this.lines.visible = (this.mode === "edit" || this.mode === "place") && !!pts.length;
+    this.lines.visible = (this.mode === "edit" || this.mode === "place" || this.mode === "link") && !!pts.length;
   }
 
   select(j) {
@@ -686,15 +962,25 @@ class Rigger {
   setMode(mode) {
     this.mode = mode;
     if (mode === "place") {
-      this.chainFrom = this.selected;
+      this.chainFrom = null;
       this.placing = null;
-      this.hint("Click on the model to place a joint. Each click adds a bone from the last joint. Click an existing dot to branch from it. Press Exit (or Esc) when done.");
+      this.hint("Click on the model to place a joint: each one stands alone until you link it. Press Link to join them into bones. Press Exit (or Esc) when done.");
       this.tools([
         { label: "⏹ Exit placing", on: true, click: () => this.setMode("edit") },
+        { label: "🔗 Link", title: "join joints into bones", click: () => this.setMode("link") },
         { label: "↶ Remove last", click: () => { const last = this.joints.at(-1); if (last) this.deleteJoint(last); } },
       ]);
+    } else if (mode === "link") {
+      this.linkFrom = this.selected;
+      this.linkTip = null;
+      this.select(this.selected);
+      this.hint("Click the joint a bone starts from, then the joint it goes to. Keep clicking to carry the chain on; click empty space to start a new one. Press Exit (or Esc) when done.");
+      this.tools([
+        { label: "⏹ Exit linking", on: true, click: () => this.setMode("edit") },
+        { label: "✂ Unlink", title: "cut the selected joint loose", click: () => this.unlink(this.selected) },
+      ]);
     } else if (mode === "edit") {
-      this.placing = null;
+      this.placing = null; this.linkFrom = null;
       if (!this.joints.length) return this.chooseRig();
       this._afterRig();
     }
@@ -780,7 +1066,7 @@ class Rigger {
   /** the snap axis: pressing the one that's on turns it off */
   setSnap(axis) {
     this.snap = this.snap === axis ? "" : axis;
-    this.toast(this.snap ? `Joints move along ${this.snap.toUpperCase()} only.` : "Joints move freely.", 2000);
+    this.toast(this.snap ? `Joints move along the ${this.snap.toUpperCase()} arrow only.` : "Joints move freely: drag a dot, or one of its arrows.", 2000);
     this._renderEditTools();
   }
 
@@ -789,21 +1075,37 @@ class Rigger {
     const name = document.createElement("input");
     name.className = "rig-name"; name.placeholder = "click a joint"; name.disabled = !this.selected;
     name.value = this.selected?.name || "";
-    name.addEventListener("change", () => { if (this.selected && name.value.trim()) { this.selected.name = name.value.trim(); this._colorsDirty = true; } });
+    name.addEventListener("change", () => { if (this.selected && name.value.trim()) { this.remember(); this.selected.name = name.value.trim(); this._colorsDirty = true; } });
+    // what the selected joint is: pick from the list and it (and what hangs from it) takes that part's name and colour
+    const role = document.createElement("select");
+    role.className = "rig-name"; role.disabled = !this.selected; role.title = "what this joint is: its colour, and how it moves";
+    for (const [k, label] of [["", "Joint is…"], ["body", "Body"], ["hands", "Hand"], ["feet", "Foot"], ["hair", "Hair"], ["clothes", "Clothes"], ["items", "Item (stiff)"], ["ears", "Ear"], ["tail", "Tail"], ["face", "Face"]]) role.append(new Option(label, k));
+    role.value = this.selected?.region && ["hands", "feet", "hair", "clothes", "items", "ears", "face"].includes(this.selected.region) ? this.selected.region : "";
+    role.addEventListener("change", () => { if (role.value) this.setRole(this.selected, role.value); });
+    // how big the dots are drawn: smaller to place them finely on a detailed model
+    const size = document.createElement("label");
+    size.className = "rig-check"; size.title = "dot size";
+    size.innerHTML = `⚬ <input type="range" min="0.25" max="2.5" step="0.05" value="${this.dotScale || 1}" style="width:80px">`;
+    size.querySelector("input").addEventListener("input", (e) => { this.dotScale = +e.target.value; for (const j of this.joints) if (j.popT == null) j.mesh.scale.setScalar(this.dotScale); });
     const mirror = document.createElement("label");
     mirror.className = "rig-check";
     mirror.innerHTML = `<input type="checkbox" ${this.mirror ? "checked" : ""}> Mirror left/right`;
     mirror.querySelector("input").addEventListener("change", (e) => { this.mirror = e.target.checked; });
     this.tools([
       { label: "✏️ Place bones", title: "add joints by clicking on the model", click: () => this.setMode("place") },
+      { label: "🔗 Link", title: "join joints into bones: click the joint a bone starts from, then the one it goes to", click: () => this.setMode("link") },
+      { label: "✂ Unlink", title: "cut the selected joint loose from what it hangs from", click: () => this.unlink(this.selected) },
       { label: "🧍 Change preset", click: () => this.chooseRig() },
       { label: "✋ Hands", title: "add finger bones to both hands (5, 4 or 3 fingers) so hand poses work", click: () => this.addHands() },
       { label: "💇 Hair", title: "add hair strands that swing", click: () => this.addHair() },
       { label: "👗 Clothes", title: "add a skirt / dress or a cape that moves like cloth", click: () => this.addClothes() },
       name,
+      role,
       { label: "🗑 Delete joint", click: () => this.selected && this.deleteJoint(this.selected) },
+      { label: "↶ Undo", title: "take back the last change (Ctrl+Z)", click: () => this.undo() },
+      size,
       mirror,
-      ...["x", "y", "z"].map((a) => ({ label: `Snap ${a.toUpperCase()}`, on: this.snap === a, title: `drag joints along the ${a.toUpperCase()} axis only (or press ${a.toUpperCase()})`, click: () => this.setSnap(a) })),
+      ...["x", "y", "z"].map((a) => ({ label: `Snap ${a.toUpperCase()}`, on: this.snap === a, title: `keep joints on the ${a.toUpperCase()} arrow, whichever way you drag (or press ${a.toUpperCase()})`, click: () => this.setSnap(a) })),
       { label: "🦾 Test pose (IK)", title: "drag hands and feet to check the rig bends well", click: () => this.poseMode() },
       { label: "💾 Save rig", click: () => this.save() },
     ]);
@@ -816,6 +1118,7 @@ class Rigger {
   }
   /** delete the joints that pass test, and everything under them */
   _removeWhere(test) {
+    this.remember();
     const gone = (j) => { for (let x = j; x; x = x.parent) if (test(x)) return true; return false; };
     for (const j of this.joints.filter(gone)) { this.jointsGroup.remove(j.mesh); if (this.selected === j) this.selected = null; }
     this.joints = this.joints.filter((j) => !gone(j));
@@ -895,6 +1198,12 @@ class Rigger {
     if (k === "place") return this.placeChains("hair");
     const head = this._role((n) => /head/.test(n) && !/end|top|hair/.test(n));
     if (!head) return this.toast("Couldn't find the head: select the head joint and name it head first.");
+    this._hairStrands(head);
+    this.select(null);
+    this.toast("Hair added ✓ Drag the strands into the hair (longer hair: select the last dot, ✏️ Place bones, click further down).", 9000);
+  }
+  /** three strands down the back of the head */
+  _hairStrands(head) {
     this._removeWhere((j) => /hair/i.test(j.name));
     const top = this.joints.find((j) => j.parent === head);
     const hh = Math.max(top ? top.pos.distanceTo(head.pos) : 0, this.size.y * 0.08);
@@ -905,8 +1214,6 @@ class Rigger {
     const strand = (name, sfx, x) => this._chain(name, sfx, head, [0, 1 / 3, 2 / 3, 1].map((t) => new THREE.Vector3(x, y0 - len * t, z0 - hh * 0.15 * t)));
     strand("hair_back", "", head.pos.x);
     for (const s of [1, -1]) strand("hair_side", s === 1 ? ".L" : ".R", head.pos.x + s * hh * 0.42);
-    this.select(null);
-    this.toast("Hair added ✓ Drag the strands into the hair (longer hair: select the last dot, ✏️ Place bones, click further down).", 9000);
   }
 
   /** a skirt / dress (8 chains around the hips, down to the knees) or a cape (3 chains down the back) */
@@ -985,40 +1292,70 @@ class Rigger {
     if (this.mode === "place") {
       const hit = this._pickJoint(e);
       if (hit) {
-        this.chainFrom = hit.userData.joint;
-        if (this.placing) { this.placing.side = 0; this.placing.twinFrom = null; }    // a branch from one dot isn't copied
-        this.select(this.chainFrom);
+        if (this.placing) { this.chainFrom = hit.userData.joint; this.placing.side = 0; this.placing.twinFrom = null; }    // a strand's branch from one dot isn't copied
+        this.select(hit.userData.joint);
         return;
       }
       const p = this._pickInside(e);
       if (!p) return;
       if (this.placing) return this._placeChainJoint(p);
-      const n = this.joints.length;
-      const side = Math.abs(p.x - (this.box.min.x + this.box.max.x) / 2) > this.size.x * 0.04 ? (p.x > (this.box.min.x + this.box.max.x) / 2 ? ".L" : ".R") : "";
-      const j = this.addJoint(`bone_${String(n).padStart(2, "0")}${side}`, this.chainFrom, p);
-      this.chainFrom = j;
+      this.remember();
+      const n = this.joints.length, cx = (this.box.min.x + this.box.max.x) / 2;
+      const side = Math.abs(p.x - cx) > this.size.x * 0.04 ? (p.x > cx ? ".L" : ".R") : "";
+      const j = this.addJoint(`bone_${String(n).padStart(2, "0")}${side}`, null, p);     // on its own: bones are made with Link
+      if (side && this.mirror) this.addJoint(OTHER(j.name), null, new THREE.Vector3(2 * cx - p.x, p.y, p.z));
       this.select(j);
       return;
+    }
+    if (this.mode === "link") {
+      const hit = this._pickJoint(e);
+      if (!hit) { this.linkFrom = null; this.linkTip = null; this.select(null); return; }
+      const j = hit.userData.joint;
+      if (this.linkFrom) this.link(this.linkFrom, j);
+      this.linkFrom = j;
+      this.select(j);
+      return;
+    }
+    if (this.mode === "edit" && this.selected) {                 // an arrow first: it sits on top of the dot it belongs to
+      this.ray.setFromCamera(this._ndc(e), this.camera);
+      const arrow = this.ray.intersectObjects(this.arrowHits, false)[0]?.object;
+      if (arrow) return this._grab(e, this.selected.mesh, arrow.userData.axis);
     }
     const list = this.mode === "pose" ? this.ikTargets.map((t) => t.handle) : this.mode === "edit" ? this.jointsGroup.children : [];
     const hit = this._pickJoint(e, list);
     if (!hit) return;
     if (this.mode === "edit") this.select(hit.userData.joint);
+    this._grab(e, hit, this.mode === "edit" ? this.snap : "");
+  }
+  /** start dragging: freely on a plane facing the camera, or along one axis */
+  _grab(e, obj, axis) {
+    this.remember();                                         // a drag can be taken back
     const n = this.camera.getWorldDirection(new THREE.Vector3());
-    this._drag = { obj: hit, plane: new THREE.Plane().setFromNormalAndCoplanarPoint(n, hit.position) };
+    this._drag = { obj, plane: new THREE.Plane().setFromNormalAndCoplanarPoint(n, obj.position), axis };
+    if (axis) {
+      const d = this._drag;
+      d.dir = new THREE.Vector3(+(axis === "x"), +(axis === "y"), +(axis === "z"));
+      d.from = obj.position.clone();
+      this.ray.setFromCamera(this._ndc(e), this.camera);
+      d.grab = this._alongAxis(d.from, d.dir) ?? 0;
+    }
     this.controls.enabled = false;
     this.renderer.domElement.setPointerCapture(e.pointerId);
   }
   _move(e) {
+    if (this.mode === "link" && this.linkFrom) {               // the line to the mouse, at the depth of the joint it comes from
+      this.ray.setFromCamera(this._ndc(e), this.camera);
+      const at = new THREE.Vector3();
+      if (this.ray.ray.intersectPlane(new THREE.Plane().setFromNormalAndCoplanarPoint(this.camera.getWorldDirection(new THREE.Vector3()), this.linkFrom.mesh.position), at)) this.linkTip = at;
+    }
     if (!this._drag) return;
     this.ray.setFromCamera(this._ndc(e), this.camera);
-    const p = new THREE.Vector3();
-    if (!this.ray.ray.intersectPlane(this._drag.plane, p)) return;
-    const o = this._drag.obj;
-    if (this.snap) {                                     // only along that axis: the other two stay where they were when the drag began
-      const from = this._drag.from ||= o.position.clone();
-      for (const k of ["x", "y", "z"]) if (k !== this.snap) p[k] = from[k];
-    }
+    const p = new THREE.Vector3(), o = this._drag.obj, d = this._drag;
+    if (d.axis) {
+      const t = this._alongAxis(d.from, d.dir);
+      if (t == null) return;
+      p.copy(d.from).addScaledVector(d.dir, t - d.grab);
+    } else if (!this.ray.ray.intersectPlane(d.plane, p)) return;
     o.position.copy(p);
     const j = o.userData.joint;
     if (j) {
@@ -1064,14 +1401,26 @@ class Rigger {
   }
 
   /** skin weights: each vertex follows the (up to 4) closest bones; left bones don't grab the right side */
-  _weights(geo, order, kids, index) {
+  _weights(geo, order, kids, index, mesh = null) {
     const segs = [];
     for (const j of order) {
       const ch = kids.get(j);
       const cloth = CLOTH_NAME.test(j.name) ? 1.5 : 1;
-      if (ch.length) for (const c of ch) segs.push({ bone: index.get(j), a: j.pos, b: c.pos, side: sideOf(j.name), cloth });
-      else if (!j.parent) segs.push({ bone: index.get(j), a: j.pos, b: j.pos, side: sideOf(j.name), cloth });
+      if (ch.length) for (const c of ch) segs.push({ bone: index.get(j), a: j.pos, b: c.pos, side: sideOf(j.name), cloth, owner: j.owner });
+      else if (!j.parent || j.owner) segs.push({ bone: index.get(j), a: j.pos, b: j.pos, side: sideOf(j.name), cloth, owner: j.owner });     // a stiff item is one point
     }
+    // a separate piece (a hat, a ribbon, the hair) is skinned only to the bones made for it, and the body never to those: nothing tears or drags along
+    const whose = new Map(), bodySegs = segs.filter((s) => !s.owner), mine = new Map();
+    if (mesh) for (const j of order) if (j.owner?.keys) for (const k of j.owner.keys) if (k.startsWith(mesh.uuid)) whose.set(+k.slice(mesh.uuid.length + 1), j.owner);
+    const segsOf = (o) => {
+      if (!mine.has(o)) {
+        const list = segs.filter((s) => s.owner === o), base = order.find((j) => j.owner === o)?.parent;
+        if (list.length > 1 && base && !base.owner) list.push(...bodySegs.filter((s) => s.bone === index.get(base)));    // a chain blends into what it hangs from; a stiff item doesn't
+        mine.set(o, list.length ? list : bodySegs);
+      }
+      return mine.get(o);
+    };
+    const anyOwned = segs.some((s) => s.owner);
     const pos = geo.attributes.position, n = pos.count;
     const skinIndex = new Uint16Array(n * 4), skinWeight = new Float32Array(n * 4);
     const cx = (this.box.min.x + this.box.max.x) / 2, mid = this.size.x * 0.03;
@@ -1080,8 +1429,8 @@ class Rigger {
     for (let i = 0; i < n; i++) {
       p.fromBufferAttribute(pos, i);
       best.fill(Infinity);
-      const vs = p.x - cx > mid ? 1 : p.x - cx < -mid ? -1 : 0;
-      for (const s of segs) {
+      const vs = p.x - cx > mid ? 1 : p.x - cx < -mid ? -1 : 0, o = whose.get(i);
+      for (const s of o ? segsOf(o) : anyOwned ? bodySegs : segs) {
         ab.subVectors(s.b, s.a); ap.subVectors(p, s.a);
         const L = ab.lengthSq();
         const t = L > 0 ? Math.max(0, Math.min(1, ap.dot(ab) / L)) : 0;
@@ -1117,7 +1466,7 @@ class Rigger {
     this.model.updateMatrixWorld(true);
     for (const m of this.meshes) {
       const geo = bake(m.geometry.clone(), m.matrixWorld);
-      this._weights(geo, order, kids, index);
+      this._weights(geo, order, kids, index, m);
       const mats = [].concat(m.material).map((x) => { const c = x.clone(); c.side = x.userData.side ?? THREE.FrontSide; c.transparent = x.userData.transparent ?? false; c.opacity = x.userData.opacity ?? 1; c.depthWrite = x.userData.depthWrite ?? true; return c; });   // the see-through ones stay so (an iris saved solid is a black block)
       const sm = new THREE.SkinnedMesh(geo, mats.length === 1 ? mats[0] : mats);
       sm.name = m.name || "mesh";
@@ -1163,12 +1512,38 @@ class Rigger {
       return { eff, links: links.map(byName).filter(Boolean), handle };
     });
     this.rest = built.skeleton.bones.map((b) => b.quaternion.clone());
+    // ready-made poses to try the rig with: five for each kind of body, the model's own kind first
+    const kind = built.skeleton.bones.some((b) => /front_?(thigh|shin)|frontup/i.test(b.name)) ? "quadruped" : built.skeleton.bones.some((b) => /wing/i.test(b.name)) || !built.skeleton.bones.some((b) => IS_UPPER_ARM(plain(b.name))) ? "monster" : "biped";
+    const poses = document.createElement("select");
+    poses.className = "rig-name"; poses.title = "try a ready-made pose";
+    poses.append(new Option("Try a pose…", ""));
+    for (const k of [kind, ...Object.keys(POSES).filter((x) => x !== kind)]) { const g = document.createElement("optgroup"); g.label = { biped: "Two legs", quadruped: "Four legs", monster: "Monster" }[k]; for (const name of Object.keys(POSES[k])) g.append(new Option(name, `${k}|${name}`)); poses.append(g); }
+    poses.addEventListener("change", () => { if (!poses.value) return; const [k, n] = poses.value.split("|"); this.remember(); this.applyPose(POSES[k][n]); });
     this.tools([
-      { label: "↺ Reset pose", click: () => { built.skeleton.bones.forEach((b, i) => b.quaternion.copy(this.rest[i])); built.root.updateMatrixWorld(true); for (const t of this.ikTargets) t.handle.position.copy(t.eff.getWorldPosition(new THREE.Vector3())); } },
+      poses,
+      { label: "↶ Undo", title: "Ctrl+Z", click: () => this.undo() },
+      { label: "↺ Reset pose", click: () => { this.remember(); built.skeleton.bones.forEach((b, i) => b.quaternion.copy(this.rest[i])); built.root.updateMatrixWorld(true); for (const t of this.ikTargets) t.handle.position.copy(t.eff.getWorldPosition(new THREE.Vector3())); } },
       { label: "← Back to joints", click: () => this._leavePose() },
       { label: "💾 Save rig", click: () => { this._leavePose(); this.save(); } },
     ]);
     this.hint("IK is on: drag the green handles (hands, feet, tail) and the arm, leg or tail bends to follow. If the mesh tears, go back and move the joints.");
+  }
+  /** a ready-made pose: from the rest pose, each part turned about a world axis (x across, y up, z forward), whatever its bones are called */
+  applyPose(list) {
+    const P = this.preview;
+    if (!P) return;
+    P.skeleton.bones.forEach((b, i) => b.quaternion.copy(this.rest[i]));
+    P.root.updateMatrixWorld(true);
+    const q = new THREE.Quaternion(), w = new THREE.Quaternion(), pw = new THREE.Quaternion(), AX = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+    for (const [part, side, axis, deg] of list) {
+      for (const b of P.skeleton.bones.filter((x) => PART[part]?.(plain(x.name)) && (!side || sideOf(x.name) === side || (side === "both" && sideOf(x.name))))) {
+        const s = side === "both" ? sideOf(b.name) : 1, ang = THREE.MathUtils.degToRad(deg) * (axis === "z" || axis === "y" ? s : 1);
+        b.getWorldQuaternion(w); (b.parent ? b.parent.getWorldQuaternion(pw) : pw.identity()).invert();
+        b.quaternion.copy(pw.multiply(q.setFromAxisAngle(AX[axis], ang).multiply(w)));
+        b.updateMatrixWorld(true);
+      }
+    }
+    for (const t of this.ikTargets) t.handle.position.copy(t.eff.getWorldPosition(new THREE.Vector3()));
   }
   _leavePose() {
     if (this.preview) this.scene.remove(this.preview.root);
@@ -1198,6 +1573,18 @@ class Rigger {
 
   // ---------- saving ----------
   async save() {
+    const roots = this.joints.filter((j) => !j.parent);
+    if (roots.length > 1) {                                    // a rig is one tree: anything left loose wouldn't move with the body
+      const k = await this.ask(`${roots.length - 1} joint${roots.length > 2 ? "s are" : " is"} not linked to the rest. Link ${roots.length > 2 ? "them" : "it"} to the nearest joint, or go back and do it yourself?`, [["auto", "🔗 Link to the nearest"], ["back", "Go back"]]);
+      if (k !== "auto") return;
+      const main = roots.reduce((a, r) => (this.joints.filter((j) => j === r || isUnder(j, r)).length > this.joints.filter((j) => j === a || isUnder(j, a)).length ? r : a));
+      for (const r of roots) {
+        if (r === main) continue;
+        const near = this.joints.filter((j) => j !== r && !isUnder(j, r)).sort((a, b) => a.pos.distanceToSquared(r.pos) - b.pos.distanceToSquared(r.pos))[0];
+        if (near) r.parent = near;
+      }
+      this._colorsDirty = true;
+    }
     let built;
     try { built = this._buildRig(); } catch (err) { return this.toast(err.message); }
     this.busy("Saving the rigged model…");

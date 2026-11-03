@@ -11,6 +11,7 @@
 		{
 			"name":"Scene",
 			"nodes":[
+				0,
 				1
 			]
 		}
@@ -18,12 +19,9 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"SM_StylizedFarm_LawnMower_B_Vehicle_Lowpoly_M_0"
+			"name":"body"
 		},
 		{
-			"children":[
-				0
-			],
 			"name":"SM_StylizedFarm_LawnMower_B",
 			"scale":[
 				0.009999999776482582,
@@ -88,29 +86,29 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":6525,
+			"count":6587,
 			"max":[
-				-1351.122802734375,
-				170.40234375,
-				290.2200622558594
+				0.9127941131591797,
+				1.7040237188339233,
+				1.5633654594421387
 			],
 			"min":[
-				-1533.681640625,
+				-0.9127941131591797,
 				0,
-				-22.453094482421875
+				-1.5633666515350342
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":6525,
+			"count":6587,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":6525,
+			"count":6587,
 			"type":"VEC2"
 		},
 		{
@@ -123,26 +121,26 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":78300,
+			"byteLength":79044,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":78300,
-			"byteOffset":78300,
+			"byteLength":79044,
+			"byteOffset":79044,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":52200,
-			"byteOffset":156600,
+			"byteLength":52696,
+			"byteOffset":158088,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":17028,
-			"byteOffset":208800,
+			"byteOffset":210784,
 			"target":34963
 		}
 	],
@@ -154,7 +152,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":225828,
+			"byteLength":227812,
 			"uri":"LawnMower_B.bin"
 		}
 	]

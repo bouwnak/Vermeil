@@ -1,8 +1,10 @@
 // craft.js - turning things into better things: the workbench and machines, the shipping bin, your market stall, and what the market will pay.
-import { CATALOG, CROPS, DEMAND, FESTIVALS, ITEMS, MACHINES, RECIPES, SHOPS, WEEK, itemName } from "./data.js";
+import { ANIMALS, CATALOG, CROPS, DEMAND, FESTIVALS, ITEMS, MACHINES, RECIPES, SHOPS, WEEK, itemName } from "./data.js";
+import * as THREE from "three";
 import { fbm } from "./terrain.js";
 import { seasonOf } from "./world.js";
 import { popup } from "./ui.js";
+import { makeGoods } from "./made.js";
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -42,6 +44,7 @@ export function makeCraft(G) {
   /** a machine: pick a recipe, and it works through the hours whether you're there or not */
   C.machine = (t) => {
     const id = t.p.id, kind = CATALOG[t.p.type].machine, m = s.machines[id];
+    t.kick = 3;
     open(MACHINES[kind]);
     if (m) {
       const left = m.at - nowOf(s);
@@ -96,7 +99,7 @@ export function makeCraft(G) {
       slider.type = "range"; Object.assign(slider, { min: 0.6, max: 2, step: 0.1, value: o.mark }); slider.oninput = () => { o.mark = +slider.value; cost.textContent = `${Math.round(ITEMS[k].sell * o.mark)}`; };
       const cost = el("em", "", `${Math.round(ITEMS[k].sell * o.mark)}`);
       r.append(el("b", "", `${ITEMS[k].icon} ${ITEMS[k].name} × ${o.n}`), slider, cost);
-      take.onclick = () => { G.add(k, o.n); delete st.items[k]; C.stall(); };
+      take.onclick = () => { G.add(k, o.n); delete st.items[k]; C.showGoods(); C.stall(); };
       r.append(take); rows.append(r);
     }
     if (Object.keys(st.items).length < 6) {
@@ -104,13 +107,48 @@ export function makeCraft(G) {
       for (const [k, n] of Object.entries(s.inv).filter(([i, c]) => c > 0 && ITEMS[i]?.sell && !st.items[i]).slice(0, 12)) {
         const r = el("div", "row"), b = el("button", "cozy small", "All");
         r.append(el("b", "", `${ITEMS[k].icon} ${ITEMS[k].name} × ${n}`));
-        b.onclick = () => { st.items[k] = { n, mark: 1 }; G.add(k, -n); G.sfx("place"); C.stall(); };
+        b.onclick = () => { st.items[k] = { n, mark: 1 }; G.add(k, -n); G.sfx("place"); C.showGoods(); C.stall(); };
         r.append(b); rows.append(r);
       }
     }
     const best = Object.entries(st.sold).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${itemName(k)} (${n})`);
     if (best.length) rows.append(el("p", "muted", `Best sellers: ${best.join(", ")}`));
   };
+  /** what's on show: your goods, set out along the counter of every stall that's yours */
+  const stalls = () => [...(G.lore?.stalls || []).filter((q) => s.rented?.[q.i]), ...G.build.of("stall").map((t) => ({ o: t.group, L: null, x: t.p.x, z: t.p.z, ry: t.p.ry }))];
+  C.showGoods = () => {
+    const list = Object.keys(s.stall?.items || {});
+    for (const q of stalls()) {
+      q.o.userData.goods?.parent?.remove(q.o.userData.goods);
+      const row = new THREE.Group();
+      list.forEach((k, i) => { const h = makeGoods(k, ITEMS[k]); h.position.set((i - (list.length - 1) / 2) * 0.48, 1.06, 0.12); row.add(h); });
+      q.o.add(row); q.o.userData.goods = row;
+    }
+  };
+  /** a stall of yours with something on it, in a town where people can walk to it */
+  C.openStall = () => (Object.keys(s.stall?.items || {}).length ? stalls().find((q) => q.L) : null);
+  /** someone has walked up to your stall: they look it over and buy, if the price suits them */
+  C.buyAt = (q) => {
+    const st = s.stall, keys = Object.keys(st?.items || {});
+    if (!keys.length) return;
+    const k = keys[Math.floor(Math.random() * keys.length)], o = st.items[k], price = Math.round(ITEMS[k].sell * o.mark);
+    if (Math.random() * o.mark ** 2 > 1.4) return popup("A customer looked, but it was too dear for them");
+    s.money += price; st.revenue += price; st.sold[k] = (st.sold[k] || 0) + 1;
+    if (--o.n <= 0) delete st.items[k];
+    G.sfx("buy"); popup(`Sold ${itemName(k)} for ${price} shells`, "good");
+    C.showGoods();
+  };
+
+  /** the animal pen: who lives in it. They stay inside, and walk about in there */
+  C.pen = (t) => {
+    open("Animal pen");
+    rows.append(el("p", "muted", "Whoever you put here stays inside and wanders about. Let them out to send them back to work."));
+    const row = (name, isIn, go) => { const r = el("div", "row"), b = el("button", `cozy small${isIn ? " ghost" : ""}`, isIn ? "Let out" : "Put in"); r.append(el("b", "", name)); b.onclick = () => { go(!isIn); G.sfx("place"); C.pen(t); }; r.append(b); rows.append(r); };
+    for (const d of G.dinos.list) row(`${d.data.icon} ${d.r.name || d.data.forms[d.r.stage]}`, d.r.pen === t.p.id, (on) => { d.r.pen = on ? t.p.id : 0; d.goal = null; d.task = null; if (on) { if (s.partner === d.r.uid) s.partner = 0; d.r.stay = true; d.pos.set(t.p.x + (Math.random() - 0.5) * 10, d.pos.y, t.p.z + (Math.random() - 0.5) * 10); } });
+    for (const a of G.animals || []) row(a.name, (s.penned ||= {})[a.key] === t.p.id, (on) => { if (on) { s.penned[a.key] = t.p.id; a.pos.set(t.p.x + (Math.random() - 0.5) * 10, a.pos.y, t.p.z + (Math.random() - 0.5) * 10); } else delete s.penned[a.key]; a.goal = null; });
+    void ANIMALS;
+  };
+
   /** the morning's trade: the bin pays out, and customers visit the stall */
   C.newDay = () => {
     let paid = 0, n = 0;
@@ -118,16 +156,17 @@ export function makeCraft(G) {
     s.bin = {};
     if (paid) { s.money += paid; popup(`Tilly paid ${paid} shells for ${n} item${n > 1 ? "s" : ""}`, "good"); }
     const st = s.stall;
-    if (st && G.build.of("stall").length) {
+    const rented = Object.keys(s.rented || {}).length;
+    if (st && (G.build.of("stall").length || rented)) {
       let sold = 0;
       for (const [k, o] of Object.entries(st.items)) {
-        const want = Math.round((1.5 + Math.random() * 4) * demand(s, "stall", kindOf(ITEMS[k])) / o.mark ** 2), c = Math.min(o.n, want);
+        const want = Math.round((1.5 + Math.random() * 4) * (1 + rented * 0.6) * demand(s, "stall", kindOf(ITEMS[k])) / o.mark ** 2), c = Math.min(o.n, want);
         if (c <= 0) continue;
         const take = Math.round(ITEMS[k].sell * o.mark) * c;
         sold += take; o.n -= c; st.sold[k] = (st.sold[k] || 0) + c;
         if (!o.n) delete st.items[k];
       }
-      if (sold) { s.money += sold; st.revenue += sold; popup(`Your stall sold ${sold} shells' worth`, "good"); }
+      if (sold) { s.money += sold; st.revenue += sold; popup(`Your stall sold ${sold} shells' worth`, "good"); C.showGoods(); }
     }
   };
   return C;

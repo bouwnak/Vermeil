@@ -323,8 +323,8 @@ body.playing .hub-waves { display: none; }
 }
 .pv-caption b { font-size: 26px; font-weight: 900; }
 .pv-caption span { opacity: .85; }
-.pv-turtle { background: radial-gradient(ellipse at 50% 45%, #a9e07a 0 16%, #f6e6bb 17% 19%, #53d6c6 20%, #2f9c8d 100%); }
-.pv-turtle::before { content: "🐢"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 100px; }
+.pv-turtle { background: #6cc4ee url("../turtle/loading.webp") center 30% / cover no-repeat; }
+.art-turtle { color: transparent; background: url("../turtle/loading.webp") 3% 8% / 330% no-repeat !important; }
 .pv-retro { background: #000; }
 .pv-collage { position: absolute; inset: -6%; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; transform: rotate(-4deg); }
 .pv-collage img { width: 100%; aspect-ratio: 4 / 3; height: auto; object-fit: cover; border-radius: 4px; animation: rise .5s ease both; }

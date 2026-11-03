@@ -11,6 +11,7 @@
 		{
 			"name":"Scene",
 			"nodes":[
+				0,
 				1
 			]
 		}
@@ -18,12 +19,9 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"SM_StylizedFarm_HandCart_02_Vehicle_Lowpoly_M_0"
+			"name":"body"
 		},
 		{
-			"children":[
-				0
-			],
 			"name":"SM_StylizedFarm_HandCart_02",
 			"scale":[
 				0.009999999776482582,
@@ -88,29 +86,29 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":3147,
+			"count":3201,
 			"max":[
-				-205.89846801757812,
-				109.81727600097656,
-				1560.8466796875
+				0.6581294536590576,
+				1.098172903060913,
+				1.6425418853759766
 			],
 			"min":[
-				-337.5243225097656,
+				-0.6581292152404785,
 				0,
-				1232.3382568359375
+				-1.642542839050293
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":3147,
+			"count":3201,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":3147,
+			"count":3201,
 			"type":"VEC2"
 		},
 		{
@@ -123,26 +121,26 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":37764,
+			"byteLength":38412,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":37764,
-			"byteOffset":37764,
+			"byteLength":38412,
+			"byteOffset":38412,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":25176,
-			"byteOffset":75528,
+			"byteLength":25608,
+			"byteOffset":76824,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":7728,
-			"byteOffset":100704,
+			"byteOffset":102432,
 			"target":34963
 		}
 	],
@@ -154,7 +152,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":108432,
+			"byteLength":110160,
 			"uri":"HandCart_02.bin"
 		}
 	]

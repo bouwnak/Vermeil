@@ -11,24 +11,20 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				1
+				0,
+				1,
+				2,
+				3,
+				4
 			]
 		}
 	],
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"SM_StylizedFarm_LawnMower_M_Vehicle_Lowpoly_M_0",
-			"translation":[
-				-6.103515625e-05,
-				0,
-				6.103515625e-05
-			]
+			"name":"body"
 		},
 		{
-			"children":[
-				0
-			],
 			"name":"SM_StylizedFarm_LawnMower_M",
 			"scale":[
 				0.009999999776482582,
@@ -39,6 +35,33 @@
 				6.929732322692871,
 				0,
 				-9.230477333068848
+			]
+		},
+		{
+			"mesh":1,
+			"name":"wheel_0",
+			"translation":[
+				-0.2374272346496582,
+				0.13556969165802002,
+				0.2073216438293457
+			]
+		},
+		{
+			"mesh":2,
+			"name":"wheel_1",
+			"translation":[
+				0.2374262809753418,
+				0.13556969165802002,
+				0.9998950958251953
+			]
+		},
+		{
+			"mesh":3,
+			"name":"wheel_2",
+			"translation":[
+				0.2374262809753418,
+				0.13556969165802002,
+				0.2073216438293457
 			]
 		}
 	],
@@ -74,6 +97,48 @@
 					"material":0
 				}
 			]
+		},
+		{
+			"name":"SM_StylizedFarm_LawnMower_M_Vehicle_Lowpoly_M_0.035",
+			"primitives":[
+				{
+					"attributes":{
+						"POSITION":4,
+						"NORMAL":5,
+						"TEXCOORD_0":6
+					},
+					"indices":7,
+					"material":0
+				}
+			]
+		},
+		{
+			"name":"SM_StylizedFarm_LawnMower_M_Vehicle_Lowpoly_M_0.052",
+			"primitives":[
+				{
+					"attributes":{
+						"POSITION":8,
+						"NORMAL":9,
+						"TEXCOORD_0":10
+					},
+					"indices":11,
+					"material":0
+				}
+			]
+		},
+		{
+			"name":"SM_StylizedFarm_LawnMower_M_Vehicle_Lowpoly_M_0.069",
+			"primitives":[
+				{
+					"attributes":{
+						"POSITION":12,
+						"NORMAL":13,
+						"TEXCOORD_0":14
+					},
+					"indices":15,
+					"material":0
+				}
+			]
 		}
 	],
 	"textures":[
@@ -93,61 +158,235 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":5289,
+			"count":5312,
 			"max":[
-				-646.5416259765625,
-				154.06903076171875,
-				1037.80322265625
+				0.46431589126586914,
+				1.540690541267395,
+				1.147557258605957
 			],
 			"min":[
-				-739.4049072265625,
+				-0.46431684494018555,
 				0,
-				808.2918701171875
+				-1.1475563049316406
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":5289,
+			"count":5312,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":5289,
+			"count":5312,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":6888,
+			"count":6807,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":4,
+			"componentType":5126,
+			"count":11,
+			"max":[
+				0,
+				0.12189710140228271,
+				0.10556459426879883
+			],
+			"min":[
+				0,
+				-0.12189709395170212,
+				-0.10556459426879883
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":5,
+			"componentType":5126,
+			"count":11,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":6,
+			"componentType":5126,
+			"count":11,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":7,
+			"componentType":5123,
+			"count":24,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":8,
+			"componentType":5126,
+			"count":11,
+			"max":[
+				0,
+				0.12189710140228271,
+				0.11373138427734375
+			],
+			"min":[
+				0,
+				-0.12189709395170212,
+				-0.11373138427734375
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":9,
+			"componentType":5126,
+			"count":11,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":10,
+			"componentType":5126,
+			"count":11,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":11,
+			"componentType":5123,
+			"count":24,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":12,
+			"componentType":5126,
+			"count":13,
+			"max":[
+				0,
+				0.12189710140228271,
+				0.12189912796020508
+			],
+			"min":[
+				0,
+				-0.12189709395170212,
+				-0.12189912796020508
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":13,
+			"componentType":5126,
+			"count":13,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":14,
+			"componentType":5126,
+			"count":13,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":15,
+			"componentType":5123,
+			"count":33,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":63468,
+			"byteLength":63744,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":63468,
-			"byteOffset":63468,
+			"byteLength":63744,
+			"byteOffset":63744,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":42312,
-			"byteOffset":126936,
+			"byteLength":42496,
+			"byteOffset":127488,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":13776,
-			"byteOffset":169248,
+			"byteLength":13614,
+			"byteOffset":169984,
+			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":132,
+			"byteOffset":183600,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":132,
+			"byteOffset":183732,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":88,
+			"byteOffset":183864,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":48,
+			"byteOffset":183952,
+			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":132,
+			"byteOffset":184000,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":132,
+			"byteOffset":184132,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":88,
+			"byteOffset":184264,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":48,
+			"byteOffset":184352,
+			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":156,
+			"byteOffset":184400,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":156,
+			"byteOffset":184556,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":104,
+			"byteOffset":184712,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":66,
+			"byteOffset":184816,
 			"target":34963
 		}
 	],
@@ -159,7 +398,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":183024,
+			"byteLength":184884,
 			"uri":"LawnMower_M.bin"
 		}
 	]

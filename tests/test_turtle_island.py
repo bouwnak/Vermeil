@@ -70,15 +70,15 @@ class Content(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(assets, rel)), rel)
 
     def test_every_crop_model_exists(self):
-        foods = {"FOOD": "conv_ultimate_food_pack", "GROWN": "conv_ultimate_nature_pack"}
-        found = re.findall(r"ripe: `\$\{(\w+)\}(\w+\.glb)`", DATA)
-        self.assertGreater(len(found), 5)
-        for pack, name in found:
-            self.assertTrue(os.path.exists(os.path.join(UI, "game", "assets", foods[pack], name)), name)
+        crops = re.findall(r'stages\("(\w+)"\)', DATA)
+        self.assertGreater(len(crops), 12)
+        for name in crops:
+            for tail in ("_1", "_2", "_3", "_4", "_Crop"):
+                self.assertTrue(os.path.exists(os.path.join(UI, "game", "assets", "conv_nature_crops_pack", f"{name}{tail}.glb")), name + tail)
 
     def test_only_the_chosen_packs_are_used(self):
         allowed = {"conv_ultimate_nature_pack", "conv_farm_buildings", "conv_farm_animals", "conv_simple_nature_pack", "ultimate_modular_men", "ultimate_modular_women",
-                   "stylized_nature_megakit", "conv_textured_stylized_trees", "conv_ultimate_food_pack", "conv_cute_fish_pack"}
+                   "stylized_nature_megakit", "conv_textured_stylized_trees", "conv_ultimate_food_pack", "conv_cute_fish_pack", "conv_nature_crops_pack"}
         packs = set(os.listdir(os.path.join(UI, "game", "assets")))
         folder = os.path.join(UI, "turtle")
         for name in os.listdir(folder):
@@ -115,6 +115,12 @@ class Content(unittest.TestCase):
             self.assertGreater(len(files), 15)
             for name in files:
                 self.assertTrue(os.path.exists(os.path.join(UI, "games", "asset_packs", packs[root], f"{name}.gltf")), name)
+
+    def test_every_rigged_dinosaur_has_its_jaw(self):
+        folder = os.path.join(UI, "games", "asset_packs", "dinosaurs")
+        for base in set(re.findall(r'"(Parasaurolophus|Triceratops|Velociraptor|Trex|Stegosaurus|Apatosaurus)"', DATA)):
+            with open(os.path.join(folder, f"{base}.glb"), "rb") as f:
+                self.assertIn(b'"Jaw"', f.read(60000), base)
 
     def test_every_line_has_three_forms(self):
         self.assertEqual(len(re.findall(r"forms: \[", DATA)), 10)

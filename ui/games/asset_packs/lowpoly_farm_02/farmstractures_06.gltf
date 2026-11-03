@@ -8,19 +8,24 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				0
+				0,
+				1
 			]
 		}
 	],
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"farmstractures_06",
+			"name":"blades",
 			"translation":[
-				-4.57763671875e-05,
-				1.637899398803711,
-				-0.36658668518066406
+				7.62939453125e-06,
+				1.8018125295639038,
+				-0.2828359603881836
 			]
+		},
+		{
+			"mesh":1,
+			"name":"body"
 		}
 	],
 	"materials":[
@@ -38,7 +43,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Plane.010",
+			"name":"Plane.1003",
 			"primitives":[
 				{
 					"attributes":{
@@ -47,6 +52,20 @@
 						"TEXCOORD_0":2
 					},
 					"indices":3,
+					"material":0
+				}
+			]
+		},
+		{
+			"name":"Plane.010",
+			"primitives":[
+				{
+					"attributes":{
+						"POSITION":4,
+						"NORMAL":5,
+						"TEXCOORD_0":6
+					},
+					"indices":7,
 					"material":0
 				}
 			]
@@ -69,61 +88,119 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":17632,
+			"count":1339,
 			"max":[
-				2.63739013671875,
-				1.773878812789917,
-				4.399441242218018
+				2.6373367309570312,
+				1.6099656820297241,
+				3.750019073486328
 			],
 			"min":[
-				-2.6372833251953125,
-				-1.637899398803711,
-				-3.6662683486938477
+				-2.6373367309570312,
+				-1.6099656820297241,
+				-3.750019073486328
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":17632,
+			"count":1339,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":17632,
+			"count":1339,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":24492,
+			"count":1872,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":4,
+			"componentType":5126,
+			"count":18213,
+			"max":[
+				2.6373443603515625,
+				3.411778211593628,
+				4.0328545570373535
+			],
+			"min":[
+				-2.6373291015625,
+				0,
+				-4.032855033874512
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":5,
+			"componentType":5126,
+			"count":18213,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":6,
+			"componentType":5126,
+			"count":18213,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":7,
+			"componentType":5123,
+			"count":22620,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":211584,
+			"byteLength":16068,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":211584,
-			"byteOffset":211584,
+			"byteLength":16068,
+			"byteOffset":16068,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":141056,
-			"byteOffset":423168,
+			"byteLength":10712,
+			"byteOffset":32136,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":48984,
-			"byteOffset":564224,
+			"byteLength":3744,
+			"byteOffset":42848,
+			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":218556,
+			"byteOffset":46592,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":218556,
+			"byteOffset":265148,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":145704,
+			"byteOffset":483704,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":45240,
+			"byteOffset":629408,
 			"target":34963
 		}
 	],
@@ -135,7 +212,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":613208,
+			"byteLength":674648,
 			"uri":"farmstractures_06.bin"
 		}
 	]

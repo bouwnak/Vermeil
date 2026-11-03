@@ -1050,7 +1050,9 @@ $("importFolder").addEventListener("click", () => importModel(true));
 $("deleteAnimated").addEventListener("click", async () => {
   if (!confirm("Delete every animated model? This can't be undone. Characters using one go back to the model it was made from.")) return;
   const r = await api.delete_animated_models();
+  const was = $("modelSelect").value;
   state = r.state; renderCharacters(); loadCharacter();
+  fillModelSelect(state.models.includes(was) ? was : "");       // the list loses them too
   if (editingId) openEditor(editingId);
   toast(r.deleted ? `Deleted ${r.deleted} animated model${r.deleted > 1 ? "s" : ""}.` : "There were no animated models.");
 });

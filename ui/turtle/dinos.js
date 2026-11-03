@@ -1,11 +1,13 @@
 // dinos.js - your dinosaurs. Friendship levels them, friendship and time evolve them through three forms, and each form changes what they can do:
 // on the farm (the work you assign, by priority) and out in the world (what they can carry you over, up or through).
 import * as THREE from "three";
-import { DINOS, DINO_ROOM, CATALOG, EVOLVE, ITEMS, LEVEL_XP, MAX_LEVEL, SKILLS, WILD, itemName } from "./data.js";
-import { makeDinoModel } from "./made.js";
-import { groundAt, nearest, pushOut, setGone } from "./world.js";
+import { rollLook, DINOS, DINO_ROOM, CATALOG, EVOLVE, ITEMS, LEVEL_XP, MAX_LEVEL, SKILLS, UNLOCK, UNLOCK_TEXT, WILD_TAME, itemName } from "./data.js";
+import { makeDinoBody } from "./dinomodel.js";
+import { groundAt, nearest, pushOut, setGone, shoreNear } from "./world.js";
 import { keyOf, ripe, spotOf } from "./farm.js";
 import { popup } from "./ui.js";
+import { dinoVoice } from "./audio.js";
+import { sandy, seaKind, seaSpot } from "./life.js";
 
 export const levelOf = (r) => Math.min(MAX_LEVEL, 1 + Math.floor(r.xp / LEVEL_XP));
 export const skillsOf = (r) => DINOS[r.species].skills[r.stage];
@@ -32,26 +34,39 @@ const stepTo = (o, tx, tz, speed, dt, stop = 0.4) => {
 };
 const PRIO = { high: 3, medium: 2, low: 1 };
 
-export function makeDinos(G) {
+/** [name, what it means for how it spends its time: how often it chats, digs, sniffs, naps] */
+export const PERSONALITY = [["Cheerful", { chat: 2, dig: 1, sniff: 1, nap: 0.5 }], ["Shy", { chat: 0.4, dig: 0.6, sniff: 1.4, nap: 1 }], ["Lazy", { chat: 0.6, dig: 0.4, sniff: 0.6, nap: 2.5 }],
+  ["Curious", { chat: 1, dig: 1.6, sniff: 2.4, nap: 0.5 }], ["Brave", { chat: 1.2, dig: 1, sniff: 1, nap: 0.6 }], ["Grumpy", { chat: 0.5, dig: 1.2, sniff: 0.8, nap: 1.4 }],
+  ["Playful", { chat: 1.8, dig: 1.4, sniff: 1, nap: 0.4 }], ["Gentle", { chat: 1, dig: 0.8, sniff: 1.2, nap: 1 }]];
+const habits = (r) => (PERSONALITY.find((p) => p[0] === r.personality) || PERSONALITY[0])[1];
+
+export async function makeDinos(G) {
   const D = { list: [], wild: [] }, s = G.s;
   let uid = s.dinos.reduce((n, r) => Math.max(n, r.uid), 0);
   const scene = G.scene, taken = new Set();
-  const spawn = (r) => {
-    const data = DINOS[r.species], c = makeDinoModel(data, r.stage, data.sizes[r.stage]);
+  const spawn = async (r) => {
+    const data = DINOS[r.species], c = await makeDinoBody(data, r.stage, data.sizes[r.stage], r.look);
     const d = { r, data, char: c, pos: new THREE.Vector3(r.pos[0], 0, r.pos[1]), heading: 2, wander: 0, task: null, stuck: 0, working: 0 };
+    d.sea = seaKind(data);
+    if (d.sea && !sandy(groundAt(G, d.pos.x, d.pos.z))) { const at = shoreNear(G, d.pos.x, d.pos.z, 300); if (at) { d.pos.x = at[0]; d.pos.z = at[1]; } }      // a sea creature lives on the beach and in the water
     d.pos.y = groundAt(G, d.pos.x, d.pos.z).y;
     d.can = (trait) => can(d.r, trait); d.has = (skill) => skillsOf(d.r).includes(skill);
+    c.addSaddle?.();                                             // yours: it wears your saddle
+    // every one is its own animal: a personality of its own, picked once, and a voice of its own pitch
+    r.personality ||= PERSONALITY[(r.uid * 7 + Math.floor(Math.random() * 100)) % PERSONALITY.length][0];
+    d.voice = 0.85 + ((r.uid * 37) % 30) / 100;
+    d.say = (mood) => dinoVoice(data.sizes[r.stage], mood, d.voice);
     scene.add(c.holder);
     return d;
   };
-  D.list = s.dinos.map(spawn);
+  D.list = await Promise.all(s.dinos.map(spawn));
   D.of = (uid2) => D.list.find((d) => d.r.uid === uid2);
   D.partner = () => D.of(s.partner);
-  D.add = (species, name) => {
-    const r = { uid: ++uid, species, name, xp: 0, stage: 0, born: s.day, pos: [G.player.pos.x + 2, G.player.pos.z + 2], jobs: {}, skill: {}, energy: 100, hunger: 100, fedDay: 0, petDay: 0, stay: false };
+  D.add = async (species, name, look = null) => {
+    const r = { uid: ++uid, species, name, xp: 0, stage: 0, born: s.day, pos: [G.player.pos.x + 2, G.player.pos.z + 2], jobs: {}, skill: {}, energy: 100, hunger: 100, fedDay: 0, petDay: 0, stay: false, look: look || rollLook(species) };      // it keeps the look it was born with
     s.dinos.push(r);
     (s.met ||= {});
-    const d = spawn(r);
+    const d = await spawn(r);
     D.list.push(d);
     return d;
   };
@@ -70,13 +85,13 @@ export function makeDinos(G) {
     G.paused = true; G.sfx("evolve");
     let n = 0;
     const flash = setInterval(() => { G.vfx.burst("glow", p.x, p.y + 1 + n * 0.3, p.z); d.char.holder.visible = n % 2 === 0; if (++n > 8) { clearInterval(flash); done(); } }, 170);
-    const done = () => {
+    const done = async () => {
       scene.remove(d.char.holder);
       d.r.stage++; d.told = false;
-      d.char = makeDinoModel(d.data, d.r.stage, d.data.sizes[d.r.stage]);
+      d.char = await makeDinoBody(d.data, d.r.stage, d.data.sizes[d.r.stage], d.r.look); d.char.addSaddle?.();
       scene.add(d.char.holder);
       G.paused = false;
-      G.sfx("roar"); G.vfx.burst("gold", p.x, p.y + 2, p.z, 2);
+      G.sfx("roar"); G.vfx.burst("gold", p.x, p.y + 2, p.z, 2); d.char.react("roar");
       popup(`${old} evolved into ${d.data.forms[d.r.stage]}!`, "good");
       (s.seenDino ||= {})[`${d.r.species}${d.r.stage}`] = true;
       G.moment("evolve");
@@ -86,6 +101,8 @@ export function makeDinos(G) {
     return true;
   };
 
+  /** the test button: straight to the next form, with no waiting */
+  D.levelNext = async () => { for (const d of D.list) { if (d.r.stage >= 2) continue; const n = EVOLVE[d.r.stage + 1]; d.r.xp = Math.max(d.r.xp, (n.level - 1) * LEVEL_XP); d.r.born = Math.min(d.r.born, s.day - n.days); scene.remove(d.char.holder); d.r.stage++; d.char = await makeDinoBody(d.data, d.r.stage, d.data.sizes[d.r.stage], d.r.look); d.char.addSaddle?.(); scene.add(d.char.holder); G.vfx.burst("glow", d.pos.x, d.pos.y + 1, d.pos.z); } G.sfx("evolve"); };
   const food = (d) => {
     const want = d.data.food, bag = Object.keys(s.inv);
     if (want === "fish") return bag.find((k) => ITEMS[k]?.fish);
@@ -98,52 +115,51 @@ export function makeDinos(G) {
     const k = food(d);
     if (!k) return popup(`${nameOf(d.r)} would like ${d.data.food === "fish" ? "a fish" : itemName(d.data.food)}`);
     if (d.r.fedDay === s.day) return popup(`${nameOf(d.r)} is full today`);
-    G.add(k, -1); d.r.fedDay = s.day; d.r.hunger = 100; d.r.energy = Math.min(100, d.r.energy + 25); s.flags.fed = true;
-    G.sfx("pick"); G.vfx.burst("heart", d.pos.x, d.pos.y + d.char.top, d.pos.z);
+    G.add(k, -1); d.r.fedDay = s.day; d.say("happy"); d.r.hunger = 100; d.r.energy = Math.min(100, d.r.energy + 25); s.flags.fed = true;
+    G.sfx("pick"); G.vfx.burst("heart", d.pos.x, d.pos.y + d.char.top, d.pos.z); d.char.react("eat"); G.player.act("use");
     D.friend(d, k === "feed" ? 6 : 14);
     popup(`${nameOf(d.r)} is delighted`, "good");
   };
-  D.pet = (d) => {
-    G.sfx(d.r.stage ? "grunt" : "chirp"); d.char.work(); G.vfx.burst("heart", d.pos.x, d.pos.y + d.char.top, d.pos.z);
-    if (d.r.petDay !== s.day) { d.r.petDay = s.day; D.friend(d, 5); popup(`${nameOf(d.r)} loves that`, "good"); }
+  // touching: each is its own moment, for you and for it. Friendship counts once a day each
+  const TOUCH = { pet: ["pet", "loves that"], chin: ["chin", "closes its eyes"], belly: ["belly", "rolls over, feet in the air"], play: ["play", "bounces around you"] };
+  D.touch = (d, kind) => {
+    const [act, line] = TOUCH[kind], r = d.r, y = d.pos.y + (kind === "belly" ? 0.8 : d.char.top * 0.8);
+    G.player.act(kind === "play" ? "wave" : "use");
+    d.char.react(act);
+    d.say("happy"); G.vfx.burst("heart", d.pos.x, y, d.pos.z, kind === "belly" ? 2 : 1);
+    if ((r.touched ||= {})[kind] !== s.day) { r.touched[kind] = s.day; D.friend(d, kind === "belly" ? 4 : 3); popup(`${nameOf(r)} ${line}`, "good"); }
   };
+  D.pet = (d) => D.touch(d, "pet");
   D.menu = (d) => {
     const r = d.r, name = nameOf(r), P = G.player, k = food(d);
     G.moment("dino");
     if (G.talking) return;
-    G.sfx(r.stage ? "grunt" : "chirp");
-    const opts = [["Pet", () => D.pet(d)], [k ? `Feed ${itemName(k)}` : "Feed (nothing it wants)", () => D.feed(d)]];
+    d.say("call");
+    const opts = [["Pet", () => D.touch(d, "pet")], ["Chin scratch", () => D.touch(d, "chin")], ["Belly rub", () => D.touch(d, "belly")], ["Play", () => D.touch(d, "play")], [k ? `Feed ${itemName(k)}` : "Feed (nothing it wants)", () => D.feed(d)]];
     if (readyToEvolve(s, r)) opts.unshift([`✨ Evolve into ${d.data.forms[r.stage + 1]}`, () => D.evolve(d)]);
     if (canRide(r)) opts.push(["Ride", () => G.setRide(d)]);
     opts.push([s.partner === r.uid ? "Stay and work here" : "Come with me", () => { if (s.partner === r.uid) { s.partner = 0; r.stay = true; popup(`${name} will stay here`); } else { s.partner = r.uid; r.stay = false; } }], ["Leave", null]);
-    G.talk.say(name, [`Level ${levelOf(r)} ${d.data.forms[r.stage]}. ${r.stage < 2 ? evolveNeeds(s, r) : "Fully grown"}.`], { choose: opts });
+    G.talkingTo = d;
+    G.talk.say(name, [`Level ${levelOf(r)} ${r.look ? `${r.look.tier} ${r.look.pattern.toLowerCase()} ` : ""}${d.data.forms[r.stage]}, ${r.personality.toLowerCase()} by nature. ${r.stage < 2 ? evolveNeeds(s, r) : "Fully grown"}.`], { choose: opts });
   };
 
-  // wild ones: they wander near where they live, and come round to you with a little food
-  D.spawnWild = (L) => {
-    for (const w of WILD) {
-      if (w.land !== L.cfg.id || s.dinos.some((r) => r.species === w.species)) continue;
-      const data = DINOS[w.species], c = makeDinoModel(data, 0, data.sizes[0]);
-      const [x, z] = L.world(w.x, w.z), a = { w, L, data, char: c, pos: new THREE.Vector3(x, 0, z), heading: 1, wander: 0, trust: s.tamed?.[w.species] || 0, home: [w.x, w.z] };
-      a.pos.y = groundAt(G, x, z).y;
-      scene.add(c.holder);
-      D.wild.push(a);
-    }
-  };
-  D.offer = (a) => {
-    const fake = { data: a.data }, k = food(fake);
-    if (a.w.after && !s.flags[a.w.after]) return popup("It watches you, and keeps its distance");
-    if (!k) return popup(`It sniffs at you. Maybe it would like ${a.data.food === "fish" ? "a fish" : itemName(a.data.food)}`);
+  // wild ones roam every turtle. Once their kind is unlocked, a little food brings one round, and it goes straight to your own island
+  D.offer = async (w) => {
+    const need = UNLOCK[w.species];
+    if (need && !s.flags[need]) return popup(`It watches you warily. It might trust you ${UNLOCK_TEXT[need]}`);
+    const k = food({ data: w.data });
+    if (!k) return popup(`It sniffs at you. Maybe it would like ${w.data.food === "fish" ? "a fish" : itemName(w.data.food)}`);
     if (s.dinos.length >= roomFor(s)) return popup("No room for another. Build a barn first");
-    G.add(k, -1); a.trust++; (s.tamed ||= {})[a.w.species] = a.trust;
-    G.sfx("chirp"); G.vfx.burst("heart", a.pos.x, a.pos.y + a.char.top, a.pos.z);
-    if (a.trust < a.w.tames) return popup(`It's warming to you (${a.trust} of ${a.w.tames})`);
-    scene.remove(a.char.holder);
-    D.wild.splice(D.wild.indexOf(a), 1);
-    const d = D.add(a.w.species, "");
-    d.pos.copy(a.pos); d.r.stay = true;
-    G.sfx("fanfare"); G.vfx.burst("gold", a.pos.x, a.pos.y + 1.5, a.pos.z);
-    popup(`${a.data.forms[0]} joined your farm!`, "good");
+    G.add(k, -1); w.trust++;
+    G.sfx("chirp"); G.vfx.burst("heart", w.pos.x, w.pos.y + w.char.top, w.pos.z); w.char.react("eat"); G.player.act("use");
+    if (w.trust < WILD_TAME) return popup(`It's warming to you (${w.trust} of ${WILD_TAME})`);
+    scene.remove(w.char.holder);
+    G.life.herd.splice(G.life.herd.indexOf(w), 1);
+    G.vfx.burst("glow", w.pos.x, w.pos.y + 1, w.pos.z);
+    const d = await D.add(w.species, "", w.look), barn = (G.build.of("barn")[0] || G.build.of("house")[0])?.p || { x: 40, z: 0 }, a = Math.random() * 6.3, x = barn.x + Math.cos(a) * 16, z = barn.z + Math.sin(a) * 16;
+    d.r.stage = 0; d.r.stay = true; d.pos.set(x, groundAt(G, x, z).y, z); d.r.pos = [x, z];                // tamed: it's on your turtle now
+    G.sfx("fanfare");
+    popup(`${w.data.forms[0]} joined you, and has gone to your island!`, "good");
     G.moment("new_dino");
   };
 
@@ -184,21 +200,43 @@ export function makeDinos(G) {
     return best;
   };
 
-  const place = (P, k = 3) => { for (let i = 0; i < 8; i++) { const a = i * 0.8 + 3, x = P.pos.x + Math.cos(a) * k, z = P.pos.z + Math.sin(a) * k; if (groundAt(G, x, z).on !== "sea") return [x, z]; } return null; };
+  /** nothing to do: a dinosaur wanders, goes down to the sea for a drink, or rests. One given a pen stays in it */
+  const idle = (d, t) => {
+    const pen = d.r.pen && G.build.things.get(d.r.pen), roll = Math.random();
+    d.then = null; d.goalBy = t + 18;
+    if (pen) { d.goal = [pen.p.x + (Math.random() - 0.5) * 13, pen.p.z + (Math.random() - 0.5) * 13]; return; }
+    if (d.r.pen) d.r.pen = 0;
+    if (d.sea) { d.goal = seaSpot(G, d.pos.x, d.pos.z, 30); if (!d.goal) d.wander = t + 3; return; }
+    // its own habits, by its nature: a dig for something buried, a long sniff along the ground, a nap, or just a chatter to itself
+    const h = habits(d.r), pick = Math.random() * 6;
+    if (pick < h.dig * 0.5) { d.wander = t + 3.2; d.char.react("eat"); d.say("dig"); for (let i = 0; i < 6; i++) setTimeout(() => G.vfx.burst("soil", d.pos.x + Math.sin(d.heading) * d.char.seat * 0.6, d.pos.y + 0.2, d.pos.z + Math.cos(d.heading) * d.char.seat * 0.6, 0.5), i * 420); return; }
+    if (pick < (h.dig + h.sniff) * 0.5) { d.wander = t + 2.5; d.char.react("sniff"); d.say("sniff"); return; }
+    if (pick < (h.dig + h.sniff + h.nap) * 0.5) { d.wander = t + 6; d.say("yawn"); G.vfx.burst("zzz", d.pos.x, d.pos.y + d.char.top, d.pos.z); return; }
+    if (pick < (h.dig + h.sniff + h.nap + h.chat) * 0.5) d.say(Math.random() < 0.5 ? "happy" : "call");
+    if (roll < 0.24) { const sea = shoreNear(G, d.pos.x, d.pos.z); if (sea) { d.goal = sea; d.then = "drink"; d.faces = sea[2]; d.goalBy = t + 40; return; } }
+    if (roll < 0.82) {                                         // never far from home for long: each stroll leans back toward the farm
+      const barn = (G.build.of("barn")[0] || G.build.of("house")[0])?.p || { x: 40, z: 0 }, off = Math.hypot(d.pos.x - barn.x, d.pos.z - barn.z), a = off > 60 ? Math.atan2(barn.z - d.pos.z, barn.x - d.pos.x) + (Math.random() - 0.5) : Math.random() * 6.3, k = 7 + Math.random() * 20;
+      d.goal = [d.pos.x + Math.cos(a) * k, d.pos.z + Math.sin(a) * k]; return;
+    }
+    d.wander = t + 3 + Math.random() * 6;
+  };
+  const place = (P, k = 3) => { for (let i = 0; i < 8; i++) { const a = i * 0.8 + 3, x = P.pos.x + Math.cos(a) * k, z = P.pos.z + Math.sin(a) * k; const g = groundAt(G, x, z); if (P.sea ? sandy(g) : g.on !== "sea") return [x, z]; } return null; };
   D.tick = (dt, t) => {
     const P = G.player, hour = s.minute / 60, night = hour > 21 || hour < 5.5;
     for (const d of D.list) {
       const r = d.r, rode = P.riding === d, follow = s.partner === r.uid && !rode, c = d.char;
-      if (rode) { d.pos.copy(P.pos); d.heading = P.heading; c.move(dt, t, P.movingNow, true, P.mode); c.holder.position.copy(d.pos); c.holder.rotation.y = d.heading; continue; }
+      if (rode) { d.pos.copy(P.pos); d.heading = P.heading; c.lookAt = null; c.move(dt, t, P.movingNow, true, P.mode); c.holder.position.copy(d.pos); c.holder.rotation.y = d.heading; c.holder.updateMatrixWorld(true); c.reinsTo?.(P.hands); continue; }
       c.holder.visible = !(P.sailing && follow);
       if (P.sailing && follow) continue;
       if (P.pos.distanceTo(d.pos) > 260 && !follow) { c.holder.visible = false; continue; }             // far off: no need to walk about
       c.holder.visible = true;
+      c.lookAt = P.pos.distanceTo(d.pos) < 12 ? P.pos : null;
+      if (c.held?.() || G.talkingTo === d) { if (G.talkingTo === d) { let a = Math.atan2(P.pos.x - d.pos.x, P.pos.z - d.pos.z) - d.heading; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; d.heading += a * Math.min(1, dt * 5); } c.move(dt, t, false, false, ""); c.holder.position.copy(d.pos); c.holder.rotation.y = d.heading; c.holder.updateMatrixWorld(true); c.reinsTo?.(null); continue; }       // it stays put while you're with it
       let moving = false;
       const from = [d.pos.x, d.pos.z];
       if (follow) {
         const dist = d.pos.distanceTo(P.pos);
-        if (dist > 40 || (dist > 14 && d.stuck > 2)) { const at = place(P); if (at) { d.pos.x = at[0]; d.pos.z = at[1]; d.stuck = 0; } }
+        if (dist > 40 || (dist > 14 && d.stuck > 2)) { const at = place(d.sea ? { pos: P.pos, sea: true } : P); if (at) { d.pos.x = at[0]; d.pos.z = at[1]; d.stuck = 0; } }
         else moving = stepTo(d, P.pos.x, P.pos.z, dist > 14 ? r.stage ? 11 : 9 : 4.5, dt, 3 + r.stage);
       } else if (night) {
         if (t > d.wander) { d.wander = t + 4; G.vfx.burst("zzz", d.pos.x, d.pos.y + c.top, d.pos.z); }
@@ -218,16 +256,23 @@ export function makeDinos(G) {
             d.task = null; d.working = 0; d.wander = t + 0.6;
           }
         } else if (t > (d.gaveUp || 1e12)) { taken.delete(d.task.key); d.task = null; }
+      } else if (d.goal) {
+        moving = stepTo(d, d.goal[0], d.goal[1], 2.4 + r.stage * 0.5, dt, 0.8);
+        if (!moving || t > d.goalBy) {
+          if (!moving && d.then === "drink") { d.heading = d.faces; c.drink?.(5); d.wander = t + 5.2; }
+          else d.wander = t + 0.8 + Math.random() * 2;
+          d.goal = null; d.then = null;
+        }
       } else if (t > d.wander) {
         d.wander = t + 1.2 + Math.random();
         const job = choose(d);
         if (job) { d.task = job; taken.add(job.key); d.gaveUp = t + 40; d.goal = null; }
-        else if (Math.random() < 0.4) d.goal = [d.pos.x + (Math.random() - 0.5) * 10, d.pos.z + (Math.random() - 0.5) * 10];
-      } else if (d.goal) moving = stepTo(d, d.goal[0], d.goal[1], 2, dt);
+        else idle(d, t);
+      }
       pushOut(G, d.pos, 0.7 + r.stage * 0.2);
       const g = groundAt(G, d.pos.x, d.pos.z);
       const swims = can(r, "swim"), rises = (g.y - groundAt(G, from[0], from[1]).y) / Math.max(0.001, Math.hypot(d.pos.x - from[0], d.pos.z - from[1]));
-      if ((g.on === "sea" && !swims) || (rises > 1.2 && !can(r, "climb"))) { d.pos.x = from[0]; d.pos.z = from[1]; d.stuck += dt; d.goal = null; if (d.task && d.stuck > 3) { taken.delete(d.task.key); d.task = null; d.stuck = 0; } }
+      if ((g.on === "sea" && !swims) || (d.sea && !sandy(g)) || (rises > 1.2 && !can(r, "climb") && g.on !== "sea")) { d.pos.x = from[0]; d.pos.z = from[1]; d.stuck += dt; d.goal = null; d.then = null; if (d.task && d.stuck > 3) { taken.delete(d.task.key); d.task = null; d.stuck = 0; } }
       else if (moving) d.stuck = 0;
       const now = groundAt(G, d.pos.x, d.pos.z);
       d.pos.y = THREE.MathUtils.lerp(d.pos.y, now.on === "sea" ? 0 : now.y, Math.min(1, dt * 8));
@@ -235,16 +280,7 @@ export function makeDinos(G) {
       c.move(dt, t, moving, false, now.on === "sea" ? "swim" : "");
       c.holder.position.copy(d.pos);
       c.holder.rotation.y = d.heading;
-    }
-    for (const a of D.wild) {
-      const near = a.L.dist(P.pos.x, P.pos.z) < a.L.cfg.a + 200;
-      a.char.holder.visible = near;
-      if (!near) continue;
-      if (t > a.wander) { a.wander = t + 3 + Math.random() * 5; const [x, z] = a.L.world(a.home[0] + (Math.random() - 0.5) * 10, a.home[1] + (Math.random() - 0.5) * 10); a.goal = [x, z]; }
-      const moving = a.goal ? stepTo(a, a.goal[0], a.goal[1], 1.6, dt) : false;
-      a.pos.y = groundAt(G, a.pos.x, a.pos.z).y;
-      a.char.move(dt, t, moving, false);
-      a.char.holder.position.copy(a.pos); a.char.holder.rotation.y = a.heading;
+      if (c.reinsTo && P.pos.distanceTo(d.pos) < 60) { c.holder.updateMatrixWorld(true); c.reinsTo(null); }        // reins looped over the saddle horn
     }
   };
   /** the dawn of a new day */

@@ -4,20 +4,27 @@ import { BRIDGE, COMPANION, CROPS, DINOS, FISH, ISLANDS, ITEMS, NPCS, SECONDS_PE
 import { SHORE, buildWorld, groundAt, isWet, nearest, pickWeather, regrow, seasonOf, setGone, tickWorld } from "./world.js";
 import { KEYS, makeInput, makePlayer, tickPlayer } from "./player.js";
 import { keyOf, makeFarm, ripe, spotOf } from "./farm.js";
-import { makeAnimals, makeCompanion, makeCourier, makePeople, makeSchool, makeTackle } from "./creatures.js";
-import { canRide, makeDinos } from "./dinos.js";
+import { makeAnimals, makeChickens, makeCompanion, makeCourier, makePeople, makeSchool, makeTackle } from "./creatures.js";
+import { canRide, makeDinos, skillsOf } from "./dinos.js";
+import { makeLife } from "./life.js";
+import { makeVehicles } from "./vehicles.js";
 import { makeBook, makeCreator, makeHud, makeShop, makeTalk, popup } from "./ui.js";
 import { missing } from "./assets.js";
-import { play, setLevels, setNight, setScene, startAudio } from "./audio.js";
+import { loadingSong, play, setLevels, setNight, setScene, startAudio } from "./audio.js";
 import { makeVfx } from "./vfx.js";
 import { makeBridge } from "./bridge.js";
 import { makeBuild } from "./build.js";
 import { makeCraft } from "./craft.js";
 import { makeSail } from "./sail.js";
 import { makeLore } from "./quests.js";
+import { runShowcase } from "./showcase.js";
+import { makeWater } from "./water.js";
+import { makeBiomes } from "./biomes.js";
+import { makeFell } from "./fell.js";
+import { makeWeather } from "./weather.js";
 
 const $ = (id) => document.getElementById(id);
-const fresh = () => ({ version: 2, name: "", body: "male", skin: "Farmer", day: 1, minute: 6.5 * 60, money: 120, weather: "sunny", pos: [18, 2], rod: 1, tools: {},
+export const fresh = () => ({ version: 2, name: "", body: "male", skin: "Farmer", day: 1, minute: 6.5 * 60, money: 120, weather: "sunny", pos: [18, 2], rod: 1, tools: {},
   inv: { carrot_seed: 8, lettuce_seed: 4 }, plots: {}, flags: {}, said: {}, seen: {}, fish: {}, met: {}, seenIsles: {}, opts: {}, bin: {}, cut: {}, turtles: {}, machines: {}, carved: {}, found: {}, orders: {},
   dinos: [{ uid: 1, species: "sprig", name: "Sprig", xp: 0, stage: 0, born: 1, pos: [12, 8], jobs: {}, skill: {}, energy: 100, hunger: 100, fedDay: 0, petDay: 0, stay: false }], partner: 1 });
 /** an older save still works: its dinosaur comes along, the rest arrives */
@@ -63,7 +70,9 @@ G.nearSolid = (x, z, pad) => !!nearest(G, x, z, pad, (r) => r.r && r.L.cfg.id ==
 /** what she says at a moment of the game. Rare ones wait their turn; big ones only ever come once. */
 G.moment = (key) => {
   const m = COMPANION.moments[key], s = G.s;
-  if (!m || G.talking || G.cinema || G.building) return;
+  if (!m || G.talking || G.cinema || G.building || G.show) return;
+  const v = G.companion;                                  // she only speaks when she's beside you: nobody talks to you from across the island
+  if (v && !G.player.sailing && (!v.char.holder.visible || v.pos.distanceTo(G.player.pos) > 9)) return;      // (in the boat she's sitting with you)
   const t = performance.now() / 1000;
   if (m.once && s.said[key]) return;
   if (m.cool && G.lastSaid?.[key] && t - G.lastSaid[key] < m.cool) return;
@@ -93,7 +102,7 @@ G.reap = (k, plot, quiet) => {
   if (id === "heartseed") s.flags.bloomed = true;
   G.vfx.burst(lucky ? "gold" : "leaf", x, y + 0.6, z); G.vfx.item(`+${amount} ${ITEMS[got].icon}`, x, y + 1.4, z);
   if (lucky) { play("rare"); popup(`A rare golden ${c.name}!`, "good"); G.moment("rare"); } else play("pick");
-  if (c.regrow) { plot.age = c.days - c.regrow; } else { plot.crop = null; plot.age = 0; plot.fert = false; }
+  if (c.regrow) { plot.age = c.days - c.regrow; plot.cut = true; } else { plot.crop = null; plot.age = 0; plot.fert = false; plot.cut = false; }
   G.farm.draw();
   if (!quiet) { popup(`+${amount} ${ITEMS[got].name}`, "good"); G.moment(id === "heartseed" ? "rare" : "first_harvest"); if (s.flags.reaped % 40 === 0) G.moment("big_harvest"); }
   return true;
@@ -106,7 +115,7 @@ function useTool() {
   if (tool === "axe") return hew("tree");
   if (tool === "pick") return hew("rock");
   const t = F.target(), k = keyOf(t.x, t.z), plot = s.plots[k];
-  if (tool === "hand") { if (ripe(plot || {})) { P.act("use", () => G.reap(k, plot)); } else if (plot?.crop) { const c = CROPS[plot.crop], n = c.days - plot.age; popup(`${c.name}: ${n} more day${n > 1 ? "s" : ""}${plot.wet ? "" : ", and it needs water"}`); } return; }
+  if (tool === "hand") { if (ripe(plot || {})) { P.act("use", () => G.reap(k, plot), 0.4, "kneel"); } else if (plot?.crop) { const c = CROPS[plot.crop], n = c.days - plot.age; popup(`${c.name}: ${n} more day${n > 1 ? "s" : ""}${plot.wet ? "" : ", and it needs water"}`); } return; }
   if (tool === "hoe") {
     const cells = F.reach("hoe").filter((c) => { const p = s.plots[keyOf(c.x, c.z)]; return p ? p.weed : F.canTill(c.x, c.z); });
     if (!cells.length) { if (!plot) { popup(F.why(t.x, t.z) || "Nothing to dig"); play("deny"); } return; }
@@ -115,22 +124,28 @@ function useTool() {
       for (const c of cells) {
         const q = keyOf(c.x, c.z);
         if (s.plots[q]) s.plots[q].weed = false; else s.plots[q] = { crop: null, age: 0, wet: isWet(s.weather) };
+        const weed = nearest(G, c.x, c.z, 1.3, (r) => r.debris && r.node === "forage");          // a wild weed where you dig comes up with the soil
+        if (weed) { setGone(G, weed, true); G.add(weed.item, 1); }
         G.vfx.burst("soil", c.x, spotY(c.x, c.z) + 0.2, c.z);
       }
       play("dig"); F.draw(); G.moment("first_till");
     });
   } else if (tool === "can") {
-    const cells = F.reach("can").filter((c) => { const p = s.plots[keyOf(c.x, c.z)]; return p && !p.wet; });
+    const ahead = P.pos.clone().addScaledVector(P.front, 2.5);
+    if (groundAt(G, ahead.x, ahead.z).on === "sea" || nearest(G, ahead.x, ahead.z, 2, (r) => r.pond)) { if (G.water.fillFree()) P.act("use", null, 0.3, "pour"); return; }     // dipped in the sea or a pond
+    let cells = F.reach("can").filter((c) => { const p = s.plots[keyOf(c.x, c.z)]; return p && !p.wet; });
     if (!cells.length) return;
+    if (s.can <= 0) { popup("The watering can is empty. Fill it at the water barrel by the tower"); play("deny"); return; }
+    cells = cells.slice(0, s.can); s.can -= cells.length;                 // a can holds so much: each plot takes one
     spend(0.4 * cells.length);
-    P.act("use", () => { for (const c of cells) { s.plots[keyOf(c.x, c.z)].wet = true; G.vfx.burst("water", c.x, spotY(c.x, c.z) + 0.8, c.z); } play("water"); F.draw(); });
+    P.act("use", () => { for (const c of cells) { s.plots[keyOf(c.x, c.z)].wet = true; G.vfx.burst("water", c.x, spotY(c.x, c.z) + 0.8, c.z); } play("water"); F.draw(); }, 0.34, "pour");
   } else if (tool === "seeds") {
     const seed = G.seedChoice();
     if (!plot) return popup("Turn the soil first");
     if (plot.crop) return;
     if (!seed) return popup("No seeds left");
     if (s.inv.fertilizer > 0 && !plot.fert && G.fertNext) { G.add("fertilizer", -1); plot.fert = true; }
-    P.act("use", () => { if (G.plant(k, plot, seed)) { play("plant"); G.vfx.burst("soil", t.x, spotY(t.x, t.z) + 0.2, t.z); G.vfx.burst("spark", t.x, spotY(t.x, t.z) + 0.4, t.z, 0.4); G.vfx.item(`-1 ${ITEMS[seed].icon}`, t.x, spotY(t.x, t.z) + 1, t.z); } });
+    P.act("use", () => { if (G.plant(k, plot, seed)) { play("plant"); G.vfx.burst("soil", t.x, spotY(t.x, t.z) + 0.2, t.z); G.vfx.burst("spark", t.x, spotY(t.x, t.z) + 0.4, t.z, 0.4); G.vfx.item(`-1 ${ITEMS[seed].icon}`, t.x, spotY(t.x, t.z) + 1, t.z); } }, 0.4, "kneel");
   }
 }
 
@@ -139,20 +154,19 @@ function hew(node) {
   const P = G.player, s = G.s, tool = G.tool.id, at = P.pos.clone().addScaledVector(P.front, 1.4);
   const gate = nearest(G, at.x, at.z, 3, (r) => r.gate);
   if (gate && tool === "axe" && gate.gate.needs === "chop") return P.act("swing", () => G.lore.tryGate(gate));
-  const rec = nearest(G, at.x, at.z, 1.7, (r) => r.node === node);
+  const rec = nearest(G, at.x, at.z, 1.7, (r) => r.node === node && !r.falling);
   P.act("swing", () => {
     if (!rec) return play("deny");
     const [x, z] = rec.L.world(rec.x, rec.z), y = groundAt(G, x, z).y, hits = TOOL_UP[tool].hits[s.tools?.[tool] || 0];
     rec.hit = (rec.hit || 0) + 1; spend(0.8);
-    play(node === "tree" ? "chop" : "tink");
-    G.vfx.burst(node === "tree" ? "wood" : "stone", x, y + 1.2, z, 0.6);
+    play(node === "tree" ? "woodhit" : "stonehit");
+    G.fell.hit(rec, P.pos);                                   // it takes the blow: a tree sways, a rock cracks a little more
     if (rec.hit < hits) return;
-    rec.hit = 0;
-    const item = node === "tree" ? "wood" : rec.item, n = node === "tree" ? 3 : 2;
-    setGone(G, rec, true); G.add(item, n);
-    play(node === "tree" ? "fall" : "smash");
-    G.vfx.burst(node === "tree" ? "leaf" : "stone", x, y + (node === "tree" ? 3 : 0.8), z, 2);
-    G.vfx.item(`+${n} ${ITEMS[item].icon}`, x, y + 2, z);
+    rec.hit = 0; rec.falling = true;
+    const item = node === "tree" ? "wood" : rec.item, n = node === "tree" ? (/stump|log/.test(rec.key) ? 2 : 3) : 2, tree = node === "tree" && !/stump|log/.test(rec.key);
+    play(tree ? "woodfall" : node === "tree" ? "woodsplit" : "stonebreak");
+    // only once it's down and gone in a puff of dust is it yours
+    G.fell.finish(rec, P.pos, () => { rec.falling = false; setGone(G, rec, true); G.add(item, n); play("pick"); G.vfx.item(`+${n} ${ITEMS[item].icon}`, x, y + 2, z); });
   });
 }
 
@@ -213,6 +227,8 @@ function endFishing() { fishing.on = false; fishing.phase = ""; $("fishBar").hid
 // ---------------- E: whatever is nearest ----------------
 const USE = {
   bed: (t) => ["Sleep until morning", sleep], bin: () => ["Open the shipping bin", G.craft.bin], craft: () => ["Use the workbench", G.craft.bench], stall: () => ["Set up your stall", G.craft.stall], machine: (t) => [`Use the ${itemName(t.p.type) === t.p.type ? "machine" : ""}`, () => G.craft.machine(t)],
+  pen: (t) => ["Open the animal pen", () => G.craft.pen(t)],
+  barrel: (t) => [`Fill the watering can (barrel ${Math.round(G.water.at(t).level / G.water.CAP * 100)}% full)`, () => G.water.fillCan(t)],
   coop: () => (G.s.eggDay === G.s.day ? null : ["Collect eggs", () => { G.s.eggDay = G.s.day; G.add("egg", 2); play("pick"); popup("+2 Eggs", "good"); }]), trough: () => null,
 };
 function nearestThing() {
@@ -223,29 +239,76 @@ function nearestThing() {
     for (const q of G.lore.sea) if (!q.done() && near(q, 12)) list.push([q.label, q.use]);
     return list[0] || null;
   }
+  if (P.riding?.vehicle) return [`Get out of the ${P.riding.label}`, () => G.setRide(null)];       // at the wheel, E is for getting out
   const B = G.world.bridge;
   if (!s.flags.bridgeFixed && near({ x: B.winch[0], z: B.winch[1] }, 6)) list.push(["Look at the winch", winch]);
   if (near({ x: G.sail.holder.position.x, z: G.sail.holder.position.z }, 8)) list.push(s.flags.boat ? ["Board your boat", G.sail.board] : ["Look at the old boat", G.sail.mend]);
   for (const n of G.people || []) if (n.here?.() !== false && near(n.world(), 3.4)) list.push([`Talk to ${n.data.name}`, () => talkTo(n)]);
   if (G.courier?.char.holder.visible && near(G.courier.pos, 3)) list.push(["Talk to Pip", () => talkTo(G.courier)]);
+  // an animal in your arms or on a lead goes down wherever you are; it makes its home there (in a pen, if you're in one)
+  const held = (G.animals || []).find((a) => a.held);
+  if (held) return [held.small ? `Put down the ${held.name.toLowerCase()}` : `Let the ${held.name.toLowerCase()} go here`, () => {
+    held.held = false;
+    const at = P.pos.clone().addScaledVector(P.front, held.small ? 1.2 : 0); if (!held.small) at.copy(held.pos);
+    held.pos.set(at.x, groundAt(G, at.x, at.z).y, at.z); held.home = [at.x, at.z]; (s.animalHome ||= {})[held.key] = [at.x, at.z];
+    const pen = G.build.of("pen").find((p) => Math.abs(p.p.x - at.x) < 9 && Math.abs(p.p.z - at.z) < 9);
+    if (pen) (s.penned ||= {})[held.key] = pen.p.id; else delete s.penned?.[held.key];
+    play("place"); G.vfx.burst("heart", at.x, at.y + 1.4, at.z, 0.5);
+  }];
+  // (milk or wool first, if it's ready)
+  if (!P.riding) for (const a of G.animals || []) if (near(a.pos, 2.4) && !(a.gives && (s.fedAnimal ||= {})[a.name + a.home[0]] !== s.day)) { list.push([a.small ? `Pick up the ${a.name.toLowerCase()}` : `Lead the ${a.name.toLowerCase()}`, () => { a.held = true; a.goal = null; play("pick"); }]); break; }
   for (const a of G.animals || []) if (a.gives && near(a.pos, 2.6) && (s.fedAnimal ||= {})[a.name + a.home[0]] !== s.day) list.push([`Pet the ${a.name.toLowerCase()}`, () => { s.fedAnimal[a.name + a.home[0]] = s.day; G.add(a.gives, 1); play("milk"); G.vfx.burst("heart", a.pos.x, a.pos.y + 1.5, a.pos.z, 0.6); popup(`+1 ${itemName(a.gives)}`, "good"); }]);
   if (G.dinos) {
     for (const d of G.dinos.list) if (P.riding !== d && d.char.holder.visible && near(d.pos, 3 + d.char.seat * 0.6)) { list.push([`${d.r.name || d.data.forms[d.r.stage]}`, () => G.dinos.menu(d)]); break; }
-    for (const a of G.dinos.wild) if (near(a.pos, 4.6)) { const k = G.dinos.food(a); list.push([k ? `Offer ${itemName(k)} to the wild ${a.data.forms[0]}` : `A wild ${a.data.forms[0]}`, () => G.dinos.offer(a)]); }
+    for (const w of G.life.herd) if (w.char.holder.visible && near(w.pos, 3 + w.char.seat * 0.7)) { const k = G.dinos.food(w); const what = `${w.look ? `${w.look.tier.toLowerCase()} ${w.look.pattern.toLowerCase()} ` : ""}${w.data.forms[w.stage]}`; list.push([k ? `Offer ${itemName(k)} to the wild ${what}` : `A wild ${what}`, () => G.dinos.offer(w)]); break; }
   }
-  if (G.companion && near(G.companion.pos, 3)) list.push(["Talk to Vermeil", () => { G.companion.char.once?.("wave"); G.talkingTo = "vermeil"; G.talk.say(COMPANION.name, [COMPANION.idle[Math.floor(Math.random() * COMPANION.idle.length)]]); }]);
+  // she walks at your side, so talking to her comes after whatever you've walked up to (a barrel, a stall, a crop)
+  const chat = G.companion && near(G.companion.pos, 3) && [`Talk to ${COMPANION.name}`, () => {
+    G.companion.char.once?.("wave"); G.talkingTo = "vermeil";
+    const farm = G.s.helper === "farm";
+    G.talk.say(COMPANION.name, [COMPANION.idle[Math.floor(Math.random() * COMPANION.idle.length)]], { choose: [[farm ? "Come with me" : "Work on the farm", () => { G.s.helper = farm ? "follow" : "farm"; popup(farm ? `${COMPANION.name} is coming with you` : `${COMPANION.name} will look after the farm`, "good"); }], ["Bye", null]] });
+  }];
   const used = nearest(G, P.pos.x, P.pos.z, 3.2, (r) => r.use);
   if (used) { const u = used.use(); if (u) list.push(u); }
-  const forage = nearest(G, P.pos.x + P.front.x, P.pos.z + P.front.z, 1.8, (r) => r.node === "forage");
-  if (forage) list.push([`Pick ${itemName(forage.item)}`, () => P.act("use", () => { setGone(G, forage, true); G.add(forage.item, 1); play("pick"); const [x, z] = forage.L.world(forage.x, forage.z); const y = groundAt(G, x, z).y; G.vfx.burst("leaf", x, y + 0.6, z, 0.6); G.vfx.item(`+1 ${ITEMS[forage.item].icon}`, x, y + 1.2, z); })]);
+  const forage = nearest(G, P.pos.x + P.front.x, P.pos.z + P.front.z, 1.8, (r) => r.node === "forage" && !r.falling);
+  // picking takes a while: you kneel, take hold and tug for two seconds while it rustles and gives, then it's yours
+  if (forage) list.push([`Pick ${itemName(forage.item)}`, () => {
+    forage.falling = true; play("rustle");
+    const [x, z] = forage.L.world(forage.x, forage.z), y = groundAt(G, x, z).y;
+    const tug = setInterval(() => G.vfx.burst("leaf", x, y + 0.4, z, 0.25), 350);
+    P.act("use", null, 0, "kneel", 2);
+    G.fell.pull(forage, 1.9, () => { clearInterval(tug); forage.falling = false; setGone(G, forage, true); G.add(forage.item, 1); play("pick"); G.vfx.burst("leaf", x, y + 0.6, z, 0.8); G.vfx.item(`+1 ${ITEMS[forage.item].icon}`, x, y + 1.2, z); });
+  }]);
   const place = P.ground?.on === "home" ? G.build.useNear(P.pos.x, P.pos.z) : null;
   if (place) {
     const c = G.build.catalog[place.p.type], u = c.use === "machine" ? [`Use the ${c.label.toLowerCase()}`, () => G.craft.machine(place)] : USE[c.use]?.(place);
     if (u) list.push(u);
   }
+  if (P.ground?.on === "home" && !P.riding) { const c = G.build.catalog; for (const th of G.build.things.values()) if (c[th.p.type].cat === "vehicles" && near(th.p, Math.max(3.6, (c[th.p.type].r || 2) + 1.4))) { list.push([`Drive the ${c[th.p.type].label.replace(/ \(.*/, "")}`, () => G.vehicles.enter(th)]); break; } }
   const t = G.farm.target(), plot = s.plots[keyOf(t.x, t.z)];
-  if (plot && ripe(plot)) list.push([`Harvest ${CROPS[plot.crop].name}`, () => P.act("use", () => G.reap(keyOf(t.x, t.z), plot))]);
+  if (plot && ripe(plot)) list.push([`Harvest ${CROPS[plot.crop].name}`, () => P.act("use", () => G.reap(keyOf(t.x, t.z), plot), 0.4, "kneel")]);
+  if (chat) list.push(chat);
+  // riding: your mount clears what's in its path, each kind by its own skill. A chopper fells trees and splits stumps, a smasher breaks rocks, any of them tramples weeds
+  if (P.riding && !P.riding.vehicle) {
+    const d = P.riding, sk = skillsOf(d.r), front = P.pos.clone().addScaledVector(P.front, 1.6 + d.char.seat * 0.4);
+    const able = (r) => (r.node === "tree" ? sk.includes("chop") : r.node === "rock" ? sk.includes("mine") || d.data.traits.smash != null && d.r.stage >= d.data.traits.smash : r.node === "forage");
+    const rec = nearest(G, front.x, front.z, 2.6, (r) => r.node && !r.falling && able(r)), name = d.r.name || d.data.forms[d.r.stage];
+    if (rec) list.unshift([`${name}: ${rec.node === "tree" ? (/stump|log/.test(rec.key) ? "split the" : "fell the") : rec.node === "rock" ? "smash the" : "trample the"} ${rec.node === "forage" ? itemName(rec.item).toLowerCase() : /stump/.test(rec.key) ? "stump" : /log/.test(rec.key) ? "log" : rec.node}`, () => rideClear(d, rec)]);
+  }
+  if (P.riding) list.push(["Get down", () => G.setRide(null)]);
   return list[0] || null;
+}
+/** a mount at work: one go does it, and it brings in a little more than you would by hand */
+function rideClear(d, rec) {
+  const P = G.player, [x, z] = rec.L.world(rec.x, rec.z), y = groundAt(G, x, z).y, tree = rec.node === "tree" && !/stump|log/.test(rec.key);
+  rec.falling = true; d.char.work(); d.say?.("call");
+  const item = rec.node === "tree" ? "wood" : rec.item, n = rec.node === "forage" ? 2 : rec.node === "tree" ? (tree ? 4 : 3) : 3;
+  setTimeout(() => {
+    G.fell.hit(rec, P.pos);
+    play(rec.node === "rock" ? "stonebreak" : rec.node === "tree" ? (tree ? "woodfall" : "woodsplit") : "rustle");
+    const done = () => { rec.falling = false; setGone(G, rec, true); G.add(item, n); play("pick"); G.vfx.item(`+${n} ${ITEMS[item].icon}`, x, y + 2, z); G.dinos.friend(d, 0.5); };
+    if (rec.node === "forage") G.fell.pull(rec, 0.6, done); else G.fell.finish(rec, P.pos, done);
+  }, 380);
 }
 function winch() {
   const r = BRIDGE.repair, s = G.s;
@@ -259,6 +322,7 @@ G.setRide = (d) => {
   const P = G.player;
   if (!d) {
     if (P.ground?.on === "sea") return popup("Not out here!");
+    if (P.riding?.vehicle) return G.vehicles.exit();
     if (P.riding) { P.riding = null; P.mode = ""; const y = groundAt(G, P.pos.x, P.pos.z).y; P.pos.y = y; }
     return;
   }
@@ -301,15 +365,16 @@ function newDay(passedOut) {
   s.weather = pickWeather(s.day, season);
   G.farm.newDay(isWet(s.weather), season);
   G.dinos.newDay();
+  G.life.respawn?.();                                     // the wild herds are born again, with new looks
   regrow(G);
   G.sail.scatter();
   G.player.stamina = 100;
-  const P = G.player; P.riding = null; P.mode = ""; P.sailing = false;
+  const P = G.player; if (P.riding?.vehicle) G.vehicles.exit(); P.riding = null; P.mode = ""; P.sailing = false;
   const house = G.build.of("house")[0]?.p || { x: 30, z: -29 };
   const front = [house.x + Math.sin(house.ry) * 11, house.z + Math.cos(house.ry) * 11];
   P.pos.set(front[0], 0, front[1]); P.pos.y = groundAt(G, ...front).y; P.ground = groundAt(G, ...front);
   G.save();
-  popup(passedOut ? "You nodded off. Vermeil got you home." : `${seasonOf(s.day).name}, day ${seasonOf(s.day).day}`);
+  popup(passedOut ? `You nodded off. ${COMPANION.name} got you home.` : `${seasonOf(s.day).name}, day ${seasonOf(s.day).day}`);
   G.lore.newDay();
   if (s.weather === "storm") { play("thunder"); setTimeout(() => G.moment("storm"), 1200); }
   if (season !== before) setTimeout(() => location.reload(), 900);        // the whole world changes colour: rebuilt for the new season
@@ -317,6 +382,9 @@ function newDay(passedOut) {
 function sleep() { fade(() => newDay(false)); }
 function fade(fn) { const f = $("fade"); f.classList.add("on"); setTimeout(() => { fn(); f.classList.remove("on"); }, 450); }
 G.nextDay = () => newDay(false);
+G.showcase = (kind) => runShowcase(G, kind);
+/** a fresh start: the farm is replaced by a new one, and the game opens on the character maker. The last save stays in the backup beside it */
+G.restart = async () => { await storage.save(fresh()); location.reload(); };
 
 G.test = { useTool, talkTo, startFishing, pressFishing, fishing, nearestThing, winch, hew };
 
@@ -340,6 +408,8 @@ function cinematic(done) {
 }
 
 async function boot() {
+  startAudio(); loadingSong(true);                        // a quiet tune and the sea while it loads. A browser may hold sound back until the first click or key
+  addEventListener("pointerdown", startAudio, { once: true }); addEventListener("keydown", startAudio, { once: true });
   const canvas = $("game");
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(1.5, devicePixelRatio || 1));
@@ -348,13 +418,18 @@ async function boot() {
   renderer.toneMappingExposure = 1;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.autoUpdate = false;                 // shadows are redrawn when they need to be, not every frame
+  G.renderer = renderer;
   G.scene = new THREE.Scene();
   G.camera = new THREE.PerspectiveCamera(46, 1, 0.3, 3200);
   const size = () => { renderer.setSize(innerWidth, innerHeight, false); G.camera.aspect = innerWidth / innerHeight; G.camera.updateProjectionMatrix(); };
   addEventListener("resize", size); size();
   const saved = await storage.load();
   if (saved) G.s = saved;
-  const say = (t, p) => { $("loadText").textContent = t; $("loadBar").style.width = `${p}%`; };
+  const say = (t, p) => { $("loadText").textContent = t; $("loadBar").style.width = `${p}%`; $("loadLeaf").style.left = `${p}%`; };
+  const TIPS = ["Oma and Tarn have been married longer than any town has stood.", "Ripe crops show a round ! bubble.", "A belly rub counts for a lot with a dinosaur.", "Press B to place anything, anywhere on your turtle.", "Rent a stall by the fountain in Willowmere.", "Tractors till, tankers water, combines harvest.", "Listen at night. The turtles sing to someone."];
+  let tip = Math.floor(Math.random() * TIPS.length); $("loadTip").textContent = TIPS[tip];
+  const tips = setInterval(() => { tip = (tip + 1) % TIPS.length; $("loadTip").textContent = TIPS[tip]; }, 3200);
   say("Waking the turtle…", 12);
   G.vfx = makeVfx(G);
   await buildWorld(G);
@@ -371,10 +446,17 @@ async function boot() {
   await G.build.load();
   G.lore = makeLore(G);
   say("Calling everyone in…", 82);
-  G.dinos = makeDinos(G);
+  G.dinos = await makeDinos(G);
   G.people = makePeople(G);
+  G.life = makeLife(G); G.vehicles = makeVehicles(G);
+  await G.life.start();
   G.sail = await makeSail(G);
   [G.companion, G.animals, G.school, G.courier] = await Promise.all([makeCompanion(G), makeAnimals(G), makeSchool(G), makeCourier(G)]);
+  G.chickens = makeChickens(G);
+  G.water = makeWater(G);
+  G.biomes = makeBiomes(G);
+  G.fell = makeFell(G);
+  G.weatherFx = makeWeather(G);
   G.lore.start();
   G.tackle = makeTackle(G);
   await G.tackle.refresh();
@@ -385,7 +467,10 @@ async function boot() {
   if (o.text) document.documentElement.style.setProperty("--text", o.text);
   if (missing.size) console.warn("[turtle] models missing:", [...missing]);
   say("", 100);
-  $("loading").hidden = true;
+  loadingSong(false);
+  clearInterval(tips);
+  $("loading").classList.add("done");
+  setTimeout(() => { $("loading").hidden = true; }, 600);
   addEventListener("pointerdown", startAudio, { once: true });
   addEventListener("keydown", startAudio, { once: true });
 
@@ -394,10 +479,11 @@ async function boot() {
   else {
     // the character maker: you on the turf, the camera close
     G.paused = true; G.cinema = true;
-    const P = G.player, c = G.camera;
-    c.position.set(P.pos.x + 2.6, P.pos.y + 1.5, P.pos.z + 4.6);
-    c.lookAt(P.pos.x - 0.9, P.pos.y + 1, P.pos.z);
+    const P = G.player;
+    P.pos.set(18, 0, 2); P.ground = groundAt(G, 18, 2); P.pos.y = P.ground.y; P.vy = 0; P.heading = 0.5;     // a new life starts with your feet on the ground, on the farm
+    G.creating = true;
     makeCreator(G, (pick) => {
+      G.creating = false;
       Object.assign(G.s, pick);
       G.save();
       cinematic(go);
@@ -405,14 +491,24 @@ async function boot() {
   }
 
   const clock = G.clock = new THREE.Clock();
-  let saveIn = 90, sceneIn = 0;
-  const frame = () => { requestAnimationFrame(frame); turn(Math.min(clock.getDelta(), 0.05)); };
+  let saveIn = 90, sceneIn = 0, hudIn = 0, near = null, shadowIn = 0;
+  const frame = () => { requestAnimationFrame(frame); const dt = clock.getDelta(); if (document.hidden) return; turn(Math.min(dt, 0.05)); pace(dt); };
+  // a slow machine draws fewer pixels rather than dropping frames: the picture sharpens again when there's time to spare. The window is measured in steps, not every frame
+  let slow = 0, quick = 0, sharp = renderer.getPixelRatio();
+  const pace = (dt) => {
+    if (dt > 0.2) return;                                  // a pause, not a slow frame
+    slow = dt > 1 / 38 ? slow + 1 : 0; quick = dt < 1 / 56 ? quick + 1 : 0;
+    const top = Math.min(1.5, devicePixelRatio || 1);
+    if (slow > 40 && sharp > 0.7) { sharp = Math.max(0.7, sharp - 0.15); renderer.setPixelRatio(sharp); size(); slow = 0; }
+    else if (quick > 300 && sharp < top) { sharp = Math.min(top, sharp + 0.15); renderer.setPixelRatio(sharp); size(); quick = 0; }
+  };
   let simT = 0;
-  G.draw = () => renderer.render(G.scene, G.camera);
+  G.draw = () => { renderer.shadowMap.needsUpdate = true; renderer.render(G.scene, G.camera); };
   /** run the game forward by hand, whether or not the window is being drawn */
   G.run = (seconds, step = 1 / 30) => { for (let i = 0; i < seconds / step; i++) { simT += step; turn(step, simT + clock.elapsedTime); } };
   const turn = (dt, at) => {
     const t = at ?? clock.elapsedTime + simT, s = G.s, P = G.player, I = G.input;
+    if (G.show) { G.show.tick(dt); I.pressed.clear(); I.click = false; renderer.shadowMap.needsUpdate = false; if (at == null) renderer.render(G.show.scene, G.camera); return; }
     if (!G.paused && !G.talking && !G.cinema) {
       if (!G.cheat.stopTime) s.minute += dt / SECONDS_PER_MINUTE;
       if (s.minute >= 26 * 60) fade(() => newDay(true));
@@ -422,8 +518,18 @@ async function boot() {
     P.movingNow = !G.paused && !G.talking && [KEYS.forward, KEYS.back, KEYS.left, KEYS.right].some((k) => I.down.has(k));
     const locked = G.paused || G.talking || G.cinema;
     tickPlayer(G, dt);
-    G.dinos.tick(dt, t); G.companion?.tick(dt);
+    if (G.creating) {                                       // the character maker: you on the turf, the camera close
+      P.pos.y = P.ground.y;
+      G.camera.position.set(P.pos.x + 2.6, P.pos.y + 1.5, P.pos.z + 4.6);
+      G.camera.lookAt(P.pos.x - 0.9, P.pos.y + 1, P.pos.z);
+    }
+    G.dinos.tick(dt, t); G.companion?.tick(dt); G.life.tick(dt, t); G.vehicles.tick(dt, t);
     for (const a of G.animals || []) a.tick(dt, t);
+    G.chickens?.tick(dt, t);
+    G.water?.tick(dt);
+    G.biomes?.tick(dt, t);
+    G.fell?.tick(dt);
+    G.weatherFx?.tick(dt, t);
     for (const n of G.people) n.tick(dt, n.L.dist(P.pos.x, P.pos.z) < n.L.cfg.a + 130);
     G.courier?.tick(dt, P.pos.distanceTo(G.world.lands.home.group.position) < 420);
     tickWorld(G, dt, t);
@@ -431,6 +537,7 @@ async function boot() {
     G.farm.tick(t);
     G.sail.tick(dt, t);
     G.build.tick(dt);
+    if ((G.fountainIn = (G.fountainIn || 0) - dt) < 0) { G.fountainIn = 0.13; for (const f of G.lore.fountains) { if (f.L.dist(P.pos.x, P.pos.z) > 150) continue; const [x, z] = f.L.world(f.x, f.z); G.vfx.burst("water", x, f.L.land.ground(f.x, f.z) + (f.h || 3.4), z, 0.6); } }
     G.vfx.tick(dt);
     tickFishing(dt, t);
     G.tackle.tick(dt, t, fishing);
@@ -442,9 +549,14 @@ async function boot() {
     else if (P.ground?.land && P.ground.on !== "home" && P.ground.on !== "bridge" && !s.seenIsles[P.ground.on] && G.world.lands[P.ground.on]) G.arrive(P.ground.land);
     if (isWet(s.weather) && !locked && Math.random() < dt * 0.01) G.moment("rain");
     if (s.minute / 60 > 22.5 && !locked) G.moment("night");
-    if (!G.cinema) G.hud.tick();
-    const near = locked ? null : nearestThing();
-    G.hud.prompt(near && !fishing.on ? `E  ${near[0]}` : "");
+    // the HUD and "what's nearest" are read by eye, not by the frame
+    hudIn -= dt;
+    if (hudIn <= 0 || I.pressed.size) {
+      hudIn = 0.1;
+      if (!G.cinema) G.hud.tick();
+      near = locked ? null : nearestThing();
+      G.hud.prompt(near && !fishing.on ? `E  ${near[0]}` : "");
+    }
     for (const code of I.pressed) {
       if (G.building) continue;
       if (G.talking) { if (code === KEYS.interact || code === "Space" || code === "Enter") G.talk.next(); continue; }
@@ -463,7 +575,7 @@ async function boot() {
     }
     I.pressed.clear();
     if (I.click) { I.click = false; if (G.building) { /* the build tool has its own mouse */ } else if (G.talking) G.talk.next(); else if (fishing.phase === "bite" || fishing.phase === "reel") pressFishing(); else if (!locked) useTool(); }
-    if (at == null) renderer.render(G.scene, G.camera);
+    if (at == null) { renderer.shadowMap.needsUpdate = P.movingNow || !!P.riding || P.sailing || (shadowIn = (shadowIn + 1) % 2) === 0; renderer.render(G.scene, G.camera); }      // while you move, the shadows move with you every frame
   };
   frame();
 }

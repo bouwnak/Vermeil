@@ -80,11 +80,40 @@ export class Land {
     const n = fbm(x * 0.08, z * 0.08);
     if (h < 3.4) c.setHex(p.sand);
     else if (slope > 0.95) c.setHex(p.high).offsetHSL(0, 0, (n - 0.5) * 0.12);
-    else if (this.onRoad(x, z)) c.setHex(winter ? 0xd9d2c4 : p.path ?? 0xd8b98a).offsetHSL(0, 0, (n - 0.5) * 0.05);
     else if (h > 34) c.setHex(p.snow);
     else if (winter) c.setHex(p.snow).offsetHSL(0, 0, -n * 0.05);
     else c.setHex(h > 16 ? p.mid : p.low).offsetHSL((n - 0.5) * 0.04, 0, (n - 0.5) * 0.08);
     out.push(c.r, c.g, c.b);
+  }
+
+  /** the roads, laid over the ground as one smooth worn strip each instead of painted onto its big facets (which gave them saw-tooth edges):
+   *  a soft edge that wanders a little, paler down the middle where feet go. Call after mesh(), so it follows the ground you see */
+  roadsMesh(winter = false) {
+    const roads = this.cfg.roads || [], pos = [], col = [], idx = [], base = new THREE.Color(winter ? 0xd9d2c4 : this.cfg.palette.path ?? 0xd8b98a), c = new THREE.Color();
+    const ACROSS = [-1, -0.6, -0.2, 0.2, 0.6, 1];
+    for (const r of roads) {
+      const [ax, az] = r.from, [bx, bz] = r.to, len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len, n = Math.max(2, Math.ceil(len / 1.2)), start = pos.length / 3;
+      for (let i = 0; i <= n; i++) {
+        const u = i / n, cx = ax + (bx - ax) * u, cz = az + (bz - az) * u, ends = Math.min(1, Math.min(u, 1 - u) * len / 2.5);
+        const half = r.w * 0.62 * (0.88 + fbm(cx * 0.21 + 7, cz * 0.21) * 0.3) * (0.55 + 0.45 * ends);
+        for (const k of ACROSS) {
+          const x = cx - dz * half * k, z = cz + dx * half * k, wear = 1 - Math.abs(k);
+          pos.push(x, this.ground(x, z) + 0.09, z);
+          c.copy(base).offsetHSL(0, 0, (fbm(x * 0.5, z * 0.5) - 0.5) * 0.06 + wear * 0.05 - (1 - wear) * 0.04);
+          col.push(c.r, c.g, c.b);
+        }
+      }
+      for (let i = 0; i < n; i++) for (let j = 0; j < ACROSS.length - 1; j++) {
+        const a = start + i * ACROSS.length + j, b = a + ACROSS.length;
+        idx.push(a, a + 1, b, a + 1, b + 1, b);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx);
+    g.computeVertexNormals();
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    m.receiveShadow = true;
+    return m;
   }
 
   /** the land as a faceted mesh; its corners are kept, so the ground under your feet is exactly what's drawn */
@@ -162,6 +191,8 @@ export function makeTurtle(cfg) {
 }
 
 /** The sea: a soft low-poly swell. Slightly see-through, so the great shape of the turtle shows under it. */
+export const SEA = { value: 0 };                            // the tide clock, shared by the sea and every shore
+
 export function makeOcean() {
   const g = new THREE.PlaneGeometry(2600, 2600, 110, 110).toNonIndexed();
   g.rotateX(-Math.PI / 2);
@@ -172,11 +203,11 @@ export function makeOcean() {
     s.vertexShader = s.vertexShader.replace("#include <common>", "#include <common>\nuniform float uT;")
       .replace("#include <begin_vertex>", `#include <begin_vertex>
         vec4 wp = modelMatrix * vec4(position, 1.0);
-        transformed.y += sin(wp.x * .035 + uT * .9) * .42 + cos(wp.z * .05 + uT * .7) * .34 + sin((wp.x + wp.z) * .11 + uT * 1.3) * .12;`);
+        transformed.y += sin(wp.x * .035 + uT * .9) * .62 + cos(wp.z * .05 + uT * .7) * .5 + sin((wp.x + wp.z) * .11 + uT * 1.5) * .26 + sin((wp.x - wp.z * .6) * .23 + uT * 2.1) * .1;`);
   };
   const m = new THREE.Mesh(g, mat);
   m.receiveShadow = true;
-  m.userData.tick = (t) => { uniforms.uT.value = t; };
+  m.userData.tick = (t) => { uniforms.uT.value = t; SEA.value = t; };
   return m;
 }
 
@@ -199,5 +230,13 @@ export function makeFoam(cfg, land) {
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   g.computeVertexNormals();
-  return new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+  mat.onBeforeCompile = (s) => {                             // the foam runs up the beach and back, in slow sets
+    s.uniforms.uT = SEA;
+    s.vertexShader = s.vertexShader.replace("#include <common>", "#include <common>\nuniform float uT;").replace("#include <begin_vertex>", `#include <begin_vertex>
+      float a = atan(position.z, position.x), wash = sin(uT * .8 + a * 9.) * .5 + sin(uT * 1.3 - a * 17.) * .3;
+      transformed.xz *= 1. + wash * .014;
+      transformed.y += wash * .1;`);
+  };
+  return new THREE.Mesh(g, mat);
 }

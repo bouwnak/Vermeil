@@ -8,13 +8,14 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { CozyRoom, CATALOG } from "./cozyroom.js";
 import { inPlace } from "./inplace.js";
-import { analyzeRig, cleanClips, rigExtras, floorUnder, facing, useOwnClips, jawOpener, bodyPlan, looksLikeMonster, bodyOf, solidBodies, FLOATING, MONSTER_NAMES } from "./rigparts.js";
+import { plainSurfaces, tidyProps, analyzeRig, cleanClips, rigExtras, floorUnder, facing, useOwnClips, jawOpener, bodyPlan, looksLikeMonster, bodyOf, solidBodies, FLOATING, MONSTER_NAMES } from "./rigparts.js";
 import { faceSheets } from "./facetex.js";
 import { monsterClips } from "./monstermoves.js";
 import { buildGymRoom, GYM_LAYOUT } from "./gymroom.js";
 
 const INK = 0x2e2135;
 const CHAR_HEIGHT = 1.6;            // every model is scaled to about this height (metres)
+const MAX_SPAN = 3;                 // ...and no more than this long or wide, so anything fits the room
 const WALK_SPEED = 1.1;             // metres per second
 const HOME = new THREE.Vector3(0.4, 0, 0.7);   // middle of the rug
 const MOUTH = /(jaw|mouth.?open|^aa$|v_aa|mouth_a\b|vrc\.v_aa)/i;
@@ -500,7 +501,8 @@ export class Room {
     const { root } = c;
     root.updateMatrixWorld(true);
     const size = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
-    root.scale.multiplyScalar(CHAR_HEIGHT / Math.max(size.y, 1e-6));
+    // about a person's height, but never longer or wider than the room has floor for: a long serpent (Rayquaza) is scaled by its length instead
+    root.scale.multiplyScalar(Math.min(CHAR_HEIGHT / Math.max(size.y, 1e-6), MAX_SPAN / Math.max(size.x, size.z, 1e-6)));
     root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(root);
     const centre = box.getCenter(new THREE.Vector3());
@@ -541,7 +543,8 @@ export class Room {
     // UniMate's clips (models saved as <name>-animated.glb) are cleaned: body bones only, smooth, feet on the floor,
     // arms hanging naturally (ui/rigparts.js). Hand-made clips (Vermeil's own) are left as they are.
     const info = analyzeRig(root);
-    solidBodies(root);
+    solidBodies(root); plainSurfaces(root);
+    try { tidyProps(root, info, gltf.animations); } catch (e) { console.warn("extra items", e); }
     if (/-animated\.glb$/i.test(file)) {
       try { cleanClips(root, gltf.animations, info); } catch (e) { console.warn("clean clips", e); }
     }
@@ -603,6 +606,7 @@ export class Room {
         const am = o.isBone && /^(upper_arm|forearm|hand)\.?([LR])$/i.exec(o.name);
         if (am) ((c.arms ||= {})[am[2].toUpperCase()] ||= {})[am[1].toLowerCase()] = o;
         if (o.isBone && /^spine\.?003$/i.test(o.name)) c.chest = o; });
+      if (c.arms && !Object.keys(analyzeRig(root).arms).length) { c.arms = null; c.handL = c.handR = null; }       // front legs named like arms stand on the ground: they're not for waving
     }
     return c;
   }
@@ -820,9 +824,14 @@ export class Room {
     if (pts.length < 20) return null;
     const box = new THREE.Box3().setFromPoints(pts);
     const center = box.getCenter(new THREE.Vector3());
-    const radius = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) / 2;
+    // the skull, not the widest thing on the head: fins, crests and horns stretch the box sideways (Garchomp's head reads
+    // three times as wide as it is tall), but a head is never much wider than it is tall, nor wider than a fifth of the model
+    const whole = new THREE.Box3().setFromObject(c.root), height = whole.max.y - whole.min.y;
+    const radius = Math.min(Math.max(box.max.x - box.min.x, box.max.z - box.min.z) / 2, (box.max.y - box.min.y) * 0.65,
+      isFinite(height) && height > 0 ? height * 0.2 : Infinity);
     // the top: the head's own top, or a little higher when hair on top of it sits above (hats go on the hair)
-    const hairTop = all.length ? Math.max(...all.filter((p) => Math.hypot(p.x - center.x, p.z - center.z) < radius).map((p) => p.y), -Infinity) : -Infinity;
+    let hairTop = -Infinity;
+    for (const p of all) if (p.y > hairTop && Math.hypot(p.x - center.x, p.z - center.z) < radius) hairTop = p.y;
     return { center, radius: Math.max(radius, 1e-4), top: Math.max(box.max.y, Math.min(hairTop, box.max.y + radius * 0.35)) };
   }
 

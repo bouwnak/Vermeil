@@ -6,6 +6,7 @@ they're found again by file name under the folder. Prints {"textures": found, "m
 """
 import json
 import os
+import re
 import sys
 
 import bpy
@@ -22,6 +23,44 @@ def pictures_under(folders):
                     if f.lower() not in out or "shiny" in out[f.lower()].lower():
                         out[f.lower()] = p
     return out
+
+
+NOT_COLOUR = re.compile(r"lgt|light|msk|mask|normal|nrm|[_.]n$|spec|rough|metal|_ao$|occl|emiss|bump|height|shadow|shiny", re.I)
+COLOUR = re.compile(r"dif|diffuse|albedo|base_?col|col(or|our)?$|tex", re.I)
+OUTLINE = re.compile(r"^(line|outline|edge)", re.I)
+
+
+def by_name(found):
+    """Many downloads keep their pictures in a folder beside the model and the model never names them (Shibahu's materials are plain black).
+    A material with no picture gets the colour picture whose name holds the material's own: Body_mt -> Shibahu_body_dif.png. -> how many"""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from texmatch import best_picture
+    done = 0
+    for mat in bpy.data.materials:
+        if OUTLINE.match(mat.name):
+            continue                                   # an outline shell is meant to be plain dark
+        if not mat.use_nodes:
+            mat.use_nodes = True
+        nt = mat.node_tree
+        pics = [n for n in nt.nodes if n.type == "TEX_IMAGE" and n.image]
+        if any(n.image.size[0] for n in pics):
+            continue                                   # it has a picture that loaded
+        lost = next((n for n in pics if any(l.to_socket.name == "Base Color" for l in n.outputs["Color"].links)), None)     # one it names but nobody could find
+        path = best_picture(mat.name, found)
+        if not path:
+            continue
+        bsdf = next((n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if not bsdf:
+            continue
+        tex = lost or nt.nodes.new("ShaderNodeTexImage")
+        tex.image = bpy.data.images.load(path, check_existing=True)
+        if not lost:
+            nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+        bsdf.inputs["Base Color"].default_value = (1, 1, 1, 1)
+        done += 1
+    for img in [i for i in bpy.data.images if i.source == "FILE" and not i.size[0] and not i.users]:
+        bpy.data.images.remove(img)                     # the lost ones it replaced
+    return done
 
 
 def main(src, dest, folders):
@@ -44,6 +83,8 @@ def main(src, dest, folders):
             done += 1
         else:
             missing.append(name)
+    done += by_name(found)
+    missing = [m for m in missing if any(i.source == "FILE" and not i.size[0] and os.path.basename(i.filepath.replace("\\", "/")).lower() == m for i in bpy.data.images)]
     for img in bpy.data.images:                # the .glb keeps these names: the page tells eyes from mouths by them
         if img.filepath:
             img.name = os.path.splitext(os.path.basename(img.filepath.replace("\\", "/")))[0]

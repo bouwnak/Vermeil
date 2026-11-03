@@ -19,6 +19,7 @@
   <div class="hint" id="toolInfo"></div>
   <div class="toolbar" id="toolbar"></div>
   <div class="pill modepill" id="mode" hidden></div>
+  <button class="pill leavebtn" id="leaveBtn" type="button" hidden onclick="G.setRide(null)"></button>
   <button class="pill bookbtn" id="bookBtn" type="button" title="Journal (J)" onclick="G.book.toggle()">📖</button>
   <button class="pill bookbtn buildbtn" id="buildBtn" type="button" title="Build (B)" onclick="G.build.toggle()">🔨</button>
 </div>
@@ -68,8 +69,16 @@
 
 <div id="titleCard" class="title-card" hidden><h1>Turtle Island</h1><p>A whole life, on the back of something alive.</p></div>
 <div id="fade" class="fade"></div>
+<button id="showExit" class="pill leavebtn showexit" type="button" hidden></button>
 
-<div id="loading" class="loading"><h1>Turtle Island</h1><div class="load-bar"><i id="loadBar"></i></div><p id="loadText">Finding the turtle…</p></div>
+<div id="loading" class="loading">
+  <div class="load-stage">
+    <img src="loading.webp" alt="" draggable="false">
+    <div class="load-tipbox"><b>Tip:</b><span id="loadTip"></span></div>
+    <div class="load-track"><i id="loadBar"></i><em id="loadLeaf"></em></div>
+    <p id="loadText" class="load-status"></p>
+  </div>
+</div>
 
 <script type="module" src="main.js"></script>
 </body>

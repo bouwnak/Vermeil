@@ -1,7 +1,8 @@
 // world.js - the place: every turtle and what grows on it, the ocean, and the clock, seasons and weather over all of it.
 // A turtle is one entry of ISLANDS. Far ones are only land and shell until you come close; then their trees, town and people arrive.
 import * as THREE from "three";
-import { ISLANDS, SEASONS, DAYS_IN_SEASON, BRIDGE, WEATHER, FISH_PACK, A } from "./data.js";
+import { ISLANDS, SEASONS, DAYS_IN_SEASON, BRIDGE, WEATHER, FISH_PACK, A, CATALOG, LAYOUT } from "./data.js";
+import { spotOf } from "./farm.js";
 import { makeBoat, madeProp } from "./made.js";
 import { Land, makeTurtle, makeOcean, makeFoam, fbm } from "./terrain.js";
 import { prop, forest, loadModel } from "./assets.js";
@@ -38,6 +39,31 @@ export function nearest(G, x, z, radius, test) {
   }
   return best;
 }
+/** the same on a land's own ground, for those who live there. p is in the land's coordinates */
+export function pushLocal(L, p, radius = 0.45) {
+  for (const s of around(L, p.x, p.z)) {
+    if (!s.r || s.off) continue;
+    const dx = p.x - s.x, dz = p.z - s.z, d = Math.hypot(dx, dz), need = s.r + radius;
+    if (d < need && d > 1e-4) { p.x += dx / d * (need - d); p.z += dz / d * (need - d); }
+  }
+}
+export const clearAt = (L, x, z, pad = 0.6) => { for (const s of around(L, x, z)) if (s.r && !s.off && Math.hypot(x - s.x, z - s.z) < s.r + pad) return false; return true; };
+/** the nearest place you can stand and reach the sea from here, or null: [x, z, which way the water lies] */
+export function shoreNear(G, x, z, reach = 130) {
+  let best = null, bd = 1e9;
+  for (let a = 0; a < 6.28; a += 0.52) {
+    const cx = Math.sin(a), cz = Math.cos(a);
+    let last = groundAt(G, x, z).y;
+    for (let d = 4; d < reach && d < bd; d += 3) {             // only a way that can be walked: a cliff ends the search this way
+      const g = groundAt(G, x + cx * d, z + cz * d);
+      if (g.on === "sea") { if (d - 3 < bd) { bd = d - 3; best = [x + cx * (d - 3.4), z + cz * (d - 3.4), a]; } break; }
+      if (Math.abs(g.y - last) > 3) break;
+      last = g.y;
+    }
+  }
+  return best;
+}
+
 /** keep something out of trees, houses and rocks */
 export function pushOut(G, p, radius = 0.5) {
   for (const L of G.world.list) {
@@ -100,7 +126,33 @@ const HARD = new Set(["stone", "ore", "sandstone", "crystal", "cinder", "relic"]
 function gather(G, L, jobs, parent, avoid, item, count, place = {}) {
   const spots = scatter(L, avoid, count, (x, y, z) => ({ x, y: y - 0.04, z, ry: rnd() * 6.3, s: place.s || (HARD.has(item) ? 1.1 : 1.1) }), { low: 3.6, ...place });
   for (const sp of spots) { sp.rec = addSolid(L, { x: sp.x, z: sp.z, r: HARD.has(item) ? 0.9 : 0, node: HARD.has(item) ? "rock" : "forage", item, key: `${L.cfg.id}:${item}:${sp.x | 0}:${sp.z | 0}`, back: 5 }); }
-  jobs.push(forest(NODE_MODEL[item], parent, spots).then((insts) => spots.forEach((sp, i) => { sp.rec.insts = insts; sp.rec.i = i; if (G.s.day - (G.s.cut?.[sp.rec.key] ?? -99) < 5) { sp.rec.off = true; hide(sp.rec, true); } })));
+  jobs.push(forest(NODE_MODEL[item], parent, spots).then((insts) => spots.forEach((sp, i) => { sp.rec.insts = sp.insts; sp.rec.i = sp.slot; if (G.s.day - (G.s.cut?.[sp.rec.key] ?? -99) < 5) { sp.rec.off = true; hide(sp.rec, true); } })));
+}
+
+/** what the wild leaves on open farmland, to be cleared for room and for what it gives: stumps and fallen logs for the axe, stones for the pick, weeds to pull.
+ *  Always in the same places, and some of it comes back every week or two, the way a field fills in if it's left */
+const DEBRIS = [["tree", `${GROWN}CommonTree_1.glb`, "tree", "wood", 10, 0.85, 0.6, 16], ["tree2", `${GROWN}CommonTree_2.glb`, "tree", "wood", 8, 0.8, 0.6, 16], ["birch", `${GROWN}BirchTree_1.glb`, "tree", "wood", 6, 0.75, 0.55, 16],
+  ["stump", `${GROWN}TreeStump.glb`, "tree", "wood", 18, 0.9, 0.55, 12], ["log", `${GROWN}WoodLog.glb`, "tree", "wood", 16, 0.75, 0.6, 10], ["stone", `${MEGA}Rock_Medium_1.gltf`, "rock", "stone", 14, 0.5, 0.55, 8],
+  ["stone2", `${MEGA}Rock_Medium_2.gltf`, "rock", "stone", 12, 0.55, 0.55, 8], ["pebble", `${GROWN}Rock_6.glb`, "rock", "stone", 12, 0.6, 0.5, 6], ["weed", `${GROWN}Grass.glb`, "forage", "fiber", 40, 1.5, 0, 4], ["bush", `${GROWN}Bush_1.glb`, "forage", "berry", 10, 0.9, 0, 6]];
+/** the same model for the season: trees turn and snow settles on them */
+const inSeason = (model, season) => /CommonTree|BirchTree/.test(model) ? model.replace(/(Tree)_/, ["$1_", "$1_", "$1_Autumn_", "$1_Snow_"][season]) : season === 3 && /TreeStump|WoodLog|Bush_/.test(model) ? model.replace(/(_\d)?\.glb$/, (m) => (/Bush/.test(model) ? `_Snow${m}` : `_Snow.glb`)) : model;
+function debris(G, L, jobs, parent, season) {
+  const cfg = L.cfg, land = L.land, fields = (cfg.clear || []).map((i) => cfg.flats[i]).filter((f) => !f.pier), s = G.s;
+  const taken = [...Object.keys(s.plots || {}).map((k) => [...spotOf(k), 1.6]), ...(s.placed || LAYOUT.map(([type, x, z]) => ({ type, x, z }))).map((p) => [p.x, p.z, (CATALOG[p.type]?.r || 1) + 1.8]), [18, 2, 7]];
+  let n = 0;
+  const pick = (i) => { const h = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return h - Math.floor(h); };       // the same spots every time: what you've cleared stays cleared
+  for (const [kind, model, node, item, count, size, r, back] of DEBRIS) {
+    const spots = [];
+    for (let i = 0; i < count * 8 && spots.length < count; i++, n++) {
+      const f = fields[Math.floor(pick(n * 3) * fields.length)], a = pick(n * 3 + 1) * 6.3, d = Math.sqrt(pick(n * 3 + 2)) * f.r * 0.9, x = f.x + Math.cos(a) * d, z = f.z + Math.sin(a) * d;
+      if (land.onRoad(x, z) || land.rough(x, z, 1.2) > 0.6 || land.ground(x, z) < 4 || taken.some(([tx, tz, tr]) => Math.hypot(x - tx, z - tz) < tr)) continue;
+      taken.push([x, z, 1.4]);
+      const sp = { x, y: land.ground(x, z) - 0.05, z, ry: pick(n * 7) * 6.3, s: size * (0.8 + pick(n * 5) * 0.4) };
+      sp.rec = addSolid(L, { x, z, r, node, item, key: `home:${kind}${spots.length}`, back: back + Math.floor(pick(n * 11) * 6), debris: true });
+      spots.push(sp);
+    }
+    jobs.push(forest(inSeason(model, season), parent, spots).then(() => spots.forEach((sp) => { sp.rec.insts = sp.insts; sp.rec.i = sp.slot; if (G.s.day - (G.s.cut?.[sp.rec.key] ?? -99) < sp.rec.back) { sp.rec.off = true; hide(sp.rec, true); } })));
+  }
 }
 
 async function plant(G, L, avoid, season) {
@@ -112,14 +164,14 @@ async function plant(G, L, avoid, season) {
       const spots = scatter(L, (x, z) => avoid(x, z) || (cfg.id === "home" && /Pine/.test(path) ? L.land.ground(x, z) < 12 : false), count * density / kinds,
         (x, y, z) => ({ x, y: y - 0.2, z, ry: rnd() * 6.3, s: size * (0.8 + rnd() * 0.6) }));
       for (const sp of spots) sp.rec = addSolid(L, { x: sp.x, z: sp.z, r: solid, node: "tree", key: `${cfg.id}:t${sp.x | 0}:${sp.z | 0}`, back: 7 });
-      jobs.push(forest(`${path}${k}.${mega || path.includes("stylized_nature") ? "gltf" : "glb"}`, parent, spots).then((insts) => spots.forEach((sp, i) => { sp.rec.insts = insts; sp.rec.i = i; if (G.s.day - (G.s.cut?.[sp.rec.key] ?? -99) < 7) { sp.rec.off = true; hide(sp.rec, true); } })));
+      jobs.push(forest(`${path}${k}.${mega || path.includes("stylized_nature") ? "gltf" : "glb"}`, parent, spots).then((insts) => spots.forEach((sp, i) => { sp.rec.insts = sp.insts; sp.rec.i = sp.slot; if (G.s.day - (G.s.cut?.[sp.rec.key] ?? -99) < 7) { sp.rec.off = true; hide(sp.rec, true); } })));
     }
   }
   const stones = cfg.stones || `${GROWN}Rock${season === 3 ? "_Snow" : ""}_`;
   for (let k = 1; k <= 5; k++) {
     const spots = scatter(L, avoid, 16 * density, (x, y, z) => ({ x, y: y - 0.1, z, ry: rnd() * 6.3, s: 0.8 + rnd() * 0.8 }));
     for (const sp of spots) sp.rec = addSolid(L, { x: sp.x, z: sp.z, r: 0.9, node: "rock", item: "stone", key: `${cfg.id}:r${sp.x | 0}:${sp.z | 0}`, back: 5 });
-    jobs.push(forest(`${stones}${k}.glb`, parent, spots).then((insts) => spots.forEach((sp, i) => { sp.rec.insts = insts; sp.rec.i = i; if (G.s.day - (G.s.cut?.[sp.rec.key] ?? -99) < 5) { sp.rec.off = true; hide(sp.rec, true); } })));
+    jobs.push(forest(`${stones}${k}.glb`, parent, spots).then((insts) => spots.forEach((sp, i) => { sp.rec.insts = sp.insts; sp.rec.i = sp.slot; if (G.s.day - (G.s.cut?.[sp.rec.key] ?? -99) < 5) { sp.rec.off = true; hide(sp.rec, true); } })));
   }
   const free = (name, count, s = 1) => jobs.push(forest(name, parent, scatter(L, avoid, count * density, (x, y, z) => ({ x, y: y - 0.04, z, ry: rnd() * 6.3, s: s * (0.7 + rnd() * 0.6) }))));
   if (cfg.biome !== "Desert" && cfg.biome !== "Volcanic") {
@@ -133,6 +185,7 @@ async function plant(G, L, avoid, season) {
   if (cfg.id === "home") {
     for (const [item, count] of [["berry", 26], ["fiber", 60], ["wildcap", 12]]) gather(G, L, jobs, parent, avoid, item, count);
     gather(G, L, jobs, parent, (x, z) => Math.hypot(x - 92, z + 46) > 20, "ore", 10);
+    debris(G, L, jobs, parent, season);
   }
   await Promise.all(jobs);
 }
@@ -192,7 +245,9 @@ export async function detail(G, L) {
 function makeLand(G, id, cfg, season) {
   cfg.id = id;
   const land = new Land(cfg), group = new THREE.Group(), body = makeTurtle(cfg), reach = Math.pow(cfg.a * 1.3, 2), L = { land, group, body, cfg, cells: new Map(), detail: false };
-  group.add(land.mesh(id === "home" ? 2.8 : id === "willowmere" ? 3.2 : 4.4, season === 3 && (id === "home" || id === "willowmere")), makeFoam(cfg, land), body.group);
+  const winter = season === 3 && (id === "home" || id === "willowmere");
+  group.add(land.mesh(id === "home" ? 2.8 : id === "willowmere" ? 3.2 : 4.4, winter), land.roadsMesh(winter), makeFoam(cfg, land), body.group);
+  for (const c of group.children) c.userData.always = true;
   L.local = (x, z) => { const dx = x - group.position.x, dz = z - group.position.z, a = group.rotation.y; if (!a) return [dx, dz]; const c = Math.cos(a), s = Math.sin(a); return [dx * c - dz * s, dx * s + dz * c]; };
   L.world = (x, z) => { const a = group.rotation.y; if (!a) return [x + group.position.x, z + group.position.z]; const c = Math.cos(a), s = Math.sin(a); return [x * c + z * s + group.position.x, -x * s + z * c + group.position.z]; };
   L.close = (x, z) => group.visible && (x - group.position.x) ** 2 + (z - group.position.z) ** 2 < reach;
@@ -262,7 +317,7 @@ export function pickWeather(day, season) {
   if (season === 1 && u > 0.72) return "heat";
   if (season === 2 && u > 0.72) return "fog";
   if (u < -0.1 && r < 0.5) return "wind";
-  return r > 0.88 ? "storm" : r > 0.8 ? "heavy" : r > 0.68 ? "rain" : r > 0.52 ? "cloudy" : "sunny";
+  return r > 0.8 ? "storm" : r > 0.68 ? "rain" : r > 0.52 ? "cloudy" : "sunny";
 }
 export const isWet = (w) => !!WEATHER[w]?.wet;
 
@@ -279,7 +334,7 @@ export function tickWorld(G, dt, t) {
   G.scene.fog.near = We.fog ? 60 : 300; G.scene.fog.far = We.fog ? 420 : 1250;
   const day = smooth(5.5, 8, hour) * (1 - smooth(17.5, 20, hour));
   W.sun.intensity = (0.2 + day * 1.5) * dull;
-  W.hemi.intensity = 0.7 + day * 1.5;
+  W.hemi.intensity = (0.7 + day * 1.5) * (0.45 + dull * 0.55);          // a rainy or stormy day is a darker day
   W.sun.color.set(day > 0.7 ? 0xfff0d8 : 0xffb080);
   const ang = (hour - 6) / 12 * Math.PI;
   W.sun.target.position.copy(focus);
@@ -297,6 +352,14 @@ export function tickWorld(G, dt, t) {
   town.group.position.set(off[0] + k * 60, Math.sin(t * 0.4 + 2) * 0.1, off[1] + k * 110);
   town.body.update(t, { ...mood, moored: k < 0.01 });
   W.townHere = here;
+  // a turtle a long way off is its land and shell: what stands on it comes back as you get near
+  if ((W.farIn = (W.farIn || 0) - dt) <= 0) {
+    W.farIn = 0.5;
+    for (const L of W.list) {
+      const far = L.dist(focus.x, focus.z) > L.cfg.a + 300;
+      if (far !== L.far) { L.far = far; for (const c of L.group.children) if (!c.userData.always) c.visible = !far; }
+    }
+  }
   // the rest go their own way, and wait for you once you've tied up alongside
   for (const L of W.list) {
     const f = L.cfg.route;
@@ -314,13 +377,7 @@ export function tickWorld(G, dt, t) {
   for (const b2 of W.boats) { const u = b2.userData; u.a += u.v * dt; b2.position.set(Math.cos(u.a) * u.r, 0.2 + Math.sin(t + u.a) * 0.25, Math.sin(u.a) * u.r); b2.rotation.y = -u.a; }
   for (const c of W.clouds) { c.position.x += dt * (s.weather === "wind" || s.weather === "storm" ? 5 : 1.6); if (c.position.x > 800) c.position.x = -800; }
   W.birds.position.set(focus.x + Math.sin(t * 0.05) * 70, 0, focus.z + Math.cos(t * 0.05) * 70);
-  W.rain.visible = wetDay || s.weather === "snow";
-  if (W.rain.visible) {
-    W.rain.position.set(focus.x, 0, focus.z);
-    const p = W.rain.geometry.attributes.position, fall = s.weather === "snow" ? 3 : s.weather === "storm" ? 48 : 34;
-    for (let i = 1; i < p.array.length; i += 3) { p.array[i] -= fall * dt; if (p.array[i] < -2 + focus.y) p.array[i] = focus.y + 38; }
-    p.needsUpdate = true;
-  }
+  W.rain.visible = false;                                    // rain, snow, storm and wind are drawn by weather.js now
 }
 
 export { A, loadModel };

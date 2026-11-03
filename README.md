@@ -26,6 +26,14 @@ background.
 - **Also:** 35 fish, crafting and machines, a shipping bin, your own market stall, seven turtles, a ten-arc story, weekly orders and festivals.
 - **Test tools:** **Journal → Settings → Test tools** gives flying, shells, instant crops, skipping days, weather and more.
 
+**Turtle Island, second round:**
+- The story is now about Oma and Tarn, the two turtles, a husband and wife searching for their lost child, Pell.
+- Dinosaurs are rigged low-poly models that blink, open their mouths, yawn and wag. Each of the three forms has a different shape. You can pet them, scratch their chin, rub their belly and play with them.
+- Wild herds roam every turtle, and birds and pterosaurs cross between islands and rest. A kind can be tamed once it's unlocked, and it then goes to your own island.
+- Willowmere is a busy town with a fountain, stalls, a crowd, stalls you can rent, and Mara's Grand Market, which sells everything from seeds to tractors.
+- Vehicles can be driven: tractors till, seed drills plant, tankers water, combines harvest.
+- Windmills, machines, fountains, animals, the sea, foam and the boat all move. The whole interface and loading screen are new and animated.
+
 **Models and rig (UniMate):**
 - Imports `.glb`, `.gltf`, `.fbx` and whole folders, and finds textures by itself.
 - Any future model works: rigs are identified by their shape and bones, with nothing written per model.

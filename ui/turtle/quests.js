@@ -1,7 +1,7 @@
 // quests.js - the story and the odd jobs: gates in the way, secrets to reach, carvings to find, tales people tell, orders on the board, festivals.
 import * as THREE from "three";
 import { BRIDGE, CARVINGS, COMPANION, CROPS, FISH, GATES, ITEMS, SECRETS, STORY, TALES, WEEK, itemName } from "./data.js";
-import { madeProp } from "./made.js";
+import { fillFountain, madeProp } from "./made.js";
 import { prop } from "./assets.js";
 import { addSolid, dropSolid, groundAt } from "./world.js";
 import { festivalOf } from "./craft.js";
@@ -11,7 +11,7 @@ const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 export function makeLore(G) {
-  const s = G.s, Q = { sea: [] };
+  const s = G.s, Q = { sea: [], fountains: [] };
   s.carved ||= {}; s.found ||= {}; s.orders ||= {};
   const give = (o = {}) => { for (const [k, n] of Object.entries(o)) { if (k === "money") s.money += n; else G.add(k, n); } };
   const fanfare = (x, y, z) => { G.sfx("rare"); G.vfx.burst("gold", x, y, z); };
@@ -76,7 +76,9 @@ export function makeLore(G) {
       const [x, z] = L.cfg.places.board, o = madeProp("board");
       o.position.set(x, L.land.ground(x, z), z); L.group.add(o);
       const rec = addSolid(L, { x, z, r: 0.8 }); rec.use = () => ["Read the order board", Q.board];
+      Q.town(L);
     }
+    else if (L.cfg.stalls) Q.town(L);                         // every town has its market
     if (L.cfg.id === "elder") { const rec = addSolid(L, { x: 0, z: -2, r: 0 }); rec.use = () => (s.flags.chest ? null : ["Open the last Shellwright chest", () => { s.flags.chest = true; give({ relic: 2, money: 800 }); fanfare(G.player.pos.x, G.player.pos.y + 1, G.player.pos.z); popup("Inside: relics, and something very old", "good"); }]); }
     if (L.cfg.id === "home" && !s.flags.finale) {
       const rec = addSolid(L, { x: -6, z: -90, r: 0 });
@@ -84,14 +86,37 @@ export function makeLore(G) {
     }
     if (L.cfg.id === "home") { const R = L.cfg; Q.home = R; }
   };
+  /** the square: a fountain, lamps and benches, and the market stalls. The empty ones are for rent */
+  Q.town = (L) => {
+    const f = L.cfg.flats[0], put = (kind, x, z, ry = 0, s2 = 1) => { const o = madeProp(kind), wx = f.x + x, wz = f.z + z; o.position.set(wx, L.land.ground(wx, wz), wz); o.rotation.y = ry; o.scale.setScalar(s2); L.group.add(o); return [o, wx, wz]; };
+    const fx = f.x, fz = f.z, own = L.cfg.id !== "willowmere";
+    if (!own) {                                              // Willowmere's round square: the fountain, ringed with lamps and benches. The other towns keep their own shape
+      prop("../games/asset_packs/town/Fountain.glb", L.group, { x: fx, y: L.land.ground(fx, fz) - 0.05, z: fz, scale: 1.7 }).then((o) => o && fillFountain(o)); addSolid(L, { x: fx, z: fz, r: 5.2 }); Q.fountains.push({ L, x: fx, z: fz, h: 6 });
+      for (let i = 0; i < 8; i++) { const a = i / 8 * 6.3, [, x, z] = put(i % 2 ? "bench" : "lamp", Math.cos(a) * 8, Math.sin(a) * 8, -a + Math.PI / 2); addSolid(L, { x, z, r: 0.5 }); if (i % 2) for (const s of [-1, 1]) addSolid(L, { x: x + s * Math.cos(-a + Math.PI / 2) * 0.8, z: z - s * Math.sin(-a + Math.PI / 2) * 0.8, r: 0.5 }); }
+    } else for (const [x, z, ry] of L.cfg.stalls) { const [, lx, lz] = put("lamp", x + Math.cos(ry) * 2.8, z - Math.sin(ry) * 2.8); addSolid(L, { x: lx, z: lz, r: 0.4 }); }       // a lamp at the end of each stall
+    const FOOD2 = ["conv_ultimate_food_pack/Apple.glb", "conv_ultimate_food_pack/Pumpkin.glb", "conv_ultimate_food_pack/Bread.glb", "conv_ultimate_food_pack/Fish.glb", "conv_ultimate_food_pack/Carrot.glb", "conv_ultimate_food_pack/Tomato.glb"];
+    L.cfg.stalls.forEach(([x, z, ry, who], i) => {
+      const [o, wx, wz] = put("stall", x, z, ry, 1.2), rec = addSolid(L, { x: wx, z: wz, r: 1.2 });
+      for (const k of [-1.5, 1.5]) addSolid(L, { x: wx + Math.cos(ry) * k, z: wz - Math.sin(ry) * k, r: 1.2 });       // a stall is long: the whole counter is in the way, not just its middle
+      if (who !== "rent") { for (let n = 0; n < 5; n++) prop(FOOD2[(i + n) % FOOD2.length], o, { x: -1.2 + n * 0.6, y: 1.05, z: 0, height: 0.26, ry: n }); return; }
+      const key = own ? `${L.cfg.id}:${i}` : i;               // Willowmere's are numbered as they always were, so a stall you rented there stays yours
+      (Q.stalls ||= []).push({ L, o, i: key, x: wx, z: wz, ry });
+      rec.use = () => (s.rented?.[key] ? ["Set up your rented stall", () => G.craft.stall()] : ["Rent this stall (300 shells)", () => {
+        if (s.money < 300) return popup("A stall here is 300 shells");
+        s.money -= 300; (s.rented ||= {})[key] = true; G.sfx("buy"); G.vfx.burst("gold", G.player.pos.x, G.player.pos.y + 2, G.player.pos.z); popup("This stall is yours! Put your goods out", "good"); G.craft.stall();
+      }]);
+    });
+    G.craft.showGoods();
+  };
   G.onDetail = (L) => {
     const id = L.cfg.id;
     for (const g of GATES) if (g.land === id) makeGate(L, g);
     for (const o of SECRETS) if (o.land === id) secret(L, o);
     for (const c of CARVINGS) if (c.land === id) carving(L, c);
     special(L);
-    G.dinos?.spawnWild(L);
     G.peopleOf?.(L);
+    G.life?.herdOf(L); G.life?.folkOf(L);
+    G.biomes?.onDetail(L);
     if (id === "elder") G.moment("ruins");
   };
   Q.start = () => {
@@ -104,7 +129,7 @@ export function makeLore(G) {
     G.add("heartseed", -1); s.flags.finale = true;
     G.sfx("evolve"); G.vfx.burst("glow", P.pos.x, P.pos.y + 1, P.pos.z, 3);
     setTimeout(() => G.sfx("horn"), 900); setTimeout(() => { G.sfx("horn"); W.lands.home.body.neck.rotation.z += 0.2; }, 1800);
-    G.talk.say(COMPANION.name, ["It's going down through the shell. I can feel it in my feet.", "Listen. The turtle's singing. All of them are.", "Whoever she is, down there, I think she just heard us.", "I don't know if that was an ending. I think it might have been a hello."], { then: () => { popup("The main story is complete. The world goes on.", "good"); } });
+    G.talk.say(COMPANION.name, ["It's going down through the shell. I can feel it in my feet.", "Listen. Oma's singing. Tarn too. I've never heard it this loud.", "There. Far out. Did you hear that? Something very small just sang back.", "Pell's awake. After all this time. I think I need a minute."], { then: () => { popup("Pell is coming home. The main story is complete, and the world goes on.", "good"); } });
   };
 
   // ---------------- people's tales, once each ----------------

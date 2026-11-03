@@ -11,6 +11,7 @@
 		{
 			"name":"Scene",
 			"nodes":[
+				0,
 				1
 			]
 		}
@@ -18,17 +19,9 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"SM_StylizedFarm_Boat_Vehicle_Lowpoly_M_0",
-			"translation":[
-				0,
-				0,
-				6.103515625e-05
-			]
+			"name":"body"
 		},
 		{
-			"children":[
-				0
-			],
 			"name":"SM_StylizedFarm_Boat",
 			"scale":[
 				0.009999999776482582,
@@ -93,29 +86,29 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":1343,
+			"count":1367,
 			"max":[
-				1893.27294921875,
-				88.96217346191406,
-				1234.739990234375
+				2.543041229248047,
+				0.8896218538284302,
+				2.358912467956543
 			],
 			"min":[
-				1384.6649169921875,
+				-2.543039321899414,
 				0,
-				762.9576416015625
+				-2.3589115142822266
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":1343,
+			"count":1367,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":1343,
+			"count":1367,
 			"type":"VEC2"
 		},
 		{
@@ -128,26 +121,26 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":16116,
+			"byteLength":16404,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":16116,
-			"byteOffset":16116,
+			"byteLength":16404,
+			"byteOffset":16404,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":10744,
-			"byteOffset":32232,
+			"byteLength":10936,
+			"byteOffset":32808,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":4896,
-			"byteOffset":42976,
+			"byteOffset":43744,
 			"target":34963
 		}
 	],
@@ -159,7 +152,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":47872,
+			"byteLength":48640,
 			"uri":"Boat.bin"
 		}
 	]
