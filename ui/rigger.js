@@ -581,6 +581,7 @@ class Rigger {
       if (g === main) continue;
       const past = Math.max(main.box.min.x - g.box.min.x, g.box.max.x - main.box.max.x) > wide * 0.2;
       if (!named(g) && !past) continue;
+      for (const i of g.verts) loose.add(`${g.mesh.uuid}:${i}`);         // left out when the body is measured: hair over the shoulders or a ribbon past the hand no longer moves the spine or the arms
 
       // many little pieces of one mesh (a ribbon's leaves) count as one thing
       let e = extras.find((x) => x.mesh === g.mesh);
@@ -647,6 +648,88 @@ class Rigger {
   }
   _spread(pts) { let a = Infinity, b = -Infinity; for (const p of pts) { a = Math.min(a, p.x); b = Math.max(b, p.x); } return b - a; }
   _centroid(pts) { const c = new THREE.Vector3(); for (const p of pts) c.add(p); return pts.length ? c.divideScalar(pts.length) : null; }
+  /** the body's skin as a graph: its welded points and which touch which along the triangles' edges. An arm held tight against the side is
+   *  only joined to the body at the armpit, however close it hangs */
+  _surface() {
+    if (this._surf) return this._surf;
+    const m = this._scan().main, mesh = m.mesh, pos = mesh.geometry.attributes.position, idx = mesh.geometry.index, n = idx ? idx.count : pos.count, v = new THREE.Vector3();
+    const KEY = (p) => `${Math.round(p.x * 2000)},${Math.round(p.y * 2000)},${Math.round(p.z * 2000)}`, weld = new Map(), id = new Int32Array(pos.count).fill(-1), P = [];
+    for (const i of m.verts) { v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld); const k = KEY(v); let w = weld.get(k); if (w == null) { w = P.length; weld.set(k, w); P.push(v.clone()); } id[i] = w; }
+    const adj = P.map(() => new Set());
+    for (let t = 0; t + 2 < n; t += 3) { const a = id[idx ? idx.getX(t) : t], b = id[idx ? idx.getX(t + 1) : t + 1], c = id[idx ? idx.getX(t + 2) : t + 2]; if (a < 0 || b < 0 || c < 0) continue; adj[a].add(b).add(c); adj[b].add(a).add(c); adj[c].add(a).add(b); }
+    return (this._surf = { P, adj: adj.map((x) => [...x]) });
+  }
+  /** an arm followed over the skin from the outside of the shoulder: rings at a growing distance along the surface, each ring split into the pieces that touch.
+   *  The piece furthest out to the side that carries on from the last is the arm. It stops where the ring suddenly widens (a sleeve, ribbon or the body) or turns back.
+   *  sign: +1 for the left side (+x), -1 for the right. -> path of middles with .tip, or null */
+  _traceArmSurface(shoulderY, cx, sign, maxLen, outTo = Infinity) {
+    const { P, adj } = this._surface(), H = this.size.y, step = H * 0.03;
+    if (P.length < 50) return null;
+    let seed = -1;
+    for (let i = 0; i < P.length; i++) if (Math.abs(P[i].y - shoulderY) < H * 0.03 && (P[i].x - cx) * sign <= outTo && (seed < 0 || (P[i].x - cx) * sign > (P[seed].x - cx) * sign)) seed = i;
+    if (seed < 0 || (P[seed].x - cx) * sign <= 0) return null;
+    // distances over the skin (Dijkstra with a small heap)
+    const dist = new Float32Array(P.length).fill(Infinity), heap = [[0, seed]], push = (e) => { heap.push(e); let i = heap.length - 1; while (i) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } }, pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+    dist[seed] = 0;
+    while (heap.length) { const [d, i] = pop(); if (d > dist[i] || d > maxLen * 1.3) continue; for (const j of adj[i]) { const nd = d + P[i].distanceTo(P[j]); if (nd < dist[j]) { dist[j] = nd; push([nd, j]); } } }
+    const path = [P[seed].clone()], widths = [];
+    let tip = null, prev = P[seed];
+    for (let k = 1; k * step < maxLen * 1.3; k++) {
+      const ring = new Set(); for (let i = 0; i < P.length; i++) if (dist[i] >= (k - 1) * step && dist[i] < k * step) ring.add(i);
+      if (ring.size < 3) break;
+      const parts = [];
+      for (const i of ring) { if (!ring.size) break; if (!ring.has(i)) continue; const part = [i]; ring.delete(i); for (let q = 0; q < part.length; q++) for (const j of adj[part[q]]) if (ring.has(j)) { ring.delete(j); part.push(j); } if (part.length >= 3) parts.push(part); }
+      if (!parts.length) break;
+      const score = (part) => { const c = this._centroid(part.map((i) => P[i])); return (c.x - cx) * sign - c.distanceTo(prev) * 0.5; };
+      const best = parts.reduce((a, b) => (score(b) > score(a) ? b : a)), pts = best.map((i) => P[i]), c = this._centroid(pts), w = new THREE.Box3().setFromPoints(pts).getSize(new THREE.Vector3()).length();
+      const usual = widths.length >= 3 ? [...widths].sort((a, b) => a - b)[Math.floor(widths.length / 2)] : null;
+      if (usual && w > usual * 2.2) break;
+      if ((c.x - cx) * sign < 0) break;                          // crossed over to the other side: that was the chest, not an arm
+      path.push(c); widths.push(w); prev = c;
+      tip = best.reduce((a, i) => (dist[i] > dist[a] ? i : a), best[0]);
+      if (k * step > maxLen) break;
+    }
+    if (path.length < 5) return null;
+    path.tip = P[tip].clone();
+    return path;
+  }
+  /** a limb followed along the surface itself, from its root outwards: rings of points at a growing distance over the skin, each ring's middle a step along the limb.
+   *  Where the ring splits (a ribbon or sleeve hanging off it) it keeps to the branch that carries straight on; where the ring suddenly gets much wider (the limb
+   *  has run into a ribbon, a wing or the body) it stops. -> the path of middles, root first, or null if there's too little to follow */
+  _traceLimb(pts, from, maxLen) {
+    const H = this.size.y, r = H * 0.022, step = H * 0.03, cell = (p) => `${Math.floor(p.x / r)},${Math.floor(p.y / r)},${Math.floor(p.z / r)}`, grid = new Map();
+    pts.forEach((p, i) => { const k = cell(p); (grid.get(k) || grid.set(k, []).get(k)).push(i); });
+    const near = (p) => { const out = [], cx = Math.floor(p.x / r), cy = Math.floor(p.y / r), cz = Math.floor(p.z / r); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) for (const i of grid.get(`${cx + a},${cy + b},${cz + c}`) || []) if (pts[i].distanceToSquared(p) < r * r * 2.2) out.push(i); return out; };
+    // how far over the skin each point is from the root (a breadth-first walk is close enough at this spacing)
+    const dist = new Float32Array(pts.length).fill(Infinity), queue = [];
+    let seeds = pts.map((p, i) => i).filter((i) => pts[i].distanceTo(from) < r * 2);
+    if (!seeds.length) { let best = 0; pts.forEach((p, i) => { if (p.distanceToSquared(from) < pts[best].distanceToSquared(from)) best = i; }); seeds = [best]; }
+    for (const i of seeds) { dist[i] = pts[i].distanceTo(from); queue.push(i); }
+    for (let q = 0; q < queue.length; q++) { const i = queue[q]; for (const j of near(pts[i])) { const d = dist[i] + pts[i].distanceTo(pts[j]); if (d < dist[j] - 1e-6 && d < maxLen * 1.3) { dist[j] = d; queue.push(j); } } }
+    // rings, outwards. Each ring is split into the pieces that touch; the one that carries on in the same direction is the limb
+    const path = [from.clone()], widths = [];
+    let dir = null, tip = null;
+    for (let k = 1; k * step < maxLen * 1.3; k++) {
+      const ring = []; for (let i = 0; i < pts.length; i++) if (dist[i] >= (k - 1) * step && dist[i] < k * step) ring.push(i);
+      if (ring.length < 3) break;
+      const left = new Set(ring), parts = [];
+      for (const i of ring) { if (!left.has(i)) continue; const part = [i]; left.delete(i); for (let q = 0; q < part.length; q++) for (const j of near(pts[part[q]])) if (left.has(j)) { left.delete(j); part.push(j); } if (part.length >= 3) parts.push(part.map((n) => pts[n])); }
+      if (!parts.length) break;
+      const prev = path[path.length - 1], score = (part) => { const c = this._centroid(part), d = c.clone().sub(prev); const len = d.length() || 1; return (dir ? d.dot(dir) / len : 1) * 2 - c.distanceTo(prev) / step * 0.3 + Math.min(part.length, 40) / 400; };
+      const best = parts.reduce((a, b) => (score(b) > score(a) ? b : a)), c = this._centroid(best), box = new THREE.Box3().setFromPoints(best), w = box.getSize(new THREE.Vector3()).length();
+      const usual = widths.length >= 3 ? [...widths].sort((a, b) => a - b)[Math.floor(widths.length / 2)] : null;
+      if (usual && w > usual * 2.2) break;                       // it ran into something much bigger than itself
+      const d = c.clone().sub(prev);
+      if (dir && d.lengthSq() > 1e-12 && d.clone().normalize().dot(dir) < -0.2) break;      // doubling back: that's the other side of whatever it joined
+      if (d.lengthSq() > 1e-12) dir = dir ? dir.multiplyScalar(0.6).add(d.normalize().multiplyScalar(0.4)).normalize() : d.normalize();
+      path.push(c); widths.push(w);
+      tip = best.reduce((a, p) => (p.distanceToSquared(from) > a.distanceToSquared(from) ? p : a), best[0]);
+      if (path.length * step > maxLen) break;
+    }
+    if (path.length < 4) return null;
+    path.tip = tip;
+    return path;
+  }
 
   preset(kind, fit) {
     if (this.joints.length) this.remember();
@@ -772,6 +855,20 @@ class Rigger {
       // arms: the furthest point out at shoulder height is the hand
       const ua = J[`upper_arm.${s}`], hand = J[`hand.${s}`], fa = J[`forearm.${s}`], end = J[`hand_end.${s}`];
       if (!ua || !hand) continue;
+      const along = (path, t) => { let total = 0; const seg = path.slice(1).map((p, i) => { const l = p.distanceTo(path[i]); total += l; return l; }); let want = total * t, i = 0; while (i < seg.length - 1 && want > seg[i]) want -= seg[i++]; return path[i].clone().lerp(path[i + 1], seg[i] ? want / seg[i] : 0); };
+      // first, over the skin from the outside of the shoulder: that finds an arm in any pose, even one hanging tight against the side or the dress,
+      // and stops at the hand rather than running on into a ribbon or sleeve. The shoulder is no further out than the chest just under the armpit
+      const chest = this._section(Math.max(0.05, v(ua) - 0.06), (p) => Math.abs(p.x - cx) < H * 0.2), shoulderOut = (chest.length > 3 ? Math.max(...chest.map((p) => (p.x - cx) * sign)) : H * 0.12) + H * 0.02;
+      const skin = this._traceArmSurface(ua.pos.y, J.spine.pos.x, sign, (neck || 0.85) * H * 0.55, shoulderOut);
+      // a real arm gets well away from the shoulder and never climbs above it; a walk that wanders over the chest or up the neck (the arm is a separate piece) doesn't count
+      if (skin && skin.tip.distanceTo(skin[0]) > H * 0.18 && Math.max(...skin.map((p) => p.y)) < ua.pos.y + H * 0.05 && Math.abs(skin.tip.x - cx) > Math.abs(skin[0].x - cx) * 0.6) {
+        ua.pos.set(skin[0].x - sign * H * 0.03, ua.pos.y, skin[Math.min(2, skin.length - 1)].z);
+        fa.pos.copy(along(skin, 0.5)); hand.pos.copy(along(skin, 0.86)); end.pos.copy(skin.tip);
+        const sh = J[`shoulder.${s}`];
+        if (sh) sh.pos.lerpVectors(J["spine.003"].pos, ua.pos, 0.45);
+        traced[s] = true;
+        continue;
+      }
       // arms in any pose: the body's own surface, out past the sides of the waist and above the hips, is the arm. Its far end is the hand
       const waist = this._section(v(J["spine.001"] || J.spine), (p) => Math.abs(p.x - cx) < H * 0.2), half = (waist.length > 3 ? this._spread(waist) / 2 : H * 0.08) * 1.12;
       const arm = this._scan().main.pts.filter((p) => (p.x - J.spine.pos.x) * sign > half && p.y > J.spine.pos.y - H * 0.08 && p.y < ua.pos.y + H * 0.06);
@@ -780,10 +877,16 @@ class Rigger {
         ua.pos.z = this._centroid(arm.filter((p) => p.y > ua.pos.y - H * 0.05))?.z ?? ua.pos.z;
         // no arm is longer than about half the body up to the neck: past that it's a sleeve, a ribbon or a wing joined on (Kindred's ribbons), not the hand
         const reach = (neck || 0.85) * H * 0.5, armPts = arm.filter((p) => p.distanceTo(ua.pos) < reach), use = armPts.length > 8 ? armPts : arm;
-        const tip = use.reduce((a, p) => (p.distanceToSquared(ua.pos) > a.distanceToSquared(ua.pos) ? p : a), use[0]), L = tip.distanceTo(ua.pos), bend = use.filter((p) => Math.abs(p.distanceTo(ua.pos) - L * 0.5) < L * 0.14), wrist = use.filter((p) => Math.abs(p.distanceTo(ua.pos) - L * 0.8) < L * 0.12);
-        fa.pos.copy(this._centroid(bend.length > 2 ? bend : [ua.pos.clone().lerp(tip, 0.5)]));
-        hand.pos.copy(this._centroid(wrist.length > 2 ? wrist : [ua.pos.clone().lerp(tip, 0.82)]));
-        end.pos.copy(tip);
+        // walked along the skin first: that follows the arm itself and stops before a ribbon or sleeve hanging off it. The straight-line reach is what's left if it can't
+        const path = this._traceLimb(use, ua.pos, reach);
+        if (path) {
+          fa.pos.copy(along(path, 0.5)); hand.pos.copy(along(path, 0.86)); end.pos.copy(path.tip || path[path.length - 1]);
+        } else {
+          const tip = use.reduce((a, p) => (p.distanceToSquared(ua.pos) > a.distanceToSquared(ua.pos) ? p : a), use[0]), L = tip.distanceTo(ua.pos), bend = use.filter((p) => Math.abs(p.distanceTo(ua.pos) - L * 0.5) < L * 0.14), wrist = use.filter((p) => Math.abs(p.distanceTo(ua.pos) - L * 0.8) < L * 0.12);
+          fa.pos.copy(this._centroid(bend.length > 2 ? bend : [ua.pos.clone().lerp(tip, 0.5)]));
+          hand.pos.copy(this._centroid(wrist.length > 2 ? wrist : [ua.pos.clone().lerp(tip, 0.82)]));
+          end.pos.copy(tip);
+        }
         const sh = J[`shoulder.${s}`];
         if (sh) sh.pos.lerpVectors(J["spine.003"].pos, ua.pos, 0.45);
         traced[s] = true;

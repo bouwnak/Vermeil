@@ -2,7 +2,7 @@
 // You can't walk on water or up a cliff. A dinosaur or a boat is how you get past those.
 import * as THREE from "three";
 import { character } from "./assets.js";
-import { modelOf } from "./data.js";
+import { modelOf, perkOf } from "./data.js";
 import { groundAt, pushOut } from "./world.js";
 
 export const KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", sprint: "ShiftLeft", jump: "Space", down: "KeyC", interact: "KeyE", ride: "KeyR", seed: "KeyQ", book: "KeyJ", map: "KeyM", bag: "KeyI", build: "KeyB", fill: "KeyF" };
@@ -174,7 +174,7 @@ export function tickPlayer(G, dt) {
   const from = P.ground?.y ?? P.pos.y;
   if (moving) {
     move.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), I.yaw);
-    const speed = P.sailing ? SAIL * (sprint ? 1.4 : 1) : T.fly ? 34 * (sprint ? 2 : 1) : mount ? mount.data.speed[mount.r.stage] * (sprint ? 1.4 : 1) : sprint ? RUN : WALK;
+    const speed = P.sailing ? SAIL * (sprint ? 1.4 : 1) : T.fly ? 34 * (sprint ? 2 : 1) : mount ? mount.data.speed[mount.r.stage] * (sprint ? 1.4 : 1) * (1 + 0.12 * perkOf(mount.data, "swift")) : sprint ? RUN : WALK;
     // each way is tried by itself, so a cliff or a shore slides you along it instead of stopping you dead
     for (const [ax, az] of [[move.x, 0], [0, move.z]]) {
       const nx = P.pos.x + ax * speed * dt, nz = P.pos.z + az * speed * dt, g = groundAt(G, nx, nz), len = Math.max(1e-4, Math.hypot(nx - P.pos.x, nz - P.pos.z));

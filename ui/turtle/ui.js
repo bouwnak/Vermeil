@@ -1,9 +1,9 @@
 // ui.js - what you read and press: talking, the HUD, the journal, shops and the character maker. Talking has no recorded or generated voice:
 // letters appear one at a time with a blip each, and you click (or press E) to go on, with a little row of dots saying there's more.
-import { ARCS, BRIDGE, CATALOG, CROPS, DINOS, EVOLVE, FERRY, FESTIVALS, FISH, ITEMS, MACHINES, NPCS, RECIPES, RODS, SEASONS, SHOPS, SKILLS, SKINS, STORY, TIERS, TOOLS, TOOL_COST, TOOL_UP, WEATHER, itemName } from "./data.js";
+import { ARCS, BRIDGE, CATALOG, CROPS, DINOS, EVOLVE, FARM_SKILLS, FERRY, FESTIVALS, FISH, ISLANDS, ITEMS, JOB_SLOTS, MACHINES, NPCS, RARE_FINDS, RECIPES, RODS, SEASONS, SHOPS, SKILLS, SKINS, STORY, TIERS, TOOLS, TOOL_COST, TOOL_UP, VERSES, WEATHER, itemName, perkText, versesOf } from "./data.js";
 import { blip, play, levels, setLevels } from "./audio.js";
 import { clockText, groundAt, seasonOf } from "./world.js";
-import { evolveNeeds, levelOf, nameOf, readyToEvolve, roomFor, skillsOf } from "./dinos.js";
+import { canRide, crewOf, evolveNeeds, levelOf, nameOf, readyToEvolve, skillsOf } from "./dinos.js";
 import { demand, festivalOf, priceOf } from "./craft.js";
 
 const $ = (id) => document.getElementById(id);
@@ -126,7 +126,9 @@ export function makeBook(G) {
         void done;
       });
       const c = Object.keys(s.carved || {}).length;
-      page.append(el("p", "muted", `Carvings found: ${c} of 5`));
+      page.append(el("p", "muted", `Carvings found: ${c} of 5 · Verses of the Waking Song: ${versesOf(s)} of ${VERSES.length} · Rare finds: ${Object.keys(s.rare || {}).length} of ${Object.keys(RARE_FINDS).length} turtles`));
+      const sung = VERSES.filter((v) => s.verses?.[v.id]);
+      if (sung.length) page.append(el("h3", "", "The Waking Song"), ...sung.map((v) => el("p", "verse", v.text.replace(" / ", "\n"))));
     },
     bag() {
       const grid = el("div", "slots"), stock = Object.entries(G.s.inv).filter(([, n]) => n > 0);
@@ -138,26 +140,32 @@ export function makeBook(G) {
     },
     dinos() {
       const s = G.s;
-      page.append(heading(`Dinosaurs: ${s.dinos.length} of ${roomFor(s)}`), el("p", "muted", "Pick how much each one should care about each job. They choose by that, by distance and by how tired they are. Tell one to stay on the farm and it gets to work."));
+      const crews = FARM_SKILLS.map((k) => `${SKILLS[k]} ${crewOf(s, k).length}/${JOB_SLOTS}`).join(" · ");
+      page.append(heading(`Dinosaurs: ${s.dinos.length}`), el("p", "muted", `Farm jobs take ${JOB_SLOTS} dinosaurs each; the first ${JOB_SLOTS} you give a job to do it. Everything else (chopping, smashing, digging, sniffing out rare finds, tilling and watering in rows) they do with you riding them.`), el("p", "muted", crews));
       for (const d of G.dinos.list) {
         const r = d.r, D = d.data, card = el("div", "dino-card"), lv = levelOf(r), need = EVOLVE[r.stage + 1], bar = el("div", "meter"), fill = el("i");
         fill.style.width = `${need ? Math.min(100, lv / need.level * 100) : 100}%`; bar.append(fill);
-        card.append(el("h3", "", `${D.icon} ${nameOf(r)}`), el("p", "muted", `${D.forms[r.stage]} (form ${r.stage + 1} of 3) · Level ${lv} · ${r.stage < 2 ? evolveNeeds(s, r) : "Fully grown"}`), bar);
+        const look = r.look ? `${r.look.tier} ${r.look.pattern.toLowerCase()} · ` : "";
+        card.append(el("h3", "", `${D.icon} ${nameOf(r)}`), el("p", "muted", `${look}${D.forms[r.stage]} (form ${r.stage + 1} of 3) · Level ${lv} · ${r.personality || ""} · ${r.stage < 2 ? evolveNeeds(s, r) : "Fully grown"}`), bar);
         card.append(el("p", "muted", D.blurb));
+        const find = Object.entries(RARE_FINDS).find(([, f]) => f.by === r.species);
+        card.append(el("p", "muted", `✨ ${perkText(D)}${D.home ? ` · from ${ISLANDS[D.home]?.name || D.home}` : ""}${D.travel ? ` · ${D.travel === "sky" ? "sky" : "land"} traveller` : ""}${find ? ` · sniffs out ${ITEMS[find[1].item].name} on ${ISLANDS[find[0]].name}` : ""}`));
         const line = el("div", "dino-row");
         card.append(el("p", "muted", D.forms.map((f, i) => (i === r.stage ? `[${f}]` : f)).join(" → ")));
-        for (const k of skillsOf(r)) {
-          const sel = el("select");
-          for (const [v, lab] of [["", "Off"], ["low", "Low"], ["medium", "Medium"], ["high", "High"]]) { const o = el("option", "", lab); o.value = v; o.selected = (r.jobs[k] || "") === v; sel.append(o); }
-          sel.onchange = () => { if (sel.value) r.jobs[k] = sel.value; else delete r.jobs[k]; };
-          const lab = el("label", "job"); lab.append(el("span", "", `${SKILLS[k]} ${(r.skill[k] || 0) >= 20 ? "★" : ""}`), sel); line.append(lab);
+        const rides = skillsOf(r).filter((k) => !FARM_SKILLS.includes(k) || ["till", "water", "harvest", "plant"].includes(k)).map((k) => SKILLS[k]);
+        if (rides.length && canRide(r)) card.append(el("p", "muted", `When you ride it: ${rides.join(", ")}`));
+        for (const k of skillsOf(r).filter((x) => FARM_SKILLS.includes(x))) {
+          const sel = el("select"), crew = crewOf(s, k), full = crew.length >= JOB_SLOTS && !crew.includes(r);
+          for (const [v, lab] of [["", "Off"], ["low", "Low"], ["medium", "Medium"], ["high", "High"]]) { const o = el("option", "", lab); o.value = v; o.selected = (r.jobs[k] || "") === v; o.disabled = full && !!v; sel.append(o); }
+          sel.onchange = () => { if (sel.value) r.jobs[k] = sel.value; else delete r.jobs[k]; show("dinos"); };
+          const lab = el("label", "job"); lab.title = full ? `${crew.length}/${JOB_SLOTS}: this job's crew is full` : ""; lab.append(el("span", "", `${SKILLS[k]} ${crew.length}/${JOB_SLOTS}${(r.skill[k] || 0) >= 20 ? " ★" : ""}${full ? " (full)" : ""}`), sel); line.append(lab);
         }
         card.append(line);
         if (readyToEvolve(s, r)) card.append(button(`✨ Evolve into ${D.forms[r.stage + 1]}`, () => { toggle(false); G.dinos.evolve(d); }));
         page.append(card);
       }
       const seen = s.dinos.map((r) => r.species);
-      page.append(el("h3", "", "Still out there"), list(Object.values(DINOS).filter((D) => !seen.includes(Object.keys(DINOS).find((k) => DINOS[k] === D))).map((D) => [s.seen[D.line] ? D.line : "???", D.rare ? "Rare" : ""])));
+      page.append(el("h3", "", "Still out there"), list(Object.values(DINOS).filter((D) => !seen.includes(Object.keys(DINOS).find((k) => DINOS[k] === D))).map((D) => [s.seen[D.line] ? D.line : "???", `${D.rare ? "Rare · " : D.basic ? "" : "Far-turtle kind · "}${s.seenIsles[D.home] || D.home === "home" ? `lives on ${ISLANDS[D.home]?.name}` : "somewhere out at sea"}`])));
     },
     crops() { page.append(heading("Crops"), list(Object.entries(CROPS).filter(([, c]) => !c.story).map(([k, c]) => [G.s.seen[k] ? `${c.icon} ${c.name}` : "???", c.seasons.map((i) => SEASONS[i]).join(", "), G.s.seen[k] ? `${c.days} days` : ""]))); },
     fish() {
@@ -177,7 +185,7 @@ export function makeBook(G) {
       const s = G.s;
       page.append(heading("The ocean"));
       const c = el("canvas", "map"); c.width = 620; c.height = 620; page.append(c);
-      const g = c.getContext("2d"), k = 0.135, o = 310;
+      const far = Math.max(...G.world.list.filter((L) => L.group.visible).map((L) => (L.cfg.route?.r || 0) + L.cfg.a)), g = c.getContext("2d"), k = Math.min(0.135, 300 / far), o = 310;     // the chart grows as the far turtles appear
       g.fillStyle = "#bfeee6"; g.fillRect(0, 0, 620, 620);
       g.strokeStyle = "rgba(90,140,140,.35)"; g.setLineDash([5, 6]);
       for (const L of G.world.list) { const f = L.cfg.route; if (f && L.group.visible) { g.beginPath(); g.arc(o, o, f.r * k, 0, 7); g.stroke(); } }
@@ -220,6 +228,13 @@ export function makeBook(G) {
       for (const q of steps) card.append(el("div", `sb-step${q.done(s) ? " done" : q === cur ? " here" : ""}`, `${q.done(s) ? "✓" : q === cur ? "▶" : "·"} ${q.text}`));
       sb.append(card);
     });
+    // the flow around the main line: which turtle opens when, who lives there, which verse it keeps and what it takes, and its rare find
+    const isles = el("div", "sb-arc"); isles.append(el("b", "", "🐢 Turtles, their dinosaurs, verses and rare finds"));
+    for (const [id, cfg] of Object.entries(ISLANDS)) {
+      const kinds = Object.entries(DINOS).filter(([, D]) => D.home === id).map(([, D]) => D.line), v = VERSES.find((x) => x.land === id), f = RARE_FINDS[id];
+      isles.append(el("div", `sb-step${s.seenIsles[id] || id === "home" ? " done" : ""}`, `${s.seenIsles[id] || id === "home" ? "✓" : "·"} ${cfg.name} (${cfg.biome})${cfg.reveal ? `, on the map after "${cfg.reveal}"` : ""} · born here: ${kinds.join(", ") || "none"}${v ? ` · verse ${v.where}${v.needs ? ` (needs ${v.needs.join(" or ")})` : ""}${s.verses?.[v.id] ? " ✓" : ""}` : ""}${f ? ` · ${ITEMS[f.item].name} by ${DINOS[f.by].line}${s.rare?.[id] ? " ✓" : ""}` : ""}`));
+    }
+    sb.append(isles);
     box.append(sb);
   }  /** for trying things out quickly. It's your save: everything here really happens */
   function testTools() {
@@ -250,7 +265,9 @@ export function makeBook(G) {
     act("🔄 Start a new game", () => { toggle(false); G.talk.say("Start over?", ["This wipes this farm and starts a fresh game. The last save stays in a backup file beside it."], { choose: [["Yes, start over", () => G.restart()], ["Keep playing", null]] }); });
     act("Open all gates", () => { for (const L of G.world.list) for (const c of L.cells.values()) for (const r of [...c]) if (r.gate) G.lore.clearGate(r); });
     act("Reveal the map", () => { for (const L of G.world.list) { L.group.visible = true; s.seenIsles[L.cfg.id] = true; } s.flags.chart = true; });
-    act("Finish this story step", () => { const q = STORY.find((x) => !x.done(s)); if (!q || q.id === "free") return; ({ plant: () => { s.flags.planted = true; }, harvest: () => { s.flags.harvested = true; }, ship: () => { s.flags.shipped = true; }, friend: () => { s.flags.fed = true; }, bridge: () => { s.flags.bridgeFixed = true; }, town: () => { s.flags.town = true; }, moss: () => { s.met["Old Moss"] = 1; }, boulder: () => { s.flags.boulder = true; }, c1: () => { s.carved.c1 = true; }, show: () => { s.flags.moss = true; }, boat: () => { s.flags.boat = true; }, dune: () => { s.seenIsles.dune = true; }, c2: () => { s.carved.c2 = true; }, c3: () => { s.carved.c3 = true; }, c4: () => { s.carved.c4 = true; }, chart: () => { s.flags.chart = true; G.world.lands.elder.group.visible = true; }, elder: () => { s.seenIsles.elder = true; }, c5: () => { s.carved.c5 = true; }, portal: () => { s.flags.portal = true; }, truth: () => { s.flags.truth = true; G.add("heartseed_seed", 1); }, grow: () => { s.flags.bloomed = true; G.add("heartseed", 1); }, shrine: () => { s.flags.finale = true; s.flags.after = true; } }[q.id] || (() => {}))(); });
+    act("Finish this story step", () => { const q = STORY.find((x) => !x.done(s)); if (!q || q.id === "free") return; ({ plant: () => { s.flags.planted = true; }, harvest: () => { s.flags.harvested = true; }, ship: () => { s.flags.shipped = true; }, friend: () => { s.flags.fed = true; }, bridge: () => { s.flags.bridgeFixed = true; }, town: () => { s.flags.town = true; }, moss: () => { s.met["Old Moss"] = 1; }, boulder: () => { s.flags.boulder = true; }, c1: () => { s.carved.c1 = true; }, show: () => { s.flags.moss = true; }, boat: () => { s.flags.boat = true; }, dune: () => { s.seenIsles.dune = true; }, c2: () => { s.carved.c2 = true; }, c3: () => { s.carved.c3 = true; }, c4: () => { s.carved.c4 = true; }, chart: () => { s.flags.chart = true; G.world.lands.elder.group.visible = true; }, elder: () => { s.seenIsles.elder = true; }, c5: () => { s.carved.c5 = true; }, portal: () => { s.flags.portal = true; }, truth: () => { s.flags.truth = true; },
+        bloom: () => { (s.verses ||= {}).v1 = true; }, travel: () => G.dinos.add("galli", ""), sniff: () => { (s.rare ||= {}).home = true; G.add("shellclover", 1); }, verses: () => { s.flags.verses = true; }, native: () => G.dinos.add("styra", ""),
+        ...Object.fromEntries(VERSES.map((v) => [v.id, () => { (s.verses ||= {})[v.id] = true; }])), whole: () => { s.flags.whole = true; G.add("heartseed_seed", 1); }, grow: () => { s.flags.bloomed = true; G.add("heartseed", 1); }, shrine: () => { s.flags.finale = true; s.flags.after = true; } }[q.id] || (() => {}))(); });
     box.append(wrap);
     const go = el("div", "test-row");
     for (const L of G.world.list) if (L.group.visible) go.append(button(`Go to ${L.cfg.name}`, () => { toggle(false); s.money += FERRY; G.sail.ferry(L); }, "cozy small ghost"));
@@ -280,7 +297,7 @@ export function makeShop(G) {
     rows.replaceChildren();
     const season = seasonOf(s.day).index, redo = () => { play("buy"); draw(who, mode); };
     if (S.seeds) for (const [k, c] of Object.entries(CROPS)) {
-      if (c.story || (S.seeds !== "all" && c.from !== mode)) continue;
+      if (c.story || c.wild || (S.seeds !== "all" && c.from !== mode)) continue;          // wild seeds are only ever found
       buyRow(`${c.icon} ${ITEMS[`${k}_seed`].name}`, c.seasons.includes(season) ? `${c.days} days` : "out of season", c.seed, s.money >= c.seed, () => { s.money -= c.seed; G.add(`${k}_seed`, 1); redo(); });
     }
     for (const k of S.rareSeeds || []) { const c = CROPS[ITEMS[k].seed]; buyRow(`${c.icon} ${ITEMS[k].name}`, "rare", c.seed * 2, s.money >= c.seed * 2, () => { s.money -= c.seed * 2; G.add(k, 1); redo(); }); }

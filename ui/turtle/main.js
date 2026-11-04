@@ -22,6 +22,9 @@ import { makeWater } from "./water.js";
 import { makeBiomes } from "./biomes.js";
 import { makeFell } from "./fell.js";
 import { makeWeather } from "./weather.js";
+import { makeExplore } from "./explore.js";
+import { makeRare } from "./rare.js";
+import { makeRideWork } from "./ridework.js";
 
 const $ = (id) => document.getElementById(id);
 export const fresh = () => ({ version: 2, name: "", body: "male", skin: "Farmer", day: 1, minute: 6.5 * 60, money: 120, weather: "sunny", pos: [18, 2], rod: 1, tools: {},
@@ -293,7 +296,9 @@ function nearestThing() {
     const d = P.riding, sk = skillsOf(d.r), front = P.pos.clone().addScaledVector(P.front, 1.6 + d.char.seat * 0.4);
     const able = (r) => (r.node === "tree" ? sk.includes("chop") : r.node === "rock" ? sk.includes("mine") || d.data.traits.smash != null && d.r.stage >= d.data.traits.smash : r.node === "forage");
     const rec = nearest(G, front.x, front.z, 2.6, (r) => r.node && !r.falling && able(r)), name = d.r.name || d.data.forms[d.r.stage];
+    list.unshift(...(G.ridework?.actions() || []));        // till, water, harvest, sow, dig, dive: from the saddle
     if (rec) list.unshift([`${name}: ${rec.node === "tree" ? (/stump|log/.test(rec.key) ? "split the" : "fell the") : rec.node === "rock" ? "smash the" : "trample the"} ${rec.node === "forage" ? itemName(rec.item).toLowerCase() : /stump/.test(rec.key) ? "stump" : /log/.test(rec.key) ? "log" : rec.node}`, () => rideClear(d, rec)]);
+    const sniff = G.rare?.action(); if (sniff) list.unshift(sniff);
   }
   if (P.riding) list.push(["Get down", () => G.setRide(null)]);
   return list[0] || null;
@@ -354,8 +359,10 @@ G.arrive = (L) => {
   c.style.animation = "none"; void c.offsetWidth; c.style.animation = "";
   setTimeout(() => { c.hidden = true; }, 5000);
   popup(`Added to your map: ${L.cfg.name}`, "good");
-  G.moment("new_isle");
+  G.moment(L.cfg.feature ? "far_isle" : "new_isle");
 };
+/** the story has just put a far turtle on your chart */
+G.revealed = (L) => { if (G.s.seenIsles[L.cfg.id]) return; play("rare"); popup(`${L.cfg.name}, the ${L.cfg.biome.toLowerCase()} turtle, is on your map now`, "good"); };
 
 function newDay(passedOut) {
   const s = G.s, before = seasonOf(s.day).index;
@@ -432,6 +439,7 @@ async function boot() {
   const tips = setInterval(() => { tip = (tip + 1) % TIPS.length; $("loadTip").textContent = TIPS[tip]; }, 3200);
   say("Waking the turtle…", 12);
   G.vfx = makeVfx(G);
+  G.explore = makeExplore(G);                               // before the world: the far turtles call it as they fill in
   await buildWorld(G);
   say("Planting the fields…", 62);
   G.input = makeInput(canvas);
@@ -457,6 +465,7 @@ async function boot() {
   G.biomes = makeBiomes(G);
   G.fell = makeFell(G);
   G.weatherFx = makeWeather(G);
+  G.rare = makeRare(G); G.ridework = makeRideWork(G);
   G.lore.start();
   G.tackle = makeTackle(G);
   await G.tackle.refresh();
@@ -530,6 +539,7 @@ async function boot() {
     G.biomes?.tick(dt, t);
     G.fell?.tick(dt);
     G.weatherFx?.tick(dt, t);
+    if (!locked) G.rare?.tick(dt, t);
     for (const n of G.people) n.tick(dt, n.L.dist(P.pos.x, P.pos.z) < n.L.cfg.a + 130);
     G.courier?.tick(dt, P.pos.distanceTo(G.world.lands.home.group.position) < 420);
     tickWorld(G, dt, t);

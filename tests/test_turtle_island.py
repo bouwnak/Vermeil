@@ -122,8 +122,34 @@ class Content(unittest.TestCase):
             with open(os.path.join(folder, f"{base}.glb"), "rb") as f:
                 self.assertIn(b'"Jaw"', f.read(60000), base)
 
+    def _kinds_and_turtles(self):
+        kinds = set(re.findall(r"^  (\w+): \{[^\n]*forms: \[", DATA, re.M))
+        isles = re.search(r"export const ISLANDS = \{(.*?)\n\};", DATA, re.S).group(1)
+        turtles = set(re.findall(r'^  (\w+): \{ name: "', isles, re.M))
+        return kinds, turtles
+
+    def test_every_dinosaur_lives_on_a_real_turtle(self):
+        kinds, turtles = self._kinds_and_turtles()
+        self.assertEqual(len(kinds), 30)
+        homes = dict(re.findall(r'^  (\w+): \{[^\n]*home: "(\w+)"', DATA, re.M))
+        homes.update(re.findall(r'\["(\w+)", "(\w+)", \["\w+", \d\]\]', DATA))       # the first ten's homes, set in a loop
+        for kind in kinds:
+            self.assertIn(homes.get(kind), turtles, kind)
+
+    def test_rare_finds_and_verses_point_at_real_things(self):
+        kinds, turtles = self._kinds_and_turtles()
+        finds = re.search(r"export const RARE_FINDS = \{(.*?)\n\};", DATA, re.S).group(1)
+        for land, item, by in re.findall(r'(\w+): \{ item: "(\w+)", by: "(\w+)" \}', finds):
+            self.assertIn(land, turtles)
+            self.assertIn(by, kinds)
+        self.assertEqual(len(re.findall(r'item: "\w+", by:', finds)), len(turtles))     # every turtle hides one
+        verses = re.findall(r'\{ id: "v\d", land: "(\w+)"', DATA)
+        self.assertEqual(len(verses), 8)
+        for land in verses:
+            self.assertIn(land, turtles)
+
     def test_every_line_has_three_forms(self):
-        self.assertEqual(len(re.findall(r"forms: \[", DATA)), 10)
+        self.assertEqual(len(re.findall(r"forms: \[", DATA)), 30)       # the first ten, and twenty from the far turtles
         for forms in re.findall(r"forms: \[(.*?)\]", DATA):
             self.assertEqual(forms.count('"') // 2, 3)
         for sizes in re.findall(r"sizes: \[(.*?)\]", DATA):

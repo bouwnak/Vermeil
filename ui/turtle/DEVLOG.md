@@ -60,6 +60,14 @@ Done: seats, crouch, town way in, fountain, crowds, roaming and drinking, pens, 
 
 Done: dinosaurs bigger, long necks carried high, Crestback mouth, eyes set ahead of the jaw hinge, real legs for the armoured one and the pterosaur, swimmers kept to beach and sea, saddles and a rider who moves with the back, a rowing boat, the swordfish showing, fire and smoke on machines, a walk-in cheese cellar, a stirring pot, wheels that roll by distance, hens living in coops, smooth roads, a town layout and stalls for every island, and clearable debris on the farm. Details in `HANDOVER.md`.
 
+## Sixth round
+
+Done: felling and breaking with gravity, pieces and dust; synthesized wood, stone, grass and weather sounds; visible rain, storms with lightning, snow and wind; lamps at night and fireflies; island life on Hoarshell, Coralcrest and Emberback; the Elder's dais and portal step; bridge crossings; dino personalities, voices, idle habits, reins, ride-to-clear; rarity tiers and patterns re-rolled daily; wheels on every vehicle; rigger roles, undo and test poses. Not yet: 20 new dinosaurs, new exploration turtles, deeper story, farm work slots, rare items by sniffing. Details in `HANDOVER.md`.
+
+## Seventh round
+
+Done: 20 new dinosaurs with home turtles and stronger gifts, two travel mounts (Strider on land, Galewing in the sky), eight far turtles for exploration (ancient city, caverns, dino forest, wildflower meadow, cloud peaks, lagoon, raptor jungle, salt flats), the Waking Song split into eight verses with two new story arcs, a rare find per turtle that only one kind can sniff out, farm work done from the saddle, three dinosaurs per farm job, no cap on dinosaurs kept. Details in `HANDOVER.md`.
+
 ## Known gaps
 
 - Not played by hand start to finish. The story chain past the ferry was checked by its conditions, not walked through.

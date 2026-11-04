@@ -226,7 +226,8 @@ export async function detail(G, L) {
   const cfg = L.cfg, season = G.world.season;
   L.detailed = (async () => {
     const town = cfg.flats[0], keep = cfg.clear ? cfg.clear.map((i) => cfg.flats[i]) : cfg.houses ? [town] : [];         // farmland, the plateau and town squares stay open
-    const avoid = (x, z) => keep.some((f) => Math.hypot(x - f.x, z - f.z) < f.r * 1.02) || (cfg.ruins && Math.hypot(x, z - 20) < 30);
+    const avoid = (x, z) => keep.some((f) => Math.hypot(x - f.x, z - f.z) < f.r * 1.02) || (cfg.ruins && Math.hypot(x, z - 20) < 30) || (L.keep || []).some(([kx, kz, kr]) => Math.hypot(x - kx, z - kz) < kr);
+    if (cfg.feature) await G.explore?.build(L);              // a far turtle's own place: the city, the caves, the giant ferns... (explore.js)
     if (cfg.houses) await Promise.all(cfg.houses.map(async ([path, x, z, h, ry]) => {
       const [wx, wz] = [town.x + x, town.z + z], o = await prop(path, L.group, { x: wx, y: L.land.ground(wx, wz) - 0.1, z: wz, height: h, ry });
       if (cfg.tint) tinted(o, cfg.tint);
@@ -282,7 +283,7 @@ export async function buildWorld(G) {
 
   const cfgs = { ...ISLANDS };
   if (save.flags.after) cfgs.drift = driftCfg(Math.floor(save.day / 7));
-  for (const [id, cfg] of Object.entries(cfgs)) { const L = W.lands[id] = makeLand(G, id, cfg, season); W.list.push(L); if (cfg.hidden && !save.flags.chart) L.group.visible = false; }
+  for (const [id, cfg] of Object.entries(cfgs)) { const L = W.lands[id] = makeLand(G, id, cfg, season); W.list.push(L); if (cfg.hidden && !save.flags[cfg.reveal || "chart"] && !save.seenIsles?.[id]) L.group.visible = false; }
 
   await buildDock(W.lands.home.group);
   await pond(W.lands.home, -74, -8, 8, W.lands.home.land.ground(-74, -8));
@@ -356,6 +357,7 @@ export function tickWorld(G, dt, t) {
   if ((W.farIn = (W.farIn || 0) - dt) <= 0) {
     W.farIn = 0.5;
     for (const L of W.list) {
+      if (!L.group.visible && L.cfg.hidden && s.flags[L.cfg.reveal || "chart"]) { L.group.visible = true; G.revealed?.(L); }       // the story has put it on your map
       const far = L.dist(focus.x, focus.z) > L.cfg.a + 300;
       if (far !== L.far) { L.far = far; for (const c of L.group.children) if (!c.userData.always) c.visible = !far; }
     }

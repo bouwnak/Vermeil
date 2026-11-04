@@ -32,6 +32,11 @@ export const CROPS = {
   banana: { name: "Banana", icon: "🍌", ...stages("PalmTree"), ripeSize: 5, tree: true, fruit: `${FOOD}Banana.glb`, seasons: [1], days: 8, regrow: 3, seed: 170, sell: 42, yield: 3, from: "palm" },
   coconut: { name: "Coconut", icon: "🥥", ...stages("PalmTree"), ripeSize: 5, tree: true, cut: `${CP}PalmTree_Harvested.glb`, seasons: [0, 1, 2, 3], days: 12, regrow: 5, seed: 220, sell: 60, yield: 2, from: "palm" },
   heartseed: { name: "Heartbloom", icon: "💠", grow: [1, 2, 3, 4].map((i) => `${CP}Flower_${i}.glb`), ripe: `${MEGA}Flower_4_Group.gltf`, ripeSize: 1.3, seasons: [0, 1, 2, 3], days: 7, seed: 0, sell: 0, yield: 1, story: true },
+  // wild: never sold. A dinosaur sniffs the seed out on one turtle, and nowhere else (RARE_FINDS)
+  moonmelon: { name: "Moonmelon", icon: "🌕", ...stages("Watermelon"), ripeSize: 1, seasons: [0, 1, 2, 3], days: 6, seed: 300, sell: 600, yield: 1, wild: true },
+  emberroot: { name: "Emberroot", icon: "🔥", ...stages("Beet"), ripeSize: 0.8, seasons: [0, 1, 2, 3], days: 5, seed: 200, sell: 420, yield: 2, wild: true },
+  prismbloom: { name: "Prismbloom", icon: "🌈", grow: [1, 2, 3, 4].map((i) => `${CP}Flower_${i}.glb`), ripe: `${MEGA}Flower_3_Group.gltf`, ripeSize: 1.3, seasons: [0, 1, 2, 3], days: 4, seed: 180, sell: 380, yield: 1, wild: true },
+  starfruit: { name: "Starfruit", icon: "⭐", ...stages("Orange"), ripeSize: 3.6, tree: true, cut: `${CP}Orange_Harvested.glb`, seasons: [0, 1, 2, 3], days: 8, regrow: 3, seed: 400, sell: 160, yield: 3, wild: true },
 };
 export const YOUNG = [`${GROWN}Plant_1.glb`, `${GROWN}Plant_2.glb`, `${GROWN}Plant_3.glb`];
 export const WEED = `${GROWN}Grass_Short.glb`;
@@ -58,7 +63,17 @@ export const RODS = [1, 2, 3, 4, 5].map((level) => ({ level, model: `FishingRod_
 // ---------------- dinosaurs: a line is three forms; friendship levels them, time and friendship evolve them ----------------
 export const LEVEL_XP = 16, MAX_LEVEL = 20;                 // one level of friendship
 export const EVOLVE = [null, { level: 5, days: 7 }, { level: 10, days: 21 }];
-export const SKILLS = { water: "Watering", weed: "Weeding", harvest: "Harvesting", plant: "Planting", chop: "Chopping", mine: "Smashing rock", dig: "Digging", scout: "Scouting", carry: "Carrying" };
+export const SKILLS = { water: "Watering", weed: "Weeding", harvest: "Harvesting", plant: "Planting", till: "Tilling", chop: "Chopping", mine: "Smashing rock", dig: "Digging", scout: "Scouting", carry: "Carrying", sniff: "Sniffing", dive: "Diving", reach: "Reaching high", slash: "Slashing brush", sprint: "Sprinting" };
+// farm work is given out in the journal, three dinosaurs at most to a job. Everything else a dinosaur only does with you on its back
+export const FARM_SKILLS = ["water", "weed", "plant", "harvest", "till", "carry"];
+export const JOB_SLOTS = 3;
+// each kind is born with one gift. The first ten have a small one; the ones you find later have it stronger. [what, how strong 1-3]
+export const PERKS = {
+  quick: ["Quick hands", "works faster"], tireless: ["Tireless", "tires more slowly"], green: ["Green thumb", "crops it tends can turn golden"], lucky: ["Lucky", "finds a little extra"],
+  strong: ["Strong", "clears more in one go"], swift: ["Swift", "runs faster"], gentle: ["Gentle", "makes friends faster"], keen: ["Keen nose", "smells rare finds from further off"],
+};
+export const perkText = (D) => { const [k, n] = D.perk || ["gentle", 1]; return `${PERKS[k][0]} ${"★".repeat(n)}: ${PERKS[k][1]}`; };
+export const perkOf = (D, kind) => (D.perk?.[0] === kind ? D.perk[1] : 0);
 export const DINOS = {
   sprig: { base: "Parasaurolophus", parts: ["ridge"], line: "Crestback", icon: "🦕", forms: ["Crestling", "Crestback", "Grand Crestback"], sizes: [2.4, 4.4, 6.6], speed: [8.5, 10, 11.5], food: "carrot", ride: 0,
     skills: [["water"], ["water", "weed"], ["water", "weed", "plant"]], traits: { smash: 0 }, blurb: "Gentle and curious. Its crest sprays water over a field, and its head can crack a loose boulder.",
@@ -90,7 +105,71 @@ export const DINOS = {
   star: { bite: "sharp", base: ["Velociraptor", "Trex", "Trex"], parts: ["sail", "crest"], line: "Glimmerling", icon: "🌟", forms: ["Glimmerling", "Auroraback", "Dawnbringer"], sizes: [2.2, 4.8, 7.4], speed: [10, 14, 20], food: "heartseed_any", rare: true, ride: 1,
     skills: [["water", "harvest"], ["water", "harvest", "weed"], ["water", "harvest", "weed", "plant", "scout"]], traits: { fly: 2, swim: 2 }, blurb: "Nobody has seen one in a thousand years. It hums the same note the turtles do.",
     shape: { hide: 0xe9e2ff, belly: 0xfff6c8, accent: 0x7fe0d0, legs: 4, wings: true, crest: "fan", tail: 3 } },
+
+  // ---------- found later, each on its own turtle: rarer gifts than the first ten. `travel`: the two fastest, one on land and one in the sky ----------
+  galli: { base: "Velociraptor", parts: ["mane"], line: "Strider", icon: "🦤", forms: ["Striderling", "Strider", "Galestrider"], sizes: [2.2, 3.8, 5.2], speed: [24, 30, 36], food: "wheat", ride: 0, travel: "land", home: "willowmere", perk: ["swift", 3],
+    skills: [["water", "sprint"], ["water", "sprint", "carry"], ["water", "sprint", "carry", "sniff"]], traits: { fast: 0 }, blurb: "Built like a sprinter and twice as restless. The fastest way across any turtle, and it carries water in its throat for your plots.",
+    shape: { hide: 0xf2c84a, belly: 0xfff4d8, accent: 0xe0703a, legs: 2, crest: "feather", tail: 3 } },
+  quetz: { bite: "sharp", line: "Galewing", icon: "🪽", forms: ["Galeling", "Galewing", "Stormsail"], sizes: [3, 6, 8.5], speed: [26, 34, 42], food: "fish", ride: 0, travel: "sky", home: "dune", perk: ["swift", 3],
+    skills: [["scout", "sniff"], ["scout", "sniff", "carry"], ["scout", "sniff", "carry", "harvest"]], traits: { fly: 0 }, blurb: "A wingspan like a sail and the patience of a cat. Nothing crosses the open sea faster.",
+    shape: { kind: "ptero", hide: 0xe8e0d0, belly: 0xfff8ee, accent: 0xd84a3a } },
+  spino: { bite: "sharp", base: "Trex", parts: ["sail"], line: "Sailjaw", icon: "⛵", forms: ["Sailpup", "Sailjaw", "Tidesail"], sizes: [2.4, 4.6, 7], speed: [8, 10, 13], food: "fish", ride: 1, home: "reef", perk: ["lucky", 2],
+    skills: [["harvest", "dive"], ["harvest", "dive", "carry"], ["harvest", "dive", "carry", "sniff"]], traits: { swim: 1 }, blurb: "Wades into the lagoon up to its sail and comes back with something every time.",
+    shape: { hide: 0x3f7a6a, belly: 0xe8e0c0, accent: 0xd86a3a, legs: 2, crest: "none", tail: 3 } },
+  pachy: { base: "Velociraptor", parts: ["dome", "scutes"], line: "Thumpdome", icon: "🐏", forms: ["Bonklet", "Thumpdome", "Crownbreaker"], sizes: [1.8, 3.2, 4.6], speed: [9, 11, 13], food: "turnip", ride: 1, home: "hollow", perk: ["strong", 2],
+    skills: [["mine"], ["mine", "carry"], ["mine", "carry", "dig"]], traits: { smash: 0 }, blurb: "Solves every problem with its head. Rocks, mostly. Sometimes doors.",
+    shape: { hide: 0x8a6ab0, belly: 0xece0f4, accent: 0xf0c040, legs: 2, crest: "dome", tail: 2 } },
+  styra: { base: "Triceratops", parts: ["horns", "scutes"], line: "Furrowhorn", icon: "🦏", forms: ["Furrowling", "Furrowhorn", "Ploughcrown"], sizes: [2.2, 4.2, 6.4], speed: [7, 8.5, 10], food: "carrot", ride: 0, home: "bloom", perk: ["quick", 2],
+    skills: [["till"], ["till", "weed"], ["till", "weed", "plant"]], traits: { smash: 1, heavy: 1 }, blurb: "Its frill is a plough. Ride it across open ground and the soil turns behind you in rows.",
+    shape: { hide: 0xd08a4a, belly: 0xf6e4c4, accent: 0x7a3a2a, legs: 4, crest: "frill", horns: true, tail: 2 } },
+  anky2: { line: "Clubtail", icon: "🛡", forms: ["Clublet", "Clubtail", "Bastionback"], sizes: [2.2, 4, 6], speed: [5.5, 6.5, 8], food: "pumpkin", ride: 1, home: "hollow", perk: ["tireless", 2],
+    skills: [["mine"], ["mine", "dig"], ["mine", "dig", "carry"]], traits: { smash: 0, heavy: 1 }, blurb: "Armoured like a castle wall, and about as easy to argue with. Its tail club cracks stone like toffee.",
+    shape: { kind: "anky", hide: 0xc9a24a, belly: 0xf4e8c0, accent: 0x5a4a2a } },
+  brachio: { base: "Apatosaurus", parts: ["crest"], line: "Cloudneck", icon: "🦕", forms: ["Necklet", "Cloudneck", "Skyreacher"], sizes: [3.4, 7.5, 11], speed: [5.5, 7, 8.5], food: "apple", ride: 1, home: "fernwood", perk: ["green", 2],
+    skills: [["harvest", "reach"], ["harvest", "reach", "plant"], ["harvest", "reach", "plant", "carry"]], traits: { reach: 0 }, blurb: "Eats from the tops of the giant ferns, and will lift you up there too if you ask nicely.",
+    shape: { hide: 0x8ec89a, belly: 0xf0f4e0, accent: 0xe0583a, legs: 4, neck: 3, crest: "none", tail: 3 } },
+  diplo: { base: "Apatosaurus", parts: ["ridge", "scutes"], line: "Whiplash", icon: "🦕", forms: ["Whiplet", "Whiplash", "Thunderwhip"], sizes: [3, 6.8, 10], speed: [6, 7.5, 9], food: "bamboo", ride: 1, home: "fernwood", perk: ["strong", 2],
+    skills: [["chop"], ["chop", "carry"], ["chop", "carry", "weed"]], traits: { chop: 0 }, blurb: "One crack of that tail and a log becomes kindling. It finds this very funny.",
+    shape: { hide: 0xc84a4a, belly: 0xf4d8c8, accent: 0x8a2a4a, legs: 4, neck: 2, tail: 3 } },
+  kentro: { base: "Stegosaurus", parts: ["plates", "scutes"], line: "Spikeback", icon: "🌵", forms: ["Spiklet", "Spikeback", "Thornwarden"], sizes: [2.2, 4, 5.8], speed: [6.5, 8, 9.5], food: "lettuce", ride: 1, home: "thorn", perk: ["quick", 2],
+    skills: [["harvest"], ["harvest", "slash"], ["harvest", "slash", "carry"]], traits: {}, blurb: "Swishes its spiked tail through a ripe row and the whole lot is picked. Mind your shins.",
+    shape: { hide: 0x5aa86a, belly: 0xf0ecc8, accent: 0xf08a2a, legs: 4, crest: "plates", tail: 3 } },
+  theri: { base: "Trex", parts: ["mane"], line: "Sicklehand", icon: "✂", forms: ["Sicklet", "Sicklehand", "Scytheking"], sizes: [2.4, 4.6, 6.8], speed: [7, 8.5, 10], food: "berries", ride: 1, home: "thorn", perk: ["green", 2],
+    skills: [["slash", "harvest"], ["slash", "harvest", "weed"], ["slash", "harvest", "weed", "chop"]], traits: {}, blurb: "Long claws, soft heart. Cuts a path through thorn and bramble, then stops to sniff the flowers.",
+    shape: { hide: 0x6a5a8a, belly: 0xece4f0, accent: 0xe8d24a, legs: 2, crest: "feather", tail: 3 } },
+  dilo: { bite: "sharp", base: "Velociraptor", parts: ["crest"], line: "Frillcrest", icon: "🦎", forms: ["Frilling", "Frillcrest", "Twincrest"], sizes: [2, 3.6, 5], speed: [11, 14, 16], food: "fish", ride: 1, home: "thorn", perk: ["keen", 2],
+    skills: [["scout", "sniff"], ["scout", "sniff", "harvest"], ["scout", "sniff", "harvest", "slash"]], traits: {}, blurb: "Twin crests that flush pink when it smells something interesting. They flush a lot.",
+    shape: { hide: 0x4ab8a8, belly: 0xf4f0d8, accent: 0xf04a6a, legs: 2, crest: "fan", tail: 3 } },
+  compy: { base: "Velociraptor", parts: [], line: "Nibbit", icon: "🐁", forms: ["Nibbit", "Scurrit", "Swiftnib"], sizes: [1.2, 2, 3], speed: [12, 15, 18], food: "berries", ride: 2, home: "pillar", perk: ["keen", 3],
+    skills: [["sniff"], ["sniff", "scout"], ["sniff", "scout", "carry"]], traits: {}, blurb: "Small enough to fit through any crack, and nosy enough to try. Has found every coin the Shellwrights ever dropped.",
+    shape: { hide: 0xa8d84a, belly: 0xfaf4d8, accent: 0x3a6a2a, legs: 2, crest: "none", tail: 3 } },
+  ovi: { base: "Velociraptor", parts: ["crest", "mane"], line: "Eggkeeper", icon: "🥚", forms: ["Eggling", "Eggkeeper", "Nestmother"], sizes: [1.8, 3.2, 4.6], speed: [10, 12, 14], food: "corn", ride: 1, home: "pillar", perk: ["gentle", 2],
+    skills: [["plant", "carry"], ["plant", "carry", "sniff"], ["plant", "carry", "sniff", "harvest"]], traits: {}, blurb: "Tucks seeds into the soil the way it tucks in its eggs: carefully, and with a little song.",
+    shape: { hide: 0x4a6ad8, belly: 0xf0f0ff, accent: 0xf0a83a, legs: 2, crest: "fan", tail: 2 } },
+  cory: { base: "Parasaurolophus", parts: ["dome"], line: "Bellcrest", icon: "🔔", forms: ["Bellchick", "Bellcrest", "Choirhorn"], sizes: [2.4, 4.6, 6.8], speed: [8, 10, 12], food: "flowers", ride: 0, home: "mist", perk: ["gentle", 3],
+    skills: [["water", "weed"], ["water", "weed", "plant"], ["water", "weed", "plant", "harvest"]], traits: { climb: 2 }, blurb: "Its hollow crest rings like a bell. The old keepers say its kind once sang with the turtles.",
+    shape: { hide: 0xe07a9a, belly: 0xfff0f0, accent: 0x7a4ab8, legs: 4, crest: "dome", tail: 3 } },
+  ptera: { bite: "sharp", line: "Duskwing", icon: "🦇", forms: ["Dusklet", "Duskwing", "Nightglider"], sizes: [1.8, 3.4, 5], speed: [12, 17, 23], food: "fish", ride: 1, home: "mist", perk: ["keen", 2],
+    skills: [["scout"], ["scout", "sniff"], ["scout", "sniff", "carry"]], traits: { fly: 1 }, blurb: "Sleeps in caves by day and glides the cloud tops at dusk. Sees in the dark, and smells even better.",
+    shape: { kind: "ptero", hide: 0x4a4a6a, belly: 0xd8d0e8, accent: 0xf0d04a } },
+  mosa: { bite: "sharp", line: "Deepmaw", icon: "🐋", forms: ["Deeplet", "Deepmaw", "Abyssal King"], sizes: [2.6, 5, 8], speed: [11, 15, 19], food: "fish", ride: 1, home: "reef", perk: ["lucky", 3],
+    skills: [["dive"], ["dive", "harvest"], ["dive", "harvest", "carry"]], traits: { swim: 1 }, blurb: "Dives deeper than anything that breathes air. Brings up pearls and grins about it.",
+    shape: { kind: "plesio", hide: 0x3a5a9a, belly: 0xe0eaf4, accent: 0x8ad8e8 } },
+  ichthy: { line: "Glimfin", icon: "🐬", forms: ["Glimlet", "Glimfin", "Aurorafin"], sizes: [2, 3.6, 5.2], speed: [13, 18, 24], food: "fish", ride: 0, home: "frost", perk: ["swift", 2],
+    skills: [["dive"], ["dive", "scout"], ["dive", "scout", "sniff"]], traits: { swim: 0 }, blurb: "Rides the cold currents like a skater. The quickest thing in the water, and it knows it.",
+    shape: { kind: "plesio", hide: 0x9ac8f0, belly: 0xf4faff, accent: 0x4a8ad8 } },
+  iguan: { base: "Parasaurolophus", parts: ["scutes"], line: "Thumbspur", icon: "🌿", forms: ["Spurling", "Thumbspur", "Grovewarden"], sizes: [2.4, 4.4, 6.4], speed: [7.5, 9, 10.5], food: "lettuce", ride: 1, home: "bloom", perk: ["green", 3],
+    skills: [["plant"], ["plant", "water"], ["plant", "water", "harvest"]], traits: {}, blurb: "Plants with its thumb spike, one seed per poke. Whatever it plants grows a little better.",
+    shape: { hide: 0x7aa84a, belly: 0xf0eccc, accent: 0xc8a24a, legs: 4, crest: "none", tail: 3 } },
+  carno: { bite: "sharp", base: "Trex", parts: ["horns"], line: "Hornrunner", icon: "🐂", forms: ["Hornpup", "Hornrunner", "Dunebreaker"], sizes: [2.2, 4.2, 6.2], speed: [13, 17, 21], food: "fish", ride: 1, home: "salt", perk: ["strong", 3],
+    skills: [["sprint", "mine"], ["sprint", "mine", "dig"], ["sprint", "mine", "dig", "sniff"]], traits: { smash: 1, fast: 1 }, blurb: "Charges the salt crust just to hear it crack. Short arms, big plans.",
+    shape: { hide: 0xd84a3a, belly: 0xf8e0c8, accent: 0x2a2a3a, legs: 2, crest: "none", horns: true, tail: 3 } },
+  dimetro: { base: "Stegosaurus", parts: ["sail"], line: "Sunsail", icon: "☀", forms: ["Sunlet", "Sunsail", "Solarch"], sizes: [2, 3.6, 5.2], speed: [6.5, 8, 9.5], food: "pepper", ride: 1, home: "salt", perk: ["tireless", 3],
+    skills: [["dig"], ["dig", "water"], ["dig", "water", "sniff"]], traits: { dig: 0 }, blurb: "Basks with its sail to the sun all morning, then digs all afternoon on the warmth it saved.",
+    shape: { hide: 0xe89a3a, belly: 0xfff0d0, accent: 0xc83a6a, legs: 4, crest: "plates", tail: 3 } },
 };
+// the first ten: where they're from and their (smaller) gifts
+for (const [k, home, perk] of [["sprig", "home", ["gentle", 1]], ["pebble", "dune", ["strong", 1]], ["dash", "willowmere", ["swift", 1]], ["ripple", "palm", ["lucky", 1]], ["feather", "frost", ["keen", 1]], ["nib", "home", ["quick", 1]], ["burrow", "mire", ["lucky", 1]], ["hop", "home", ["tireless", 1]], ["neck", "palm", ["green", 1]], ["star", "elder", ["gentle", 2]]]) Object.assign(DINOS[k], { home, perk, basic: true });
 // ---------- looks: every dinosaur is born with a pattern and colours, and some are rarer than others ----------
 // [tier, chance, how far its colours stray from its kind's, a colour of its own or none]. Wild herds are born again each morning, so a rare one can turn up any day
 export const DINO_TIERS = [["Common", 0.62, 0.04, null], ["Uncommon", 0.25, 0.12, null], ["Rare", 0.09, 0.3, null], ["Legendary", 0.035, 0, [[0xe8c25a, 0x8a5a1a], [0xd8dde6, 0x5a6478], [0x2a2730, 0xd84a2a]]], ["Mythic", 0.005, 0, [[0x9ff3e6, 0xd86ad8], [0xfff0a0, 0x6ad8ff], [0xf4f0ff, 0xff6aa0]]]];
@@ -110,13 +189,23 @@ export function rollLook(species, rnd = Math.random) {
 }
 
 // roaming everywhere. after: what has to have happened before they'll trust you; until then they only watch. [species, how many, x, z, spread]
-export const UNLOCK = { sprig: null, nib: null, ripple: "town", hop: "boulder", dash: "town", pebble: "boat", feather: "boat", burrow: "boat", neck: "boat", star: "finale" };
+// the ones born on the far turtles need no unlocking: reaching their turtle at all is the test
+export const UNLOCK = { sprig: null, nib: null, ripple: "town", hop: "boulder", dash: "town", pebble: "boat", feather: "boat", burrow: "boat", neck: "boat", star: "finale", galli: "town", quetz: "boat" };
 export const UNLOCK_TEXT = { town: "after you've reached Willowmere", boulder: "after you've broken through the high road", boat: "once you have a boat", finale: "after the end of the story" };
 export const HERDS = {
   home: [["sprig", 3, 60, 40, 24], ["nib", 4, -40, -70, 22], ["ripple", 2, -116, 44, 10], ["hop", 3, 92, -46, 18], ["dash", 2, -80, 50, 22], ["neck", 2, -96, -40, 18]],
-  willowmere: [["dash", 4, 34, 40, 20], ["pebble", 2, -40, 30, 18], ["sprig", 2, 40, -30, 18]],
-  dune: [["pebble", 5, -30, 20, 34], ["dash", 3, 40, 10, 30], ["hop", 2, 30, -40, 20]],
-  frost: [["feather", 3, 20, -24, 26], ["pebble", 3, -20, 30, 26], ["hop", 3, 40, 10, 24]],
+  willowmere: [["dash", 4, 34, 40, 20], ["pebble", 2, -40, 30, 18], ["sprig", 2, 40, -30, 18], ["galli", 3, -34, -20, 16]],
+  dune: [["pebble", 5, -30, 20, 34], ["dash", 3, 40, 10, 30], ["hop", 2, 30, -40, 20], ["quetz", 2, -46, -30, 20]],
+  frost: [["feather", 3, 20, -24, 26], ["pebble", 3, -20, 30, 26], ["hop", 3, 40, 10, 24], ["ichthy", 2, 70, 40, 12]],
+  // the far turtles: each has its own kinds, born nowhere else
+  bloom: [["styra", 3, 20, 20, 24], ["iguan", 3, -30, -10, 22], ["sprig", 2, 40, -30, 18]],
+  pillar: [["compy", 4, 10, 10, 26], ["ovi", 3, -30, 30, 20], ["neck", 2, 40, -40, 20]],
+  hollow: [["pachy", 3, -20, 50, 16], ["anky2", 2, 40, 50, 18], ["burrow", 2, -50, 30, 14]],
+  fernwood: [["brachio", 2, 10, -10, 30], ["diplo", 2, -50, 30, 30], ["nib", 3, 40, 40, 24]],
+  mist: [["cory", 3, -50, 30, 16], ["ptera", 3, -30, 50, 20], ["feather", 2, -60, 10, 14]],
+  reef: [["spino", 2, -30, -20, 20], ["mosa", 2, 90, 40, 12], ["ripple", 2, -100, 40, 12]],
+  thorn: [["kentro", 3, 0, 20, 24], ["theri", 2, -40, -20, 20], ["dilo", 3, 30, -30, 22]],
+  salt: [["carno", 2, 0, 0, 30], ["dimetro", 3, -30, 20, 24], ["pebble", 2, 40, -30, 20]],
   mire: [["burrow", 4, 30, 16, 26], ["nib", 4, -30, -20, 24], ["sprig", 2, 10, 40, 20]],
   palm: [["neck", 3, -30, -12, 28], ["ripple", 2, 50, -20, 16], ["dash", 3, 20, 30, 24], ["feather", 2, 40, 40, 18]],
   ember: [["star", 1, 30, 30, 18], ["pebble", 3, -10, 44, 24], ["burrow", 3, 40, 0, 20]],
@@ -139,6 +228,19 @@ export const ITEMS = {
   ...Object.fromEntries(Object.entries(CROPS).filter(([, c]) => !c.story).flatMap(([k, c]) => [[k, { name: c.name, icon: c.icon, sell: c.sell, crop: true }], [`${k}_gold`, { name: `Golden ${c.name}`, icon: "✨", sell: c.sell * 4, crop: true, gold: true }], [`${k}_seed`, { name: `${c.name} ${c.tree ? "Sapling" : "Seeds"}`, icon: c.icon, packet: true, seed: k }]])),
   heartseed: { name: "Heartbloom", icon: "💠", sell: 0 },
   ...Object.fromEntries(FISH.map((f) => [f.id, { name: f.name, icon: "🐟", sell: f.sell, fish: true }])),
+  ...Object.fromEntries(Object.entries({ shellclover: ["Shellclover", "🍀", 140], brassbell: ["Old Brass Bell", "🔔", 300], sunstone: ["Sunstone", "🌞", 400], frostfeather: ["Frost Feather", "🪶", 350], bogpearl: ["Bog Pearl", "🟢", 380], coralbloom: ["Coral Bloom", "🪸", 360],
+    shellcoin: ["Shellwright Coin", "🪙", 500], glowstone: ["Glowstone", "💡", 450], amber: ["Ancient Amber", "🟠", 600], cloudpearl: ["Cloud Pearl", "☁", 700], thornberry: ["Thornheart Berry", "💗", 260], mirrorcrystal: ["Mirror Crystal", "🔮", 650] })
+    .map(([k, [name, icon, sell]]) => [k, { name, icon, sell, rare: true }])),
+};
+ITEMS.moonmelon_seed.name = "Unknown Seed"; ITEMS.moonmelon_seed.icon = "❔";
+for (const k of ["moonmelon_seed", "emberroot_seed", "prismbloom_seed", "starfruit_seed"]) ITEMS[k].rare = true;
+ITEMS.thornberry.treat = true;                                 // a dinosaur's favourite: three times the friendship of a meal
+// every turtle hides one rare thing, and only one kind of dinosaur can smell it. Ride that one there and let it sniff: three spots a week, each found once
+export const RARE_FINDS = {
+  home: { item: "shellclover", by: "sprig" }, willowmere: { item: "brassbell", by: "galli" }, dune: { item: "sunstone", by: "pebble" }, frost: { item: "frostfeather", by: "feather" },
+  mire: { item: "bogpearl", by: "dilo" }, palm: { item: "coralbloom", by: "ripple" }, ember: { item: "emberroot_seed", by: "anky2" }, elder: { item: "moonmelon_seed", by: "burrow" },
+  bloom: { item: "prismbloom_seed", by: "iguan" }, pillar: { item: "shellcoin", by: "compy" }, hollow: { item: "glowstone", by: "ptera" }, fernwood: { item: "amber", by: "diplo" },
+  mist: { item: "cloudpearl", by: "quetz" }, reef: { item: "starfruit_seed", by: "spino" }, thorn: { item: "thornberry", by: "kentro" }, salt: { item: "mirrorcrystal", by: "carno" },
 };
 export const itemName = (k) => ITEMS[k]?.name || k;
 
@@ -313,7 +415,38 @@ export const ISLANDS = {
   elder: { name: "The Elder", biome: "Ancient", a: 170, b: 130, seed: 61, deep: 44, hidden: true, route: { r: 1800, speed: 0.0015, phase: 4.2 }, palette: { sand: 0xd8d2bf, low: 0x8fb09a, mid: 0x7da08c, high: 0x8a8d8a, snow: 0xc9d2c8, path: 0xb8b2a0 },
     peaks: [[60, -30, 30, 40]], flats: [{ x: 0, z: 20, r: 54, h: 12 }], flora: () => [[`${GROWN}Willow_Dead_`, 5, 30, 1.8, 0.7], [`${TREE}DeadTree_`, 10, 40, 1.2, 0.6]], stones: `${GROWN}Rock_Moss_`, density: 0.5, nodes: [["relic", 6], ["stone", 12]],
     ruins: true, places: {}, folk: 0 },
+
+  // ---------- the far turtles: no towns, only what the Shellwrights left and the dinosaurs born there. Each keeps one verse of the Waking Song (VERSES).
+  // reveal: the flag that puts it on your map. feature: what explore.js builds on it ----------
+  bloom: { name: "Bloomdrift", biome: "Wildflower meadow", a: 130, b: 100, seed: 71, deep: 28, hidden: true, reveal: "boat", feature: "meadow", route: { r: 2350, speed: 0.0021, phase: 0.8 }, palette: { sand: 0xf7ecc8, low: 0xb8e88a, mid: 0x9ad877, high: 0xc9c2b0, snow: 0xf6f2ff, path: 0xd9c79a },
+    peaks: [[40, -30, 18, 20]], flats: [{ x: -10, z: 10, r: 44, h: 8 }], flora: () => [[`${TREE}Birch_`, 10, 40, 1.2, 0.5], [`${MEGA}CommonTree_`, 5, 30, 1.1, 0.6]], stones: `${GROWN}Rock_`, density: 1, nodes: [["berry", 20], ["fiber", 14], ["herb", 10]], flower: "Flower_4_Group", places: {}, folk: 0 },
+  thorn: { name: "Thornwild", biome: "Raptor jungle", a: 150, b: 116, seed: 79, deep: 30, hidden: true, reveal: "verses", feature: "jungle", route: { r: 2600, speed: 0.0019, phase: 2.1 }, palette: { sand: 0xd8c890, low: 0x4f9a48, mid: 0x3f8a40, high: 0x6a7a5a, snow: 0xa8d0a0, path: 0x9a8a5a },
+    peaks: [[-50, -40, 24, 22]], flats: [{ x: 0, z: 20, r: 34, h: 9 }], flora: () => [[`${MEGA}TwistedTree_`, 5, 90, 1.6, 0.8], [`${GROWN}Willow_`, 5, 50, 1.5, 0.7], [`${MEGA}CommonTree_`, 5, 40, 1.4, 0.6]], stones: `${GROWN}Rock_Moss_`, density: 1.5, nodes: [["berry", 16], ["wildcap", 10], ["herb", 10]], flower: "Mushroom_Laetiporus", places: {}, folk: 0 },
+  pillar: { name: "Pillarback", biome: "Ancient city", a: 150, b: 118, seed: 83, deep: 32, hidden: true, reveal: "verses", feature: "city", route: { r: 2850, speed: 0.0017, phase: 3.9 }, palette: { sand: 0xe8dcc0, low: 0xbfc49a, mid: 0xaab08c, high: 0xc8bca0, snow: 0xe8e2d0, path: 0xd6c8a6 },
+    peaks: [[70, -50, 20, 22]], flats: [{ x: 0, z: 0, r: 62, h: 11 }], flora: () => [[`${MEGA}TwistedTree_`, 5, 24, 1.3, 0.6], [`${TREE}DeadTree_`, 10, 16, 1.1, 0.5]], stones: `${GROWN}Rock_`, density: 0.6, nodes: [["relic", 8], ["stone", 14], ["sandstone", 8]], places: {}, folk: 0 },
+  hollow: { name: "Hollowshell", biome: "Caverns", a: 140, b: 110, seed: 89, deep: 34, hidden: true, reveal: "verses", feature: "caves", route: { r: 3100, speed: 0.0016, phase: 5.4 }, palette: { sand: 0x9a948c, low: 0x7d8a6e, mid: 0x6e7466, high: 0x6a6870, snow: 0x9fd8e8, path: 0x8a8478 },
+    peaks: [[0, -20, 46, 34], [56, 6, 26, 24], [-56, 0, 28, 26]], flats: [{ x: -10, z: 50, r: 28, h: 8 }], flora: () => [[`${GROWN}PineTree_`, 5, 30, 1.5, 0.6]], stones: `${GROWN}Rock_Moss_`, density: 0.8, nodes: [["ore", 14], ["crystal", 10], ["stone", 12]], places: {}, folk: 0 },
+  fernwood: { name: "Fernhold", biome: "Dino forest", a: 170, b: 130, seed: 97, deep: 34, hidden: true, reveal: "verses", feature: "forest", route: { r: 3350, speed: 0.0015, phase: 1.3 }, palette: { sand: 0xe4d9a8, low: 0x5fb85a, mid: 0x4aa64e, high: 0x8a9a7a, snow: 0xd8f0c8, path: 0x9a8a5a },
+    peaks: [[80, 40, 22, 22]], flats: [{ x: 10, z: -10, r: 40, h: 9 }], flora: () => [[`${TREE}Tree_`, 10, 150, 2.4, 1.2], [`${MEGA}CommonTree_`, 5, 60, 2, 0.8]], stones: `${GROWN}Rock_Moss_`, density: 1.3, nodes: [["herb", 16], ["wildcap", 12], ["fiber", 12]], places: {}, folk: 0 },
+  reef: { name: "Lagoonback", biome: "Lagoon and reef", a: 150, b: 120, seed: 101, deep: 20, hidden: true, reveal: "verses", feature: "lagoon", route: { r: 3600, speed: 0.0014, phase: 4.6 }, palette: { sand: 0xfff4d0, low: 0x7fe0a0, mid: 0x60c88a, high: 0xc8b08a, snow: 0xe8fff0, path: 0xe8d6a4 },
+    peaks: [[50, 40, 14, 16]], flats: [{ x: -30, z: -20, r: 36, h: 5 }], flora: () => [[`${GROWN}PalmTree_`, 4, 70, 1.8, 0.6]], stones: `${GROWN}Rock_`, density: 1.2, nodes: [["pearl", 6], ["berry", 10], ["fiber", 8]], places: {}, folk: 0 },
+  mist: { name: "Mistcrown", biome: "Cloud peaks", a: 124, b: 98, seed: 107, deep: 34, hidden: true, reveal: "verses", feature: "peaks", route: { r: 3850, speed: 0.0013, phase: 0.2 }, palette: { sand: 0xd8dce6, low: 0x9cc4a8, mid: 0x8ab494, high: 0xb0b4c4, snow: 0xffffff, path: 0xb8bcc8 },
+    peaks: [[10, -10, 64, 40], [50, -40, 36, 24]], flats: [{ x: -50, z: 34, r: 24, h: 7 }], flora: () => [[`${MEGA}Pine_`, 5, 60, 1.5, 0.6]], stones: `${GROWN}Rock_Snow_`, density: 0.9, nodes: [["crystal", 8], ["stone", 10]], places: {}, folk: 0 },
+  salt: { name: "Glassflat", biome: "Salt flats", a: 160, b: 120, seed: 113, deep: 28, hidden: true, reveal: "verses", feature: "saltflat", route: { r: 4100, speed: 0.0012, phase: 2.9 }, palette: { sand: 0xf4f0e6, low: 0xece6da, mid: 0xe2dccf, high: 0xc9c0b4, snow: 0xffffff, path: 0xd8d0c0 },
+    peaks: [[60, -50, 20, 18]], flats: [{ x: 0, z: 0, r: 70, h: 6 }], flora: () => [[`${GROWN}Cactus_`, 5, 20, 1.4, 0.6]], stones: `${GROWN}Rock_`, density: 0.5, nodes: [["crystal", 12], ["sandstone", 14], ["ore", 6]], places: {}, folk: 0 },
 };
+// the Waking Song, broken in eight by the Shellwrights after the storm so no single storm could take it again. One verse to a far turtle, and a talent to reach it.
+// needs: what a dinosaur near you (or under you) must be able to do; any one of them will do
+export const VERSES = [
+  { id: "v1", land: "bloom", x: -10, z: 30, needs: null, where: "in the flower ring", text: "Little shell, the sea is wide, / but every wave comes home." },
+  { id: "v2", land: "pillar", x: 0, z: -6, needs: ["sniff"], where: "under the old plaza", hint: "There's a door under these flagstones. Something with a good nose could find the seam.", text: "We built you streets of sun and stone, / so you would never sleep alone." },
+  { id: "v3", land: "hollow", x: -10, z: 30, needs: ["smash"], where: "behind the fallen rock", hint: "The cave's blocked. We'd need a dinosaur that breaks rock with its head or tail.", text: "When storms came down we kept the light / in hollow places, through the night." },
+  { id: "v4", land: "fernwood", x: 10, z: -10, needs: ["reach", "fly"], where: "high in the giant ferns", hint: "It's up in the canopy. A long neck could lift us, or wings.", text: "The tall ones bow to hear your name; / the old green forest says the same." },
+  { id: "v5", land: "mist", x: 10, z: -10, needs: ["fly"], where: "on the highest peak", hint: "Only wings get up here. We should come back flying.", text: "Above the cloud, the wind will learn / the way you swam, and your return." },
+  { id: "v6", land: "reef", x: -30, z: -50, needs: ["dive", "swim"], where: "under the lagoon", hint: "It's on the lagoon floor. We need a dinosaur that dives.", text: "Under the water, slow and deep, / your mother's heartbeat guards your sleep." },
+  { id: "v7", land: "thorn", x: 0, z: 20, needs: ["slash"], where: "inside the thorn wall", hint: "Thorns, all the way round. Something with claws or a spiked tail could cut us in.", text: "The sharp and small, the quick and bold, / will clear the way, as they were told." },
+  { id: "v8", land: "salt", x: 0, z: 10, needs: ["dig"], where: "under the salt crust", hint: "It's buried in the salt. We'd need a digger.", text: "And when the eight are sung as one, / wake, little Pell. The night is done." },
+];
 export const BRIDGE = { open: 9, close: 20, arrive: 7, repair: { wood: 30, stone: 15, money: 200 } };   // hours Willowmere stays moored, and what the winches cost to mend
 export const BOAT = { speed: 15, cost: { plank: 30, rope: 6, money: 400 } };
 export const FERRY = 150;                                    // the bell at the dock calls a ferry to any turtle you've landed on
@@ -392,12 +525,19 @@ export const COMPANION = {
     storm: { cool: 300, lines: ["Hold on to something. The turtle's chin just went up. It's enjoying this."] },
     rare: { cool: 60, lines: ["Oh, that one's special. Don't sell it too quickly."] },
     festival: { cool: 600, lines: ["There's music coming from somewhere. It's festival day!"] },
+    scent: { cool: 90, lines: ["Look at its nose going. It's caught something.", "Warmer... it's definitely after something round here."] },
+    rare_find: { cool: 30, lines: ["Nobody else could have found that. Good nose!"] },
+    verse: { cool: 10, lines: ["Another verse. It sounds like a lullaby, doesn't it?"] },
+    far_isle: { cool: 60, lines: ["No town, no people. Just the Shellwrights' old stones, and dinosaurs nobody's named yet."] },
+    travel: { once: true, lines: ["Now that's fast. The far turtles don't feel so far any more."] },
   },
 };
 
 // ---------------- the story: ten arcs, each step a check against what has happened ----------------
-export const ARCS = ["Start the farm", "The first neighbour", "The old couple", "Why they keep moving", "What the desert remembers", "Their lost child", "The Elder", "The truth", "The long search", "Home"];
+export const ARCS = ["Start the farm", "The first neighbour", "The old couple", "Why they keep moving", "What the desert remembers", "Their lost child", "The Elder", "The truth", "The broken song", "The keepers' verses", "The long search", "Home"];
 const carvings = (s) => Object.keys(s.carved || {}).length;
+export const versesOf = (s) => Object.keys(s.verses || {}).length;
+const tamedFrom = (s, isles) => (s.dinos || []).some((r) => isles.includes(DINOS[r.species]?.home));
 export const STORY = [
   { id: "plant", arc: 0, text: "Till flat ground, plant and water a crop", done: (s) => s.flags.planted },
   { id: "harvest", arc: 0, text: "Wait for the ! bubble, then harvest your first crop", done: (s) => s.flags.harvested },
@@ -410,8 +550,11 @@ export const STORY = [
   { id: "c1", arc: 3, text: "Find what's up in the High Meadow", done: (s) => s.carved?.c1 },
   { id: "show", arc: 3, text: "Ask Old Moss what the carving means", done: (s) => s.flags.moss },
   { id: "boat", arc: 3, text: "Mend the old boat at your dock", done: (s) => s.flags.boat },
+  { id: "bloom", arc: 3, text: "Sail out to Bloomdrift, the wildflower turtle now on your map, and read the stone in its flower ring", done: (s) => s.verses?.v1 },
   { id: "dune", arc: 4, text: "Sail to Sunback, the desert turtle", done: (s) => s.seenIsles.dune },
+  { id: "travel", arc: 4, text: "Befriend a fast traveller: a Strider on Willowmere, or a Galewing on Sunback", done: (s) => (s.dinos || []).some((r) => DINOS[r.species]?.travel) },
   { id: "c2", arc: 4, text: "Find the carving on Sunback's high rock", done: (s) => s.carved?.c2 },
+  { id: "sniff", arc: 4, text: "Ride the right dinosaur on its own turtle and let it sniff out something rare", done: (s) => Object.keys(s.rare || {}).length > 0 },
   { id: "c3", arc: 5, text: "Find the carving on Hoarshell, the frozen turtle", done: (s) => s.carved?.c3 },
   { id: "c4", arc: 5, text: "Find the carving on Mirewalk, the swamp turtle", done: (s) => s.carved?.c4 },
   { id: "chart", arc: 5, text: "Bring your findings to Old Moss", done: (s) => s.flags.chart },
@@ -419,15 +562,34 @@ export const STORY = [
   { id: "c5", arc: 6, text: "Read the deepest carving in the ruins", done: (s) => s.carved?.c5 },
   { id: "truth", arc: 7, text: "Tell Old Moss what you found", done: (s) => s.flags.truth },
   { id: "portal", arc: 7, text: "Stand on the stone dais in the heart of the Elder's ruins and open the way to Pell", done: (s) => s.flags.portal },
-  { id: "grow", arc: 8, text: "Grow the Heartseed on your turtle", done: (s) => s.flags.bloomed },
-  { id: "shrine", arc: 9, text: "Carry the Heartbloom to the Sky Shrine and call Pell home (a flyer can reach it)", done: (s) => s.flags.finale },
-  { id: "free", arc: 9, text: "Pell is coming home. Your farm, your turtle, what next?", done: () => false },
+  { id: "verses", arc: 8, text: "Ask Old Moss why the Elder's song is too quiet to reach", done: (s) => s.flags.verses },
+  { id: "v2", arc: 8, text: "Pillarback, the ancient city: let a sniffer find the door under the plaza", done: (s) => s.verses?.v2 },
+  { id: "v3", arc: 8, text: "Hollowshell, the caverns: break through to the deep cave with a rock-smasher", done: (s) => s.verses?.v3 },
+  { id: "v7", arc: 8, text: "Thornwild, the raptor jungle: cut through the thorn wall with a slasher", done: (s) => s.verses?.v7 },
+  { id: "native", arc: 8, text: "Befriend a dinosaur born on one of the far turtles", done: (s) => tamedFrom(s, ["bloom", "pillar", "hollow", "fernwood", "mist", "reef", "thorn", "salt"]) },
+  { id: "v4", arc: 9, text: "Fernhold, the dino forest: reach the verse high in the giant ferns (a long neck, or wings)", done: (s) => s.verses?.v4 },
+  { id: "v6", arc: 9, text: "Lagoonback: dive for the verse on the lagoon floor", done: (s) => s.verses?.v6 },
+  { id: "v8", arc: 9, text: "Glassflat, the salt flats: dig the verse out of the crust with a digger", done: (s) => s.verses?.v8 },
+  { id: "v5", arc: 9, text: "Mistcrown: fly to the highest peak for the final verse", done: (s) => s.verses?.v5 },
+  { id: "whole", arc: 9, text: "Bring all eight verses to Old Moss", done: (s) => s.flags.whole },
+  { id: "grow", arc: 10, text: "Grow the Heartseed on your turtle", done: (s) => s.flags.bloomed },
+  { id: "shrine", arc: 11, text: "Carry the Heartbloom to the Sky Shrine and call Pell home (a flyer can reach it)", done: (s) => s.flags.finale },
+  { id: "free", arc: 11, text: "Pell is coming home. Your farm, your turtle, what next?", done: () => false },
 ];
 // who says what, once, when the story says so: the deeper tale
 export const TALES = [
   { who: "moss", need: (s) => s.carved?.c1 && !s.flags.moss, set: "moss", gives: { money: 200 }, lines: ["Oh... you found the first one. Then it's time you knew.", "Your turtle is Oma. Willowmere rides on Tarn. They are husband and wife, and they've been together longer than there have been towns.", "See the small one between them? That's their child. Pell.", "A storm took Pell centuries ago. Every migration, every mooring, every morning they meet by your bridge... they are still looking.", "That's why we live on their backs, dear. Our people swore to keep watch. You'll want a boat."] },
   { who: "moss", need: (s) => Object.keys(s.carved || {}).length >= 4 && !s.flags.chart, set: "chart", lines: ["So they turned back, and searched the cold seas, and our grandmothers watched the water.", "But this last one says something new. Somebody has been sheltering Pell.", "There's a turtle older than all my charts. The Elder. I've marked where she should be. Go gently."] },
-  { who: "moss", need: (s) => s.carved?.c5 && !s.flags.truth, set: "truth", gives: { heartseed_seed: 1 }, lines: ["The Elder took Pell in. All this time the child has been asleep, safe under her shell, too small to swim home alone.", "A turtle wakes to the song of its mother. That's what Oma and Tarn have been calling, every night, across the whole ocean.", "They just can't sing loud enough to reach so far.", "This seed was in the Elder's ruin. A Heartbloom holds a song. Grow it on Oma's back, and carry it to the Sky Shrine."] },
+  { who: "moss", need: (s) => s.carved?.c5 && !s.flags.truth, set: "truth", lines: ["The Elder took Pell in. All this time the child has been asleep, safe under her shell, too small to swim home alone.", "A turtle wakes to the song of its mother. That's what Oma and Tarn have been calling, every night, across the whole ocean.", "They just can't sing loud enough to reach so far.", "Go back to the Elder. There's a stone dais in the heart of her ruins. Stand on it and see for yourself."] },
+  { who: "moss", need: (s) => s.flags.truth && s.flags.portal && !s.flags.verses, set: "verses", lines: ["You saw Pell. Asleep, and so small... Oh, my dear.", "Then you'll want the rest of it. Oma and Tarn's song isn't only quiet. It's broken.", "The night of the storm, the Shellwrights, the first people who ever lived on a turtle's back, sang the Waking Song to call Pell home. It didn't carry.", "So they did something clever and something sad. They split the song into eight verses and carried each one to a different young turtle, so no single storm could ever take the whole of it again.", "Then they let the creatures of each turtle keep their verse. Only a dinosaur with the right gift can reach one.", "You found the first already, on Bloomdrift. I've marked the other seven on your map. Bring me every verse, and I'll give you what the Elder gave me to keep."] },
+  { who: "moss", need: (s) => versesOf(s) >= 8 && !s.flags.whole, set: "whole", gives: { heartseed_seed: 1, money: 1500 }, lines: ["All eight. Let me hear them together... yes. Yes, that's it. I'd only ever had the first line.", "This seed was in the Elder's ruin. I've kept it for forty years, waiting for someone to bring the song.", "A Heartbloom holds a song. Grow it on Oma's back with all eight verses in your head, and carry it to the Sky Shrine. Then sing."] },
+  // the towns help: each one has heard of a far turtle, once the song is out
+  { who: "ferra", need: (s) => s.flags.verses && !s.flags.h_salt, set: "h_salt", gives: { ore: 6 }, lines: ["A song in eight pieces, is it? My grandmother sang one bit while she worked the forge.", "She said it came from Glassflat, a turtle crusted white with salt, way out past the deep water. Take a digger. And ore, for the road."] },
+  { who: "ona", need: (s) => s.flags.verses && !s.flags.h_mist, set: "h_mist", gives: { crystal: 3 }, lines: ["On clear nights you can see Mistcrown from the ice. A turtle with mountains on its back, higher than the clouds.", "Nobody's ever climbed it. You'd need wings. Big ones. The Galewings nest on Sunback, if you're brave."] },
+  { who: "fen", need: (s) => s.flags.verses && !s.flags.h_thorn, set: "h_thorn", gives: { herb: 6 }, lines: ["Thornwild. I've seen it pass. A jungle so thick it rustles from here.", "The raptors there are kind, mostly, but the thorns aren't. Something with claws will cut you a way. And Fernhold beyond it: ferns as tall as towers."] },
+  { who: "luma", need: (s) => s.flags.verses && !s.flags.h_reef, set: "h_reef", gives: { pearl: 1 }, lines: ["Lagoonback! The prettiest turtle in the sea. Her shell holds a whole lagoon.", "Pearl divers swear there's a carved stone on the lagoon floor. Ride a diver down to it. Here, for luck."] },
+  { who: "cole", need: (s) => s.flags.verses && !s.flags.h_hollow, set: "h_hollow", gives: { cinder: 2 }, lines: ["Hollowshell. All caves. The Shellwrights hid there through the storm years, they say, and kept lamps burning in the rock.", "There's a cave mouth nobody's opened since. Rockfall. You'd need a head like a hammer."] },
+  { who: "drift", need: (s) => s.flags.verses && !s.flags.h_pillar, set: "h_pillar", gives: { relic: 1 }, lines: ["Pillarback. I told you I'd seen a turtle with a whole city on it. Empty streets, pillars, a plaza.", "The Shellwrights' coins still turn up there, if you have the nose for it. Small dinosaurs do. Take this. It came from there."] },
   { who: "moss", need: (s) => s.flags.finale && !s.flags.after, set: "after", gives: { money: 1000 }, lines: ["I heard it. The whole town stood up and went to the rail.", "Little Pell is awake, and swimming home. Look out past the far turtles.", "Centuries, and it took one farmer. Go and say hello. And then, dear, keep farming. They'll all be hungry."] },
 ];
 

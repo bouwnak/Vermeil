@@ -1,9 +1,9 @@
 // dinos.js - your dinosaurs. Friendship levels them, friendship and time evolve them through three forms, and each form changes what they can do:
 // on the farm (the work you assign, by priority) and out in the world (what they can carry you over, up or through).
 import * as THREE from "three";
-import { rollLook, DINOS, DINO_ROOM, CATALOG, EVOLVE, ITEMS, LEVEL_XP, MAX_LEVEL, SKILLS, UNLOCK, UNLOCK_TEXT, WILD_TAME, itemName } from "./data.js";
+import { rollLook, DINOS, CATALOG, EVOLVE, FARM_SKILLS, ITEMS, JOB_SLOTS, LEVEL_XP, MAX_LEVEL, SKILLS, UNLOCK, UNLOCK_TEXT, WILD_TAME, itemName, perkOf } from "./data.js";
 import { makeDinoBody } from "./dinomodel.js";
-import { groundAt, nearest, pushOut, setGone, shoreNear } from "./world.js";
+import { groundAt, isWet, nearest, pushOut, shoreNear } from "./world.js";
 import { keyOf, ripe, spotOf } from "./farm.js";
 import { popup } from "./ui.js";
 import { dinoVoice } from "./audio.js";
@@ -12,10 +12,14 @@ import { sandy, seaKind, seaSpot } from "./life.js";
 export const levelOf = (r) => Math.min(MAX_LEVEL, 1 + Math.floor(r.xp / LEVEL_XP));
 export const skillsOf = (r) => DINOS[r.species].skills[r.stage];
 export const nameOf = (r) => r.name || DINOS[r.species].forms[r.stage];
-/** what a dinosaur of this form can do out in the world */
-export const can = (r, trait) => { const t = DINOS[r.species].traits[trait]; return t != null && r.stage >= t; };
+/** what a dinosaur of this form can do out in the world: a trait it has grown into, or a skill it has now */
+export const can = (r, trait) => { const t = DINOS[r.species].traits[trait]; return (t != null && r.stage >= t) || skillsOf(r).includes(trait); };
 export const canRide = (r) => r.stage >= DINOS[r.species].ride;
-export const roomFor = (s) => DINO_ROOM + (s.placed || []).reduce((n, p) => n + (CATALOG[p.type]?.room || 0), 0);
+/** there's no limit to how many friends you keep. (Barns used to set one; they're still good shelter) */
+export const roomFor = () => Infinity;
+/** the dinosaurs working a farm job, in the order they were given it: only the first JOB_SLOTS of them actually do it */
+export const crewOf = (s, skill) => (s.dinos || []).filter((r) => r.jobs?.[skill] && skillsOf(r).includes(skill)).slice(0, JOB_SLOTS);
+export const onCrew = (s, r, skill) => crewOf(s, skill).includes(r);
 export function readyToEvolve(s, r) {
   const need = EVOLVE[r.stage + 1];
   return !!need && levelOf(r) >= need.level && s.day - r.born >= need.days;
@@ -72,7 +76,7 @@ export async function makeDinos(G) {
   };
   D.friend = (d, amount) => {
     const before = levelOf(d.r);
-    d.r.xp += amount;
+    d.r.xp += amount * (1 + 0.4 * perkOf(d.data, "gentle"));
     const now = levelOf(d.r);
     if (now > before) { popup(`${nameOf(d.r)} reached level ${now}`, "good"); G.sfx("chirp"); G.vfx.burst("heart", d.pos.x, d.pos.y + d.char.top, d.pos.z); }
     if (readyToEvolve(s, d.r) && !d.told) { d.told = true; popup(`${nameOf(d.r)} is ready to evolve!`, "good"); G.moment("evolve_ready"); }
@@ -136,6 +140,7 @@ export async function makeDinos(G) {
     if (G.talking) return;
     d.say("call");
     const opts = [["Pet", () => D.touch(d, "pet")], ["Chin scratch", () => D.touch(d, "chin")], ["Belly rub", () => D.touch(d, "belly")], ["Play", () => D.touch(d, "play")], [k ? `Feed ${itemName(k)}` : "Feed (nothing it wants)", () => D.feed(d)]];
+    if (s.inv.thornberry > 0) opts.push(["Give a Thornheart Berry 💗", () => { G.add("thornberry", -1); d.say("happy"); d.char.react("eat"); G.sfx("rare"); G.vfx.burst("heart", d.pos.x, d.pos.y + d.char.top, d.pos.z, 3); D.friend(d, 42); d.r.energy = 100; popup(`${name} adores it`, "good"); }]);
     if (readyToEvolve(s, r)) opts.unshift([`✨ Evolve into ${d.data.forms[r.stage + 1]}`, () => D.evolve(d)]);
     if (canRide(r)) opts.push(["Ride", () => G.setRide(d)]);
     opts.push([s.partner === r.uid ? "Stay and work here" : "Come with me", () => { if (s.partner === r.uid) { s.partner = 0; r.stay = true; popup(`${name} will stay here`); } else { s.partner = r.uid; r.stay = false; } }], ["Leave", null]);
@@ -149,7 +154,6 @@ export async function makeDinos(G) {
     if (need && !s.flags[need]) return popup(`It watches you warily. It might trust you ${UNLOCK_TEXT[need]}`);
     const k = food({ data: w.data });
     if (!k) return popup(`It sniffs at you. Maybe it would like ${w.data.food === "fish" ? "a fish" : itemName(w.data.food)}`);
-    if (s.dinos.length >= roomFor(s)) return popup("No room for another. Build a barn first");
     G.add(k, -1); w.trust++;
     G.sfx("chirp"); G.vfx.burst("heart", w.pos.x, w.pos.y + w.char.top, w.pos.z); w.char.react("eat"); G.player.act("use");
     if (w.trust < WILD_TAME) return popup(`It's warming to you (${w.trust} of ${WILD_TAME})`);
@@ -160,38 +164,39 @@ export async function makeDinos(G) {
     d.r.stage = 0; d.r.stay = true; d.pos.set(x, groundAt(G, x, z).y, z); d.r.pos = [x, z];                // tamed: it's on your turtle now
     G.sfx("fanfare");
     popup(`${w.data.forms[0]} joined you, and has gone to your island!`, "good");
-    G.moment("new_dino");
+    G.moment(w.data.travel ? "travel" : "new_dino");
   };
 
   // ---------------- work: each dinosaur picks its next job by priority, distance and energy ----------------
+  // only farm work, and only for the three on that job's crew. Chopping, smashing, digging and sniffing happen with you riding (ridework.js, rare.js)
   const plotsThat = (test) => Object.entries(s.plots).filter(([k, p]) => !taken.has(k) && test(p));
+  const tend = (d, p) => { const g = perkOf(d.data, "green"); if (g) p.care = (p.care || 0) + g * 3; };          // a green thumb: what it tends is likelier to come up golden
+  /** fresh soil beside the field: a tiller keeps a few empty plots ready, never more */
+  const tillSpots = () => {
+    const empty = Object.values(s.plots).filter((p) => !p.crop).length;
+    if (empty >= 6) return [];
+    const out = [];
+    for (const k of Object.keys(s.plots)) { const [x, z] = spotOf(k); for (const [a, b] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const q = keyOf(x + a, z + b); if (!s.plots[q] && !taken.has(q) && G.farm.canTill(x + a, z + b)) out.push(q); } if (out.length > 12) break; }
+    return out;
+  };
   const JOBS = {
-    water: (d) => plotsThat((p) => p.crop && !p.wet && !ripe(p)).map(([k, p]) => plotJob(k, () => { p.wet = true; G.vfx.burst("water", ...spot(k)); G.sfx("water"); })),
-    weed: (d) => plotsThat((p) => p.weed).map(([k, p]) => plotJob(k, () => { p.weed = false; G.vfx.burst("leaf", ...spot(k)); })),
+    water: (d) => plotsThat((p) => p.crop && !p.wet && !ripe(p)).map(([k, p]) => plotJob(k, () => { p.wet = true; tend(d, p); G.vfx.burst("water", ...spot(k)); G.sfx("water"); })),
+    weed: (d) => plotsThat((p) => p.weed).map(([k, p]) => plotJob(k, () => { p.weed = false; tend(d, p); G.vfx.burst("leaf", ...spot(k)); })),
     harvest: (d) => plotsThat((p) => ripe(p)).map(([k, p]) => plotJob(k, () => G.reap(k, p, true))),
-    plant: (d) => { const seed = G.seedChoice(); if (!seed) return []; return plotsThat((p) => !p.crop).map(([k, p]) => plotJob(k, () => { if (s.inv[seed] > 0 && G.plant(k, p, seed, true)) G.vfx.burst("soil", ...spot(k)); })); },
-    chop: (d) => nodeJob(d, "tree", (rec) => { G.add("wood", 2); G.sfx("chop"); G.vfx.burst("wood", ...world(rec)); setGone(G, rec, true); }),
-    mine: (d) => nodeJob(d, "rock", (rec) => { G.add(rec.item, 1); G.sfx("tink"); G.vfx.burst("stone", ...world(rec)); setGone(G, rec, true); }),
-    scout: (d) => nodeJob(d, "forage", (rec) => { G.add(rec.item, 1); G.vfx.burst("leaf", ...world(rec)); setGone(G, rec, true); }),
-    dig: (d) => { const a = Math.random() * 6.3, x = d.pos.x + Math.cos(a) * 8, z = d.pos.z + Math.sin(a) * 8; return groundAt(G, x, z).on === "home" ? [{ x, z, key: `dig${Date.now()}`, run: () => { const got = Math.random() < 0.2 ? "ore" : Math.random() < 0.5 ? "stone" : "fiber"; G.add(got, 1); G.vfx.burst("soil", x, groundAt(G, x, z).y, z, 2); } }] : []; },
+    plant: (d) => { const seed = G.seedChoice(); if (!seed) return []; return plotsThat((p) => !p.crop).map(([k, p]) => plotJob(k, () => { if (s.inv[seed] > 0 && G.plant(k, p, seed, true)) { tend(d, p); G.vfx.burst("soil", ...spot(k)); } })); },
+    till: (d) => tillSpots().map((k) => plotJob(k, () => { const [x, z] = spotOf(k); if (!s.plots[k] && G.farm.canTill(x, z)) { s.plots[k] = { crop: null, age: 0, wet: isWet(s.weather) }; G.vfx.burst("soil", ...spot(k)); G.sfx("dig"); } })),
     carry: () => G.craft.waiting(),
   };
   const spot = (k) => { const [x, z] = spotOf(k); return [x, G.world.lands.home.land.ground(x, z) + 0.3, z]; };
-  const world = (rec) => { const [x, z] = rec.L.world(rec.x, rec.z); return [x, groundAt(G, x, z).y + 1, z]; };
   const plotJob = (k, run) => { const [x, z] = spotOf(k); return { x, z, key: k, run }; };
-  const nodeJob = (d, node, run) => {
-    const rec = nearest(G, d.pos.x, d.pos.z, 46, (r) => r.node === node && r.L.cfg.id === "home");
-    if (!rec) return [];
-    const [x, z] = rec.L.world(rec.x, rec.z);
-    return [{ x, z, key: rec.key, run: () => run(rec) }];
-  };
   const choose = (d) => {
     const r = d.r;
     if (r.energy < 8) return null;
     let best = null, score = -1e9;
     for (const skill of skillsOf(r)) {
       const prio = PRIO[r.jobs[skill]];
-      if (!prio) continue;
+      if (!prio || !JOBS[skill] || !FARM_SKILLS.includes(skill) || !onCrew(s, r, skill)) continue;
+      if (r.personality === "Lazy" && Math.random() < 0.15) continue;           // a lazy one sometimes just... doesn't
       for (const job of JOBS[skill](d)) {
         const v = prio * 40 - Math.hypot(job.x - d.pos.x, job.z - d.pos.z);
         if (v > score) { score = v; best = { ...job, skill }; }
@@ -246,11 +251,11 @@ export async function makeDinos(G) {
         if (!moving) {
           d.working += dt;
           if (d.working === dt) c.work();
-          if (d.working > 1.2) {
+          if (d.working > 1.2 * (1 - 0.25 * perkOf(d.data, "quick"))) {
             d.task.run();
             taken.delete(d.task.key);
             const sk = r.skill[d.task.skill] = (r.skill[d.task.skill] || 0) + 1;
-            r.energy -= Math.max(1.5, 4 - sk * 0.02);
+            r.energy -= Math.max(1.5, 4 - sk * 0.02) * (1 - 0.3 * perkOf(d.data, "tireless"));
             D.friend(d, 0.3);
             G.farm.dirty = true; G.farm.draw();
             d.task = null; d.working = 0; d.wander = t + 0.6;

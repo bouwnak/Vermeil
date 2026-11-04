@@ -58,11 +58,13 @@ export async function runShowcase(G, kind) {
   if (kind === "alive") {
     await row("Farm animals", [...[...new Map(ANIMALS.map((a) => [a[0], a])).values()].map(([name, size]) => [name, () => character(`conv_farm_animals/${name}.glb`, size)]), ["Chicken", () => makeChicken()], ["Brown hen", () => makeChicken(0xc98a4a)]]);
     // yours first, as they are now: their own names and forms, saddled
-    if (G.dinos?.list.length) await row("Your dinosaurs", G.dinos.list.map((d) => [`${d.r.name || d.data.forms[d.r.stage]} (${d.r.personality || "?"})`, async () => { const c = await makeDinoBody(d.data, d.r.stage, d.data.sizes[d.r.stage]); c.addSaddle?.(); return c; }]));
+    if (G.dinos?.list.length) await row("Your dinosaurs", G.dinos.list.map((d) => [`${d.r.name || d.data.forms[d.r.stage]} (${d.r.look ? `${d.r.look.tier} ${d.r.look.pattern}, ` : ""}${d.r.personality || "?"})`, async () => { const c = await makeDinoBody(d.data, d.r.stage, d.data.sizes[d.r.stage], d.r.look); c.addSaddle?.(); return c; }]));
     // every tier and every pattern, on one kind and then across all of them, so each can be checked by eye
     const tierLook = (sp, tier, pattern, i) => { let l; for (let n = 0; n < 4000; n++) { l = rollLook(sp, dayRnd(n + i * 977, sp)); if (l.tier === tier && (!pattern || l.pattern === pattern)) return l; } return l; };
     await row("Tiers", DINO_TIERS.map(([tier], i) => [`${tier} Crestback`, () => makeDinoBody(DINOS.sprig, 1, DINOS.sprig.sizes[1], tierLook("sprig", tier, "", i))]));
     await row("Patterns", DINO_PATTERNS.map((p, i) => [`${p} Sawback`, () => makeDinoBody(DINOS.nib, 1, DINOS.nib.sizes[1], tierLook("nib", "Rare", p, i))]));
+    // every kind, born at each tier in turn: the colours and patterns a wild one can roll, Common to Mythic
+    await row("Every kind, every tier", Object.entries(DINOS).map(([k, D], i) => { const tier = DINO_TIERS[i % DINO_TIERS.length][0]; return [`${tier} ${D.forms[1]}`, () => makeDinoBody(D, 1, D.sizes[1], tierLook(k, tier, "", i + 50))]; }));
     for (const [k, D] of Object.entries(DINOS)) await row(D.line, D.forms.map((f, st) => [f, () => makeDinoBody(D, st, D.sizes[st])]));
     await row("Companion", [[COMPANION.name, () => G.companion ? character(G.companion.path || COMPANION.model, 1.6, true) : null]]);
     await row("Named people", Object.values(NPCS).map((n) => [n.name, () => character(n.model, 1.72)]));
